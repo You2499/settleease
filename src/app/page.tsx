@@ -264,7 +264,7 @@ export default function SettleEasePage() {
             {activeView === 'addExpense' && <AddExpenseTab people={people} />}
           </main>
           <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
-            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Ensure Supabase table replication is ON for realtime.</p>
+            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved.</p>
           </footer>
         </div>
       </SidebarInset>
