@@ -103,7 +103,7 @@ interface Person {
   created_at?: string; 
 }
 
-interface ExpenseItemDetail { // Renamed from Item to avoid conflict with React.Item
+interface ExpenseItemDetail { 
   id: string; 
   name: string;
   price: number;
@@ -137,7 +137,7 @@ export default function SettleEasePage() {
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
-        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id');
+        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true });
         if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
           return; 
         }
@@ -893,3 +893,4 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
+
