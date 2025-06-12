@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarProvider,
   Sidebar,
@@ -49,11 +59,12 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 let db: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
 
-if (!supabaseUrl || supabaseUrl === "YOUR_SUPABASE_URL") {
+if (!supabaseUrl || supabaseUrl === "YOUR_SUPABASE_URL" || supabaseUrl.includes("pzednvgbxgixonpvbdsx.supabase.coYOUR_SUPABASE_URL")) {
   supabaseInitializationError = "Supabase URL is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_URL environment variable correctly.";
-} else if (!supabaseAnonKey || supabaseAnonKey === "YOUR_SUPABASE_ANON_KEY") {
+} else if (!supabaseAnonKey || supabaseAnonKey === "YOUR_SUPABASE_ANON_KEY" || supabaseAnonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
   supabaseInitializationError = "Supabase Anon Key is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable correctly.";
 }
+
 
 if (!supabaseInitializationError && supabaseUrl && supabaseAnonKey) {
   try {
@@ -92,6 +103,13 @@ interface Person {
   created_at?: string; 
 }
 
+interface ExpenseItemDetail { // Renamed from Item to avoid conflict with React.Item
+  id: string; 
+  name: string;
+  price: number;
+  sharedBy: string[]; 
+}
+
 interface Expense {
   id: string; 
   description: string;
@@ -100,16 +118,10 @@ interface Expense {
   paid_by: string; 
   split_method: 'equal' | 'unequal' | 'itemwise';
   shares: { personId: string, amount: number }[]; 
-  items?: { name: string, price: number, sharedBy: string[] }[]; 
+  items?: ExpenseItemDetail[]; 
   created_at: string; 
 }
 
-interface Item {
-  id: string; 
-  name: string;
-  price: number;
-  sharedBy: string[]; 
-}
 
 let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
@@ -125,14 +137,11 @@ export default function SettleEasePage() {
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
-        // If setup was already attempted/completed, just ensure people state is up-to-date
-        // This path is less likely to be hit frequently if initial load is robust.
         const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id');
         if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
-          return; // People exist, do nothing further here for default setup.
+          return; 
         }
       } else if (!db) {
-        // Supabase not initialized, can't proceed.
         return;
       }
     }
@@ -152,18 +161,15 @@ export default function SettleEasePage() {
       if (count === 0) {
         const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
         const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
-        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select(); // Added .select() here as good practice, though not strictly needed for the flag
+        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select(); 
         if (insertError) {
           console.error("Error adding default people:", insertError);
           toast({ title: "Setup Error", description: `Could not add default people: ${insertError.message}`, variant: "destructive" });
           initialDefaultPeopleSetupAttemptedOrCompleted = false; 
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-          // No need to set initialDefaultPeopleSetupAttemptedOrCompleted to true again here, it's set at the start of the attempt.
         }
       }
-      // If count > 0, it means people (possibly the defaults) already exist, so we do nothing.
-      // The flag initialDefaultPeopleSetupAttemptedOrCompleted remains true.
     } catch (error) {
       console.error("Unexpected error in addDefaultPeople:", error);
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
@@ -190,8 +196,6 @@ export default function SettleEasePage() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       setCurrentUser(session?.user ?? null);
-      // Only call addDefaultPeople if it hasn't been attempted/completed successfully yet.
-      // The addDefaultPeople function itself now contains logic to prevent re-adding.
       if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
         await addDefaultPeople();
       }
@@ -200,15 +204,14 @@ export default function SettleEasePage() {
     
     const initializeAppData = async () => {
       setIsLoading(true);
-      await db!.auth.getSession(); // This will trigger onAuthStateChange
-      // Fallback to stop loading if onAuthStateChange doesn't fire quickly
+      await db!.auth.getSession(); 
       if (isMounted && !authStateProcessed) {
-        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1500); // Extended timeout slightly
+        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1500);
       }
     };
     initializeAppData();
     return () => { isMounted = false; authListener?.subscription.unsubscribe(); };
-  }, [addDefaultPeople]); // addDefaultPeople is now memoized with useCallback
+  }, [addDefaultPeople]); 
 
 
   useEffect(() => {
@@ -216,7 +219,7 @@ export default function SettleEasePage() {
     let isMounted = true;
     const fetchInitialData = async () => {
       if (!isMounted || !db) return;
-      setIsLoading(true); // Set loading true at the start of fetching
+      setIsLoading(true);
 
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (!isMounted) return;
@@ -232,7 +235,7 @@ export default function SettleEasePage() {
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
       } else { setExpenses(expensesData as Expense[]); }
       
-      if (isMounted) setIsLoading(false); // Set loading false after all fetches are done or errored
+      if (isMounted) setIsLoading(false); 
     };
 
     fetchInitialData();
@@ -244,7 +247,7 @@ export default function SettleEasePage() {
         db.removeChannel(peopleChannel); 
         db.removeChannel(expensesChannel); 
     };
-  }, []); // Removed dependencies as fetchInitialData is self-contained and we want this effect to run once on mount.
+  }, []); 
   
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -260,7 +263,7 @@ export default function SettleEasePage() {
     );
   }
 
-  if (supabaseInitializationError) { // Removed !isLoading check here as it's redundant if we reach this.
+  if (supabaseInitializationError) { 
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -364,7 +367,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, number | ''>>({});
-  const [items, setItems] = useState<Item[]>([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
+  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
   
   const [newPersonName, setNewPersonName] = useState('');
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
@@ -448,7 +451,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
 
   const handleAddItem = () => setItems([...items, { id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
   const handleRemoveItem = (itemId: string) => setItems(items.filter(item => item.id !== itemId));
-  const handleItemChange = (itemId: string, field: keyof Omit<Item, 'id'>, value: any) => setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
+  const handleItemChange = (itemId: string, field: keyof Omit<ExpenseItemDetail, 'id'>, value: any) => setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   const handleItemSharedByChange = (itemId: string, personId: string) => {
     setItems(items.map(item => item.id === itemId ? { ...item, sharedBy: item.sharedBy.includes(personId) ? item.sharedBy.filter(id => id !== personId) : [...item.sharedBy, personId] } : item));
   };
@@ -585,7 +588,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
             <div className="p-3 border rounded-md bg-secondary/20 mt-3"> 
             {splitMethod === 'equal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Select who shared:</h4>{people.map(person => (<div key={person.id} className="flex items-center space-x-2"><Checkbox id={`equal-${person.id}`} checked={selectedPeopleEqual.includes(person.id)} onCheckedChange={(checked) => setSelectedPeopleEqual(prev => checked ? [...prev, person.id] : prev.filter(id => id !== person.id))} /><Label htmlFor={`equal-${person.id}`} className="font-normal text-sm">{person.name}</Label></div>))}</div>)}
             {splitMethod === 'unequal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Enter individual shares:</h4>{people.map(person => (<div key={person.id} className="flex items-center justify-between space-x-2"><Label htmlFor={`unequal-${person.id}`} className="min-w-[70px] text-sm">{person.name}</Label><Input id={`unequal-${person.id}`} type="number" value={unequalShares[person.id] || ''} onChange={(e) => setUnequalShares(prev => ({ ...prev, [person.id]: parseFloat(e.target.value) || '' }))} placeholder="Amt" className="w-1/2 h-8 text-sm" /></div>))}<div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Remaining: {formatCurrency(remainingAmountUnequal)}</div></div>)}
-            {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
+            {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price as any} onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
             </div>
           )}
         </CardContent>
@@ -604,6 +607,9 @@ interface DashboardTabProps {
 }
 
 function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
+  const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+
   const settlement = useMemo(() => {
     if (people.length === 0 || expenses.length === 0) return [];
     const balances: Record<string, number> = {};
@@ -639,6 +645,11 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     expenses.forEach(exp => { data[exp.category] = (data[exp.category] || 0) + exp.total_amount; });
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
+
+  const handleExpenseCardClick = (expense: Expense) => {
+    setSelectedExpenseForModal(expense);
+    setIsExpenseModalOpen(true);
+  };
 
   if (people.length === 0 && expenses.length === 0) { 
      return (
@@ -723,8 +734,8 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
               {expenses.map(expense => {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
                  return (
-                  <li key={expense.id}>
-                    <Card className="bg-card/70 hover:shadow-md transition-shadow rounded-md">
+                  <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
+                    <Card className="bg-card/70 hover:shadow-md hover:border-primary/50 transition-all rounded-md">
                       <CardHeader className="pb-1.5 pt-2.5 px-3">
                          <div className="flex justify-between items-start">
                             <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
@@ -746,6 +757,139 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
         </CardContent>
       </Card>
+      {selectedExpenseForModal && (
+        <ExpenseDetailModal 
+          expense={selectedExpenseForModal} 
+          isOpen={isExpenseModalOpen} 
+          onOpenChange={setIsExpenseModalOpen}
+          peopleMap={peopleMap} 
+        />
+      )}
     </div>
+  );
+}
+
+
+interface ExpenseDetailModalProps {
+  expense: Expense;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  peopleMap: Record<string, string>;
+}
+
+function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: ExpenseDetailModalProps) {
+  if (!expense) return null;
+
+  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="text-2xl text-primary flex items-center">
+            <Info className="mr-2 h-6 w-6" /> Expense Details
+          </DialogTitle>
+          <DialogDescription>
+            Detailed breakdown of "{expense.description}" recorded on {new Date(expense.created_at).toLocaleDateString()}.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <ScrollArea className="flex-grow pr-4 -mr-4">
+          <div className="space-y-4 py-4">
+            <Card>
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-lg">Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm space-y-1.5">
+                <div className="flex justify-between"><span>Description:</span> <span className="font-medium text-right">{expense.description}</span></div>
+                <div className="flex justify-between"><span>Total Amount:</span> <span className="font-bold text-primary text-right">{formatCurrency(expense.total_amount)}</span></div>
+                <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4 text-muted-foreground" /> {expense.category}</span></div>
+                <div className="flex justify-between"><span>Paid by:</span> <span className="font-medium text-right">{peopleMap[expense.paid_by] || 'Unknown'}</span></div>
+                <div className="flex justify-between"><span>Date:</span> <span className="font-medium text-right">{new Date(expense.created_at).toLocaleDateString()}</span></div>
+                <div className="flex justify-between"><span>Split Method:</span> <span className="font-medium capitalize text-right">{expense.split_method}</span></div>
+              </CardContent>
+            </Card>
+
+            <Separator />
+
+            <Card>
+              <CardHeader className="pb-2 pt-3">
+                <CardTitle className="text-lg">Calculated Shares</CardTitle>
+                <CardDescription>This is what each person owes or is credited for this expense.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1 text-sm">
+                  {expense.shares.map(share => (
+                    <li key={share.personId} className="flex justify-between items-center p-1.5 bg-secondary/30 rounded-sm">
+                      <span>{peopleMap[share.personId] || 'Unknown Person'}</span>
+                      <span className="font-semibold text-primary">{formatCurrency(share.amount)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+            
+            {expense.split_method === 'itemwise' && expense.items && expense.items.length > 0 && (
+              <>
+                <Separator />
+                <Card>
+                  <CardHeader className="pb-2 pt-3">
+                    <CardTitle className="text-lg">Item-wise Breakdown</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {expense.items.map((item, index) => (
+                      <Card key={item.id || index} className="p-3 bg-card/70 shadow-sm">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <h4 className="font-semibold text-sm">{item.name || `Item ${index + 1}`}</h4>
+                          <span className="text-sm font-medium text-primary">{formatCurrency(item.price)}</span>
+                        </div>
+                        {item.sharedBy.length > 0 ? (
+                          <>
+                            <p className="text-xs text-muted-foreground mb-1">Shared by:</p>
+                            <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
+                              {item.sharedBy.map(personId => (
+                                <li key={personId} className="flex justify-between">
+                                  <span>{peopleMap[personId] || 'Unknown'}</span>
+                                  <span className="text-muted-foreground">{formatCurrency(item.price / item.sharedBy.length)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </>
+                        ) : <p className="text-xs text-muted-foreground">Not shared by anyone.</p>}
+                      </Card>
+                    ))}
+                  </CardContent>
+                </Card>
+              </>
+            )}
+             {(expense.split_method === 'equal' && expense.shares.length > 0) && (
+              <>
+                <Separator />
+                <Card>
+                  <CardHeader className="pb-2 pt-3">
+                    <CardTitle className="text-lg">Equal Split Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm mb-1">Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"}:</p>
+                    <ul className="list-disc list-inside text-sm space-y-0.5">
+                      {expense.shares.map(share => (
+                        <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
+                      ))}
+                    </ul>
+                     <p className="text-sm mt-2">Amount per person: <span className="font-semibold text-primary">{formatCurrency(expense.total_amount / expense.shares.length)}</span></p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <DialogFooter className="pt-4 border-t">
+          <DialogClose asChild>
+            <Button type="button" variant="outline">Close</Button>
+          </DialogClose>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
