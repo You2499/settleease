@@ -124,12 +124,24 @@ export default function SettleEasePage() {
 
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
-      return;
+      if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
+        // If setup was already attempted/completed, just ensure people state is up-to-date
+        // This path is less likely to be hit frequently if initial load is robust.
+        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id');
+        if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
+          return; // People exist, do nothing further here for default setup.
+        }
+      } else if (!db) {
+        // Supabase not initialized, can't proceed.
+        return;
+      }
     }
+    
     initialDefaultPeopleSetupAttemptedOrCompleted = true; 
 
     try {
       const { count, error: countError } = await db.from(PEOPLE_TABLE).select('id', { count: 'exact', head: true });
+      
       if (countError) {
         console.error("Error checking for existing people:", countError);
         toast({ title: "Setup Error", description: `Could not check for existing people: ${countError.message}`, variant: "destructive" });
@@ -140,21 +152,25 @@ export default function SettleEasePage() {
       if (count === 0) {
         const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
         const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
-        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select();
+        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select(); // Added .select() here as good practice, though not strictly needed for the flag
         if (insertError) {
           console.error("Error adding default people:", insertError);
           toast({ title: "Setup Error", description: `Could not add default people: ${insertError.message}`, variant: "destructive" });
           initialDefaultPeopleSetupAttemptedOrCompleted = false; 
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
+          // No need to set initialDefaultPeopleSetupAttemptedOrCompleted to true again here, it's set at the start of the attempt.
         }
       }
+      // If count > 0, it means people (possibly the defaults) already exist, so we do nothing.
+      // The flag initialDefaultPeopleSetupAttemptedOrCompleted remains true.
     } catch (error) {
       console.error("Unexpected error in addDefaultPeople:", error);
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false; 
     }
   }, []);
+
 
   useEffect(() => {
     if (supabaseInitializationError) {
@@ -174,26 +190,34 @@ export default function SettleEasePage() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       setCurrentUser(session?.user ?? null);
-      await addDefaultPeople();
+      // Only call addDefaultPeople if it hasn't been attempted/completed successfully yet.
+      // The addDefaultPeople function itself now contains logic to prevent re-adding.
+      if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
+        await addDefaultPeople();
+      }
       if (!authStateProcessed) { setIsLoading(false); authStateProcessed = true; }
     });
     
     const initializeAppData = async () => {
       setIsLoading(true);
-      await db!.auth.getSession(); 
+      await db!.auth.getSession(); // This will trigger onAuthStateChange
+      // Fallback to stop loading if onAuthStateChange doesn't fire quickly
       if (isMounted && !authStateProcessed) {
-        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1000);
+        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1500); // Extended timeout slightly
       }
     };
     initializeAppData();
     return () => { isMounted = false; authListener?.subscription.unsubscribe(); };
-  }, [addDefaultPeople]);
+  }, [addDefaultPeople]); // addDefaultPeople is now memoized with useCallback
+
 
   useEffect(() => {
     if (supabaseInitializationError || !db) return;
     let isMounted = true;
     const fetchInitialData = async () => {
       if (!isMounted || !db) return;
+      setIsLoading(true); // Set loading true at the start of fetching
+
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (!isMounted) return;
       if (peopleError) {
@@ -207,13 +231,20 @@ export default function SettleEasePage() {
         console.error("Error fetching expenses:", expensesError);
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
       } else { setExpenses(expensesData as Expense[]); }
+      
+      if (isMounted) setIsLoading(false); // Set loading false after all fetches are done or errored
     };
 
     fetchInitialData();
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, () => fetchInitialData()).subscribe();
     const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, () => fetchInitialData()).subscribe();
-    return () => { isMounted = false; db.removeChannel(peopleChannel); db.removeChannel(expensesChannel); };
-  }, []); 
+    
+    return () => { 
+        isMounted = false; 
+        db.removeChannel(peopleChannel); 
+        db.removeChannel(expensesChannel); 
+    };
+  }, []); // Removed dependencies as fetchInitialData is self-contained and we want this effect to run once on mount.
   
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -229,7 +260,7 @@ export default function SettleEasePage() {
     );
   }
 
-  if (supabaseInitializationError && !isLoading) {
+  if (supabaseInitializationError) { // Removed !isLoading check here as it's redundant if we reach this.
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -249,15 +280,14 @@ export default function SettleEasePage() {
     <SidebarProvider defaultOpen={true}>
       <AppActualSidebar activeView={activeView} setActiveView={setActiveView} />
       <SidebarInset>
-        <div className="flex flex-col h-screen"> {/* Use h-screen for full height */}
+        <div className="flex flex-col h-screen"> 
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center">
-              <SidebarTrigger className="md:hidden mr-2" /> {/* Trigger for mobile */}
+              <SidebarTrigger className="md:hidden mr-2" /> 
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {activeView === 'dashboard' ? 'Dashboard' : 'Manage Expenses'}
               </h1>
             </div>
-             {/* Placeholder for future actions like user profile or settings */}
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
             {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
@@ -461,7 +491,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   };
   
   return (
-    <div className="space-y-6"> {/* Reduced space from space-y-8 */}
+    <div className="space-y-6"> 
       <Card className="shadow-lg rounded-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-xl"><Users className="mr-2 h-5 w-5 text-primary" /> Manage People</CardTitle>
@@ -525,7 +555,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
           <CardTitle className="flex items-center text-xl"><CreditCard className="mr-2 h-5 w-5 text-primary" /> Add New Expense</CardTitle>
           <CardDescription>Fill in the details of the expense and how it was split.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4"> {/* Reduced space from space-y-6 */}
+        <CardContent className="space-y-4"> 
           <div>
             <Label htmlFor="description">Description</Label>
             <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Dinner with friends" className="mt-1" />
@@ -552,7 +582,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
           </div>
 
           {Number(totalAmount) > 0 && people.length > 0 && (
-            <div className="p-3 border rounded-md bg-secondary/20 mt-3"> {/* Consistent padding & margin */}
+            <div className="p-3 border rounded-md bg-secondary/20 mt-3"> 
             {splitMethod === 'equal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Select who shared:</h4>{people.map(person => (<div key={person.id} className="flex items-center space-x-2"><Checkbox id={`equal-${person.id}`} checked={selectedPeopleEqual.includes(person.id)} onCheckedChange={(checked) => setSelectedPeopleEqual(prev => checked ? [...prev, person.id] : prev.filter(id => id !== person.id))} /><Label htmlFor={`equal-${person.id}`} className="font-normal text-sm">{person.name}</Label></div>))}</div>)}
             {splitMethod === 'unequal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Enter individual shares:</h4>{people.map(person => (<div key={person.id} className="flex items-center justify-between space-x-2"><Label htmlFor={`unequal-${person.id}`} className="min-w-[70px] text-sm">{person.name}</Label><Input id={`unequal-${person.id}`} type="number" value={unequalShares[person.id] || ''} onChange={(e) => setUnequalShares(prev => ({ ...prev, [person.id]: parseFloat(e.target.value) || '' }))} placeholder="Amt" className="w-1/2 h-8 text-sm" /></div>))}<div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Remaining: {formatCurrency(remainingAmountUnequal)}</div></div>)}
             {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
@@ -623,7 +653,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
   }
 
   return (
-    <div className="space-y-6"> {/* Reduced space from space-y-8 */}
+    <div className="space-y-6"> 
       <Card className="shadow-lg rounded-lg">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center text-xl"><ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary</CardTitle>
@@ -645,13 +675,13 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-6"> {/* Reduced gap */}
+      <div className="grid md:grid-cols-2 gap-6"> 
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Payer</CardTitle></CardHeader>
-          <CardContent className="h-[280px]"> {/* Slightly reduced height */}
+          <CardContent className="h-[280px]"> 
             {expensesByPayer.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expensesByPayer} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
+                <BarChart data={expensesByPayer} margin={{ top: 5, right: 10, left: 30, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
                   <YAxis tickFormatter={formatCurrency} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
@@ -668,7 +698,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           <CardContent className="h-[280px]">
              {expensesByCategory.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> {/* Adjusted margin for legend */}
+                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> 
                   <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={70} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
                     {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
                   </Pie>
@@ -688,7 +718,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[350px] pr-2"> {/* Slightly reduced height */}
+            <ScrollArea className="h-[350px] pr-2"> 
             <ul className="space-y-2.5">
               {expenses.map(expense => {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
