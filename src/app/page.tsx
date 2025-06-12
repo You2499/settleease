@@ -38,31 +38,39 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 // --- Firebase Configuration ---
-// IMPORTANT: Replace with your actual Firebase configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "YOUR_API_KEY",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "YOUR_AUTH_DOMAIN",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "YOUR_PROJECT_ID",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "YOUR_STORAGE_BUCKET",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "YOUR_MESSAGING_SENDER_ID",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "YOUR_APP_ID"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-let app: FirebaseApp;
-let auth: Auth;
-let db: Firestore;
+let app: FirebaseApp | undefined;
+let auth: Auth | undefined;
+let db: Firestore | undefined;
+let firebaseInitializationError: string | null = null;
 
-try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-} catch (error) {
-  console.error("Error initializing Firebase:", error);
-  toast({
-    title: "Firebase Initialization Error",
-    description: "Could not connect to Firebase. Please check your configuration and console for details.",
-    variant: "destructive",
-  });
+// Validate essential Firebase config values
+if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+  firebaseInitializationError = "Firebase API Key is missing or is a placeholder. Please set the NEXT_PUBLIC_FIREBASE_API_KEY environment variable correctly.";
+} else if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
+  firebaseInitializationError = "Firebase Project ID is missing or is a placeholder. Please set the NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable correctly.";
+}
+
+if (!firebaseInitializationError) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+  } catch (error: any) {
+    console.error("Error initializing Firebase SDK:", error);
+    firebaseInitializationError = `Firebase SDK Initialization Error: ${error.message || "Could not initialize Firebase."}. Ensure your Firebase project is set up correctly and environment variables are accessible.`;
+  }
+} else {
+  // Log the pre-initialization config error
+  console.error("Firebase Configuration Error:", firebaseInitializationError);
 }
 
 
@@ -122,27 +130,61 @@ export default function SettleEaseApp() {
 
   // Authentication
   useEffect(() => {
-    if (!auth) return;
+    if (firebaseInitializationError) {
+      toast({
+        title: "Firebase Configuration Error",
+        description: firebaseInitializationError,
+        variant: "destructive",
+        duration: 15000, // Keep message visible for a while
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    if (!auth) {
+      // This case implies an issue even if pre-checks passed, e.g. SDK internal error
+      toast({
+        title: "Firebase Error",
+        description: "Firebase Authentication service is not available. Please check console logs.",
+        variant: "destructive",
+        duration: 15000,
+      });
+      setIsLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setCurrentUser(user);
-        await addDefaultPeople(); // Add default people if collection is empty
+        // db should be available if auth is, due to initialization logic
+        if (db) await addDefaultPeople();
       } else {
         try {
           await signInAnonymously(auth);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error signing in anonymously:", error);
-          toast({ title: "Authentication Error", description: "Could not sign in.", variant: "destructive" });
+          let description = "Could not sign in anonymously. Check Firebase console.";
+          if (error.code === 'auth/operation-not-allowed') {
+            description = "Anonymous sign-in is not enabled in your Firebase project. Please enable it in the Firebase console (Authentication > Sign-in method).";
+          } else if (error.code === 'auth/api-key-not-valid') {
+            description = "Firebase API key is invalid. This should have been caught earlier. Please verify NEXT_PUBLIC_FIREBASE_API_KEY.";
+          }
+          toast({ title: "Authentication Error", description, variant: "destructive" });
         }
       }
       setIsLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, []); // Dependencies are stable after initial module load
 
   // Firestore Listeners
   useEffect(() => {
-    if (!currentUser || !db) return;
+    if (firebaseInitializationError || !currentUser || !db) {
+        // If there was an init error, or no user, or db is not available, don't set up listeners.
+        // isLoading should be false if firebaseInitializationError is set from the auth effect.
+        // If !currentUser or !db, it's normal not to fetch, so no special loading handling here.
+        return;
+    }
 
     const peopleQuery = query(collection(db, PEOPLE_COLLECTION_PATH), orderBy("name", "asc"));
     const expensesQuery = query(collection(db, EXPENSES_COLLECTION_PATH), orderBy("createdAt", "desc"));
@@ -167,10 +209,10 @@ export default function SettleEaseApp() {
       unsubscribePeople();
       unsubscribeExpenses();
     };
-  }, [currentUser]);
+  }, [currentUser]); // firebaseInitializationError and db are stable after init.
 
   const addDefaultPeople = async () => {
-    if (!db) return;
+    if (!db) return; // db check already here, good.
     const peopleCollectionRef = collection(db, PEOPLE_COLLECTION_PATH);
     const q = query(peopleCollectionRef, limit(1));
     const snapshot = await getDocs(q);
@@ -199,14 +241,39 @@ export default function SettleEaseApp() {
   }, [people]);
 
 
-  if (isLoading || !currentUser) {
+  if (isLoading) { // Show loading only if we haven't hit an error or completed auth.
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
           <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
           <p className="text-xl font-semibold">Loading SettleEase...</p>
           <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
+          {firebaseInitializationError && ( // Also show error here if still loading for some reason
+            <p className="mt-4 text-sm text-destructive p-2 bg-destructive/10 rounded-md max-w-md text-center">
+              Configuration Issue: {firebaseInitializationError}
+            </p>
+          )}
         </div>
+      </div>
+    );
+  }
+
+  // If firebase failed to initialize and not loading, show a clear message.
+  if (firebaseInitializationError && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
+        <Card className="w-full max-w-md shadow-xl">
+          <CardHeader>
+            <CardTitle className="text-2xl text-destructive flex items-center">
+              <AlertTriangle className="mr-2 h-6 w-6" /> Configuration Error
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-destructive-foreground">SettleEase could not start due to a Firebase configuration problem.</p>
+            <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{firebaseInitializationError}</p>
+            <p className="mt-4 text-xs">Please ensure your Firebase environment variables (e.g., <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>, <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code>) are correctly set in your project and are not using placeholder values.</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -273,7 +340,12 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [newPersonName, setNewPersonName] = useState('');
 
   const handleAddPerson = async () => {
-    if (!newPersonName.trim() || !db) return;
+    if (!newPersonName.trim() || !db || firebaseInitializationError) {
+        if (firebaseInitializationError){
+             toast({ title: "Error", description: "Cannot add person due to Firebase configuration issue.", variant: "destructive" });
+        }
+        return;
+    }
     try {
       await addDoc(collection(db, PEOPLE_COLLECTION_PATH), {
         name: newPersonName.trim(),
@@ -353,7 +425,12 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   };
 
   const handleSubmitExpense = async () => {
-    if (!isFormValid || !db) return;
+    if (!isFormValid || !db || firebaseInitializationError) {
+        if (firebaseInitializationError){
+             toast({ title: "Error", description: "Cannot add expense due to Firebase configuration issue.", variant: "destructive" });
+        }
+        return;
+    }
 
     let shares: { personId: string, amount: number }[] = [];
 
@@ -420,7 +497,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
                 placeholder="Enter person's name"
                 className="flex-grow"
               />
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim()}>
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!firebaseInitializationError}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add
               </Button>
             </div>
@@ -605,7 +682,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
 
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmitExpense} disabled={!isFormValid} className="w-full text-lg py-3">
+          <Button onClick={handleSubmitExpense} disabled={!isFormValid || !!firebaseInitializationError} className="w-full text-lg py-3">
             Add Expense
           </Button>
         </CardFooter>
@@ -683,6 +760,26 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
+  if (firebaseInitializationError && people.length === 0 && expenses.length === 0) {
+    // This message is handled by the main SettleEaseApp component if firebaseInitializationError is set.
+    // So, this specific block in DashboardTab might not be strictly necessary if the parent handles it.
+    // However, keeping a fallback or context-specific message can be useful.
+    return (
+      <Card className="text-center py-12 shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-semibold text-destructive flex items-center justify-center">
+             <AlertTriangle className="mr-2 h-8 w-8" />Firebase Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-lg text-muted-foreground">Cannot display dashboard due to Firebase configuration issues.</p>
+          <p className="text-sm p-2 bg-destructive/10 rounded-md">{firebaseInitializationError}</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+
   if (people.length === 0 && expenses.length === 0) {
      return (
       <Card className="text-center py-12 shadow-lg">
@@ -693,6 +790,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           <FileText className="mx-auto h-16 w-16 text-primary/70" />
           <p className="text-lg text-muted-foreground">No expenses recorded yet.</p>
           <p>Go to the "Add Expense" tab to start managing your group finances.</p>
+           {currentUser ? null : <p className="text-sm text-amber-600 mt-2">Note: You are currently not signed in. Data might be limited or temporary.</p>}
         </CardContent>
       </Card>
     );
