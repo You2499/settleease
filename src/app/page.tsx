@@ -19,11 +19,8 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Supabase Configuration ---
-// IMPORTANT: Hardcoding credentials here is for TEMPORARY DEVELOPMENT EASE ONLY.
-// For production, you MUST use environment variables (e.g., .env.local file)
-// and ensure they are correctly set in your deployment environment.
-const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co"; // process.env.NEXT_PUBLIC_SUPABASE_URL; // Development override
-const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og"; // process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; // Development override
+const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co"; 
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og"; 
 
 let db: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
@@ -66,29 +63,32 @@ const formatCurrency = (amount: number): string => {
 };
 
 interface Person {
-  id: string; // UUID
+  id: string; 
   name: string;
-  created_at?: string; // ISO 8601 string
+  created_at?: string; 
 }
 
 interface Expense {
-  id: string; // UUID
+  id: string; 
   description: string;
   total_amount: number; 
   category: string;
-  paid_by: string; // personId (UUID)
+  paid_by: string; 
   split_method: 'equal' | 'unequal' | 'itemwise';
-  shares: { personId: string, amount: number }[]; // JSONB
-  items?: { name: string, price: number, sharedBy: string[] }[]; // JSONB: personIds (UUIDs)
-  created_at: string; // ISO 8601 string
+  shares: { personId: string, amount: number }[]; 
+  items?: { name: string, price: number, sharedBy: string[] }[]; 
+  created_at: string; 
 }
 
 interface Item {
-  id: string; // for React key
+  id: string; 
   name: string;
   price: number;
-  sharedBy: string[]; // personIds (UUIDs)
+  sharedBy: string[]; 
 }
+
+// Module-scoped flag to ensure default people setup logic runs effectively once.
+let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
 // --- Main Application Component ---
 export default function SettleEaseApp() {
@@ -97,6 +97,45 @@ export default function SettleEaseApp() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'addExpense'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
+
+  const addDefaultPeople = useCallback(async () => {
+    if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
+      return;
+    }
+    
+    initialDefaultPeopleSetupAttemptedOrCompleted = true; 
+
+    try {
+      const { count, error: countError } = await db.from(PEOPLE_TABLE).select('id', { count: 'exact', head: true });
+
+      if (countError) {
+        console.error("Error checking for existing people:", countError);
+        toast({ title: "Setup Error", description: `Could not check for existing people: ${countError.message}`, variant: "destructive" });
+        initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry if check fails
+        return;
+      }
+
+      if (count === 0) {
+        const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
+        const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
+        
+        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert);
+        
+        if (insertError) {
+          console.error("Error adding default people to DB:", insertError);
+          toast({ title: "Setup Error", description: `Could not add default people: ${insertError.message}`, variant: "destructive" });
+          initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry if insert fails
+        } else {
+          toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error in addDefaultPeople:", error);
+      toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
+      initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry on unexpected error
+    }
+  }, [db]);
+
 
   useEffect(() => {
     if (supabaseInitializationError) {
@@ -121,38 +160,42 @@ export default function SettleEaseApp() {
       return;
     }
     
-    const { data: authListener } = db.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
-      const user = session?.user ?? null;
-      setCurrentUser(user);
-      if (user && db) { 
-        await addDefaultPeople();
-      } else if (_event === 'INITIAL_SESSION' && !user && db) { // Handle initial load for anonymous-like access
-        await addDefaultPeople();
+    let isMounted = true;
+    let authStateProcessed = false;
+
+    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
+      if (!isMounted) return;
+
+      setCurrentUser(session?.user ?? null);
+      await addDefaultPeople();
+      
+      if (!authStateProcessed) {
+        setIsLoading(false);
+        authStateProcessed = true;
       }
-      // setIsLoading(false); // Moved to after initial session check
     });
     
-    const getInitialSession = async () => {
-        setIsLoading(true); // Set loading true before async operation
-        try {
-            const { data: { session } } = await db!.auth.getSession();
-            const user = session?.user ?? null;
-            setCurrentUser(user);
-            if (db) await addDefaultPeople(); 
-        } catch (error) {
-            console.error("Error getting initial session:", error);
-            toast({ title: "Session Error", description: "Could not retrieve initial session.", variant: "destructive" });
-        } finally {
+    const initializeAppData = async () => {
+      setIsLoading(true);
+      await db!.auth.getSession(); // Ensures onAuthStateChange listener fires with INITIAL_SESSION
+      // Fallback for isLoading, though onAuthStateChange should handle it.
+      if (isMounted && !authStateProcessed) {
+        setTimeout(() => {
+          if (isMounted && !authStateProcessed) {
             setIsLoading(false);
-        }
+            authStateProcessed = true;
+          }
+        }, 1000);
+      }
     };
 
-    getInitialSession();
+    initializeAppData();
 
     return () => {
+      isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [db, supabaseInitializationError, addDefaultPeople]);
 
 
   useEffect(() => {
@@ -160,8 +203,12 @@ export default function SettleEaseApp() {
       return;
     }
 
+    let isMounted = true;
+
     const fetchInitialData = async () => {
+      if (!isMounted) return;
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
+      if (!isMounted) return;
       if (peopleError) {
         console.error("Error fetching people:", peopleError);
         toast({ title: "Data Error", description: `Could not fetch people: ${peopleError.message}`, variant: "destructive" });
@@ -170,6 +217,7 @@ export default function SettleEaseApp() {
       }
 
       const { data: expensesData, error: expensesError } = await db.from(EXPENSES_TABLE).select('*').order('created_at', { ascending: false });
+      if (!isMounted) return;
       if (expensesError) {
         console.error("Error fetching expenses:", expensesError);
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
@@ -182,7 +230,6 @@ export default function SettleEaseApp() {
 
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, (payload) => {
-        console.log('People change received!', payload);
         fetchInitialData(); 
       })
       .subscribe((status, err) => {
@@ -195,7 +242,6 @@ export default function SettleEaseApp() {
 
     const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, (payload) => {
-        console.log('Expenses change received!', payload);
         fetchInitialData(); 
       })
       .subscribe((status, err) => {
@@ -207,34 +253,11 @@ export default function SettleEaseApp() {
       });
 
     return () => {
+      isMounted = false;
       db.removeChannel(peopleChannel);
       db.removeChannel(expensesChannel);
     };
-  }, [db]); 
-
-  const addDefaultPeople = async () => {
-    if (!db) return;
-    const { count, error: countError } = await db.from(PEOPLE_TABLE).select('id', { count: 'exact', head: true });
-
-    if (countError) {
-        console.error("Error checking for existing people:", countError);
-        return;
-    }
-
-    if (count === 0) {
-      const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
-      const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
-      const { error } = await db.from(PEOPLE_TABLE).insert(peopleToInsert);
-      if (error) {
-        console.error("Error adding default people:", error);
-        toast({ title: "Setup Error", description: `Could not add default people: ${error.message}`, variant: "destructive" });
-      } else {
-        toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-        const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
-        if (!peopleError && peopleData) setPeople(peopleData as Person[]);
-      }
-    }
-  };
+  }, [db, supabaseInitializationError]); 
   
   const peopleMap = useMemo(() => {
     return people.reduce((acc, person) => {
@@ -346,10 +369,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
       
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added to the group.` });
       setNewPersonName('');
-      if (data && data.length > 0) {
-        setPeople(prevPeople => [...prevPeople, data[0] as Person].sort((a,b) => a.name.localeCompare(b.name)));
-      }
-
+      // Data fetching useEffect will update people list
     } catch (error: any) {
       console.error("Error adding person:", error);
       toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" });
@@ -754,9 +774,6 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
-  // The parent SettleEaseApp component handles Supabase initialization errors.
-  // If there's an error, DashboardTab won't be rendered.
-  // Thus, the check for supabaseInitializationError is removed from here.
 
   if (people.length === 0 && expenses.length === 0) { 
      return (
@@ -893,8 +910,3 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     </div>
   );
 }
-
-
-    
-
-    
