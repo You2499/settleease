@@ -355,7 +355,7 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
     const { isMobile } = useSidebar(); 
     return (
         <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
-            <SidebarHeader className="items-center p-3 border-b border-sidebar-border">
+            <SidebarHeader className="items-center p-4 border-b border-sidebar-border">
                  <div className="flex items-center gap-2">
                     <svg className="h-8 w-8 fill-primary" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z"/></svg>
                     <h2 className="text-xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
@@ -895,7 +895,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[350px] pr-2"> 
+            <div className="max-h-[350px] overflow-y-auto pr-2"> 
             <ul className="space-y-2.5">
               {expenses.map(expense => {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
@@ -929,7 +929,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                   </li>
                 )})}
             </ul>
-            </ScrollArea>
+            </div>
           ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
         </CardContent>
       </Card>
@@ -982,8 +982,8 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-grow min-h-0 overflow-y-auto">
-          <div className="space-y-4 py-4 pr-4">
+        <div className="flex-grow min-h-0 overflow-y-auto pr-4">
+          <div className="space-y-4 py-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
