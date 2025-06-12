@@ -2,25 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { initializeApp, type FirebaseApp } from "firebase/app";
-import { getAuth, signInAnonymously, onAuthStateChanged, type Auth, type User } from "firebase/auth";
-import {
-  getFirestore,
-  collection,
-  doc,
-  addDoc,
-  onSnapshot,
-  query,
-  orderBy,
-  Timestamp,
-  getDocs,
-  writeBatch,
-  serverTimestamp,
-  limit,
-  type Firestore,
-  type DocumentData,
-  type Unsubscribe,
-} from "firebase/firestore";
+import { createClient, type SupabaseClient, type User as SupabaseUser, type Session, type AuthChangeEvent } from '@supabase/supabase-js';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
@@ -36,48 +18,34 @@ import { toast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+// --- Supabase Configuration ---
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-// --- Firebase Configuration ---
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-};
+let db: SupabaseClient | undefined;
+let supabaseInitializationError: string | null = null;
 
-let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
-let db: Firestore | undefined;
-let firebaseInitializationError: string | null = null;
-
-// Validate essential Firebase config values
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
-  firebaseInitializationError = "Firebase API Key is missing or is a placeholder. Please set the NEXT_PUBLIC_FIREBASE_API_KEY environment variable correctly.";
-} else if (!firebaseConfig.projectId || firebaseConfig.projectId === "YOUR_PROJECT_ID") {
-  firebaseInitializationError = "Firebase Project ID is missing or is a placeholder. Please set the NEXT_PUBLIC_FIREBASE_PROJECT_ID environment variable correctly.";
+if (!supabaseUrl || supabaseUrl === "YOUR_SUPABASE_URL") {
+  supabaseInitializationError = "Supabase URL is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_URL environment variable correctly.";
+} else if (!supabaseAnonKey || supabaseAnonKey === "YOUR_SUPABASE_ANON_KEY") {
+  supabaseInitializationError = "Supabase Anon Key is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable correctly.";
 }
 
-if (!firebaseInitializationError) {
+if (!supabaseInitializationError && supabaseUrl && supabaseAnonKey) {
   try {
-    app = initializeApp(firebaseConfig);
-    auth = getAuth(app);
-    db = getFirestore(app);
+    db = createClient(supabaseUrl, supabaseAnonKey);
   } catch (error: any) {
-    console.error("Error initializing Firebase SDK:", error);
-    firebaseInitializationError = `Firebase SDK Initialization Error: ${error.message || "Could not initialize Firebase."}. Ensure your Firebase project is set up correctly and environment variables are accessible.`;
+    console.error("Error initializing Supabase client:", error);
+    supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase project URL and Anon Key are correct.`;
   }
 } else {
-  // Log the pre-initialization config error
-  console.error("Firebase Configuration Error:", firebaseInitializationError);
+  // Log the pre-initialization config error if not already logged by client creation try-catch
+  if (supabaseInitializationError) console.error("Supabase Configuration Error:", supabaseInitializationError);
 }
 
-
 // --- Constants ---
-const APP_ID = "SettleEaseApp"; // Used in collection paths
-const PEOPLE_COLLECTION_PATH = `artifacts/${APP_ID}/public/data/people`;
-const EXPENSES_COLLECTION_PATH = `artifacts/${APP_ID}/public/data/expenses`;
+const PEOPLE_TABLE = 'people';
+const EXPENSES_TABLE = 'expenses';
 
 const CATEGORIES = [
   { name: 'Food', icon: Utensils },
@@ -96,33 +64,33 @@ const formatCurrency = (amount: number): string => {
 };
 
 interface Person {
-  id: string;
+  id: string; // UUID
   name: string;
-  createdAt?: Timestamp;
+  created_at?: string; // ISO 8601 string
 }
 
 interface Expense {
-  id: string;
+  id: string; // UUID
   description: string;
-  totalAmount: number;
+  total_amount: number; // Column name typically snake_case in Supabase
   category: string;
-  paidBy: string; // personId
-  splitMethod: 'equal' | 'unequal' | 'itemwise';
-  shares: { personId: string, amount: number }[];
-  items?: { name: string, price: number, sharedBy: string[] }[]; // personIds
-  createdAt: Timestamp;
+  paid_by: string; // personId (UUID)
+  split_method: 'equal' | 'unequal' | 'itemwise';
+  shares: { personId: string, amount: number }[]; // JSONB
+  items?: { name: string, price: number, sharedBy: string[] }[]; // JSONB: personIds (UUIDs)
+  created_at: string; // ISO 8601 string
 }
 
 interface Item {
   id: string; // for React key
   name: string;
   price: number;
-  sharedBy: string[]; // personIds
+  sharedBy: string[]; // personIds (UUIDs)
 }
 
 // --- Main Application Component ---
 export default function SettleEaseApp() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'addExpense'>('dashboard');
@@ -130,22 +98,10 @@ export default function SettleEaseApp() {
 
   // Authentication
   useEffect(() => {
-    if (firebaseInitializationError) {
+    if (supabaseInitializationError) {
       toast({
-        title: "Firebase Configuration Error",
-        description: firebaseInitializationError,
-        variant: "destructive",
-        duration: 15000, // Keep message visible for a while
-      });
-      setIsLoading(false);
-      return;
-    }
-
-    if (!auth) {
-      // This case implies an issue even if pre-checks passed, e.g. SDK internal error
-      toast({
-        title: "Firebase Error",
-        description: "Firebase Authentication service is not available. Please check console logs.",
+        title: "Supabase Configuration Error",
+        description: supabaseInitializationError,
         variant: "destructive",
         duration: 15000,
       });
@@ -153,82 +109,134 @@ export default function SettleEaseApp() {
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setCurrentUser(user);
-        // db should be available if auth is, due to initialization logic
-        if (db) await addDefaultPeople();
-      } else {
-        try {
-          await signInAnonymously(auth);
-        } catch (error: any) {
-          console.error("Error signing in anonymously:", error);
-          let description = "Could not sign in anonymously. Check Firebase console.";
-          if (error.code === 'auth/operation-not-allowed') {
-            description = "Anonymous sign-in is not enabled in your Firebase project. Please enable it in the Firebase console (Authentication > Sign-in method).";
-          } else if (error.code === 'auth/api-key-not-valid') {
-            description = "Firebase API key is invalid. This should have been caught earlier. Please verify NEXT_PUBLIC_FIREBASE_API_KEY.";
-          }
-          toast({ title: "Authentication Error", description, variant: "destructive" });
-        }
+    if (!db) {
+      toast({
+        title: "Supabase Error",
+        description: "Supabase client is not available. Please check console logs.",
+        variant: "destructive",
+        duration: 15000,
+      });
+      setIsLoading(false);
+      return;
+    }
+    
+    const { data: authListener } = db.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
+      const user = session?.user ?? null;
+      setCurrentUser(user);
+      if (user && db) { // Or if event === 'INITIAL_SESSION' and no user, attempt anon sign-in if desired
+        // For this app, we proceed if there's a user or allow anonymous-like access.
+        // The original app added default people after anonymous sign-in.
+        // We'll do it if a user session is established or on initial load if configured for anon.
+        // For simplicity, let's call it if db is available.
+        await addDefaultPeople();
       }
       setIsLoading(false);
     });
-    return () => unsubscribe();
-  }, []); // Dependencies are stable after initial module load
+    
+    // Check initial session
+    const getInitialSession = async () => {
+        const { data: { session } } = await db!.auth.getSession();
+        const user = session?.user ?? null;
+        setCurrentUser(user);
+        if (db) await addDefaultPeople(); // Check for default people on initial load
+        setIsLoading(false);
+    };
 
-  // Firestore Listeners
+    if (authListener) { // if onAuthStateChange is set up
+        // getInitialSession(); // Call it to ensure initial state is correct.
+        // onAuthStateChange with event INITIAL_SESSION should handle this.
+    } else {
+        setIsLoading(false); // if listener setup failed
+    }
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, []);
+
+
+  // Data Fetching and Realtime Subscriptions
   useEffect(() => {
-    if (firebaseInitializationError || !currentUser || !db) {
-        // If there was an init error, or no user, or db is not available, don't set up listeners.
-        // isLoading should be false if firebaseInitializationError is set from the auth effect.
-        // If !currentUser or !db, it's normal not to fetch, so no special loading handling here.
+    if (supabaseInitializationError || !db) {
+      return;
+    }
+
+    // Fetch initial data
+    const fetchInitialData = async () => {
+      const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
+      if (peopleError) {
+        console.error("Error fetching people:", peopleError);
+        toast({ title: "Data Error", description: `Could not fetch people: ${peopleError.message}`, variant: "destructive" });
+      } else {
+        setPeople(peopleData as Person[]);
+      }
+
+      const { data: expensesData, error: expensesError } = await db.from(EXPENSES_TABLE).select('*').order('created_at', { ascending: false });
+      if (expensesError) {
+        console.error("Error fetching expenses:", expensesError);
+        toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
+      } else {
+        setExpenses(expensesData as Expense[]);
+      }
+    };
+
+    fetchInitialData();
+
+    // Realtime subscriptions
+    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, (payload) => {
+        console.log('People change received!', payload);
+        fetchInitialData(); // Simple refetch, can be optimized
+      })
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`Subscription error for ${PEOPLE_TABLE}:`, err);
+            toast({ title: "Realtime Error", description: `Connection issue with ${PEOPLE_TABLE} updates. Data may not be live.`, variant: "destructive", duration: 7000});
+        }
+      });
+
+    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, (payload) => {
+        console.log('Expenses change received!', payload);
+        fetchInitialData(); // Simple refetch
+      })
+      .subscribe((status, err) => {
+         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
+         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.error(`Subscription error for ${EXPENSES_TABLE}:`, err);
+            toast({ title: "Realtime Error", description: `Connection issue with ${EXPENSES_TABLE} updates. Data may not be live.`, variant: "destructive", duration: 7000});
+        }
+      });
+
+    return () => {
+      db.removeChannel(peopleChannel);
+      db.removeChannel(expensesChannel);
+    };
+  }, [db]); // currentUser removed as explicit RLS based on user is not set up here. Depends on db init.
+
+  const addDefaultPeople = async () => {
+    if (!db) return;
+    const { count, error: countError } = await db.from(PEOPLE_TABLE).select('id', { count: 'exact', head: true });
+
+    if (countError) {
+        console.error("Error checking for existing people:", countError);
+        // Don't toast here as it might be too early or spammy
         return;
     }
 
-    const peopleQuery = query(collection(db, PEOPLE_COLLECTION_PATH), orderBy("name", "asc"));
-    const expensesQuery = query(collection(db, EXPENSES_COLLECTION_PATH), orderBy("createdAt", "desc"));
-
-    const unsubscribePeople = onSnapshot(peopleQuery, (snapshot) => {
-      const peopleData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Person));
-      setPeople(peopleData);
-    }, (error) => {
-      console.error("Error fetching people:", error);
-      toast({ title: "Data Error", description: "Could not fetch people data.", variant: "destructive" });
-    });
-
-    const unsubscribeExpenses = onSnapshot(expensesQuery, (snapshot) => {
-      const expensesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Expense));
-      setExpenses(expensesData);
-    }, (error) => {
-      console.error("Error fetching expenses:", error);
-      toast({ title: "Data Error", description: "Could not fetch expenses data.", variant: "destructive" });
-    });
-
-    return () => {
-      unsubscribePeople();
-      unsubscribeExpenses();
-    };
-  }, [currentUser]); // firebaseInitializationError and db are stable after init.
-
-  const addDefaultPeople = async () => {
-    if (!db) return; // db check already here, good.
-    const peopleCollectionRef = collection(db, PEOPLE_COLLECTION_PATH);
-    const q = query(peopleCollectionRef, limit(1));
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) {
+    if (count === 0) {
       const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
-      const batch = writeBatch(db);
-      defaultPeopleNames.forEach(name => {
-        const newPersonRef = doc(peopleCollectionRef);
-        batch.set(newPersonRef, { name, createdAt: serverTimestamp() });
-      });
-      try {
-        await batch.commit();
-        toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-      } catch (error) {
+      const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
+      const { error } = await db.from(PEOPLE_TABLE).insert(peopleToInsert);
+      if (error) {
         console.error("Error adding default people:", error);
-        toast({ title: "Setup Error", description: "Could not add default people.", variant: "destructive" });
+        toast({ title: "Setup Error", description: `Could not add default people: ${error.message}`, variant: "destructive" });
+      } else {
+        toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
+        // Refetch people after adding defaults
+        const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
+        if (!peopleError && peopleData) setPeople(peopleData as Person[]);
       }
     }
   };
@@ -241,16 +249,16 @@ export default function SettleEaseApp() {
   }, [people]);
 
 
-  if (isLoading) { // Show loading only if we haven't hit an error or completed auth.
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
           <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
           <p className="text-xl font-semibold">Loading SettleEase...</p>
           <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
-          {firebaseInitializationError && ( // Also show error here if still loading for some reason
+          {supabaseInitializationError && (
             <p className="mt-4 text-sm text-destructive p-2 bg-destructive/10 rounded-md max-w-md text-center">
-              Configuration Issue: {firebaseInitializationError}
+              Configuration Issue: {supabaseInitializationError}
             </p>
           )}
         </div>
@@ -258,8 +266,7 @@ export default function SettleEaseApp() {
     );
   }
 
-  // If firebase failed to initialize and not loading, show a clear message.
-  if (firebaseInitializationError && !isLoading) {
+  if (supabaseInitializationError && !isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -269,9 +276,9 @@ export default function SettleEaseApp() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-destructive-foreground">SettleEase could not start due to a Firebase configuration problem.</p>
-            <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{firebaseInitializationError}</p>
-            <p className="mt-4 text-xs">Please ensure your Firebase environment variables (e.g., <code>NEXT_PUBLIC_FIREBASE_API_KEY</code>, <code>NEXT_PUBLIC_FIREBASE_PROJECT_ID</code>) are correctly set in your project and are not using placeholder values.</p>
+            <p className="text-destructive-foreground">SettleEase could not start due to a Supabase configuration problem.</p>
+            <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{supabaseInitializationError}</p>
+            <p className="mt-4 text-xs">Please ensure your Supabase environment variables (e.g., <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are correctly set in your project and are not using placeholder values.</p>
           </CardContent>
         </Card>
       </div>
@@ -287,7 +294,6 @@ export default function SettleEaseApp() {
       </header>
 
       <div className="max-w-5xl mx-auto">
-        {/* Tabs */}
         <div className="mb-6 flex justify-center border-b border-border">
           <Button
             variant="ghost"
@@ -305,62 +311,61 @@ export default function SettleEaseApp() {
           </Button>
         </div>
 
-        {/* Tab Content */}
         {activeTab === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
-        {activeTab === 'addExpense' && <AddExpenseTab people={people} />}
+        {activeTab === 'addExpense' && <AddExpenseTab people={people} setPeople={setPeople}/>}
       </div>
       <footer className="text-center mt-12 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved.</p>
+        <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Ensure Supabase table replication is ON for realtime.</p>
       </footer>
     </div>
   );
 }
 
-// --- AddExpenseTab Component ---
 interface AddExpenseTabProps {
   people: Person[];
+  setPeople: React.Dispatch<React.SetStateAction<Person[]>>; // To refresh people list after adding
 }
 
-function AddExpenseTab({ people }: AddExpenseTabProps) {
+function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState<number | ''>('');
   const [category, setCategory] = useState('');
-  const [paidBy, setPaidBy] = useState(''); // personId
+  const [paidBy, setPaidBy] = useState('');
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal' | 'itemwise'>('equal');
   
-  // Equal split state
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
-
-  // Unequal split state
   const [unequalShares, setUnequalShares] = useState<Record<string, number | ''>>({});
-  
-  // Item-wise split state
   const [items, setItems] = useState<Item[]>([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
-
   const [newPersonName, setNewPersonName] = useState('');
 
   const handleAddPerson = async () => {
-    if (!newPersonName.trim() || !db || firebaseInitializationError) {
-        if (firebaseInitializationError){
-             toast({ title: "Error", description: "Cannot add person due to Firebase configuration issue.", variant: "destructive" });
+    if (!newPersonName.trim() || !db || supabaseInitializationError) {
+        if (supabaseInitializationError){
+             toast({ title: "Error", description: "Cannot add person due to Supabase configuration issue.", variant: "destructive" });
         }
         return;
     }
     try {
-      await addDoc(collection(db, PEOPLE_COLLECTION_PATH), {
-        name: newPersonName.trim(),
-        createdAt: serverTimestamp()
-      });
+      const { data, error } = await db.from(PEOPLE_TABLE).insert([{ name: newPersonName.trim(), created_at: new Date().toISOString() }]).select();
+      if (error) throw error;
+      
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added to the group.` });
       setNewPersonName('');
-    } catch (error) {
+      // Manually update people list or rely on realtime (if it's fast enough for UX)
+      // For immediate feedback:
+      if (data && data.length > 0) {
+        // @ts-ignore TODO: Fix type for data from insert
+        setPeople(prevPeople => [...prevPeople, data[0] as Person].sort((a,b) => a.name.localeCompare(b.name)));
+      }
+
+    } catch (error: any) {
       console.error("Error adding person:", error);
-      toast({ title: "Error", description: "Could not add person.", variant: "destructive" });
+      toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" });
     }
   };
   
   const isFormValid = useMemo(() => {
-    if (!description.trim() || !totalAmount || totalAmount <= 0 || !category || !paidBy) return false;
+    if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category || !paidBy) return false;
 
     if (splitMethod === 'equal') {
       return selectedPeopleEqual.length > 0;
@@ -397,7 +402,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
     setItems(items.filter(item => item.id !== itemId));
   };
 
-  const handleItemChange = (itemId: string, field: keyof Item, value: any) => {
+  const handleItemChange = (itemId: string, field: keyof Omit<Item, 'id'>, value: any) => {
     setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   };
 
@@ -421,24 +426,25 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
     setSelectedPeopleEqual([]);
     setUnequalShares({});
     setItems([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
-    // setSplitMethod('equal'); // Optionally reset split method
   };
 
   const handleSubmitExpense = async () => {
-    if (!isFormValid || !db || firebaseInitializationError) {
-        if (firebaseInitializationError){
-             toast({ title: "Error", description: "Cannot add expense due to Firebase configuration issue.", variant: "destructive" });
+    if (!isFormValid || !db || supabaseInitializationError) {
+        if (supabaseInitializationError){
+             toast({ title: "Error", description: "Cannot add expense due to Supabase configuration issue.", variant: "destructive" });
+        } else if (!isFormValid) {
+            toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
         }
         return;
     }
 
-    let shares: { personId: string, amount: number }[] = [];
+    let sharesData: { personId: string, amount: number }[] = [];
 
     if (splitMethod === 'equal') {
       const amountPerPerson = Number(totalAmount) / selectedPeopleEqual.length;
-      shares = selectedPeopleEqual.map(personId => ({ personId, amount: amountPerPerson }));
+      sharesData = selectedPeopleEqual.map(personId => ({ personId, amount: amountPerPerson }));
     } else if (splitMethod === 'unequal') {
-      shares = Object.entries(unequalShares)
+      sharesData = Object.entries(unequalShares)
         .filter(([_, amount]) => Number(amount) > 0)
         .map(([personId, amount]) => ({ personId, amount: Number(amount) }));
     } else if (splitMethod === 'itemwise') {
@@ -451,29 +457,28 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
           });
         }
       });
-      shares = Object.entries(personOwes).map(([personId, amount]) => ({ personId, amount }));
+      sharesData = Object.entries(personOwes).map(([personId, amount]) => ({ personId, amount }));
     }
 
-    const expenseData: Omit<Expense, 'id' | 'createdAt'> = {
+    const expenseToInsert = {
       description,
-      totalAmount: Number(totalAmount),
+      total_amount: Number(totalAmount), // Ensure snake_case for Supabase column
       category,
-      paidBy,
-      splitMethod,
-      shares,
-      createdAt: serverTimestamp() as Timestamp, // Cast for type consistency pre-server
+      paid_by: paidBy,
+      split_method: splitMethod,
+      shares: sharesData,
+      items: splitMethod === 'itemwise' ? items.map(item => ({ ...item, price: Number(item.price) })) : undefined,
+      created_at: new Date().toISOString(),
     };
-    if (splitMethod === 'itemwise') {
-      expenseData.items = items.map(item => ({ ...item, price: Number(item.price) }));
-    }
     
     try {
-      await addDoc(collection(db, EXPENSES_COLLECTION_PATH), expenseData);
+      const { error } = await db.from(EXPENSES_TABLE).insert([expenseToInsert]);
+      if (error) throw error;
       toast({ title: "Expense Added!", description: `${description} has been successfully recorded.` });
       resetForm();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error adding expense:", error);
-      toast({ title: "Error", description: "Could not add expense.", variant: "destructive" });
+      toast({ title: "Error", description: `Could not add expense: ${error.message}`, variant: "destructive" });
     }
   };
   
@@ -497,7 +502,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
                 placeholder="Enter person's name"
                 className="flex-grow"
               />
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!firebaseInitializationError}>
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!supabaseInitializationError}>
                 <PlusCircle className="mr-2 h-4 w-4" /> Add
               </Button>
             </div>
@@ -525,7 +530,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
           <CardDescription>Fill in the details of the expense and how it was split.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Basic Fields */}
           <div>
             <Label htmlFor="description">Description</Label>
             <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Dinner with friends" className="mt-1" />
@@ -568,7 +572,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
             </Select>
           </div>
 
-          {/* Split Method Selector */}
           <div>
             <Label>Split Method</Label>
             <div className="grid grid-cols-3 gap-2 mt-1">
@@ -578,8 +581,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
             </div>
           </div>
 
-          {/* Dynamic Split UI */}
-          {totalAmount > 0 && people.length > 0 && (
+          {Number(totalAmount) > 0 && people.length > 0 && (
             <>
             {splitMethod === 'equal' && (
               <div className="space-y-2 p-4 border rounded-md bg-secondary/20">
@@ -682,7 +684,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
 
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmitExpense} disabled={!isFormValid || !!firebaseInitializationError} className="w-full text-lg py-3">
+          <Button onClick={handleSubmitExpense} disabled={!isFormValid || !!supabaseInitializationError} className="w-full text-lg py-3">
             Add Expense
           </Button>
         </CardFooter>
@@ -691,7 +693,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   );
 }
 
-// --- DashboardTab Component ---
 interface DashboardTabProps {
   expenses: Expense[];
   people: Person[];
@@ -706,7 +707,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     people.forEach(p => balances[p.id] = 0);
 
     expenses.forEach(expense => {
-      balances[expense.paidBy] = (balances[expense.paidBy] || 0) + expense.totalAmount;
+      balances[expense.paid_by] = (balances[expense.paid_by] || 0) + expense.total_amount;
       expense.shares.forEach(share => {
         balances[share.personId] = (balances[share.personId] || 0) - share.amount;
       });
@@ -715,8 +716,8 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal }));
     const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal }));
     
-    debtors.sort((a, b) => a.amount - b.amount); // Most negative first
-    creditors.sort((a, b) => b.amount - a.amount); // Most positive first
+    debtors.sort((a, b) => a.amount - b.amount);
+    creditors.sort((a, b) => b.amount - a.amount);
 
     const transactions: { from: string, to: string, amount: number }[] = [];
     let debtorIdx = 0;
@@ -727,7 +728,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
       const creditor = creditors[creditorIdx];
       const amountToSettle = Math.min(-debtor.amount, creditor.amount);
 
-      if (amountToSettle > 0.01) { // Avoid tiny transactions
+      if (amountToSettle > 0.01) {
           transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
           debtor.amount += amountToSettle;
           creditor.amount -= amountToSettle;
@@ -743,9 +744,9 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     const data: Record<string, number> = {};
     people.forEach(p => data[p.name] = 0);
     expenses.forEach(exp => {
-      const payerName = peopleMap[exp.paidBy];
+      const payerName = peopleMap[exp.paid_by];
       if (payerName) {
-        data[payerName] = (data[payerName] || 0) + exp.totalAmount;
+        data[payerName] = (data[payerName] || 0) + exp.total_amount;
       }
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
@@ -755,30 +756,26 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     const data: Record<string, number> = {};
     CATEGORIES.forEach(c => data[c.name] = 0);
     expenses.forEach(exp => {
-      data[exp.category] = (data[exp.category] || 0) + exp.totalAmount;
+      data[exp.category] = (data[exp.category] || 0) + exp.total_amount;
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
-  if (firebaseInitializationError && people.length === 0 && expenses.length === 0) {
-    // This message is handled by the main SettleEaseApp component if firebaseInitializationError is set.
-    // So, this specific block in DashboardTab might not be strictly necessary if the parent handles it.
-    // However, keeping a fallback or context-specific message can be useful.
+  if (supabaseInitializationError && people.length === 0 && expenses.length === 0) {
     return (
       <Card className="text-center py-12 shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-semibold text-destructive flex items-center justify-center">
-             <AlertTriangle className="mr-2 h-8 w-8" />Firebase Error
+             <AlertTriangle className="mr-2 h-8 w-8" />Supabase Error
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-lg text-muted-foreground">Cannot display dashboard due to Firebase configuration issues.</p>
-          <p className="text-sm p-2 bg-destructive/10 rounded-md">{firebaseInitializationError}</p>
+          <p className="text-lg text-muted-foreground">Cannot display dashboard due to Supabase configuration issues.</p>
+          <p className="text-sm p-2 bg-destructive/10 rounded-md">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );
   }
-
 
   if (people.length === 0 && expenses.length === 0) {
      return (
@@ -790,7 +787,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           <FileText className="mx-auto h-16 w-16 text-primary/70" />
           <p className="text-lg text-muted-foreground">No expenses recorded yet.</p>
           <p>Go to the "Add Expense" tab to start managing your group finances.</p>
-           {currentUser ? null : <p className="text-sm text-amber-600 mt-2">Note: You are currently not signed in. Data might be limited or temporary.</p>}
+          {/* User state check might need adjustment based on Supabase auth */}
         </CardContent>
       </Card>
     );
@@ -891,7 +888,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                       <CardHeader className="pb-2 pt-4 px-4">
                          <div className="flex justify-between items-start">
                             <CardTitle className="text-md font-semibold leading-tight">{expense.description}</CardTitle>
-                            <span className="text-lg font-bold text-primary">{formatCurrency(expense.totalAmount)}</span>
+                            <span className="text-lg font-bold text-primary">{formatCurrency(expense.total_amount)}</span>
                          </div>
                       </CardHeader>
                       <CardContent className="px-4 pb-3 text-xs text-muted-foreground space-y-1">
@@ -899,9 +896,9 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                             <div className="flex items-center">
                                <CategoryIcon className="mr-1.5 h-3.5 w-3.5" /> {expense.category}
                             </div>
-                            <span>Paid by: <span className="font-medium text-foreground">{peopleMap[expense.paidBy] || 'Unknown'}</span></span>
+                            <span>Paid by: <span className="font-medium text-foreground">{peopleMap[expense.paid_by] || 'Unknown'}</span></span>
                          </div>
-                         <p>Date: {expense.createdAt?.toDate().toLocaleDateString() || 'N/A'}</p>
+                         <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
                       </CardContent>
                     </Card>
                   </li>
@@ -916,4 +913,3 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     </div>
   );
 }
-
