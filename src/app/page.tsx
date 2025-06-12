@@ -2,11 +2,11 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { createClient, type SupabaseClient, type User as SupabaseUser, type Session, type AuthChangeEvent } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, CheckCircle2, XCircle, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,20 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarInset,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 
 
 // --- Supabase Configuration ---
@@ -99,27 +111,25 @@ interface Item {
   sharedBy: string[]; 
 }
 
-// Module-scoped flag to ensure default people setup logic runs effectively once.
 let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
-// --- Main Application Component ---
-export default function SettleEaseApp() {
+
+// --- Main Application Structure ---
+export default function SettleEasePage() {
+  const [activeView, setActiveView] = useState<'dashboard' | 'addExpense'>('dashboard');
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'addExpense'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
 
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       return;
     }
-    
     initialDefaultPeopleSetupAttemptedOrCompleted = true; 
 
     try {
       const { count, error: countError } = await db.from(PEOPLE_TABLE).select('id', { count: 'exact', head: true });
-
       if (countError) {
         console.error("Error checking for existing people:", countError);
         toast({ title: "Setup Error", description: `Could not check for existing people: ${countError.message}`, variant: "destructive" });
@@ -130,9 +140,7 @@ export default function SettleEaseApp() {
       if (count === 0) {
         const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
         const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
-        
-        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert);
-        
+        const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select();
         if (insertError) {
           console.error("Error adding default people:", insertError);
           toast({ title: "Setup Error", description: `Could not add default people: ${insertError.message}`, variant: "destructive" });
@@ -148,26 +156,14 @@ export default function SettleEaseApp() {
     }
   }, []);
 
-
   useEffect(() => {
     if (supabaseInitializationError) {
-      toast({
-        title: "Supabase Configuration Error",
-        description: supabaseInitializationError,
-        variant: "destructive",
-        duration: 15000,
-      });
+      toast({ title: "Supabase Configuration Error", description: supabaseInitializationError, variant: "destructive", duration: 15000 });
       setIsLoading(false);
       return;
     }
-
     if (!db) {
-      toast({
-        title: "Supabase Error",
-        description: "Supabase client is not available. Please check console logs.",
-        variant: "destructive",
-        duration: 15000,
-      });
+      toast({ title: "Supabase Error", description: "Supabase client is not available.", variant: "destructive", duration: 15000 });
       setIsLoading(false);
       return;
     }
@@ -177,106 +173,49 @@ export default function SettleEaseApp() {
 
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
-
       setCurrentUser(session?.user ?? null);
       await addDefaultPeople();
-      
-      if (!authStateProcessed) {
-        setIsLoading(false);
-        authStateProcessed = true;
-      }
+      if (!authStateProcessed) { setIsLoading(false); authStateProcessed = true; }
     });
     
     const initializeAppData = async () => {
       setIsLoading(true);
       await db!.auth.getSession(); 
       if (isMounted && !authStateProcessed) {
-        setTimeout(() => {
-          if (isMounted && !authStateProcessed) {
-            setIsLoading(false);
-            authStateProcessed = true;
-          }
-        }, 1000);
+        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1000);
       }
     };
-
     initializeAppData();
-
-    return () => {
-      isMounted = false;
-      authListener?.subscription.unsubscribe();
-    };
+    return () => { isMounted = false; authListener?.subscription.unsubscribe(); };
   }, [addDefaultPeople]);
 
-
   useEffect(() => {
-    if (supabaseInitializationError || !db) {
-      return;
-    }
-
+    if (supabaseInitializationError || !db) return;
     let isMounted = true;
-
     const fetchInitialData = async () => {
-      if (!isMounted) return;
+      if (!isMounted || !db) return;
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (!isMounted) return;
       if (peopleError) {
         console.error("Error fetching people:", peopleError);
         toast({ title: "Data Error", description: `Could not fetch people: ${peopleError.message}`, variant: "destructive" });
-      } else {
-        setPeople(peopleData as Person[]);
-      }
+      } else { setPeople(peopleData as Person[]); }
 
       const { data: expensesData, error: expensesError } = await db.from(EXPENSES_TABLE).select('*').order('created_at', { ascending: false });
       if (!isMounted) return;
       if (expensesError) {
         console.error("Error fetching expenses:", expensesError);
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
-      } else {
-        setExpenses(expensesData as Expense[]);
-      }
+      } else { setExpenses(expensesData as Expense[]); }
     };
 
     fetchInitialData();
-
-    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, (payload) => {
-        fetchInitialData(); 
-      })
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error(`Subscription error for ${PEOPLE_TABLE}:`, err);
-            toast({ title: "Realtime Error", description: `Connection issue with ${PEOPLE_TABLE} updates. Data may not be live.`, variant: "destructive", duration: 7000});
-        }
-      });
-
-    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, (payload) => {
-        fetchInitialData(); 
-      })
-      .subscribe((status, err) => {
-         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
-         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-            console.error(`Subscription error for ${EXPENSES_TABLE}:`, err);
-            toast({ title: "Realtime Error", description: `Connection issue with ${EXPENSES_TABLE} updates. Data may not be live.`, variant: "destructive", duration: 7000});
-        }
-      });
-
-    return () => {
-      isMounted = false;
-      db.removeChannel(peopleChannel);
-      db.removeChannel(expensesChannel);
-    };
+    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, () => fetchInitialData()).subscribe();
+    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, () => fetchInitialData()).subscribe();
+    return () => { isMounted = false; db.removeChannel(peopleChannel); db.removeChannel(expensesChannel); };
   }, []); 
   
-  const peopleMap = useMemo(() => {
-    return people.reduce((acc, person) => {
-      acc[person.id] = person.name;
-      return acc;
-    }, {} as Record<string, string>);
-  }, [people]);
-
+  const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   if (isLoading) {
     return (
@@ -285,11 +224,6 @@ export default function SettleEaseApp() {
           <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
           <p className="text-xl font-semibold">Loading SettleEase...</p>
           <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
-          {supabaseInitializationError && (
-            <p className="mt-4 text-sm text-destructive p-2 bg-destructive/10 rounded-md max-w-md text-center">
-              Configuration Issue: {supabaseInitializationError}
-            </p>
-          )}
         </div>
       </div>
     );
@@ -300,55 +234,92 @@ export default function SettleEaseApp() {
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader>
-            <CardTitle className="text-2xl text-destructive flex items-center">
-              <AlertTriangle className="mr-2 h-6 w-6" /> Configuration Error
-            </CardTitle>
+            <CardTitle className="text-2xl text-destructive flex items-center"><AlertTriangle className="mr-2 h-6 w-6" /> Configuration Error</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-destructive-foreground">SettleEase could not start due to a Supabase configuration problem.</p>
             <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{supabaseInitializationError}</p>
-            <p className="mt-4 text-xs">Please ensure your Supabase environment variables (e.g., <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are correctly set in your project and are not using placeholder values, or that the hardcoded values in the source are correct (for development only).</p>
           </CardContent>
         </Card>
       </div>
     );
   }
 
-
   return (
-    <div className="min-h-screen bg-background text-foreground p-4 md:p-8 font-body">
-      <header className="mb-8 text-center">
-        <h1 className="text-4xl font-headline font-bold text-primary">SettleEase</h1>
-        <p className="text-muted-foreground">Simplify your group expenses effortlessly.</p>
-      </header>
-
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-6 flex justify-center border-b border-border">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('dashboard')}
-            className={`pb-2 px-4 text-lg rounded-none ${activeTab === 'dashboard' ? 'border-b-2 border-accent text-accent font-semibold' : 'text-muted-foreground hover:text-accent'}`}
-          >
-            <LayoutDashboard className="mr-2 h-5 w-5" /> Dashboard
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setActiveTab('addExpense')}
-            className={`pb-2 px-4 text-lg rounded-none ${activeTab === 'addExpense' ? 'border-b-2 border-accent text-accent font-semibold' : 'text-muted-foreground hover:text-accent'}`}
-          >
-            <CreditCard className="mr-2 h-5 w-5" /> Add Expense
-          </Button>
+    <SidebarProvider defaultOpen={true}>
+      <AppActualSidebar activeView={activeView} setActiveView={setActiveView} />
+      <SidebarInset>
+        <div className="flex flex-col h-screen"> {/* Use h-screen for full height */}
+          <header className="p-4 border-b bg-card flex items-center justify-between">
+            <div className="flex items-center">
+              <SidebarTrigger className="md:hidden mr-2" /> {/* Trigger for mobile */}
+              <h1 className="text-2xl font-headline font-bold text-primary">
+                {activeView === 'dashboard' ? 'Dashboard' : 'Manage Expenses'}
+              </h1>
+            </div>
+             {/* Placeholder for future actions like user profile or settings */}
+          </header>
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+            {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
+            {activeView === 'addExpense' && <AddExpenseTab people={people} />}
+          </main>
+          <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
+            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Ensure Supabase table replication is ON for realtime.</p>
+          </footer>
         </div>
-
-        {activeTab === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
-        {activeTab === 'addExpense' && <AddExpenseTab people={people} />}
-      </div>
-      <footer className="text-center mt-12 text-sm text-muted-foreground">
-        <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Ensure Supabase table replication is ON for realtime.</p>
-      </footer>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }
+
+interface AppActualSidebarProps {
+  activeView: 'dashboard' | 'addExpense';
+  setActiveView: (view: 'dashboard' | 'addExpense') => void;
+}
+
+function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) {
+    const { state: sidebarState, isMobile } = useSidebar();
+    return (
+        <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
+            <SidebarHeader className="items-center p-3 border-b border-sidebar-border">
+                 <div className="flex items-center gap-2">
+                    <svg className="h-8 w-8 fill-primary" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z"/></svg>
+                    <h2 className="text-xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
+                 </div>
+            </SidebarHeader>
+            <SidebarContent className="p-2">
+                <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={() => setActiveView('dashboard')}
+                            isActive={activeView === 'dashboard'}
+                            tooltip={{content: "Dashboard", side: "right", align:"center", className: "group-data-[state=expanded]:hidden"}}
+                            className="justify-start"
+                        >
+                            <LayoutDashboard />
+                            <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={() => setActiveView('addExpense')}
+                            isActive={activeView === 'addExpense'}
+                            tooltip={{content: "Add Expense", side: "right", align:"center", className: "group-data-[state=expanded]:hidden"}}
+                            className="justify-start"
+                        >
+                            <CreditCard />
+                            <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarContent>
+            <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
+                 <p className="text-xs text-sidebar-foreground/70">Version 1.0.0</p>
+            </SidebarFooter>
+        </Sidebar>
+    );
+}
+
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -373,108 +344,55 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
 
   const handleAddPerson = async () => {
     if (!newPersonName.trim() || !db || supabaseInitializationError) {
-        if (supabaseInitializationError){
-             toast({ title: "Error", description: "Cannot add person due to Supabase configuration issue.", variant: "destructive" });
-        } else if (!newPersonName.trim()) {
-            toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" });
-        }
+        if (supabaseInitializationError){ toast({ title: "Error", description: "Cannot add person: Supabase issue.", variant: "destructive" }); } 
+        else if (!newPersonName.trim()) { toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" }); }
         return;
     }
     try {
-      const { data, error } = await db.from(PEOPLE_TABLE).insert([{ name: newPersonName.trim(), created_at: new Date().toISOString() }]).select();
-      if (error) throw error;
-      
-      toast({ title: "Person Added", description: `${newPersonName.trim()} has been added to the group.` });
+      await db.from(PEOPLE_TABLE).insert([{ name: newPersonName.trim(), created_at: new Date().toISOString() }]).select();
+      toast({ title: "Person Added", description: `${newPersonName.trim()} has been added.` });
       setNewPersonName('');
-    } catch (error: any) {
-      console.error("Error adding person:", error);
-      toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" });
-    }
+    } catch (error: any) { toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" }); }
   };
 
-  const handleStartEditPerson = (person: Person) => {
-    setEditingPersonId(person.id);
-    setEditingPersonNewName(person.name);
-  };
-
-  const handleCancelEditPerson = () => {
-    setEditingPersonId(null);
-    setEditingPersonNewName('');
-  };
+  const handleStartEditPerson = (person: Person) => { setEditingPersonId(person.id); setEditingPersonNewName(person.name); };
+  const handleCancelEditPerson = () => { setEditingPersonId(null); setEditingPersonNewName(''); };
 
   const handleSavePersonName = async () => {
     if (!editingPersonId || !editingPersonNewName.trim() || !db || supabaseInitializationError) {
-      if (supabaseInitializationError) {
-        toast({ title: "Error", description: "Cannot update person due to Supabase configuration issue.", variant: "destructive" });
-      } else if (!editingPersonNewName.trim()) {
-        toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" });
-      }
+      if (supabaseInitializationError) { toast({ title: "Error", description: "Cannot update person: Supabase issue.", variant: "destructive" }); } 
+      else if (!editingPersonNewName.trim()) { toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" }); }
       return;
     }
     try {
-      const { error } = await db.from(PEOPLE_TABLE).update({ name: editingPersonNewName.trim() }).eq('id', editingPersonId);
-      if (error) throw error;
+      await db.from(PEOPLE_TABLE).update({ name: editingPersonNewName.trim() }).eq('id', editingPersonId);
       toast({ title: "Person Updated", description: "Name updated successfully." });
       handleCancelEditPerson();
-    } catch (error: any) {
-      console.error("Error updating person:", error);
-      toast({ title: "Error", description: `Could not update person: ${error.message}`, variant: "destructive" });
-    }
+    } catch (error: any) { toast({ title: "Error", description: `Could not update person: ${error.message}`, variant: "destructive" }); }
   };
   
-  const handleConfirmRemovePerson = (person: Person) => {
-    setPersonToDelete(person);
-  };
+  const handleConfirmRemovePerson = (person: Person) => setPersonToDelete(person);
 
   const handleExecuteRemovePerson = async () => {
     if (!personToDelete || !db || supabaseInitializationError) {
-       if (supabaseInitializationError) {
-        toast({ title: "Error", description: "Cannot remove person due to Supabase configuration issue.", variant: "destructive" });
-      }
-      setPersonToDelete(null);
-      return;
+       if (supabaseInitializationError) { toast({ title: "Error", description: "Cannot remove person: Supabase issue.", variant: "destructive" }); }
+      setPersonToDelete(null); return;
     }
     try {
-      const { error } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
-      if (error) throw error;
+      await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
       toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
-      // If the deleted person was being edited, cancel edit mode
-      if (editingPersonId === personToDelete.id) {
-        handleCancelEditPerson();
-      }
-      // If the deleted person was selected as payer, reset paidBy
-      if (paidBy === personToDelete.id) {
-        setPaidBy('');
-      }
-      // If the deleted person was in selectedPeopleEqual, remove them
+      if (editingPersonId === personToDelete.id) handleCancelEditPerson();
+      if (paidBy === personToDelete.id) setPaidBy('');
       setSelectedPeopleEqual(prev => prev.filter(id => id !== personToDelete.id));
-      // If the deleted person was in unequalShares, remove their share
-      setUnequalShares(prev => {
-        const newShares = {...prev};
-        delete newShares[personToDelete.id];
-        return newShares;
-      });
-       // If the deleted person was in item shares, remove them
-      setItems(prevItems => prevItems.map(item => ({
-        ...item,
-        sharedBy: item.sharedBy.filter(id => id !== personToDelete.id)
-      })));
-
-
-    } catch (error: any) {
-      console.error("Error removing person:", error);
-      toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" });
-    } finally {
-      setPersonToDelete(null);
-    }
+      setUnequalShares(prev => { const newShares = {...prev}; delete newShares[personToDelete.id]; return newShares; });
+      setItems(prevItems => prevItems.map(item => ({ ...item, sharedBy: item.sharedBy.filter(id => id !== personToDelete.id) })));
+    } catch (error: any) { toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" }); } 
+    finally { setPersonToDelete(null); }
   };
   
   const isFormValid = useMemo(() => {
     if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category || !paidBy) return false;
-
-    if (splitMethod === 'equal') {
-      return selectedPeopleEqual.length > 0;
-    }
+    if (splitMethod === 'equal') return selectedPeopleEqual.length > 0;
     if (splitMethod === 'unequal') {
       const sumOfShares = Object.values(unequalShares).reduce((sum, share) => sum + (Number(share) || 0), 0);
       return Math.abs(sumOfShares - Number(totalAmount)) < 0.01 && Object.values(unequalShares).every(s => s !== '' && Number(s) >= 0) && Object.keys(unequalShares).length > 0;
@@ -498,155 +416,84 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
     return items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
   }, [items, splitMethod]);
 
-
-  const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
-  };
-
-  const handleRemoveItem = (itemId: string) => {
-    setItems(items.filter(item => item.id !== itemId));
-  };
-
-  const handleItemChange = (itemId: string, field: keyof Omit<Item, 'id'>, value: any) => {
-    setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
-  };
-
+  const handleAddItem = () => setItems([...items, { id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
+  const handleRemoveItem = (itemId: string) => setItems(items.filter(item => item.id !== itemId));
+  const handleItemChange = (itemId: string, field: keyof Omit<Item, 'id'>, value: any) => setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   const handleItemSharedByChange = (itemId: string, personId: string) => {
-    setItems(items.map(item => {
-      if (item.id === itemId) {
-        const newSharedBy = item.sharedBy.includes(personId)
-          ? item.sharedBy.filter(id => id !== personId)
-          : [...item.sharedBy, personId];
-        return { ...item, sharedBy: newSharedBy };
-      }
-      return item;
-    }));
+    setItems(items.map(item => item.id === itemId ? { ...item, sharedBy: item.sharedBy.includes(personId) ? item.sharedBy.filter(id => id !== personId) : [...item.sharedBy, personId] } : item));
   };
 
   const resetForm = () => {
-    setDescription('');
-    setTotalAmount('');
-    setCategory('');
-    setPaidBy('');
-    setSelectedPeopleEqual([]);
-    setUnequalShares({});
+    setDescription(''); setTotalAmount(''); setCategory(''); setPaidBy('');
+    setSelectedPeopleEqual([]); setUnequalShares({});
     setItems([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
     setSplitMethod('equal');
   };
 
   const handleSubmitExpense = async () => {
     if (!isFormValid || !db || supabaseInitializationError) {
-        if (supabaseInitializationError){
-             toast({ title: "Error", description: "Cannot add expense due to Supabase configuration issue.", variant: "destructive" });
-        } else if (!isFormValid) {
-            toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" });
-        }
+        if (supabaseInitializationError){ toast({ title: "Error", description: "Cannot add expense: Supabase issue.", variant: "destructive" }); } 
+        else if (!isFormValid) { toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" }); }
         return;
     }
-
     let sharesData: { personId: string, amount: number }[] = [];
-
     if (splitMethod === 'equal') {
       const amountPerPerson = Number(totalAmount) / selectedPeopleEqual.length;
       sharesData = selectedPeopleEqual.map(personId => ({ personId, amount: amountPerPerson }));
     } else if (splitMethod === 'unequal') {
-      sharesData = Object.entries(unequalShares)
-        .filter(([_, amount]) => Number(amount) > 0)
-        .map(([personId, amount]) => ({ personId, amount: Number(amount) }));
+      sharesData = Object.entries(unequalShares).filter(([_, amount]) => Number(amount) > 0).map(([personId, amount]) => ({ personId, amount: Number(amount) }));
     } else if (splitMethod === 'itemwise') {
       const personOwes: Record<string, number> = {};
       items.forEach(item => {
         if (item.sharedBy.length > 0) {
           const amountPerPersonForItem = Number(item.price) / item.sharedBy.length;
-          item.sharedBy.forEach(personId => {
-            personOwes[personId] = (personOwes[personId] || 0) + amountPerPersonForItem;
-          });
+          item.sharedBy.forEach(personId => { personOwes[personId] = (personOwes[personId] || 0) + amountPerPersonForItem; });
         }
       });
       sharesData = Object.entries(personOwes).map(([personId, amount]) => ({ personId, amount }));
     }
-
-    const expenseToInsert = {
-      description,
-      total_amount: Number(totalAmount), 
-      category,
-      paid_by: paidBy,
-      split_method: splitMethod,
-      shares: sharesData,
-      items: splitMethod === 'itemwise' ? items.map(item => ({ ...item, price: Number(item.price) })) : undefined,
-      created_at: new Date().toISOString(),
-    };
-    
+    const expenseToInsert = { description, total_amount: Number(totalAmount), category, paid_by: paidBy, split_method: splitMethod, shares: sharesData, items: splitMethod === 'itemwise' ? items.map(item => ({ ...item, price: Number(item.price) })) : undefined, created_at: new Date().toISOString() };
     try {
-      const { error } = await db.from(EXPENSES_TABLE).insert([expenseToInsert]);
-      if (error) throw error;
+      await db.from(EXPENSES_TABLE).insert([expenseToInsert]);
       toast({ title: "Expense Added!", description: `${description} has been successfully recorded.` });
       resetForm();
-    } catch (error: any) {
-      console.error("Error adding expense:", error);
-      toast({ title: "Error", description: `Could not add expense: ${error.message}`, variant: "destructive" });
-    }
+    } catch (error: any) { toast({ title: "Error", description: `Could not add expense: ${error.message}`, variant: "destructive" }); }
   };
   
-
   return (
-    <div className="space-y-8">
-      <Card className="shadow-xl">
+    <div className="space-y-6"> {/* Reduced space from space-y-8 */}
+      <Card className="shadow-lg rounded-lg">
         <CardHeader>
-          <CardTitle className="flex items-center text-2xl"><Users className="mr-2 h-6 w-6 text-primary" /> Manage People</CardTitle>
+          <CardTitle className="flex items-center text-xl"><Users className="mr-2 h-5 w-5 text-primary" /> Manage People</CardTitle>
           <CardDescription>Add, edit, or remove people in your settlement group.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
             <Label htmlFor="newPersonName" className="text-sm font-medium">Add New Person</Label>
             <div className="flex space-x-2 mt-1">
-              <Input
-                id="newPersonName"
-                type="text"
-                value={newPersonName}
-                onChange={(e) => setNewPersonName(e.target.value)}
-                placeholder="Enter person's name"
-                className="flex-grow"
-              />
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!supabaseInitializationError}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add
-              </Button>
+              <Input id="newPersonName" type="text" value={newPersonName} onChange={(e) => setNewPersonName(e.target.value)} placeholder="Enter person's name" className="flex-grow" />
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!supabaseInitializationError}><PlusCircle className="mr-2 h-4 w-4" /> Add</Button>
             </div>
           </div>
           <div>
-            <h4 className="font-semibold mb-2 text-muted-foreground">Current People:</h4>
+            <h4 className="font-semibold mb-2 text-muted-foreground text-sm">Current People:</h4>
             {people.length > 0 ? (
-              <ScrollArea className="h-40 rounded-md border p-2">
-                <ul className="space-y-2">
+              <ScrollArea className="h-40 rounded-md border p-2 bg-background">
+                <ul className="space-y-1.5">
                   {people.map(person => (
-                    <li key={person.id} className="flex items-center justify-between p-2 bg-secondary/30 rounded-sm text-sm group">
+                    <li key={person.id} className="flex items-center justify-between p-2 bg-card/60 hover:bg-secondary/40 rounded-sm text-sm group">
                       {editingPersonId === person.id ? (
                         <>
-                          <Input
-                            type="text"
-                            value={editingPersonNewName}
-                            onChange={(e) => setEditingPersonNewName(e.target.value)}
-                            className="flex-grow mr-2 h-8"
-                            autoFocus
-                            onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
-                          />
-                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600 hover:bg-green-100" title="Save">
-                            <Save className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500 hover:bg-gray-100" title="Cancel">
-                            <Ban className="h-4 w-4" />
-                          </Button>
+                          <Input type="text" value={editingPersonNewName} onChange={(e) => setEditingPersonNewName(e.target.value)} className="flex-grow mr-2 h-8 text-sm" autoFocus onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()} />
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-100" title="Save"><Save className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500 hover:text-gray-600 hover:bg-gray-100" title="Cancel"><Ban className="h-4 w-4" /></Button>
                         </>
                       ) : (
                         <>
                           <span className="truncate flex-grow" title={person.name}>{person.name}</span>
-                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600 hover:bg-blue-100" title="Edit name">
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600 hover:bg-red-100" title="Remove person">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                          <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-100" title="Edit name"><Pencil className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-100" title="Remove person"><Trash2 className="h-4 w-4" /></Button>
                           </div>
                         </>
                       )}
@@ -654,9 +501,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
                   ))}
                 </ul>
               </ScrollArea>
-            ) : (
-              <p className="text-sm text-muted-foreground">No people added yet. Add some to get started!</p>
-            )}
+            ) : ( <p className="text-sm text-muted-foreground p-2">No people added yet. Add some to get started!</p> )}
           </div>
         </CardContent>
       </Card>
@@ -664,191 +509,58 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       {personToDelete && (
         <AlertDialog open={personToDelete !== null} onOpenChange={(open) => !open && setPersonToDelete(null)}>
           <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action will remove <strong>{personToDelete.name}</strong> from the group.
-                If this person has paid for any expenses, those expenses will also be deleted.
-                This action cannot be undone.
-              </AlertDialogDescription>
+            <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>This action will remove <strong>{personToDelete.name}</strong> from the group. Associated expense data might be affected. This action cannot be undone.</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleExecuteRemovePerson}
-                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              >
-                Remove {personToDelete.name}
-              </AlertDialogAction>
+              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Remove {personToDelete.name}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       )}
 
-
-      <Card className="shadow-xl">
+      <Card className="shadow-lg rounded-lg">
         <CardHeader>
-          <CardTitle className="flex items-center text-2xl"><CreditCard className="mr-2 h-6 w-6 text-primary" /> Add New Expense</CardTitle>
+          <CardTitle className="flex items-center text-xl"><CreditCard className="mr-2 h-5 w-5 text-primary" /> Add New Expense</CardTitle>
           <CardDescription>Fill in the details of the expense and how it was split.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4"> {/* Reduced space from space-y-6 */}
           <div>
             <Label htmlFor="description">Description</Label>
             <Input id="description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g., Dinner with friends" className="mt-1" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="totalAmount">Total Amount</Label>
-              <Input id="totalAmount" type="number" value={totalAmount} onChange={(e) => setTotalAmount(parseFloat(e.target.value) || '')} placeholder="e.g., 1000" className="mt-1" />
-            </div>
-             <div>
-              <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="category" className="w-full mt-1">
-                  <SelectValue placeholder="Select a category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map(cat => {
-                    const IconComponent = cat.icon;
-                    return (<SelectItem key={cat.name} value={cat.name}>
-                      <div className="flex items-center">
-                        <IconComponent className="mr-2 h-4 w-4 text-muted-foreground" /> {cat.name}
-                      </div>
-                    </SelectItem>)
-                  })}
-                </SelectContent>
+            <div><Label htmlFor="totalAmount">Total Amount</Label><Input id="totalAmount" type="number" value={totalAmount} onChange={(e) => setTotalAmount(parseFloat(e.target.value) || '')} placeholder="e.g., 1000" className="mt-1" /></div>
+            <div><Label htmlFor="category">Category</Label>
+              <Select value={category} onValueChange={setCategory}><SelectTrigger id="category" className="w-full mt-1"><SelectValue placeholder="Select a category" /></SelectTrigger>
+                <SelectContent>{CATEGORIES.map(cat => { const IconComponent = cat.icon; return (<SelectItem key={cat.name} value={cat.name}><div className="flex items-center"><IconComponent className="mr-2 h-4 w-4 text-muted-foreground" /> {cat.name}</div></SelectItem>)})}</SelectContent>
               </Select>
             </div>
           </div>
-          <div>
-            <Label htmlFor="paidBy">Paid by</Label>
-            <Select value={paidBy} onValueChange={setPaidBy} disabled={people.length === 0}>
-              <SelectTrigger id="paidBy" className="w-full mt-1">
-                <SelectValue placeholder={people.length === 0 ? "Add people first" : "Select who paid"} />
-              </SelectTrigger>
-              <SelectContent>
-                {people.map(person => (
-                  <SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>
-                ))}
-              </SelectContent>
+          <div><Label htmlFor="paidBy">Paid by</Label>
+            <Select value={paidBy} onValueChange={setPaidBy} disabled={people.length === 0}><SelectTrigger id="paidBy" className="w-full mt-1"><SelectValue placeholder={people.length === 0 ? "Add people first" : "Select who paid"} /></SelectTrigger>
+              <SelectContent>{people.map(person => (<SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>))}</SelectContent>
             </Select>
           </div>
-
-          <div>
-            <Label>Split Method</Label>
+          <div><Label>Split Method</Label>
             <div className="grid grid-cols-3 gap-2 mt-1">
-              <Button variant={splitMethod === 'equal' ? 'default' : 'outline'} onClick={() => setSplitMethod('equal')}>Equal</Button>
-              <Button variant={splitMethod === 'unequal' ? 'default' : 'outline'} onClick={() => setSplitMethod('unequal')}>Unequal</Button>
-              <Button variant={splitMethod === 'itemwise' ? 'default' : 'outline'} onClick={() => setSplitMethod('itemwise')}>Item-wise</Button>
+              <Button variant={splitMethod === 'equal' ? 'default' : 'outline'} onClick={() => setSplitMethod('equal')} className="text-sm">Equal</Button>
+              <Button variant={splitMethod === 'unequal' ? 'default' : 'outline'} onClick={() => setSplitMethod('unequal')} className="text-sm">Unequal</Button>
+              <Button variant={splitMethod === 'itemwise' ? 'default' : 'outline'} onClick={() => setSplitMethod('itemwise')} className="text-sm">Item-wise</Button>
             </div>
           </div>
 
           {Number(totalAmount) > 0 && people.length > 0 && (
-            <>
-            {splitMethod === 'equal' && (
-              <div className="space-y-2 p-4 border rounded-md bg-secondary/20">
-                <h4 className="font-semibold">Select who shared:</h4>
-                {people.map(person => (
-                  <div key={person.id} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`equal-${person.id}`}
-                      checked={selectedPeopleEqual.includes(person.id)}
-                      onCheckedChange={(checked) => {
-                        setSelectedPeopleEqual(prev => 
-                          checked ? [...prev, person.id] : prev.filter(id => id !== person.id)
-                        );
-                      }}
-                    />
-                    <Label htmlFor={`equal-${person.id}`} className="font-normal">{person.name}</Label>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {splitMethod === 'unequal' && (
-              <div className="space-y-3 p-4 border rounded-md bg-secondary/20">
-                <h4 className="font-semibold">Enter individual shares:</h4>
-                {people.map(person => (
-                  <div key={person.id} className="flex items-center justify-between space-x-2">
-                    <Label htmlFor={`unequal-${person.id}`} className="min-w-[80px]">{person.name}</Label>
-                    <Input
-                      id={`unequal-${person.id}`}
-                      type="number"
-                      value={unequalShares[person.id] || ''}
-                      onChange={(e) => setUnequalShares(prev => ({ ...prev, [person.id]: parseFloat(e.target.value) || '' }))}
-                      placeholder="Amount"
-                      className="w-1/2"
-                    />
-                  </div>
-                ))}
-                <div className={`text-sm font-medium p-2 rounded-md ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>
-                  Remaining: {formatCurrency(remainingAmountUnequal)}
-                </div>
-              </div>
-            )}
-
-            {splitMethod === 'itemwise' && (
-              <div className="space-y-4 p-4 border rounded-md bg-secondary/20">
-                <h4 className="font-semibold">Add items and assign shares:</h4>
-                {items.map((item, index) => (
-                  <Card key={item.id} className="p-3 bg-card/80 shadow-sm">
-                    <div className="space-y-2">
-                       <div className="flex justify-between items-center mb-2">
-                         <p className="font-medium text-sm">Item #{index + 1}</p>
-                         {items.length > 1 && (
-                            <Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-6 w-6 text-destructive hover:bg-destructive/10">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                       </div>
-                      <Input 
-                        value={item.name} 
-                        onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} 
-                        placeholder="Item name (e.g., Pizza)" 
-                        className="text-sm"
-                      />
-                      <Input 
-                        type="number" 
-                        value={item.price} 
-                        onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} 
-                        placeholder="Item price" 
-                        className="text-sm"
-                      />
-                      <div className="space-y-1 pt-1">
-                        <p className="text-xs text-muted-foreground">Shared by:</p>
-                        <div className="grid grid-cols-2 gap-1">
-                          {people.map(person => (
-                            <div key={person.id} className="flex items-center space-x-1">
-                              <Checkbox
-                                id={`item-${item.id}-person-${person.id}`}
-                                checked={item.sharedBy.includes(person.id)}
-                                onCheckedChange={() => handleItemSharedByChange(item.id, person.id)}
-                                className="h-3 w-3"
-                              />
-                              <Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-                <Button variant="outline" onClick={handleAddItem} className="w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Add Another Item
-                </Button>
-                <div className={`text-sm font-medium p-2 rounded-md ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>
-                  Sum of item prices: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})
-                </div>
-              </div>
-            )}
-            </>
+            <div className="p-3 border rounded-md bg-secondary/20 mt-3"> {/* Consistent padding & margin */}
+            {splitMethod === 'equal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Select who shared:</h4>{people.map(person => (<div key={person.id} className="flex items-center space-x-2"><Checkbox id={`equal-${person.id}`} checked={selectedPeopleEqual.includes(person.id)} onCheckedChange={(checked) => setSelectedPeopleEqual(prev => checked ? [...prev, person.id] : prev.filter(id => id !== person.id))} /><Label htmlFor={`equal-${person.id}`} className="font-normal text-sm">{person.name}</Label></div>))}</div>)}
+            {splitMethod === 'unequal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Enter individual shares:</h4>{people.map(person => (<div key={person.id} className="flex items-center justify-between space-x-2"><Label htmlFor={`unequal-${person.id}`} className="min-w-[70px] text-sm">{person.name}</Label><Input id={`unequal-${person.id}`} type="number" value={unequalShares[person.id] || ''} onChange={(e) => setUnequalShares(prev => ({ ...prev, [person.id]: parseFloat(e.target.value) || '' }))} placeholder="Amt" className="w-1/2 h-8 text-sm" /></div>))}<div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Remaining: {formatCurrency(remainingAmountUnequal)}</div></div>)}
+            {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
+            </div>
           )}
-
         </CardContent>
         <CardFooter>
-          <Button onClick={handleSubmitExpense} disabled={!isFormValid || !!supabaseInitializationError} className="w-full text-lg py-3">
-            Add Expense
-          </Button>
+          <Button onClick={handleSubmitExpense} disabled={!isFormValid || !!supabaseInitializationError} className="w-full text-base py-2.5">Add Expense</Button>
         </CardFooter>
       </Card>
     </div>
@@ -864,38 +576,20 @@ interface DashboardTabProps {
 function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
   const settlement = useMemo(() => {
     if (people.length === 0 || expenses.length === 0) return [];
-
     const balances: Record<string, number> = {};
     people.forEach(p => balances[p.id] = 0);
-
     expenses.forEach(expense => {
       balances[expense.paid_by] = (balances[expense.paid_by] || 0) + expense.total_amount;
-      expense.shares.forEach(share => {
-        balances[share.personId] = (balances[share.personId] || 0) - share.amount;
-      });
+      expense.shares.forEach(share => { balances[share.personId] = (balances[share.personId] || 0) - share.amount; });
     });
-
-    const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal }));
-    const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal }));
-    
-    debtors.sort((a, b) => a.amount - b.amount);
-    creditors.sort((a, b) => b.amount - a.amount);
-
+    const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
+    const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
     const transactions: { from: string, to: string, amount: number }[] = [];
-    let debtorIdx = 0;
-    let creditorIdx = 0;
-
+    let debtorIdx = 0, creditorIdx = 0;
     while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
-      const debtor = debtors[debtorIdx];
-      const creditor = creditors[creditorIdx];
+      const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
       const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-
-      if (amountToSettle > 0.01) {
-          transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
-          debtor.amount += amountToSettle;
-          creditor.amount -= amountToSettle;
-      }
-
+      if (amountToSettle > 0.01) { transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle }); debtor.amount += amountToSettle; creditor.amount -= amountToSettle; }
       if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
       if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
     }
@@ -905,143 +599,111 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
   const expensesByPayer = useMemo(() => {
     const data: Record<string, number> = {};
     people.forEach(p => data[p.name] = 0);
-    expenses.forEach(exp => {
-      const payerName = peopleMap[exp.paid_by];
-      if (payerName) {
-        data[payerName] = (data[payerName] || 0) + exp.total_amount;
-      }
-    });
+    expenses.forEach(exp => { const payerName = peopleMap[exp.paid_by]; if (payerName) { data[payerName] = (data[payerName] || 0) + exp.total_amount; }});
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses, peopleMap, people]);
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     CATEGORIES.forEach(c => data[c.name] = 0);
-    expenses.forEach(exp => {
-      data[exp.category] = (data[exp.category] || 0) + exp.total_amount;
-    });
+    expenses.forEach(exp => { data[exp.category] = (data[exp.category] || 0) + exp.total_amount; });
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
-
   if (people.length === 0 && expenses.length === 0) { 
      return (
-      <Card className="text-center py-12 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-primary">Welcome to SettleEase!</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FileText className="mx-auto h-16 w-16 text-primary/70" />
-          <p className="text-lg text-muted-foreground">No expenses recorded yet.</p>
-          <p>Go to the "Add Expense" tab to start managing your group finances.</p>
+      <Card className="text-center py-10 shadow-lg rounded-lg">
+        <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Welcome to SettleEase!</CardTitle></CardHeader>
+        <CardContent className="space-y-3"><FileText className="mx-auto h-12 w-12 text-primary/70" />
+          <p className="text-md text-muted-foreground">No expenses recorded yet.</p>
+          <p className="text-sm">Navigate to "Add Expense" to start managing your group finances.</p>
         </CardContent>
       </Card>
     );
   }
 
-
   return (
-    <div className="space-y-8">
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl"><ArrowRight className="mr-2 h-6 w-6 text-primary" /> Settlement Summary</CardTitle>
-          <CardDescription>Minimum transactions required to settle all debts.</CardDescription>
+    <div className="space-y-6"> {/* Reduced space from space-y-8 */}
+      <Card className="shadow-lg rounded-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-xl"><ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary</CardTitle>
+          <CardDescription className="text-sm">Minimum transactions required to settle all debts.</CardDescription>
         </CardHeader>
         <CardContent>
           {settlement.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-1.5">
               {settlement.map((txn, i) => (
-                <li key={i} className="flex items-center justify-between p-3 bg-secondary/30 rounded-md text-sm">
-                  <span className="font-medium">{peopleMap[txn.from] || 'Unknown'}</span>
-                  <ArrowRight className="h-4 w-4 text-accent mx-2" />
-                  <span className="font-medium">{peopleMap[txn.to] || 'Unknown'}</span>
-                  <span className="ml-auto font-semibold text-primary">{formatCurrency(txn.amount)}</span>
+                <li key={i} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-md text-sm">
+                  <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
+                  <ArrowRight className="h-4 w-4 text-accent mx-2 shrink-0" />
+                  <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
+                  <span className="ml-auto font-semibold text-primary pl-2">{formatCurrency(txn.amount)}</span>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="text-muted-foreground">All debts are settled, or no expenses to settle yet!</p>
-          )}
+          ) : (<p className="text-sm text-muted-foreground p-2">All debts are settled, or no expenses to settle yet!</p>)}
         </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">Expenses by Payer</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
+      <div className="grid md:grid-cols-2 gap-6"> {/* Reduced gap */}
+        <Card className="shadow-lg rounded-lg">
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Payer</CardTitle></CardHeader>
+          <CardContent className="h-[280px]"> {/* Slightly reduced height */}
             {expensesByPayer.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expensesByPayer} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                <BarChart data={expensesByPayer} margin={{ top: 5, right: 10, left: -25, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <YAxis tickFormatter={formatCurrency} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }} />
-                  <RechartsTooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }} />
-                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <YAxis tickFormatter={formatCurrency} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <RechartsTooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} />
+                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} barSize={20} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center">No data for payer chart.</p>)}
+            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for payer chart.</p>)}
           </CardContent>
         </Card>
 
-        <Card className="shadow-xl">
-          <CardHeader>
-            <CardTitle className="text-xl">Expenses by Category</CardTitle>
-          </CardHeader>
-          <CardContent className="h-[300px]">
+        <Card className="shadow-lg rounded-lg">
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Category</CardTitle></CardHeader>
+          <CardContent className="h-[280px]">
              {expensesByCategory.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={expensesByCategory}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="amount"
-                    nameKey="name"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {expensesByCategory.map((entry, index) => (
-                      <RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
+                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> {/* Adjusted margin for legend */}
+                  <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={70} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
+                    {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
                   </Pie>
-                  <RechartsTooltip formatter={(value: number, name: string) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)' }}/>
-                  <Legend wrapperStyle={{fontSize: "12px"}}/>
+                  <RechartsTooltip formatter={(value: number, name: string) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}/>
+                  <Legend wrapperStyle={{fontSize: "11px", paddingTop: "10px"}}/>
                 </PieChart>
               </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center">No data for category chart.</p>)}
+            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for category chart.</p>)}
           </CardContent>
         </Card>
       </div>
 
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center text-2xl"><FileText className="mr-2 h-6 w-6 text-primary" /> Expense Log</CardTitle>
-          <CardDescription>A list of all recorded expenses, most recent first.</CardDescription>
+      <Card className="shadow-lg rounded-lg">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center text-xl"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
+          <CardDescription className="text-sm">A list of all recorded expenses, most recent first.</CardDescription>
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[400px] pr-3">
-            <ul className="space-y-4">
+            <ScrollArea className="h-[350px] pr-2"> {/* Slightly reduced height */}
+            <ul className="space-y-2.5">
               {expenses.map(expense => {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
                  return (
                   <li key={expense.id}>
-                    <Card className="bg-card/70 hover:shadow-md transition-shadow">
-                      <CardHeader className="pb-2 pt-4 px-4">
+                    <Card className="bg-card/70 hover:shadow-md transition-shadow rounded-md">
+                      <CardHeader className="pb-1.5 pt-2.5 px-3">
                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-md font-semibold leading-tight">{expense.description}</CardTitle>
-                            <span className="text-lg font-bold text-primary">{formatCurrency(expense.total_amount)}</span>
+                            <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
+                            <span className="text-md font-bold text-primary">{formatCurrency(expense.total_amount)}</span>
                          </div>
                       </CardHeader>
-                      <CardContent className="px-4 pb-3 text-xs text-muted-foreground space-y-1">
+                      <CardContent className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                               <CategoryIcon className="mr-1.5 h-3.5 w-3.5" /> {expense.category}
-                            </div>
+                            <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
                             <span>Paid by: <span className="font-medium text-foreground">{peopleMap[expense.paid_by] || 'Unknown'}</span></span>
                          </div>
                          <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
@@ -1051,14 +713,9 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                 )})}
             </ul>
             </ScrollArea>
-          ) : (
-            <p className="text-muted-foreground">No expenses recorded yet.</p>
-          )}
+          ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
         </CardContent>
       </Card>
     </div>
   );
 }
-
-
-      

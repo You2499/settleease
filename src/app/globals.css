@@ -2,9 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
+/* Removed body { font-family: Arial, Helvetica, sans-serif; } to allow Tailwind and layout.tsx to manage Inter font */
 
 @layer base {
   :root {
@@ -33,14 +31,14 @@ body {
     --chart-4: 43 74% 66%; /* Complementary color - Orange/Yellow */
     --chart-5: 27 87% 67%; /* Complementary color - Coral */
     --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 0 0% 98%; /* Default white/light gray for sidebar */
+    --sidebar-foreground: 240 5.3% 26.1%; /* Darker text for sidebar */
+    --sidebar-primary: 122 39% 49%; /* Forest Green for active/primary sidebar items */
+    --sidebar-primary-foreground: 0 0% 98%; /* White text on primary sidebar items */
+    --sidebar-accent: 125 67% 92%; /* Lighter green for hover/accent in sidebar */
+    --sidebar-accent-foreground: 122 39% 49%; /* Forest Green for text on sidebar accent */
+    --sidebar-border: 125 30% 85%; /* Greenish border for sidebar */
+    --sidebar-ring: 180 100% 30%; /* Teal focus ring for sidebar elements */
   }
   .dark {
     /* Keeping dark mode somewhat standard, can be customized if needed */
@@ -69,13 +67,13 @@ body {
     --chart-4: 43 74% 70%;
     --chart-5: 27 87% 70%;
     --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 122 39% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 0 0% 98%;
     --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 180 100% 40%;
   }
 }
 
