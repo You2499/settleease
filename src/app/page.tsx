@@ -794,7 +794,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow pr-4 -mr-4">
+        <ScrollArea className="flex-grow min-h-0 pr-4 -mr-4">
           <div className="space-y-4 py-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
