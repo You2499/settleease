@@ -754,23 +754,11 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
-  if (supabaseInitializationError && people.length === 0 && expenses.length === 0 && !isLoading) { // check isLoading
-    return (
-      <Card className="text-center py-12 shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold text-destructive flex items-center justify-center">
-             <AlertTriangle className="mr-2 h-8 w-8" />Supabase Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-lg text-muted-foreground">Cannot display dashboard due to Supabase configuration issues.</p>
-          <p className="text-sm p-2 bg-destructive/10 rounded-md">{supabaseInitializationError}</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // The parent SettleEaseApp component handles Supabase initialization errors.
+  // If there's an error, DashboardTab won't be rendered.
+  // Thus, the check for supabaseInitializationError is removed from here.
 
-  if (people.length === 0 && expenses.length === 0 && !isLoading) { // check isLoading
+  if (people.length === 0 && expenses.length === 0) { 
      return (
       <Card className="text-center py-12 shadow-lg">
         <CardHeader>
@@ -906,5 +894,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
   );
 }
 
+
+    
 
     
