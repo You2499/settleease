@@ -137,7 +137,7 @@ export default function SettleEasePage() {
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
-        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id');
+        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
         if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
           return; 
         }
@@ -510,8 +510,8 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const isFormValid = useMemo(() => {
     if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category) return false;
     
-    if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) < 0)) return false; // Allow 0 for payer amount initially
-    if (payers.every(p => Number(p.amount) === 0) && Number(totalAmount) > 0) return false; // At least one payer must pay if total > 0
+    if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) < 0)) return false; 
+    if (payers.every(p => Number(p.amount) === 0) && Number(totalAmount) > 0) return false; 
     if (Math.abs(sumOfPayerAmounts - Number(totalAmount)) > 0.01) return false;
 
 
@@ -901,12 +901,12 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
                  const payerNames = Array.isArray(expense.paid_by) 
                     ? expense.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')
-                    : 'Data Error'; // Should always be an array now
+                    : 'Data Error'; 
                  const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1 
                     ? "Multiple Payers" 
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1 
                         ? (peopleMap[expense.paid_by[0].personId] || 'Unknown') 
-                        : (expense.paid_by.length === 0 ? 'None' : 'Error'));
+                        : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
 
 
                  return (
@@ -982,8 +982,8 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow min-h-0">
-          <div className="space-y-4 py-4 pr-1">
+        <div className="flex-grow min-h-0 overflow-y-auto">
+          <div className="space-y-4 py-4 pr-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
@@ -1116,7 +1116,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
               </>
             )}
           </div>
-        </ScrollArea>
+        </div>
         
         <DialogFooter className="pt-4 border-t">
           <DialogClose asChild>
@@ -1128,3 +1128,5 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
   );
 }
 
+
+    
