@@ -142,8 +142,7 @@ export default function SettleEasePage() {
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
-         // Check if people actually exist, in case a previous attempt failed but set the flag.
-        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
+        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id');
         if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
           return; 
         }
@@ -167,7 +166,6 @@ export default function SettleEasePage() {
       if (count === 0) {
         const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
         const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
-        // Use .select() to ensure the promise resolves after insertion and to potentially get back inserted data if needed
         const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select(); 
         if (insertError) {
           console.error("Error adding default people:", insertError);
@@ -198,15 +196,13 @@ export default function SettleEasePage() {
     }
     
     let isMounted = true;
-    let authStateProcessed = false; // To prevent multiple setIsLoading(false) calls from auth listener
+    let authStateProcessed = false; 
 
-    // Check initial session state for anonymous user context (or any logged-in user)
     const checkInitialSession = async () => {
         if (!db) return;
         const { data: { session } } = await db.auth.getSession();
         if (isMounted) {
             setCurrentUser(session?.user ?? null);
-            // Attempt to add default people regardless of explicit session for anon usage
              if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
                 await addDefaultPeople();
             }
@@ -215,25 +211,21 @@ export default function SettleEasePage() {
     };
     checkInitialSession();
     
-    // Listen for auth state changes (e.g., if user logs in/out in another tab)
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       setCurrentUser(session?.user ?? null);
-      // Re-check default people if auth state changes and setup wasn't done.
-      // This is mostly for robustness, main call is in checkInitialSession
       if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
         await addDefaultPeople();
       }
       if (!authStateProcessed) { setIsLoading(false); authStateProcessed = true; }
     });
     
-    // Fallback to ensure loading state is eventually false if auth takes too long or doesn't fire
     const loadingFallbackTimeout = setTimeout(() => {
         if (isMounted && !authStateProcessed) {
             setIsLoading(false);
             authStateProcessed = true;
             if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
-                 addDefaultPeople(); // Ensure it's called if timeout occurs first
+                 addDefaultPeople(); 
             }
         }
     }, 2500); 
@@ -251,9 +243,6 @@ export default function SettleEasePage() {
     let isMounted = true;
     const fetchInitialData = async () => {
       if (!isMounted || !db) return;
-      // No need to setIsLoading(true) here if the main useEffect handles initial load
-      // However, if this is meant to be a refresh, it might be needed.
-      // For simplicity, relying on main loading state.
 
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (!isMounted) return;
@@ -269,18 +258,15 @@ export default function SettleEasePage() {
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
       } else { setExpenses(expensesData as Expense[]); }
       
-      // Ensure loading is false after initial fetch if not already set
-      // if (isMounted && isLoading) setIsLoading(false); 
     };
 
-    fetchInitialData(); // Fetch on component mount or when db becomes available
+    fetchInitialData(); 
 
-    // Setup realtime subscriptions
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, 
         (payload) => {
           console.log('People change received!', payload);
-          fetchInitialData(); // Refetch all people on change
+          fetchInitialData(); 
         }
       ).subscribe((status, err) => {
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
@@ -291,7 +277,7 @@ export default function SettleEasePage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, 
         (payload) => {
           console.log('Expenses change received!', payload);
-          fetchInitialData(); // Refetch all expenses on change
+          fetchInitialData(); 
         }
       ).subscribe((status, err) => {
          if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
@@ -305,7 +291,7 @@ export default function SettleEasePage() {
             db.removeChannel(expensesChannel); 
         }
     };
-  }, [supabaseInitializationError]); // Removed isLoading from dependencies to avoid re-triggering fetches on its change
+  }, [supabaseInitializationError]); 
   
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -370,7 +356,7 @@ interface AppActualSidebarProps {
 }
 
 function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) {
-    const { isMobile } = useSidebar(); // Removed sidebarState as it's not directly used here.
+    const { isMobile } = useSidebar(); 
     return (
         <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
             <SidebarHeader className="items-center p-3 border-b border-sidebar-border">
@@ -413,7 +399,7 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
 }
 
 interface PayerInputRow {
-  id: string; // For React key
+  id: string; 
   personId: string;
   amount: number | '';
 }
@@ -426,7 +412,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [totalAmount, setTotalAmount] = useState<number | ''>('');
   const [category, setCategory] = useState('');
   
-  // State for multiple payers
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
 
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal' | 'itemwise'>('equal');
@@ -440,7 +425,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [editingPersonNewName, setEditingPersonNewName] = useState('');
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
 
-  // Handler for payers
   const handlePayerChange = (rowId: string, field: 'personId' | 'amount', value: string | number) => {
     setPayers(prevPayers => 
       prevPayers.map(p => 
@@ -460,11 +444,10 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   };
 
   useEffect(() => {
-    // Auto-fill single payer amount if totalAmount is set and only one payer row exists with no amount
-    if (payers.length === 1 && totalAmount && payers[0].amount === '') {
+    if (payers.length === 1 && totalAmount && payers[0].amount === '' && payers[0].personId) {
       setPayers([{ ...payers[0], amount: Number(totalAmount) }]);
     }
-  }, [totalAmount, payers.length]); // payers.length ensures this runs if a payer is removed/added too
+  }, [totalAmount, payers]); 
 
 
   const handleAddPerson = async () => {
@@ -508,11 +491,13 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
       if (editingPersonId === personToDelete.id) handleCancelEditPerson();
       
-      // Update multi-payer state
-      setPayers(prev => prev.map(p => p.personId === personToDelete.id ? {...p, personId: ''} : p).filter(p => p.personId !== ''));
-      if (payers.length === 0 && people.length > 1) { // if all payers removed, add a blank one if other people exist
-          addPayerRow();
-      }
+      setPayers(prev => {
+        const updatedPayers = prev.map(p => p.personId === personToDelete.id ? {...p, personId: '', amount: ''} : p).filter(p => p.personId !== '');
+        if (updatedPayers.length === 0 && people.length > 1) { // if all payers removed due to deletion, add a blank one if other people exist
+            return [{ id: Date.now().toString(), personId: '', amount: '' }];
+        }
+        return updatedPayers;
+      });
 
 
       setSelectedPeopleEqual(prev => prev.filter(id => id !== personToDelete.id));
@@ -529,7 +514,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const isFormValid = useMemo(() => {
     if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category) return false;
     
-    // Validate payers
     if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) <= 0)) return false;
     if (Math.abs(sumOfPayerAmounts - Number(totalAmount)) > 0.01) return false;
 
@@ -560,7 +544,9 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
 
   const handleAddItem = () => setItems([...items, { id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
   const handleRemoveItem = (itemId: string) => setItems(items.filter(item => item.id !== itemId));
-  const handleItemChange = (itemId: string, field: keyof Omit<ExpenseItemDetail, 'id'>, value: any) => setItems(items.map(item => item.id === itemId ? { ...item, [field]: value } : item));
+  const handleItemChange = (itemId: string, field: keyof Omit<ExpenseItemDetail, 'id' | 'price'> | 'price', value: any) => {
+    setItems(items.map(item => item.id === itemId ? { ...item, [field]: field === 'price' ? (value === '' ? '' : parseFloat(value as string) || 0) : value } : item));
+  };
   const handleItemSharedByChange = (itemId: string, personId: string) => {
     setItems(items.map(item => item.id === itemId ? { ...item, sharedBy: item.sharedBy.includes(personId) ? item.sharedBy.filter(id => id !== personId) : [...item.sharedBy, personId] } : item));
   };
@@ -576,7 +562,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const handleSubmitExpense = async () => {
     if (!isFormValid || !db || supabaseInitializationError) {
         if (supabaseInitializationError){ toast({ title: "Error", description: "Cannot add expense: Supabase issue.", variant: "destructive" }); } 
-        else if (!isFormValid) { toast({ title: "Validation Error", description: "Please fill all required fields correctly. Ensure payer amounts sum to total.", variant: "destructive" }); }
+        else if (!isFormValid) { toast({ title: "Validation Error", description: "Please fill all required fields correctly. Ensure payer amounts sum to total, and splits add up.", variant: "destructive" }); }
         return;
     }
     let sharesData: { personId: string, amount: number }[] = [];
@@ -694,7 +680,6 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
             </div>
           </div>
           
-          {/* Paid By Section - Multiple Payers */}
           <div className="space-y-3">
             <Label>Paid by</Label>
             {payers.map((payerRow, index) => (
@@ -757,7 +742,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
             <div className="p-3 border rounded-md bg-secondary/20 mt-3"> 
             {splitMethod === 'equal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Select who shared:</h4>{people.map(person => (<div key={person.id} className="flex items-center space-x-2"><Checkbox id={`equal-${person.id}`} checked={selectedPeopleEqual.includes(person.id)} onCheckedChange={(checked) => setSelectedPeopleEqual(prev => checked ? [...prev, person.id] : prev.filter(id => id !== person.id))} /><Label htmlFor={`equal-${person.id}`} className="font-normal text-sm">{person.name}</Label></div>))}</div>)}
             {splitMethod === 'unequal' && (<div className="space-y-2"><h4 className="font-semibold text-sm">Enter individual shares:</h4>{people.map(person => (<div key={person.id} className="flex items-center justify-between space-x-2"><Label htmlFor={`unequal-${person.id}`} className="min-w-[70px] text-sm">{person.name}</Label><Input id={`unequal-${person.id}`} type="number" value={unequalShares[person.id] || ''} onChange={(e) => setUnequalShares(prev => ({ ...prev, [person.id]: parseFloat(e.target.value) || '' }))} placeholder="Amt" className="w-1/2 h-8 text-sm" /></div>))}<div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Remaining: {formatCurrency(remainingAmountUnequal)}</div></div>)}
-            {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price as any} onChange={(e) => handleItemChange(item.id, 'price', parseFloat(e.target.value) || '')} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
+            {splitMethod === 'itemwise' && (<div className="space-y-3"><h4 className="font-semibold text-sm">Add items and assign shares:</h4>{items.map((item, index) => (<Card key={item.id} className="p-2.5 bg-card/80 shadow-sm"><div className="space-y-1.5"><div className="flex justify-between items-center mb-1"><p className="font-medium text-xs">Item #{index + 1}</p>{items.length > 1 && (<Button variant="ghost" size="icon" onClick={() => handleRemoveItem(item.id)} className="h-5 w-5 text-destructive hover:bg-destructive/10"><Trash2 className="h-3.5 w-3.5" /></Button>)}</div><Input value={item.name} onChange={(e) => handleItemChange(item.id, 'name', e.target.value)} placeholder="Item name" className="text-xs h-8" /><Input type="number" value={item.price} onChange={(e) => handleItemChange(item.id, 'price', e.target.value)} placeholder="Price" className="text-xs h-8" /><div className="space-y-0.5 pt-0.5"><p className="text-xs text-muted-foreground">Shared by:</p><div className="grid grid-cols-2 gap-x-2 gap-y-1">{people.map(person => (<div key={person.id} className="flex items-center space-x-1"><Checkbox id={`item-${item.id}-person-${person.id}`} checked={item.sharedBy.includes(person.id)} onCheckedChange={() => handleItemSharedByChange(item.id, person.id)} className="h-3 w-3" /><Label htmlFor={`item-${item.id}-person-${person.id}`} className="text-xs font-normal">{person.name}</Label></div>))}</div></div></div></Card>))}<Button variant="outline" onClick={handleAddItem} className="w-full h-9 text-sm"><PlusCircle className="mr-2 h-4 w-4" /> Add Another Item</Button><div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>Item Sum: {formatCurrency(sumOfItemPrices)} (Total: {formatCurrency(Number(totalAmount))})</div></div>)}
             </div>
           )}
         </CardContent>
@@ -785,13 +770,11 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     people.forEach(p => balances[p.id] = 0);
     
     expenses.forEach(expense => {
-      // Add amounts paid by each payer to their balance
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach(payment => {
           balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
         });
       }
-      // Subtract shares from each person's balance
       expense.shares.forEach(share => { 
         balances[share.personId] = (balances[share.personId] || 0) - share.amount; 
       });
@@ -921,7 +904,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
                  const payerNames = Array.isArray(expense.paid_by) 
                     ? expense.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')
-                    : (peopleMap[expense.paid_by as any] || 'Unknown'); // Fallback for old data
+                    : (peopleMap[expense.paid_by as any] || 'Unknown'); 
                  const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1 
                     ? "Multiple Payers" 
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1 
@@ -979,7 +962,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2 h-6 w-6" /> Expense Details
@@ -989,8 +972,8 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow min-h-0 pr-4 -mr-4">
-          <div className="space-y-4 py-4">
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="space-y-4 py-4 pr-1"> {/* Added pr-1 to give slight space for scrollbar if it appears */}
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
@@ -1104,3 +1087,4 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
+
