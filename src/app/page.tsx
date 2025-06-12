@@ -791,19 +791,36 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     return transactions;
   }, [expenses, people]);
 
-  const expensesByPayer = useMemo(() => {
-    const data: Record<string, number> = {};
-    people.forEach(p => data[p.name] = 0);
-    expenses.forEach(exp => { 
-      if (Array.isArray(exp.paid_by)) {
-        exp.paid_by.forEach(payment => {
-          const payerName = peopleMap[payment.personId];
-          if (payerName) { data[payerName] = (data[payerName] || 0) + Number(payment.amount); }
-        });
-      }
-    });
-    return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
-  }, [expenses, peopleMap, people]);
+  const shareVsPaidData = useMemo(() => {
+    if (!people.length) return [];
+
+    return people.map(person => {
+      let totalPaidByPerson = 0;
+      let totalShareForPerson = 0;
+
+      expenses.forEach(expense => {
+        if (Array.isArray(expense.paid_by)) {
+          expense.paid_by.forEach(payment => {
+            if (payment.personId === person.id) {
+              totalPaidByPerson += Number(payment.amount);
+            }
+          });
+        }
+        if (Array.isArray(expense.shares)) {
+          expense.shares.forEach(share => {
+            if (share.personId === person.id) {
+              totalShareForPerson += Number(share.amount);
+            }
+          });
+        }
+      });
+      return {
+        name: peopleMap[person.id] || person.name,
+        paid: totalPaidByPerson,
+        share: totalShareForPerson,
+      };
+    }).filter(d => d.paid > 0 || d.share > 0);
+  }, [expenses, people, peopleMap]);
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
@@ -854,19 +871,24 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
 
       <div className="grid md:grid-cols-2 gap-6"> 
         <Card className="shadow-lg rounded-lg">
-          <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Payer</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-lg">Share vs. Paid Comparison</CardTitle></CardHeader>
           <CardContent className="h-[280px]"> 
-            {expensesByPayer.length > 0 ? (
+            {shareVsPaidData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={expensesByPayer} margin={{ top: 5, right: 10, left: 30, bottom: 5 }}>
+                <BarChart data={shareVsPaidData} margin={{ top: 5, right: 10, left: 30, bottom: 20 }}> {/* Increased bottom margin for legend */}
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={-30} textAnchor="end" height={50} />
                   <YAxis tickFormatter={formatCurrency} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
-                  <RechartsTooltip formatter={(value: number) => formatCurrency(value)} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} />
-                  <Bar dataKey="amount" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} barSize={20} />
+                  <RechartsTooltip 
+                    formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']} 
+                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} 
+                  />
+                  <Legend wrapperStyle={{fontSize: "11px", paddingTop: "10px"}} />
+                  <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={15} />
+                  <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} barSize={15} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for payer chart.</p>)}
+            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for comparison chart.</p>)}
           </CardContent>
         </Card>
 
@@ -1127,6 +1149,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
-
-
-    
