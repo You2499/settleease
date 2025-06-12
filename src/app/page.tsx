@@ -19,8 +19,11 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 // --- Supabase Configuration ---
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// IMPORTANT: Hardcoding credentials here is for TEMPORARY DEVELOPMENT EASE ONLY.
+// For production, you MUST use environment variables (e.g., .env.local file)
+// and ensure they are correctly set in your deployment environment.
+const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co"; // process.env.NEXT_PUBLIC_SUPABASE_URL; // Development override
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og"; // process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY; // Development override
 
 let db: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
@@ -39,7 +42,6 @@ if (!supabaseInitializationError && supabaseUrl && supabaseAnonKey) {
     supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase project URL and Anon Key are correct.`;
   }
 } else {
-  // Log the pre-initialization config error if not already logged by client creation try-catch
   if (supabaseInitializationError) console.error("Supabase Configuration Error:", supabaseInitializationError);
 }
 
@@ -72,7 +74,7 @@ interface Person {
 interface Expense {
   id: string; // UUID
   description: string;
-  total_amount: number; // Column name typically snake_case in Supabase
+  total_amount: number; 
   category: string;
   paid_by: string; // personId (UUID)
   split_method: 'equal' | 'unequal' | 'itemwise';
@@ -96,7 +98,6 @@ export default function SettleEaseApp() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'addExpense'>('dashboard');
   const [isLoading, setIsLoading] = useState(true);
 
-  // Authentication
   useEffect(() => {
     if (supabaseInitializationError) {
       toast({
@@ -123,31 +124,30 @@ export default function SettleEaseApp() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event: AuthChangeEvent, session: Session | null) => {
       const user = session?.user ?? null;
       setCurrentUser(user);
-      if (user && db) { // Or if event === 'INITIAL_SESSION' and no user, attempt anon sign-in if desired
-        // For this app, we proceed if there's a user or allow anonymous-like access.
-        // The original app added default people after anonymous sign-in.
-        // We'll do it if a user session is established or on initial load if configured for anon.
-        // For simplicity, let's call it if db is available.
+      if (user && db) { 
+        await addDefaultPeople();
+      } else if (_event === 'INITIAL_SESSION' && !user && db) { // Handle initial load for anonymous-like access
         await addDefaultPeople();
       }
-      setIsLoading(false);
+      // setIsLoading(false); // Moved to after initial session check
     });
     
-    // Check initial session
     const getInitialSession = async () => {
-        const { data: { session } } = await db!.auth.getSession();
-        const user = session?.user ?? null;
-        setCurrentUser(user);
-        if (db) await addDefaultPeople(); // Check for default people on initial load
-        setIsLoading(false);
+        setIsLoading(true); // Set loading true before async operation
+        try {
+            const { data: { session } } = await db!.auth.getSession();
+            const user = session?.user ?? null;
+            setCurrentUser(user);
+            if (db) await addDefaultPeople(); 
+        } catch (error) {
+            console.error("Error getting initial session:", error);
+            toast({ title: "Session Error", description: "Could not retrieve initial session.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    if (authListener) { // if onAuthStateChange is set up
-        // getInitialSession(); // Call it to ensure initial state is correct.
-        // onAuthStateChange with event INITIAL_SESSION should handle this.
-    } else {
-        setIsLoading(false); // if listener setup failed
-    }
+    getInitialSession();
 
     return () => {
       authListener?.subscription.unsubscribe();
@@ -155,13 +155,11 @@ export default function SettleEaseApp() {
   }, []);
 
 
-  // Data Fetching and Realtime Subscriptions
   useEffect(() => {
     if (supabaseInitializationError || !db) {
       return;
     }
 
-    // Fetch initial data
     const fetchInitialData = async () => {
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (peopleError) {
@@ -182,11 +180,10 @@ export default function SettleEaseApp() {
 
     fetchInitialData();
 
-    // Realtime subscriptions
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, (payload) => {
         console.log('People change received!', payload);
-        fetchInitialData(); // Simple refetch, can be optimized
+        fetchInitialData(); 
       })
       .subscribe((status, err) => {
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
@@ -199,7 +196,7 @@ export default function SettleEaseApp() {
     const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, (payload) => {
         console.log('Expenses change received!', payload);
-        fetchInitialData(); // Simple refetch
+        fetchInitialData(); 
       })
       .subscribe((status, err) => {
          if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
@@ -213,7 +210,7 @@ export default function SettleEaseApp() {
       db.removeChannel(peopleChannel);
       db.removeChannel(expensesChannel);
     };
-  }, [db]); // currentUser removed as explicit RLS based on user is not set up here. Depends on db init.
+  }, [db]); 
 
   const addDefaultPeople = async () => {
     if (!db) return;
@@ -221,7 +218,6 @@ export default function SettleEaseApp() {
 
     if (countError) {
         console.error("Error checking for existing people:", countError);
-        // Don't toast here as it might be too early or spammy
         return;
     }
 
@@ -234,7 +230,6 @@ export default function SettleEaseApp() {
         toast({ title: "Setup Error", description: `Could not add default people: ${error.message}`, variant: "destructive" });
       } else {
         toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-        // Refetch people after adding defaults
         const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
         if (!peopleError && peopleData) setPeople(peopleData as Person[]);
       }
@@ -278,7 +273,7 @@ export default function SettleEaseApp() {
           <CardContent>
             <p className="text-destructive-foreground">SettleEase could not start due to a Supabase configuration problem.</p>
             <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{supabaseInitializationError}</p>
-            <p className="mt-4 text-xs">Please ensure your Supabase environment variables (e.g., <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are correctly set in your project and are not using placeholder values.</p>
+            <p className="mt-4 text-xs">Please ensure your Supabase environment variables (e.g., <code>NEXT_PUBLIC_SUPABASE_URL</code>, <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>) are correctly set in your project and are not using placeholder values, or that the hardcoded values in the source are correct (for development only).</p>
           </CardContent>
         </Card>
       </div>
@@ -323,7 +318,7 @@ export default function SettleEaseApp() {
 
 interface AddExpenseTabProps {
   people: Person[];
-  setPeople: React.Dispatch<React.SetStateAction<Person[]>>; // To refresh people list after adding
+  setPeople: React.Dispatch<React.SetStateAction<Person[]>>; 
 }
 
 function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
@@ -351,10 +346,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
       
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added to the group.` });
       setNewPersonName('');
-      // Manually update people list or rely on realtime (if it's fast enough for UX)
-      // For immediate feedback:
       if (data && data.length > 0) {
-        // @ts-ignore TODO: Fix type for data from insert
         setPeople(prevPeople => [...prevPeople, data[0] as Person].sort((a,b) => a.name.localeCompare(b.name)));
       }
 
@@ -372,7 +364,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
     }
     if (splitMethod === 'unequal') {
       const sumOfShares = Object.values(unequalShares).reduce((sum, share) => sum + (Number(share) || 0), 0);
-      return Math.abs(sumOfShares - Number(totalAmount)) < 0.01 && Object.values(unequalShares).every(s => s !== '' && Number(s) >= 0);
+      return Math.abs(sumOfShares - Number(totalAmount)) < 0.01 && Object.values(unequalShares).every(s => s !== '' && Number(s) >= 0) && Object.keys(unequalShares).length > 0;
     }
     if (splitMethod === 'itemwise') {
       if (items.length === 0) return false;
@@ -426,6 +418,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
     setSelectedPeopleEqual([]);
     setUnequalShares({});
     setItems([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
+    setSplitMethod('equal');
   };
 
   const handleSubmitExpense = async () => {
@@ -462,7 +455,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
 
     const expenseToInsert = {
       description,
-      total_amount: Number(totalAmount), // Ensure snake_case for Supabase column
+      total_amount: Number(totalAmount), 
       category,
       paid_by: paidBy,
       split_method: splitMethod,
@@ -619,7 +612,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
                     />
                   </div>
                 ))}
-                <div className={`text-sm font-medium p-2 rounded-md ${remainingAmountUnequal === 0 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>
+                <div className={`text-sm font-medium p-2 rounded-md ${Math.abs(remainingAmountUnequal) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>
                   Remaining: {formatCurrency(remainingAmountUnequal)}
                 </div>
               </div>
@@ -761,7 +754,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses]);
 
-  if (supabaseInitializationError && people.length === 0 && expenses.length === 0) {
+  if (supabaseInitializationError && people.length === 0 && expenses.length === 0 && !isLoading) { // check isLoading
     return (
       <Card className="text-center py-12 shadow-lg">
         <CardHeader>
@@ -777,7 +770,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     );
   }
 
-  if (people.length === 0 && expenses.length === 0) {
+  if (people.length === 0 && expenses.length === 0 && !isLoading) { // check isLoading
      return (
       <Card className="text-center py-12 shadow-lg">
         <CardHeader>
@@ -787,7 +780,6 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           <FileText className="mx-auto h-16 w-16 text-primary/70" />
           <p className="text-lg text-muted-foreground">No expenses recorded yet.</p>
           <p>Go to the "Add Expense" tab to start managing your group finances.</p>
-          {/* User state check might need adjustment based on Supabase auth */}
         </CardContent>
       </Card>
     );
@@ -913,3 +905,6 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     </div>
   );
 }
+
+
+    
