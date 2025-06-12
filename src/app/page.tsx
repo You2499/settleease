@@ -59,23 +59,18 @@ const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 let db: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
 
-if (!supabaseUrl || supabaseUrl === "YOUR_SUPABASE_URL" || supabaseUrl.includes("pzednvgbxgixonpvbdsx.supabase.coYOUR_SUPABASE_URL")) {
-  supabaseInitializationError = "Supabase URL is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_URL environment variable correctly.";
-} else if (!supabaseAnonKey || supabaseAnonKey === "YOUR_SUPABASE_ANON_KEY" || supabaseAnonKey.includes("YOUR_SUPABASE_ANON_KEY")) {
-  supabaseInitializationError = "Supabase Anon Key is missing or is a placeholder. Please set the NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable correctly.";
-}
-
-
-if (!supabaseInitializationError && supabaseUrl && supabaseAnonKey) {
+// Hardcoded Supabase credentials (NOT RECOMMENDED FOR PRODUCTION)
+if (!supabaseUrl || !supabaseAnonKey) {
+  supabaseInitializationError = "Supabase URL or Anon Key is missing in the hardcoded values.";
+} else {
   try {
     db = createClient(supabaseUrl, supabaseAnonKey);
   } catch (error: any) {
-    console.error("Error initializing Supabase client:", error);
-    supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase project URL and Anon Key are correct.`;
+    console.error("Error initializing Supabase client with hardcoded values:", error);
+    supabaseInitializationError = `Supabase Client Initialization Error (hardcoded): ${error.message || "Could not initialize Supabase."}. Check the hardcoded values.`;
   }
-} else {
-  if (supabaseInitializationError) console.error("Supabase Configuration Error:", supabaseInitializationError);
 }
+
 
 // --- Constants ---
 const PEOPLE_TABLE = 'people';
@@ -134,7 +129,7 @@ let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 // --- Main Application Structure ---
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<'dashboard' | 'addExpense'>('dashboard');
-  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null); // Retained for potential future use with explicit auth
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null); 
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -147,6 +142,7 @@ export default function SettleEasePage() {
           return; 
         }
       } else if (!db) {
+         console.warn("addDefaultPeople: Supabase client (db) not available.");
         return;
       }
     }
@@ -317,7 +313,7 @@ export default function SettleEasePage() {
           <CardContent>
             <p className="text-destructive-foreground">SettleEase could not start due to a Supabase configuration problem.</p>
             <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{supabaseInitializationError}</p>
-            <p className="mt-3 text-xs">Please ensure your Supabase environment variables (e.g., NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY) are correctly set in your project and are not using placeholder values. If using hardcoded values for local testing, double-check them.</p>
+            <p className="mt-3 text-xs">If using hardcoded values for local testing, double-check them in `src/app/page.tsx`. For production, please ensure your Supabase environment variables (e.g., NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY) are correctly set.</p>
           </CardContent>
         </Card>
       </div>
@@ -493,10 +489,10 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       
       setPayers(prev => {
         const updatedPayers = prev.map(p => p.personId === personToDelete.id ? {...p, personId: '', amount: ''} : p).filter(p => p.personId !== '');
-        if (updatedPayers.length === 0 && people.length > 1) { // if all payers removed due to deletion, add a blank one if other people exist
+        if (updatedPayers.length === 0 && people.length > 1) { 
             return [{ id: Date.now().toString(), personId: '', amount: '' }];
         }
-        return updatedPayers;
+        return updatedPayers.length === 0 ? [{ id: Date.now().toString(), personId: '', amount: '' }] : updatedPayers;
       });
 
 
@@ -514,7 +510,8 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const isFormValid = useMemo(() => {
     if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category) return false;
     
-    if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) <= 0)) return false;
+    if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) < 0)) return false; // Allow 0 for payer amount initially
+    if (payers.every(p => Number(p.amount) === 0) && Number(totalAmount) > 0) return false; // At least one payer must pay if total > 0
     if (Math.abs(sumOfPayerAmounts - Number(totalAmount)) > 0.01) return false;
 
 
@@ -582,7 +579,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       sharesData = Object.entries(personOwes).map(([personId, amount]) => ({ personId, amount }));
     }
     
-    const validPayers = payers.map(p => ({ personId: p.personId, amount: Number(p.amount) }));
+    const validPayers = payers.filter(p => p.personId && Number(p.amount) >= 0).map(p => ({ personId: p.personId, amount: Number(p.amount) }));
 
     const expenseToInsert = { 
         description, 
@@ -776,7 +773,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
         });
       }
       expense.shares.forEach(share => { 
-        balances[share.personId] = (balances[share.personId] || 0) - share.amount; 
+        balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount); 
       });
     });
 
@@ -904,12 +901,13 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
                  const payerNames = Array.isArray(expense.paid_by) 
                     ? expense.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')
-                    : (peopleMap[expense.paid_by as any] || 'Unknown'); 
+                    : 'Data Error'; // Should always be an array now
                  const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1 
                     ? "Multiple Payers" 
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1 
                         ? (peopleMap[expense.paid_by[0].personId] || 'Unknown') 
-                        : payerNames);
+                        : (expense.paid_by.length === 0 ? 'None' : 'Error'));
+
 
                  return (
                   <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
@@ -960,6 +958,18 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
 
   const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
 
+  const involvedPersonIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (Array.isArray(expense.paid_by)) {
+        expense.paid_by.forEach(p => ids.add(p.personId));
+    }
+    if (Array.isArray(expense.shares)) {
+        expense.shares.forEach(s => ids.add(s.personId));
+    }
+    return Array.from(ids);
+  }, [expense.paid_by, expense.shares]);
+
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
@@ -973,7 +983,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
         </DialogHeader>
         
         <ScrollArea className="flex-grow min-h-0">
-          <div className="space-y-4 py-4 pr-1"> {/* Added pr-1 to give slight space for scrollbar if it appears */}
+          <div className="space-y-4 py-4 pr-1">
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
@@ -995,7 +1005,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
                       ))}
                     </ul>
                   ) : (
-                    <span className="font-medium text-right block">Information unavailable</span>
+                    <span className="font-medium text-right block">No payers listed or data unavailable</span>
                   )}
                 </div>
 
@@ -1008,18 +1018,48 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
 
             <Card>
               <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-lg">Calculated Shares</CardTitle>
-                <CardDescription>This is what each person owes or is credited for this expense.</CardDescription>
+                <CardTitle className="text-lg">Individual Breakdown for this Expense</CardTitle>
+                <CardDescription>How this specific expense affects each person's balance before overall settlement.</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-1 text-sm">
-                  {expense.shares.map(share => (
-                    <li key={share.personId} className="flex justify-between items-center p-1.5 bg-secondary/30 rounded-sm">
-                      <span>{peopleMap[share.personId] || 'Unknown Person'}</span>
-                      <span className="font-semibold text-primary">{formatCurrency(share.amount)}</span>
-                    </li>
-                  ))}
-                </ul>
+                 {involvedPersonIds.length > 0 ? (
+                    <ul className="space-y-2 text-sm">
+                    {involvedPersonIds.map(personId => {
+                        const personName = peopleMap[personId] || 'Unknown Person';
+                        const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
+                        const amountPaidThisExpense = paymentRecord ? Number(paymentRecord.amount) : 0;
+                        
+                        const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
+                        const shareOfThisExpense = shareRecord ? Number(shareRecord.amount) : 0;
+                        
+                        const netForThisExpense = amountPaidThisExpense - shareOfThisExpense;
+
+                        return (
+                        <li key={personId} className="p-2.5 bg-secondary/30 rounded-md space-y-0.5">
+                            <div className="flex justify-between items-center">
+                                <span className="font-semibold">{personName}</span>
+                                <span 
+                                    className={`font-bold text-xs px-1.5 py-0.5 rounded-full
+                                    ${netForThisExpense < -0.01 ? 'bg-red-100 text-red-700' : netForThisExpense > 0.01 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
+                                >
+                                    {netForThisExpense < -0.01 ? `Owes ${formatCurrency(Math.abs(netForThisExpense))}` :
+                                    netForThisExpense > 0.01 ? `Is Owed ${formatCurrency(netForThisExpense)}` :
+                                    `Settled`}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Amount Paid:</span> <span>{formatCurrency(amountPaidThisExpense)}</span>
+                            </div>
+                            <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Share of Expense:</span> <span>{formatCurrency(shareOfThisExpense)}</span>
+                            </div>
+                        </li>
+                        );
+                    })}
+                    </ul>
+                 ) : (
+                    <p className="text-sm text-muted-foreground">No individuals involved in payments or shares for this expense.</p>
+                 )}
               </CardContent>
             </Card>
             
