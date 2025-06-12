@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -110,12 +110,17 @@ interface ExpenseItemDetail {
   sharedBy: string[]; 
 }
 
+interface PayerShare {
+  personId: string;
+  amount: number;
+}
+
 interface Expense {
   id: string; 
   description: string;
   total_amount: number; 
   category: string;
-  paid_by: string; 
+  paid_by: PayerShare[]; 
   split_method: 'equal' | 'unequal' | 'itemwise';
   shares: { personId: string, amount: number }[]; 
   items?: ExpenseItemDetail[]; 
@@ -129,7 +134,7 @@ let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 // --- Main Application Structure ---
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<'dashboard' | 'addExpense'>('dashboard');
-  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null); // Retained for potential future use with explicit auth
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -137,7 +142,8 @@ export default function SettleEasePage() {
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
-        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true });
+         // Check if people actually exist, in case a previous attempt failed but set the flag.
+        const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
         if (!currentPeopleError && currentPeople && currentPeople.length > 0) {
           return; 
         }
@@ -161,6 +167,7 @@ export default function SettleEasePage() {
       if (count === 0) {
         const defaultPeopleNames = ['Alice', 'Bob', 'Charlie'];
         const peopleToInsert = defaultPeopleNames.map(name => ({ name, created_at: new Date().toISOString() }));
+        // Use .select() to ensure the promise resolves after insertion and to potentially get back inserted data if needed
         const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert).select(); 
         if (insertError) {
           console.error("Error adding default people:", insertError);
@@ -191,26 +198,51 @@ export default function SettleEasePage() {
     }
     
     let isMounted = true;
-    let authStateProcessed = false;
+    let authStateProcessed = false; // To prevent multiple setIsLoading(false) calls from auth listener
 
+    // Check initial session state for anonymous user context (or any logged-in user)
+    const checkInitialSession = async () => {
+        if (!db) return;
+        const { data: { session } } = await db.auth.getSession();
+        if (isMounted) {
+            setCurrentUser(session?.user ?? null);
+            // Attempt to add default people regardless of explicit session for anon usage
+             if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
+                await addDefaultPeople();
+            }
+            if (!authStateProcessed) { setIsLoading(false); authStateProcessed = true; }
+        }
+    };
+    checkInitialSession();
+    
+    // Listen for auth state changes (e.g., if user logs in/out in another tab)
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (!isMounted) return;
       setCurrentUser(session?.user ?? null);
+      // Re-check default people if auth state changes and setup wasn't done.
+      // This is mostly for robustness, main call is in checkInitialSession
       if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
         await addDefaultPeople();
       }
       if (!authStateProcessed) { setIsLoading(false); authStateProcessed = true; }
     });
     
-    const initializeAppData = async () => {
-      setIsLoading(true);
-      await db!.auth.getSession(); 
-      if (isMounted && !authStateProcessed) {
-        setTimeout(() => { if (isMounted && !authStateProcessed) { setIsLoading(false); authStateProcessed = true; }}, 1500);
-      }
+    // Fallback to ensure loading state is eventually false if auth takes too long or doesn't fire
+    const loadingFallbackTimeout = setTimeout(() => {
+        if (isMounted && !authStateProcessed) {
+            setIsLoading(false);
+            authStateProcessed = true;
+            if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
+                 addDefaultPeople(); // Ensure it's called if timeout occurs first
+            }
+        }
+    }, 2500); 
+
+    return () => { 
+        isMounted = false; 
+        authListener?.subscription.unsubscribe(); 
+        clearTimeout(loadingFallbackTimeout);
     };
-    initializeAppData();
-    return () => { isMounted = false; authListener?.subscription.unsubscribe(); };
   }, [addDefaultPeople]); 
 
 
@@ -219,7 +251,9 @@ export default function SettleEasePage() {
     let isMounted = true;
     const fetchInitialData = async () => {
       if (!isMounted || !db) return;
-      setIsLoading(true);
+      // No need to setIsLoading(true) here if the main useEffect handles initial load
+      // However, if this is meant to be a refresh, it might be needed.
+      // For simplicity, relying on main loading state.
 
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
       if (!isMounted) return;
@@ -235,19 +269,43 @@ export default function SettleEasePage() {
         toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
       } else { setExpenses(expensesData as Expense[]); }
       
-      if (isMounted) setIsLoading(false); 
+      // Ensure loading is false after initial fetch if not already set
+      // if (isMounted && isLoading) setIsLoading(false); 
     };
 
-    fetchInitialData();
-    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, () => fetchInitialData()).subscribe();
-    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`).on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, () => fetchInitialData()).subscribe();
+    fetchInitialData(); // Fetch on component mount or when db becomes available
+
+    // Setup realtime subscriptions
+    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE }, 
+        (payload) => {
+          console.log('People change received!', payload);
+          fetchInitialData(); // Refetch all people on change
+        }
+      ).subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${PEOPLE_TABLE}:`, err);
+      });
+
+    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE }, 
+        (payload) => {
+          console.log('Expenses change received!', payload);
+          fetchInitialData(); // Refetch all expenses on change
+        }
+      ).subscribe((status, err) => {
+         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
+         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${EXPENSES_TABLE}:`, err);
+      });
     
     return () => { 
         isMounted = false; 
-        db.removeChannel(peopleChannel); 
-        db.removeChannel(expensesChannel); 
+        if (db) {
+            db.removeChannel(peopleChannel); 
+            db.removeChannel(expensesChannel); 
+        }
     };
-  }, []); 
+  }, [supabaseInitializationError]); // Removed isLoading from dependencies to avoid re-triggering fetches on its change
   
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -273,6 +331,7 @@ export default function SettleEasePage() {
           <CardContent>
             <p className="text-destructive-foreground">SettleEase could not start due to a Supabase configuration problem.</p>
             <p className="mt-2 text-sm text-muted-foreground bg-destructive/10 p-3 rounded-md">{supabaseInitializationError}</p>
+            <p className="mt-3 text-xs">Please ensure your Supabase environment variables (e.g., NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY) are correctly set in your project and are not using placeholder values. If using hardcoded values for local testing, double-check them.</p>
           </CardContent>
         </Card>
       </div>
@@ -311,7 +370,7 @@ interface AppActualSidebarProps {
 }
 
 function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) {
-    const { state: sidebarState, isMobile } = useSidebar();
+    const { isMobile } = useSidebar(); // Removed sidebarState as it's not directly used here.
     return (
         <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
             <SidebarHeader className="items-center p-3 border-b border-sidebar-border">
@@ -353,7 +412,11 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
     );
 }
 
-
+interface PayerInputRow {
+  id: string; // For React key
+  personId: string;
+  amount: number | '';
+}
 interface AddExpenseTabProps {
   people: Person[];
 }
@@ -362,7 +425,10 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState<number | ''>('');
   const [category, setCategory] = useState('');
-  const [paidBy, setPaidBy] = useState('');
+  
+  // State for multiple payers
+  const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
+
   const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal' | 'itemwise'>('equal');
   
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
@@ -373,6 +439,32 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingPersonNewName, setEditingPersonNewName] = useState('');
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+
+  // Handler for payers
+  const handlePayerChange = (rowId: string, field: 'personId' | 'amount', value: string | number) => {
+    setPayers(prevPayers => 
+      prevPayers.map(p => 
+        p.id === rowId 
+        ? { ...p, [field]: field === 'amount' ? (value === '' ? '' : parseFloat(value as string) || 0) : value } 
+        : p
+      )
+    );
+  };
+
+  const addPayerRow = () => {
+    setPayers(prevPayers => [...prevPayers, { id: Date.now().toString(), personId: '', amount: '' }]);
+  };
+
+  const removePayerRow = (rowId: string) => {
+    setPayers(prevPayers => prevPayers.length > 1 ? prevPayers.filter(p => p.id !== rowId) : prevPayers);
+  };
+
+  useEffect(() => {
+    // Auto-fill single payer amount if totalAmount is set and only one payer row exists with no amount
+    if (payers.length === 1 && totalAmount && payers[0].amount === '') {
+      setPayers([{ ...payers[0], amount: Number(totalAmount) }]);
+    }
+  }, [totalAmount, payers.length]); // payers.length ensures this runs if a payer is removed/added too
 
 
   const handleAddPerson = async () => {
@@ -415,7 +507,14 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
       toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
       if (editingPersonId === personToDelete.id) handleCancelEditPerson();
-      if (paidBy === personToDelete.id) setPaidBy('');
+      
+      // Update multi-payer state
+      setPayers(prev => prev.map(p => p.personId === personToDelete.id ? {...p, personId: ''} : p).filter(p => p.personId !== ''));
+      if (payers.length === 0 && people.length > 1) { // if all payers removed, add a blank one if other people exist
+          addPayerRow();
+      }
+
+
       setSelectedPeopleEqual(prev => prev.filter(id => id !== personToDelete.id));
       setUnequalShares(prev => { const newShares = {...prev}; delete newShares[personToDelete.id]; return newShares; });
       setItems(prevItems => prevItems.map(item => ({ ...item, sharedBy: item.sharedBy.filter(id => id !== personToDelete.id) })));
@@ -423,8 +522,18 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
     finally { setPersonToDelete(null); }
   };
   
+  const sumOfPayerAmounts = useMemo(() => {
+    return payers.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  }, [payers]);
+
   const isFormValid = useMemo(() => {
-    if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category || !paidBy) return false;
+    if (!description.trim() || !totalAmount || Number(totalAmount) <= 0 || !category) return false;
+    
+    // Validate payers
+    if (payers.some(p => !p.personId || p.amount === '' || Number(p.amount) <= 0)) return false;
+    if (Math.abs(sumOfPayerAmounts - Number(totalAmount)) > 0.01) return false;
+
+
     if (splitMethod === 'equal') return selectedPeopleEqual.length > 0;
     if (splitMethod === 'unequal') {
       const sumOfShares = Object.values(unequalShares).reduce((sum, share) => sum + (Number(share) || 0), 0);
@@ -436,7 +545,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       return Math.abs(sumOfItemPrices - Number(totalAmount)) < 0.01 && items.every(item => item.name.trim() && Number(item.price) > 0 && item.sharedBy.length > 0);
     }
     return false;
-  }, [description, totalAmount, category, paidBy, splitMethod, selectedPeopleEqual, unequalShares, items]);
+  }, [description, totalAmount, category, payers, sumOfPayerAmounts, splitMethod, selectedPeopleEqual, unequalShares, items]);
 
   const remainingAmountUnequal = useMemo(() => {
     if (splitMethod !== 'unequal' || totalAmount === '') return 0;
@@ -457,7 +566,8 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   };
 
   const resetForm = () => {
-    setDescription(''); setTotalAmount(''); setCategory(''); setPaidBy('');
+    setDescription(''); setTotalAmount(''); setCategory('');
+    setPayers([{ id: Date.now().toString(), personId: '', amount: '' }]);
     setSelectedPeopleEqual([]); setUnequalShares({});
     setItems([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
     setSplitMethod('equal');
@@ -466,7 +576,7 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
   const handleSubmitExpense = async () => {
     if (!isFormValid || !db || supabaseInitializationError) {
         if (supabaseInitializationError){ toast({ title: "Error", description: "Cannot add expense: Supabase issue.", variant: "destructive" }); } 
-        else if (!isFormValid) { toast({ title: "Validation Error", description: "Please fill all required fields correctly.", variant: "destructive" }); }
+        else if (!isFormValid) { toast({ title: "Validation Error", description: "Please fill all required fields correctly. Ensure payer amounts sum to total.", variant: "destructive" }); }
         return;
     }
     let sharesData: { personId: string, amount: number }[] = [];
@@ -485,7 +595,19 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
       });
       sharesData = Object.entries(personOwes).map(([personId, amount]) => ({ personId, amount }));
     }
-    const expenseToInsert = { description, total_amount: Number(totalAmount), category, paid_by: paidBy, split_method: splitMethod, shares: sharesData, items: splitMethod === 'itemwise' ? items.map(item => ({ ...item, price: Number(item.price) })) : undefined, created_at: new Date().toISOString() };
+    
+    const validPayers = payers.map(p => ({ personId: p.personId, amount: Number(p.amount) }));
+
+    const expenseToInsert = { 
+        description, 
+        total_amount: Number(totalAmount), 
+        category, 
+        paid_by: validPayers, 
+        split_method: splitMethod, 
+        shares: sharesData, 
+        items: splitMethod === 'itemwise' ? items.map(item => ({ ...item, price: Number(item.price) })) : undefined, 
+        created_at: new Date().toISOString() 
+    };
     try {
       await db.from(EXPENSES_TABLE).insert([expenseToInsert]);
       toast({ title: "Expense Added!", description: `${description} has been successfully recorded.` });
@@ -571,11 +693,58 @@ function AddExpenseTab({ people }: AddExpenseTabProps) {
               </Select>
             </div>
           </div>
-          <div><Label htmlFor="paidBy">Paid by</Label>
-            <Select value={paidBy} onValueChange={setPaidBy} disabled={people.length === 0}><SelectTrigger id="paidBy" className="w-full mt-1"><SelectValue placeholder={people.length === 0 ? "Add people first" : "Select who paid"} /></SelectTrigger>
-              <SelectContent>{people.map(person => (<SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>))}</SelectContent>
-            </Select>
+          
+          {/* Paid By Section - Multiple Payers */}
+          <div className="space-y-3">
+            <Label>Paid by</Label>
+            {payers.map((payerRow, index) => (
+              <Card key={payerRow.id} className="p-3 bg-card/60 shadow-sm">
+                <div className="flex items-center space-x-2">
+                  <div className="flex-grow">
+                    <Label htmlFor={`payer-person-${payerRow.id}`} className="sr-only">Payer Person</Label>
+                    <Select 
+                      value={payerRow.personId} 
+                      onValueChange={(value) => handlePayerChange(payerRow.id, 'personId', value)}
+                      disabled={people.length === 0}
+                    >
+                      <SelectTrigger id={`payer-person-${payerRow.id}`} className="w-full h-9 text-sm">
+                        <SelectValue placeholder={people.length === 0 ? "Add people first" : "Select payer"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {people.map(person => (<SelectItem key={person.id} value={person.id}>{person.name}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-1/3">
+                     <Label htmlFor={`payer-amount-${payerRow.id}`} className="sr-only">Payer Amount</Label>
+                    <Input 
+                      id={`payer-amount-${payerRow.id}`} 
+                      type="number" 
+                      value={payerRow.amount} 
+                      onChange={(e) => handlePayerChange(payerRow.id, 'amount', e.target.value)} 
+                      placeholder="Amount" 
+                      className="h-9 text-sm"
+                    />
+                  </div>
+                  {payers.length > 1 && (
+                    <Button variant="ghost" size="icon" onClick={() => removePayerRow(payerRow.id)} className="h-8 w-8 text-destructive hover:bg-destructive/10">
+                      <MinusCircle className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            ))}
+            <Button variant="outline" onClick={addPayerRow} className="w-full h-9 text-sm" disabled={people.length === 0}>
+              <PlusCircle className="mr-2 h-4 w-4" /> Add Another Payer
+            </Button>
+            {Number(totalAmount) > 0 && (
+                 <div className={`text-xs font-medium p-1.5 rounded-md mt-1 ${Math.abs(sumOfPayerAmounts - Number(totalAmount)) < 0.01 ? 'text-green-700 bg-green-100' : 'text-red-700 bg-red-100'}`}>
+                    Payer Sum: {formatCurrency(sumOfPayerAmounts)} (Total Expense: {formatCurrency(Number(totalAmount))})
+                 </div>
+            )}
           </div>
+
+
           <div><Label>Split Method</Label>
             <div className="grid grid-cols-3 gap-2 mt-1">
               <Button variant={splitMethod === 'equal' ? 'default' : 'outline'} onClick={() => setSplitMethod('equal')} className="text-sm">Equal</Button>
@@ -614,10 +783,20 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     if (people.length === 0 || expenses.length === 0) return [];
     const balances: Record<string, number> = {};
     people.forEach(p => balances[p.id] = 0);
+    
     expenses.forEach(expense => {
-      balances[expense.paid_by] = (balances[expense.paid_by] || 0) + expense.total_amount;
-      expense.shares.forEach(share => { balances[share.personId] = (balances[share.personId] || 0) - share.amount; });
+      // Add amounts paid by each payer to their balance
+      if (Array.isArray(expense.paid_by)) {
+        expense.paid_by.forEach(payment => {
+          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
+        });
+      }
+      // Subtract shares from each person's balance
+      expense.shares.forEach(share => { 
+        balances[share.personId] = (balances[share.personId] || 0) - share.amount; 
+      });
     });
+
     const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
     const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
     const transactions: { from: string, to: string, amount: number }[] = [];
@@ -635,7 +814,14 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
   const expensesByPayer = useMemo(() => {
     const data: Record<string, number> = {};
     people.forEach(p => data[p.name] = 0);
-    expenses.forEach(exp => { const payerName = peopleMap[exp.paid_by]; if (payerName) { data[payerName] = (data[payerName] || 0) + exp.total_amount; }});
+    expenses.forEach(exp => { 
+      if (Array.isArray(exp.paid_by)) {
+        exp.paid_by.forEach(payment => {
+          const payerName = peopleMap[payment.personId];
+          if (payerName) { data[payerName] = (data[payerName] || 0) + Number(payment.amount); }
+        });
+      }
+    });
     return Object.entries(data).map(([name, amount]) => ({ name, amount })).filter(d => d.amount > 0);
   }, [expenses, peopleMap, people]);
 
@@ -733,6 +919,15 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
             <ul className="space-y-2.5">
               {expenses.map(expense => {
                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
+                 const payerNames = Array.isArray(expense.paid_by) 
+                    ? expense.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')
+                    : (peopleMap[expense.paid_by as any] || 'Unknown'); // Fallback for old data
+                 const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1 
+                    ? "Multiple Payers" 
+                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1 
+                        ? (peopleMap[expense.paid_by[0].personId] || 'Unknown') 
+                        : payerNames);
+
                  return (
                   <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
                     <Card className="bg-card/70 hover:shadow-md hover:border-primary/50 transition-all rounded-md">
@@ -745,7 +940,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
                       <CardContent className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
                          <div className="flex items-center justify-between">
                             <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
-                            <span>Paid by: <span className="font-medium text-foreground">{peopleMap[expense.paid_by] || 'Unknown'}</span></span>
+                            <span>Paid by: <span className="font-medium text-foreground">{displayPayerText}</span></span>
                          </div>
                          <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
                       </CardContent>
@@ -804,7 +999,23 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
                 <div className="flex justify-between"><span>Description:</span> <span className="font-medium text-right">{expense.description}</span></div>
                 <div className="flex justify-between"><span>Total Amount:</span> <span className="font-bold text-primary text-right">{formatCurrency(expense.total_amount)}</span></div>
                 <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4 text-muted-foreground" /> {expense.category}</span></div>
-                <div className="flex justify-between"><span>Paid by:</span> <span className="font-medium text-right">{peopleMap[expense.paid_by] || 'Unknown'}</span></div>
+                
+                <div>
+                  <span className="block">Paid by:</span>
+                  {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
+                    <ul className="list-disc list-inside pl-4">
+                      {expense.paid_by.map(p => (
+                        <li key={p.personId} className="flex justify-between text-xs">
+                          <span>{peopleMap[p.personId] || 'Unknown'}</span>
+                          <span className="font-medium">{formatCurrency(p.amount)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="font-medium text-right block">Information unavailable</span>
+                  )}
+                </div>
+
                 <div className="flex justify-between"><span>Date:</span> <span className="font-medium text-right">{new Date(expense.created_at).toLocaleDateString()}</span></div>
                 <div className="flex justify-between"><span>Split Method:</span> <span className="font-medium capitalize text-right">{expense.split_method}</span></div>
               </CardContent>
@@ -893,4 +1104,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
-
