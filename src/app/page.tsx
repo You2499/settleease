@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser, type Sess
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, CheckCircle2, XCircle, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, CheckCircle2, XCircle, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 // --- Supabase Configuration ---
 const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co"; 
@@ -111,7 +123,7 @@ export default function SettleEaseApp() {
       if (countError) {
         console.error("Error checking for existing people:", countError);
         toast({ title: "Setup Error", description: `Could not check for existing people: ${countError.message}`, variant: "destructive" });
-        initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry if check fails
+        initialDefaultPeopleSetupAttemptedOrCompleted = false; 
         return;
       }
 
@@ -122,9 +134,9 @@ export default function SettleEaseApp() {
         const { error: insertError } = await db.from(PEOPLE_TABLE).insert(peopleToInsert);
         
         if (insertError) {
-          console.error("Error adding default people to DB:", insertError);
+          console.error("Error adding default people:", insertError);
           toast({ title: "Setup Error", description: `Could not add default people: ${insertError.message}`, variant: "destructive" });
-          initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry if insert fails
+          initialDefaultPeopleSetupAttemptedOrCompleted = false; 
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
         }
@@ -132,9 +144,9 @@ export default function SettleEaseApp() {
     } catch (error) {
       console.error("Unexpected error in addDefaultPeople:", error);
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
-      initialDefaultPeopleSetupAttemptedOrCompleted = false; // Allow retry on unexpected error
+      initialDefaultPeopleSetupAttemptedOrCompleted = false; 
     }
-  }, [db]);
+  }, []);
 
 
   useEffect(() => {
@@ -177,8 +189,7 @@ export default function SettleEaseApp() {
     
     const initializeAppData = async () => {
       setIsLoading(true);
-      await db!.auth.getSession(); // Ensures onAuthStateChange listener fires with INITIAL_SESSION
-      // Fallback for isLoading, though onAuthStateChange should handle it.
+      await db!.auth.getSession(); 
       if (isMounted && !authStateProcessed) {
         setTimeout(() => {
           if (isMounted && !authStateProcessed) {
@@ -195,7 +206,7 @@ export default function SettleEaseApp() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [db, supabaseInitializationError, addDefaultPeople]);
+  }, [addDefaultPeople]);
 
 
   useEffect(() => {
@@ -257,7 +268,7 @@ export default function SettleEaseApp() {
       db.removeChannel(peopleChannel);
       db.removeChannel(expensesChannel);
     };
-  }, [db, supabaseInitializationError]); 
+  }, []); 
   
   const peopleMap = useMemo(() => {
     return people.reduce((acc, person) => {
@@ -330,7 +341,7 @@ export default function SettleEaseApp() {
         </div>
 
         {activeTab === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
-        {activeTab === 'addExpense' && <AddExpenseTab people={people} setPeople={setPeople}/>}
+        {activeTab === 'addExpense' && <AddExpenseTab people={people} />}
       </div>
       <footer className="text-center mt-12 text-sm text-muted-foreground">
         <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Ensure Supabase table replication is ON for realtime.</p>
@@ -341,10 +352,9 @@ export default function SettleEaseApp() {
 
 interface AddExpenseTabProps {
   people: Person[];
-  setPeople: React.Dispatch<React.SetStateAction<Person[]>>; 
 }
 
-function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
+function AddExpenseTab({ people }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState<number | ''>('');
   const [category, setCategory] = useState('');
@@ -354,12 +364,19 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, number | ''>>({});
   const [items, setItems] = useState<Item[]>([{ id: Date.now().toString(), name: '', price: '' as any, sharedBy: [] }]);
+  
   const [newPersonName, setNewPersonName] = useState('');
+  const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
+  const [editingPersonNewName, setEditingPersonNewName] = useState('');
+  const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+
 
   const handleAddPerson = async () => {
     if (!newPersonName.trim() || !db || supabaseInitializationError) {
         if (supabaseInitializationError){
              toast({ title: "Error", description: "Cannot add person due to Supabase configuration issue.", variant: "destructive" });
+        } else if (!newPersonName.trim()) {
+            toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" });
         }
         return;
     }
@@ -369,10 +386,86 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
       
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added to the group.` });
       setNewPersonName('');
-      // Data fetching useEffect will update people list
     } catch (error: any) {
       console.error("Error adding person:", error);
       toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" });
+    }
+  };
+
+  const handleStartEditPerson = (person: Person) => {
+    setEditingPersonId(person.id);
+    setEditingPersonNewName(person.name);
+  };
+
+  const handleCancelEditPerson = () => {
+    setEditingPersonId(null);
+    setEditingPersonNewName('');
+  };
+
+  const handleSavePersonName = async () => {
+    if (!editingPersonId || !editingPersonNewName.trim() || !db || supabaseInitializationError) {
+      if (supabaseInitializationError) {
+        toast({ title: "Error", description: "Cannot update person due to Supabase configuration issue.", variant: "destructive" });
+      } else if (!editingPersonNewName.trim()) {
+        toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" });
+      }
+      return;
+    }
+    try {
+      const { error } = await db.from(PEOPLE_TABLE).update({ name: editingPersonNewName.trim() }).eq('id', editingPersonId);
+      if (error) throw error;
+      toast({ title: "Person Updated", description: "Name updated successfully." });
+      handleCancelEditPerson();
+    } catch (error: any) {
+      console.error("Error updating person:", error);
+      toast({ title: "Error", description: `Could not update person: ${error.message}`, variant: "destructive" });
+    }
+  };
+  
+  const handleConfirmRemovePerson = (person: Person) => {
+    setPersonToDelete(person);
+  };
+
+  const handleExecuteRemovePerson = async () => {
+    if (!personToDelete || !db || supabaseInitializationError) {
+       if (supabaseInitializationError) {
+        toast({ title: "Error", description: "Cannot remove person due to Supabase configuration issue.", variant: "destructive" });
+      }
+      setPersonToDelete(null);
+      return;
+    }
+    try {
+      const { error } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
+      if (error) throw error;
+      toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
+      // If the deleted person was being edited, cancel edit mode
+      if (editingPersonId === personToDelete.id) {
+        handleCancelEditPerson();
+      }
+      // If the deleted person was selected as payer, reset paidBy
+      if (paidBy === personToDelete.id) {
+        setPaidBy('');
+      }
+      // If the deleted person was in selectedPeopleEqual, remove them
+      setSelectedPeopleEqual(prev => prev.filter(id => id !== personToDelete.id));
+      // If the deleted person was in unequalShares, remove their share
+      setUnequalShares(prev => {
+        const newShares = {...prev};
+        delete newShares[personToDelete.id];
+        return newShares;
+      });
+       // If the deleted person was in item shares, remove them
+      setItems(prevItems => prevItems.map(item => ({
+        ...item,
+        sharedBy: item.sharedBy.filter(id => id !== personToDelete.id)
+      })));
+
+
+    } catch (error: any) {
+      console.error("Error removing person:", error);
+      toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" });
+    } finally {
+      setPersonToDelete(null);
     }
   };
   
@@ -501,7 +594,7 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="flex items-center text-2xl"><Users className="mr-2 h-6 w-6 text-primary" /> Manage People</CardTitle>
-          <CardDescription>Add or view people in your settlement group.</CardDescription>
+          <CardDescription>Add, edit, or remove people in your settlement group.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
@@ -523,10 +616,41 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
           <div>
             <h4 className="font-semibold mb-2 text-muted-foreground">Current People:</h4>
             {people.length > 0 ? (
-              <ScrollArea className="h-24 rounded-md border p-2">
-                <ul className="space-y-1">
+              <ScrollArea className="h-40 rounded-md border p-2">
+                <ul className="space-y-2">
                   {people.map(person => (
-                    <li key={person.id} className="text-sm p-1 bg-secondary/30 rounded-sm">{person.name}</li>
+                    <li key={person.id} className="flex items-center justify-between p-2 bg-secondary/30 rounded-sm text-sm group">
+                      {editingPersonId === person.id ? (
+                        <>
+                          <Input
+                            type="text"
+                            value={editingPersonNewName}
+                            onChange={(e) => setEditingPersonNewName(e.target.value)}
+                            className="flex-grow mr-2 h-8"
+                            autoFocus
+                            onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
+                          />
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600 hover:bg-green-100" title="Save">
+                            <Save className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500 hover:bg-gray-100" title="Cancel">
+                            <Ban className="h-4 w-4" />
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="truncate flex-grow" title={person.name}>{person.name}</span>
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600 hover:bg-blue-100" title="Edit name">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600 hover:bg-red-100" title="Remove person">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </>
+                      )}
+                    </li>
                   ))}
                 </ul>
               </ScrollArea>
@@ -536,6 +660,31 @@ function AddExpenseTab({ people, setPeople }: AddExpenseTabProps) {
           </div>
         </CardContent>
       </Card>
+
+      {personToDelete && (
+        <AlertDialog open={personToDelete !== null} onOpenChange={(open) => !open && setPersonToDelete(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will remove <strong>{personToDelete.name}</strong> from the group.
+                If this person has paid for any expenses, those expenses will also be deleted.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleExecuteRemovePerson}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Remove {personToDelete.name}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
+
 
       <Card className="shadow-xl">
         <CardHeader>
@@ -910,3 +1059,6 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     </div>
   );
 }
+
+
+      
