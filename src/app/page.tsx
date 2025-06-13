@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle, LogOut
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle, LogOut, ShieldCheck, UserCog
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -63,6 +63,7 @@ import {
   EXPENSES_TABLE,
   PEOPLE_TABLE,
   CATEGORIES_TABLE,
+  USER_PROFILES_TABLE,
   CHART_COLORS,
   formatCurrency,
   supabaseUrl,
@@ -71,7 +72,7 @@ import {
   formatCurrencyForAxis
 } from '@/lib/settleease';
 
-import type { Person, Expense, ExpenseItemDetail, Category } from '@/lib/settleease';
+import type { Person, Expense, ExpenseItemDetail, Category, UserRole } from '@/lib/settleease';
 
 
 let db: SupabaseClient | undefined;
@@ -98,17 +99,47 @@ type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' |
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
+  const [userRole, setUserRole] = useState<UserRole>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isLoadingRole, setIsLoadingRole] = useState(false);
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isDataFetchedAtLeastOnce, setIsDataFetchedAtLeastOnce] = useState(false);
 
 
+  const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
+    if (!db || !userId) return 'user'; // Default to 'user' if db not ready or no userId
+    setIsLoadingRole(true);
+    try {
+      const { data, error } = await db
+        .from(USER_PROFILES_TABLE)
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') { 
+          console.warn(`User profile or role not found for ${userId}, defaulting to 'user' role. Ensure a profile exists in '${USER_PROFILES_TABLE}'.`);
+          return 'user'; 
+        }
+        console.error("Error fetching user role:", error);
+        return 'user'; 
+      }
+      return data?.role as UserRole || 'user';
+    } catch (e) {
+      console.error("Catch: Error fetching user role:", e);
+      return 'user';
+    } finally {
+      setIsLoadingRole(false);
+    }
+  }, [db]);
+
+
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
-    if (!db || supabaseInitializationError || !currentUser) {
+    if (!db || supabaseInitializationError || !currentUser) { // Also ensure user is present
       setIsLoadingData(false);
       return;
     }
@@ -164,16 +195,20 @@ export default function SettleEasePage() {
     }
 
     if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
-        setIsDataFetchedAtLeastOnce(true); // Mark that data has been fetched successfully at least once
+        setIsDataFetchedAtLeastOnce(true); 
     }
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoadingData(false);
     }
-  }, [currentUser]);
+  }, [currentUser]); // Removed db from dependencies as it's module-level
 
 
   const addDefaultPeople = useCallback(async () => {
-    if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError || !currentUser) {
+    if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError || !currentUser || userRole !== 'admin') {
+      if (userRole !== 'admin' && currentUser) {
+        // console.log("Skipping default people setup for non-admin user.");
+        return;
+      }
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
         const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
         if (!currentPeopleError && currentPeople && (currentPeople as any).length > 0) {
@@ -210,7 +245,7 @@ export default function SettleEasePage() {
           initialDefaultPeopleSetupAttemptedOrCompleted = false;
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-          // fetchAllData will be called by the effect that watches currentUser
+          // fetchAllData will be called by the effect that watches currentUser & userRole
         }
       }
     } catch (error) {
@@ -218,7 +253,7 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [fetchAllData, currentUser]);
+  }, [currentUser, userRole]); // Removed fetchAllData, supabaseInitializationError, depends on userRole now
 
 
   // Effect for initializing auth and listening to auth state changes
@@ -234,7 +269,7 @@ export default function SettleEasePage() {
     db.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setCurrentUser(session?.user ?? null);
-        setIsLoadingAuth(false);
+        setIsLoadingAuth(false); // Initial auth check done
       }
     }).catch(err => {
         if(isMounted) setIsLoadingAuth(false);
@@ -244,17 +279,18 @@ export default function SettleEasePage() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (isMounted) {
         const newAuthUser = session?.user ?? null;
-        setCurrentUser(newAuthUser);
+        setCurrentUser(newAuthUser); // This will trigger the next useEffect for role and data
         if (!newAuthUser) { // User logged out
           setPeople([]);
           setExpenses([]);
           setCategories([]);
+          setUserRole(null);
+          setIsLoadingRole(false);
           setActiveView('dashboard');
-          setIsDataFetchedAtLeastOnce(false); // Reset for next login
+          setIsDataFetchedAtLeastOnce(false);
           toast({ title: "Logged Out", description: "You have been successfully logged out." });
         }
-        // Data fetching will be handled by the useEffect dependent on currentUser
-        if (isLoadingAuth) setIsLoadingAuth(false); // Ensure loading auth is false after first auth event
+         if (isLoadingAuth) setIsLoadingAuth(false);
       }
     });
 
@@ -262,16 +298,30 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [supabaseInitializationError]);
+  }, []); // Removed supabaseInitializationError, db as they are module-level
 
 
-  // Effect for fetching data when currentUser changes (and auth is not loading)
+  // Effect for fetching role and data when currentUser changes (and auth is not loading)
   useEffect(() => {
+    let isMounted = true;
     if (currentUser && !isLoadingAuth) {
-      setIsLoadingData(true);
-      addDefaultPeople().then(() => {
-        fetchAllData(true).finally(() => {
-             // setIsLoadingData(false); // fetchAllData now handles this
+      setIsLoadingRole(true);
+      fetchUserRole(currentUser.id).then(role => {
+        if (!isMounted) return;
+        setUserRole(role);
+        setIsLoadingRole(false);
+
+        if (role === 'user' && activeView !== 'dashboard') {
+          setActiveView('dashboard');
+        }
+        
+        setIsLoadingData(true);
+        addDefaultPeople().then(() => {
+          if (!isMounted) return;
+          fetchAllData(true).finally(() => {
+            if (!isMounted) return;
+            // setIsLoadingData(false); // fetchAllData now handles this
+          });
         });
       });
     } else if (!currentUser && !isLoadingAuth) {
@@ -279,16 +329,19 @@ export default function SettleEasePage() {
       setPeople([]);
       setExpenses([]);
       setCategories([]);
+      setUserRole(null);
+      setIsLoadingRole(false);
       setIsDataFetchedAtLeastOnce(false);
       setIsLoadingData(false);
+      setActiveView('dashboard');
     }
-  }, [currentUser, isLoadingAuth, addDefaultPeople, fetchAllData]);
+    return () => { isMounted = false; };
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]);
 
 
   // Effect for Supabase real-time subscriptions
   useEffect(() => {
-    if (supabaseInitializationError || !db || !currentUser || !isDataFetchedAtLeastOnce) {
-      // Remove any existing channels if conditions are not met
+    if (supabaseInitializationError || !db || !currentUser || !isDataFetchedAtLeastOnce || !userRole) {
       if (db) {
         db.getChannels().forEach(channel => db.removeChannel(channel));
       }
@@ -301,7 +354,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`${table} change received!`, payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false); // Fetch data without primary loading indicator
+        fetchAllData(false); 
     };
 
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
@@ -340,7 +393,7 @@ export default function SettleEasePage() {
         db.removeChannel(categoriesChannel).catch(err => console.error("Error removing categories channel", err));
       }
     };
-  }, [supabaseInitializationError, db, fetchAllData, currentUser, isDataFetchedAtLeastOnce]);
+  }, [supabaseInitializationError, db, fetchAllData, currentUser, isDataFetchedAtLeastOnce, userRole]);
 
 
   const handleLogout = async () => {
@@ -348,23 +401,30 @@ export default function SettleEasePage() {
     const { error } = await db.auth.signOut();
     if (error) {
       toast({ title: "Logout Error", description: error.message, variant: "destructive" });
-    } else {
-      // onAuthStateChange will handle UI updates (setting currentUser to null, clearing data)
-      // No need to manually set currentUser to null here, listener does it.
     }
+    // onAuthStateChange handles UI updates
   };
 
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
+  const handleSetActiveView = (view: ActiveView) => {
+    if (userRole === 'user' && view !== 'dashboard') {
+      toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
+      setActiveView('dashboard'); // Force to dashboard if 'user' tries to access restricted page
+    } else {
+      setActiveView(view);
+    }
+  };
+
 
   const getHeaderTitle = () => {
     switch (activeView) {
       case 'dashboard': return 'Dashboard';
-      case 'addExpense': return 'Add New Expense';
-      case 'editExpenses': return 'Edit Expenses';
-      case 'managePeople': return 'Manage People';
-      case 'manageCategories': return 'Manage Categories';
+      case 'addExpense': return userRole === 'admin' ? 'Add New Expense' : 'Dashboard';
+      case 'editExpenses': return userRole === 'admin' ? 'Edit Expenses' : 'Dashboard';
+      case 'managePeople': return userRole === 'admin' ? 'Manage People' : 'Dashboard';
+      case 'manageCategories': return userRole === 'admin' ? 'Manage Categories' : 'Dashboard';
       default: return 'SettleEase';
     }
   };
@@ -382,13 +442,18 @@ export default function SettleEasePage() {
   }, [categories]);
 
 
-  if (isLoadingAuth) {
+  if (isLoadingAuth || (currentUser && isLoadingRole)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
-          <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
+          <svg className="h-12 w-12 text-primary animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
           <p className="text-xl font-semibold">Loading SettleEase...</p>
-          <p className="text-muted-foreground">Initializing application and checking session.</p>
+          <p className="text-muted-foreground">
+            {isLoadingAuth ? "Initializing application and checking session..." : "Verifying user details..."}
+          </p>
         </div>
       </div>
     );
@@ -419,12 +484,15 @@ export default function SettleEasePage() {
     );
   }
 
-  // User is logged in, but data might still be loading
+  // User is logged in, role might be loading, or main data might be loading
   if (isLoadingData && !isDataFetchedAtLeastOnce) {
      return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
-          <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
+           <svg className="h-12 w-12 text-primary animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
           <p className="text-xl font-semibold">Loading Your Data...</p>
           <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
         </div>
@@ -435,7 +503,7 @@ export default function SettleEasePage() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppActualSidebar activeView={activeView} setActiveView={setActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} />
+      <AppActualSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
@@ -448,14 +516,14 @@ export default function SettleEasePage() {
             <ThemeToggleButton />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-            {isLoadingData && isDataFetchedAtLeastOnce && ( // Show subtle loading indicator for re-fetches
+            {isLoadingData && isDataFetchedAtLeastOnce && ( 
                 <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
             )}
             {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
-            {activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
-            {activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
-            {activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
-            {activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
+            {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
+            {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
+            {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
+            {userRole === 'admin' && activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
           </main>
           <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
             <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Made by Gagan Gupta</p>
@@ -471,19 +539,20 @@ interface AppActualSidebarProps {
   setActiveView: (view: ActiveView) => void;
   handleLogout: () => void;
   currentUserEmail?: string | null;
+  userRole: UserRole;
 }
 
-function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUserEmail }: AppActualSidebarProps) {
+function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppActualSidebarProps) {
   const { isMobile } = useSidebar();
+  const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
+
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-        <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2.5-3.5h5v-2h-5v2zm0-3h5v-2h-5v2zm0-3h5v-2h-5v2zM4.03 7.44l2.83 2.83-1.42 1.41L2.61 8.85l1.42-1.41zM17.14 13.73l2.83-2.83-1.41-1.41-2.83 2.83 1.41 1.41zM7.5 17.5h2V14h-2v3.5zm7-3.5h2V14h-2v3.5zM6.21 4.93l1.41 1.41L4.79 9.17 3.38 7.76l2.83-2.83zM20.62 16.24l-2.83-2.83-1.41 1.41 2.83 2.83 1.41-1.41z"/>
-            <path d="M21.29,10.29l-3.58-3.58c-0.39-0.39-1.02-0.39-1.41,0L12,11l-4.29-4.29c-0.39-0.39-1.02-0.39-1.41,0L2.71,10.29 c-0.39,0.39-0.39,1.02,0,1.41L6.3,15.29C6.49,15.48,6.74,15.58,7,15.58s0.51-0.09,0.71-0.29L12,11.41l4.29,4.29 C16.48,15.9,16.74,16,17,16s0.51-0.09,0.71-0.29l3.58-3.58C21.68,11.32,21.68,10.68,21.29,10.29z M7,13.17L5.83,12L7,10.83 V13.17z M17,13.17V10.83L18.17,12L17,13.17z"/>
-            <path d="M12 6c-1.93 0-3.5 1.57-3.5 3.5S10.07 13 12 13s3.5-1.57 3.5-3.5S13.93 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/>
-            <path d="M12.01,20.79c-0.26-1.09-0.88-2.05-1.77-2.79H8.5c-0.28,0-0.5,0.22-0.5,0.5v3c0,0.28,0.22,0.5,0.5,0.5h1.27 c0.13,0,0.26-0.05,0.35-0.15c0.89-0.89,1.34-1.99,1.34-3.17V20.79z M15.5,20.5c0-0.28-0.22-0.5-0.5-0.5h-1.24 c-0.89,0.74-1.51,1.7-1.77,2.79v-1.87c0-1.18,0.45-2.28,1.34-3.17c0.1-0.1,0.22-0.15,0.35-0.15h1.27c0.28,0,0.5,0.22,0.5,0.5 V20.5z"/>
+        <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" >
+            <path d="M21.41 10.59l-2.82-2.82a.996.996 0 00-1.41 0L12 12.93 6.82 7.76a.996.996 0 00-1.41 0L2.59 10.59a.996.996 0 000 1.41L5.4 14.82c.19.2.45.31.71.31s.52-.11.71-.31L12 9.66l5.18 5.17c.19.2.45.31.71.31s.52-.11.71-.31l2.82-2.82a.996.996 0 000-1.41zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+            <path d="M12 4c-2.97 0-5.58 1.64-6.99 4.01l1.43.82C7.45 7.01 9.52 6 12 6s4.55 1.01 5.56 2.83l1.43-.82C17.58 5.64 14.97 4 12 4z"/>
         </svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
@@ -501,57 +570,68 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
               <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setActiveView('addExpense')}
-              isActive={activeView === 'addExpense'}
-              tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
-            >
-              <CreditCard />
-              <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setActiveView('editExpenses')}
-              isActive={activeView === 'editExpenses'}
-              tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
-            >
-              <FilePenLine />
-              <span className="group-data-[state=collapsed]:hidden">Edit Expenses</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setActiveView('managePeople')}
-              isActive={activeView === 'managePeople'}
-              tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
-            >
-              <Users />
-              <span className="group-data-[state=collapsed]:hidden">Manage People</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-           <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setActiveView('manageCategories')}
-              isActive={activeView === 'manageCategories'}
-              tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
-            >
-              <ListChecks />
-              <span className="group-data-[state=collapsed]:hidden">Manage Categories</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          {userRole === 'admin' && (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setActiveView('addExpense')}
+                  isActive={activeView === 'addExpense'}
+                  tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <CreditCard />
+                  <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setActiveView('editExpenses')}
+                  isActive={activeView === 'editExpenses'}
+                  tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <FilePenLine />
+                  <span className="group-data-[state=collapsed]:hidden">Edit Expenses</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setActiveView('managePeople')}
+                  isActive={activeView === 'managePeople'}
+                  tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <Users />
+                  <span className="group-data-[state=collapsed]:hidden">Manage People</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setActiveView('manageCategories')}
+                  isActive={activeView === 'manageCategories'}
+                  tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <ListChecks />
+                  <span className="group-data-[state=collapsed]:hidden">Manage Categories</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
          {currentUserEmail && (
-          <p className="text-xs text-sidebar-foreground/70 truncate mb-2" title={currentUserEmail}>
-            Logged in as: {currentUserEmail}
-          </p>
+          <div className="mb-2 space-y-0.5">
+            <p className="text-xs text-sidebar-foreground/70 truncate" title={currentUserEmail}>
+              Logged in as: {currentUserEmail}
+            </p>
+            {userRole && (
+              <p className="text-xs text-sidebar-foreground/70 flex items-center" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
+                Role: <RoleIcon className="ml-1 mr-0.5 h-3.5 w-3.5" /> {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
+              </p>
+            )}
+          </div>
         )}
         <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
           <LogOut className="mr-2 h-4 w-4" /> Logout
@@ -639,9 +719,9 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   }, [expenses, people, peopleMap]);
   
   const yAxisDomainTop = useMemo(() => {
-      const dataMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(dataMax, 500) * 1.1; 
-      return Math.ceil(paddedMax / 50) * 50; 
+      const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
+      const paddedMax = Math.max(overallMax, 500) * 1.1; // Ensure a minimum upper bound, then add padding
+      return Math.ceil(paddedMax / 50) * 50; // Round up to nearest 50 for a cleaner axis
   }, [shareVsPaidData]);
 
 
@@ -782,7 +862,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
 
                   return (
                     <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
-                      <Card className="bg-card/70 transition-all rounded-md">
+                      <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
                         <CardHeader className="pb-1.5 pt-2.5 px-3">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
@@ -998,3 +1078,4 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
+

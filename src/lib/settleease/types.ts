@@ -43,3 +43,15 @@ export interface PayerInputRow {
   personId: string;
   amount: string; // Input string
 }
+
+// User Roles
+export type UserRole = 'admin' | 'user' | null;
+
+export interface UserProfile {
+  id: string; // profile ID
+  user_id: string; // maps to auth.users.id
+  role: UserRole;
+  // you can add other profile fields like full_name, avatar_url here
+  created_at?: string;
+  updated_at?: string;
+}
