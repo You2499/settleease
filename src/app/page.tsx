@@ -348,9 +348,8 @@ export default function SettleEasePage() {
       const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
       if (iconDetail) return iconDetail.IconComponent;
     }
-    // Fallback for any category not found in dynamic list or if icon_name is missing/invalid
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2; // Default to Settings2 if even that isn't found
+    return settingsIcon ? settingsIcon.IconComponent : Settings2;
   }, [categories]);
 
 
@@ -423,9 +422,9 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="items-center p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 h-10">
           <svg className="h-8 w-8 fill-primary" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z" /></svg>
-          <h2 className="text-xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
+          <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
       <SidebarContent className="p-2">
@@ -571,14 +570,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   }, [expenses, people, peopleMap]);
 
 
-  const yAxisOverallMax = useMemo(() => {
-    if (!shareVsPaidData.length) return 500; // Default max if no data
-    const maxPaid = Math.max(...shareVsPaidData.map(d => d.paid), 0);
-    const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
-    return Math.max(maxPaid, maxShare, 500); // Ensure a minimum sensible upper bound
-  }, [shareVsPaidData]);
-
-  const yAxisDomainTop = Math.max(yAxisOverallMax * 1.1, 550); // Add 10% padding, ensure min like 550
 
 
   const expensesByCategory = useMemo(() => {
