@@ -142,7 +142,7 @@ const SidebarProvider = React.forwardRef<
               } as React.CSSProperties
             }
             className={cn(
-              "group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar",
+              "group/sidebar-wrapper flex items-start min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar", // Added items-start
               className
             )}
             ref={ref}
@@ -217,7 +217,7 @@ const Sidebar = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          "group peer hidden md:block text-sidebar-foreground flex-shrink-0" // Added flex-shrink-0
+          "group peer hidden md:block text-sidebar-foreground flex-shrink-0" 
         )}
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
@@ -764,3 +764,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
