@@ -14,16 +14,20 @@ export interface OldCategoryConfig {
   icon: LucideIcon;
 }
 
-// This remains for now, used by existing components and as a source for AVAILABLE_CATEGORY_ICONS
-export const CATEGORIES: OldCategoryConfig[] = [
+// Renamed from CATEGORIES to OLD_CATEGORIES_CONSTANT to signify its legacy status
+// This can be used as a fallback during transition or for icon lookups if a dynamic category is missing an icon somehow.
+export const OLD_CATEGORIES_CONSTANT: OldCategoryConfig[] = [
   { name: 'Food', icon: Utensils },
   { name: 'Transport', icon: Car },
   { name: 'Shopping', icon: ShoppingCart },
   { name: 'Entertainment', icon: PartyPopper },
   { name: 'Utilities', icon: Lightbulb },
-  { name: 'Groceries', icon: ShoppingCart }, // Duplicate icon is fine for different category names
+  { name: 'Groceries', icon: ShoppingCart },
   { name: 'Bills', icon: FileText },
   { name: 'Other', icon: Settings2 },
+  { name: 'Rent/Mortgage', icon: Home },
+  { name: 'Health', icon: Heart },
+  { name: 'Travel', icon: Plane },
 ];
 
 export interface AvailableCategoryIcon {
@@ -58,7 +62,7 @@ export const AVAILABLE_CATEGORY_ICONS: AvailableCategoryIcon[] = [
   { iconKey: 'Globe', IconComponent: Globe, label: 'Globe (Internet/Misc Travel)' },
   { iconKey: 'Palette', IconComponent: Palette, label: 'Palette (Hobbies/Art)' },
   { iconKey: 'Sprout', IconComponent: Sprout, label: 'Sprout (Gardening/Nature)' },
-  { iconKey: 'Smile', IconComponent: Smile, label: 'Smile (Personal Care/Wellbeing)' },
+  { iconKey: 'Smile', IconComponent: Smile, label: 'Personal Care/Wellbeing)' },
   { iconKey: 'Coins', IconComponent: Coins, label: 'Coins (Savings/Investments)' },
   { iconKey: 'Settings2', IconComponent: Settings2, label: 'Settings (Miscellaneous/Other)' },
 ];
@@ -74,3 +78,4 @@ export const CHART_COLORS = [
   '#FF8042', // Additional distinct color
   '#00C49F', // Additional distinct color
 ];
+

@@ -18,8 +18,8 @@ import {
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; // Re-use for editing
-import { EXPENSES_TABLE, CATEGORIES, formatCurrency } from '@/lib/settleease';
-import type { Expense, Person } from '@/lib/settleease';
+import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease'; // Removed OLD_CATEGORIES_CONSTANT
+import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -27,9 +27,10 @@ interface EditExpensesTabProps {
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
   onActionComplete: () => void; // Callback to refresh data in parent
+  dynamicCategories: DynamicCategory[]; // Added dynamic categories prop
 }
 
-export default function EditExpensesTab({ people, expenses, db, supabaseInitializationError, onActionComplete }: EditExpensesTabProps) {
+export default function EditExpensesTab({ people, expenses, db, supabaseInitializationError, onActionComplete, dynamicCategories }: EditExpensesTabProps) {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
@@ -37,6 +38,18 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     acc[person.id] = person.name;
     return acc;
   }, {} as Record<string, string>), [people]);
+
+  const getCategoryIcon = (categoryName: string) => {
+    const category = dynamicCategories.find(c => c.name === categoryName);
+    if (category) {
+        const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === category.icon_name);
+        if (iconDetail) return iconDetail.IconComponent;
+    }
+    // Fallback to a default icon if not found in dynamic or available icons
+    const oldDefault = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
+    return oldDefault ? oldDefault.IconComponent : Settings2;
+  };
+
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
@@ -56,7 +69,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
       const { error } = await db.from(EXPENSES_TABLE).delete().eq('id', expenseToDelete.id);
       if (error) throw error;
       toast({ title: "Expense Deleted", description: `${expenseToDelete.description} has been deleted.` });
-      onActionComplete(); // Refresh data in parent
+      onActionComplete(); 
     } catch (error: any) {
       toast({ title: "Error", description: `Could not delete expense: ${error.message}`, variant: "destructive" });
     } finally {
@@ -65,8 +78,8 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
   };
 
   const handleActionComplete = () => {
-    setEditingExpense(null); // Go back to list view
-    onActionComplete(); // Refresh data in parent
+    setEditingExpense(null); 
+    onActionComplete(); 
   };
 
   if (supabaseInitializationError && !db) {
@@ -91,9 +104,10 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         people={people}
         db={db}
         supabaseInitializationError={supabaseInitializationError}
-        onExpenseAdded={handleActionComplete} // For consistency, though it's an update
+        onExpenseAdded={handleActionComplete} 
         expenseToEdit={editingExpense}
         onCancelEdit={() => setEditingExpense(null)}
+        dynamicCategories={dynamicCategories} // Pass dynamic categories
       />
     );
   }
@@ -109,10 +123,10 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-20rem)] pr-2"> {/* Adjust height as needed */}
+            <ScrollArea className="h-[calc(100vh-20rem)] pr-2"> 
               <ul className="space-y-3">
                 {expenses.map(expense => {
-                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
+                  const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
                     ? "Multiple Payers"
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
@@ -122,7 +136,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
                   return (
                     <li key={expense.id}>
-                      <Card className="bg-card/70 transition-shadow">
+                      <Card className="bg-card/70">
                         <CardHeader className="pb-2 pt-3 px-4">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-base font-semibold leading-tight">{expense.description}</CardTitle>
@@ -177,4 +191,3 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     </div>
   );
 }
-

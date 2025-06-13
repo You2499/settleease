@@ -11,30 +11,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Trash2, PlusCircle, Users, CreditCard, AlertTriangle, X, Settings2, Pencil, Save, Ban, MinusCircle } from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
-import { CATEGORIES, EXPENSES_TABLE, formatCurrency } from '@/lib/settleease';
-import type { Expense, Person, PayerInputRow, ExpenseItemDetail } from '@/lib/settleease';
+import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease'; // Removed OLD_CATEGORIES_CONSTANT
+import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease';
 
 interface AddExpenseTabProps {
   people: Person[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
   onExpenseAdded: () => void;
+  dynamicCategories: DynamicCategory[]; // Added dynamic categories prop
   expenseToEdit?: Expense | null;
   onCancelEdit?: () => void;
 }
@@ -44,12 +35,13 @@ export default function AddExpenseTab({
   db,
   supabaseInitializationError,
   onExpenseAdded,
+  dynamicCategories, // Use dynamic categories
   expenseToEdit,
   onCancelEdit,
 }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0].name);
+  const [category, setCategory] = useState(''); // Will be set from dynamicCategories
   
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
@@ -145,7 +137,7 @@ export default function AddExpenseTab({
     if (expenseToEdit) {
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
-      setCategory(expenseToEdit.category);
+      setCategory(expenseToEdit.category); // Category is already a name string
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
         setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
@@ -186,20 +178,19 @@ export default function AddExpenseTab({
       // Reset form for new expense
       setDescription('');
       setTotalAmount('');
-      setCategory(CATEGORIES[0].name);
+      setCategory(dynamicCategories[0]?.name || ''); // Default to first dynamic category or empty
       setIsMultiplePayers(false);
       setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
       setSplitMethod('equal'); 
-      setSelectedPeopleEqual(people.map(p => p.id)); // Default to all people selected for equal split on new expense
+      setSelectedPeopleEqual(people.map(p => p.id)); 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [expenseToEdit, people]); // Removed totalAmount from deps as it might cause loops with payer updates.
+  }, [expenseToEdit, people, dynamicCategories]);
 
 
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
-      // Attempt to find a common default name like "You" or use the first person.
       const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
       return currentUserAsPerson ? currentUserAsPerson.id : people[0].id;
     }
@@ -207,27 +198,19 @@ export default function AddExpenseTab({
   }, [people]);
 
   useEffect(() => {
-    // Initialize or adjust single payer
     if (!isMultiplePayers) {
       const currentPayer = payers[0];
       let newPayerAmount = totalAmount;
       let newPayerPersonId = currentPayer?.personId || defaultPayerId;
-
-      // If editing and totalAmount changes, update single payer's amount
-      if (expenseToEdit && currentPayer?.amount !== totalAmount) {
-        // This condition might be too broad if totalAmount changes for other reasons
-      }
       
-      // If no payer is set, or the current one is empty, set default
       if (!currentPayer?.personId && defaultPayerId) {
          // newPayerPersonId is already set
       }
 
-      // Only update if necessary to avoid loops
       if (!currentPayer || currentPayer.personId !== newPayerPersonId || currentPayer.amount !== newPayerAmount) {
         setPayers([{ id: currentPayer?.id || Date.now().toString(), personId: newPayerPersonId, amount: newPayerAmount }]);
       }
-    } else { // Multiple payers logic
+    } else { 
         if (payers.length === 0 && defaultPayerId) {
              setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: '' }]);
         } else if (payers.length === 1 && !payers[0].personId && defaultPayerId) {
@@ -239,26 +222,22 @@ export default function AddExpenseTab({
 
   useEffect(() => {
     if (splitMethod === 'equal') {
-      // For new expenses or if no one is selected, default to all.
       if (!expenseToEdit || selectedPeopleEqual.length === 0) {
         const allPeopleIds = people.map(p => p.id);
-        // Avoid unnecessary re-renders if already set to all people
         if (selectedPeopleEqual.length !== allPeopleIds.length || !selectedPeopleEqual.every(id => allPeopleIds.includes(id))) {
             setSelectedPeopleEqual(allPeopleIds);
         }
       }
     } else if (splitMethod === 'unequal') {
-       // If no shares defined, initialize for all people
        const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
         if (!anySharesPopulated && people.length > 0) {
             const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
-            // Avoid re-render if already empty for all
             if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) {
                  setUnequalShares(initialEmptyShares);
             }
         }
     }
-  }, [splitMethod, people, expenseToEdit, selectedPeopleEqual, unequalShares]); // selectedPeopleEqual was removed from deps to avoid loop
+  }, [splitMethod, people, expenseToEdit, selectedPeopleEqual, unequalShares]);
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -272,10 +251,10 @@ export default function AddExpenseTab({
 
   const removePayer = (index: number) => {
     const newPayers = payers.filter((_, i) => i !== index);
-    if (newPayers.length === 0) { // If all payers removed, add one back if in multiple payer mode
+    if (newPayers.length === 0) { 
         if (isMultiplePayers) {
             setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
-        } else { // Should not happen if UI prevents removing the last single payer
+        } else { 
             setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: totalAmount }]);
         }
     } else {
@@ -287,11 +266,9 @@ export default function AddExpenseTab({
     const goingToMultiple = !isMultiplePayers;
     setIsMultiplePayers(goingToMultiple);
     if (goingToMultiple) {
-      // If was single payer with amount, keep that amount for the first multi-payer, or clear if no amount
       const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
       setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: firstPayerAmount }]);
     } else {
-      // Switching to single payer: use first current payer or default, set amount to totalAmount
       setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: totalAmount }]);
     }
   };
@@ -308,7 +285,7 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]); // Default to all people sharing new item
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]); 
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
@@ -335,15 +312,15 @@ export default function AddExpenseTab({
     if (!description.trim()) return "Description cannot be empty.";
     const amountNum = parseFloat(totalAmount);
     if (isNaN(amountNum) || amountNum <= 0) return "Total amount must be a positive number.";
-    if (!category) return "Category must be selected.";
+    if (!category) return "Category must be selected."; // Category is a string name
 
     if (payers.some(p => !p.personId)) return "Each payer must be selected.";
     const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    if (Math.abs(totalPaidByPayers - amountNum) > 0.001) { // Using a small epsilon for float comparison
+    if (Math.abs(totalPaidByPayers - amountNum) > 0.001) { 
       return `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total expense amount (${formatCurrency(amountNum)}).`;
     }
     if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) {
-        if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { // Allow single payer in multi-mode to be 0 if they are the only one, effectively making it like no one paid yet.
+        if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { 
              return "Each payer's amount must be positive if listed.";
         }
     }
@@ -384,7 +361,7 @@ export default function AddExpenseTab({
     setIsLoading(true);
 
     const finalPayers = payers
-        .filter(p => p.personId && parseFloat(p.amount) > 0) // Ensure valid payers
+        .filter(p => p.personId && parseFloat(p.amount) > 0) 
         .map(p => ({ personId: p.personId, amount: parseFloat(p.amount) }));
 
     if (finalPayers.length === 0 && parseFloat(totalAmount) > 0) {
@@ -398,11 +375,11 @@ export default function AddExpenseTab({
     const expenseData: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
       description,
       total_amount: parseFloat(totalAmount),
-      category,
+      category, // Category is already a name string
       paid_by: finalPayers,
       split_method: splitMethod,
       shares: [],
-      items: [], // Will be populated for itemwise
+      items: [], 
     };
 
     if (splitMethod === 'equal') {
@@ -410,7 +387,7 @@ export default function AddExpenseTab({
       expenseData.shares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
     } else if (splitMethod === 'unequal') {
       expenseData.shares = Object.entries(unequalShares)
-        .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) // Only include positive shares
+        .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
       expenseData.items = items.map(item => ({
@@ -419,7 +396,6 @@ export default function AddExpenseTab({
         price: parseFloat(item.price as string),
         sharedBy: item.sharedBy
       }));
-      // Calculate shares from items
       const itemwiseSharesMap: Record<string, number> = {};
       items.forEach(item => {
         const itemPrice = parseFloat(item.price as string);
@@ -435,7 +411,7 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        const updatePayload = { ...expenseData }; // Do not include updated_at here
+        const updatePayload = { ...expenseData }; 
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
           .update(updatePayload) 
@@ -453,7 +429,8 @@ export default function AddExpenseTab({
       }
       onExpenseAdded(); 
       if (!expenseToEdit) {
-        setDescription(''); setTotalAmount(''); setCategory(CATEGORIES[0].name);
+        setDescription(''); setTotalAmount(''); 
+        setCategory(dynamicCategories[0]?.name || '');
         setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
         setIsMultiplePayers(false);
         setSplitMethod('equal'); 
@@ -463,7 +440,6 @@ export default function AddExpenseTab({
       }
     } catch (error: any) {
       let errorMessage = "An unknown error occurred while saving the expense.";
-      // Attempt to get a more specific message
       if (error) {
         if (typeof error.message === 'string' && error.message.trim() !== '') {
           errorMessage = error.message;
@@ -480,13 +456,11 @@ export default function AddExpenseTab({
       console.error("Raw error object received in catch block:", error);
       
       if (error && typeof error === 'object') {
-        // Log all enumerable keys and their values
         for (const key in error) {
           if (Object.prototype.hasOwnProperty.call(error, key)) {
             console.error(`Error object property - ${key}:`, error[key]);
           }
         }
-        // Attempt to stringify, including non-enumerable properties if possible
         try {
           const errorJson = JSON.stringify(error, Object.getOwnPropertyNames(error));
           console.error("Full error (JSON with own properties):", errorJson);
@@ -495,7 +469,6 @@ export default function AddExpenseTab({
           }
         } catch (stringifyError) {
           console.error("Could not stringify the full error object due to:", stringifyError);
-          // Fallback if stringify fails (e.g. circular refs)
           if (error.stack) {
             console.error("Error stack:", error.stack);
           }
@@ -527,7 +500,7 @@ export default function AddExpenseTab({
     );
   }
 
-  if (people.length === 0 && !expenseToEdit) { // Allow editing even if no people (e.g. to delete)
+  if (people.length === 0 && !expenseToEdit) { 
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
         <CardHeader className="pb-2">
@@ -566,7 +539,6 @@ export default function AddExpenseTab({
             </div>
           )}
 
-          {/* Basic Info */}
           <div className="space-y-3">
             <div>
               <Label htmlFor="description">Description</Label>
@@ -579,15 +551,16 @@ export default function AddExpenseTab({
               </div>
               <div>
                 <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory}>
+                <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
                   <SelectTrigger id="category" className="mt-1">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map(cat => {
-                       const IconComponent = cat.icon;
+                    {dynamicCategories.map(cat => {
+                       const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                       const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
                        return (
-                        <SelectItem key={cat.name} value={cat.name}>
+                        <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">
                             <IconComponent className="mr-2 h-4 w-4 text-muted-foreground" />
                             {cat.name}
@@ -603,7 +576,6 @@ export default function AddExpenseTab({
 
           <Separator />
 
-          {/* Payers Section */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <Label className="text-lg font-medium">Paid By</Label>
@@ -641,7 +613,6 @@ export default function AddExpenseTab({
 
           <Separator />
 
-          {/* Split Method Section */}
           <div className="space-y-3">
             <Label className="text-lg font-medium">Split Method</Label>
             <RadioGroup value={splitMethod} onValueChange={(val) => setSplitMethod(val as any)} className="flex space-x-4">
@@ -650,7 +621,6 @@ export default function AddExpenseTab({
               <div className="flex items-center space-x-1.5"><RadioGroupItem value="itemwise" id="splitItemwise" /><Label htmlFor="splitItemwise" className="font-normal text-sm">Item-wise</Label></div>
             </RadioGroup>
 
-            {/* Equal Split */}
             {splitMethod === 'equal' && (
               <Card className="p-4 bg-card/50 shadow-sm mt-2">
                 <Label className="mb-2 block text-sm font-medium">Select who shared:</Label>
@@ -673,7 +643,6 @@ export default function AddExpenseTab({
               </Card>
             )}
 
-            {/* Unequal Split */}
             {splitMethod === 'unequal' && (
               <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-2.5">
                 {people.length > 0 ? people.map(person => (
@@ -692,7 +661,6 @@ export default function AddExpenseTab({
               </Card>
             )}
             
-            {/* Item-wise Split */}
             {splitMethod === 'itemwise' && (
                 <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-3">
                     {items.map((item, itemIndex) => (
@@ -735,7 +703,7 @@ export default function AddExpenseTab({
           {expenseToEdit && onCancelEdit && (
              <Button variant="outline" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
           )}
-          <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) }>
+          <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
             {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
           </Button>
         </CardFooter>
@@ -743,4 +711,3 @@ export default function AddExpenseTab({
     </div>
   );
 }
-
