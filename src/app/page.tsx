@@ -111,7 +111,7 @@ export default function SettleEasePage() {
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
-    if (!db || !userId) return 'user'; // Default to 'user' if db not ready or no userId
+    if (!db || !userId) return 'user'; 
     setIsLoadingRole(true);
     try {
       const { data, error } = await db
@@ -122,7 +122,7 @@ export default function SettleEasePage() {
 
       if (error) {
         if (error.code === 'PGRST116') { 
-          console.warn(`User profile or role not found for ${userId}, defaulting to 'user' role. Ensure a profile exists in '${USER_PROFILES_TABLE}'.`);
+          console.warn(`User profile or role not found for ${userId}, defaulting to 'user' role. Ensure a profile exists in '${USER_PROFILES_TABLE}'. This can happen briefly for new users.`);
           return 'user'; 
         }
         console.error("Error fetching user role:", error);
@@ -135,11 +135,11 @@ export default function SettleEasePage() {
     } finally {
       setIsLoadingRole(false);
     }
-  }, [db]);
+  }, []);
 
 
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
-    if (!db || supabaseInitializationError || !currentUser) { // Also ensure user is present
+    if (!db || supabaseInitializationError || !currentUser) { 
       setIsLoadingData(false);
       return;
     }
@@ -200,13 +200,12 @@ export default function SettleEasePage() {
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoadingData(false);
     }
-  }, [currentUser]); // Removed db from dependencies as it's module-level
+  }, [currentUser]);
 
 
   const addDefaultPeople = useCallback(async () => {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError || !currentUser || userRole !== 'admin') {
       if (userRole !== 'admin' && currentUser) {
-        // console.log("Skipping default people setup for non-admin user.");
         return;
       }
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
@@ -245,7 +244,6 @@ export default function SettleEasePage() {
           initialDefaultPeopleSetupAttemptedOrCompleted = false;
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-          // fetchAllData will be called by the effect that watches currentUser & userRole
         }
       }
     } catch (error) {
@@ -253,10 +251,9 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [currentUser, userRole]); // Removed fetchAllData, supabaseInitializationError, depends on userRole now
+  }, [currentUser, userRole]);
 
 
-  // Effect for initializing auth and listening to auth state changes
   useEffect(() => {
     if (supabaseInitializationError || !db) {
       setIsLoadingAuth(false);
@@ -269,7 +266,7 @@ export default function SettleEasePage() {
     db.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setCurrentUser(session?.user ?? null);
-        setIsLoadingAuth(false); // Initial auth check done
+        setIsLoadingAuth(false); 
       }
     }).catch(err => {
         if(isMounted) setIsLoadingAuth(false);
@@ -279,8 +276,8 @@ export default function SettleEasePage() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (isMounted) {
         const newAuthUser = session?.user ?? null;
-        setCurrentUser(newAuthUser); // This will trigger the next useEffect for role and data
-        if (!newAuthUser) { // User logged out
+        setCurrentUser(newAuthUser); 
+        if (!newAuthUser) { 
           setPeople([]);
           setExpenses([]);
           setCategories([]);
@@ -298,10 +295,9 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, []); // Removed supabaseInitializationError, db as they are module-level
+  }, []);
 
 
-  // Effect for fetching role and data when currentUser changes (and auth is not loading)
   useEffect(() => {
     let isMounted = true;
     if (currentUser && !isLoadingAuth) {
@@ -318,14 +314,10 @@ export default function SettleEasePage() {
         setIsLoadingData(true);
         addDefaultPeople().then(() => {
           if (!isMounted) return;
-          fetchAllData(true).finally(() => {
-            if (!isMounted) return;
-            // setIsLoadingData(false); // fetchAllData now handles this
-          });
+          fetchAllData(true);
         });
       });
     } else if (!currentUser && !isLoadingAuth) {
-      // Clear data if user logs out and auth isn't in an intermediate loading state
       setPeople([]);
       setExpenses([]);
       setCategories([]);
@@ -339,11 +331,10 @@ export default function SettleEasePage() {
   }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]);
 
 
-  // Effect for Supabase real-time subscriptions
   useEffect(() => {
     if (supabaseInitializationError || !db || !currentUser || !isDataFetchedAtLeastOnce || !userRole) {
       if (db) {
-        db.getChannels().forEach(channel => db.removeChannel(channel));
+        db.getChannels().forEach(channel => db.removeChannel(channel).catch(e => console.warn("Failed to remove a stray channel during cleanup", e)));
       }
       return;
     }
@@ -357,13 +348,27 @@ export default function SettleEasePage() {
         fetchAllData(false); 
     };
 
+    const handleSubscriptionError = (tableName: string, status: string, error?: any) => {
+      if (!isMounted) return;
+      const baseMessage = `Subscription error on ${tableName}`;
+      if (error) {
+        console.error(`${baseMessage}:`, error);
+        toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe: ${error.message || 'Unknown error'}. Status: ${status}.`, variant: "destructive", duration: 10000 });
+      } else {
+        console.error(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
+        toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe to ${tableName}. Please check Supabase RLS and Replication settings. Status: ${status}.`, variant: "destructive", duration: 10000 });
+      }
+    };
+
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
         (payload) => handleDbChange(payload, PEOPLE_TABLE)
       ).subscribe((status, err) => {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${PEOPLE_TABLE}:`, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          handleSubscriptionError(PEOPLE_TABLE, status, err);
+        }
       });
 
     const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
@@ -372,7 +377,9 @@ export default function SettleEasePage() {
       ).subscribe((status, err) => {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${EXPENSES_TABLE}:`, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          handleSubscriptionError(EXPENSES_TABLE, status, err);
+        }
       });
 
     const categoriesChannel = db.channel(`public:${CATEGORIES_TABLE}`)
@@ -381,19 +388,21 @@ export default function SettleEasePage() {
       ).subscribe((status, err) => {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${CATEGORIES_TABLE}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${CATEGORIES_TABLE}:`, err);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          handleSubscriptionError(CATEGORIES_TABLE, status, err);
+        }
       });
 
 
     return () => {
       isMounted = false;
       if (db) {
-        db.removeChannel(peopleChannel).catch(err => console.error("Error removing people channel", err));
-        db.removeChannel(expensesChannel).catch(err => console.error("Error removing expenses channel", err));
-        db.removeChannel(categoriesChannel).catch(err => console.error("Error removing categories channel", err));
+        db.removeChannel(peopleChannel).catch(err => console.warn("Error removing people channel", err));
+        db.removeChannel(expensesChannel).catch(err => console.warn("Error removing expenses channel", err));
+        db.removeChannel(categoriesChannel).catch(err => console.warn("Error removing categories channel", err));
       }
     };
-  }, [supabaseInitializationError, db, fetchAllData, currentUser, isDataFetchedAtLeastOnce, userRole]);
+  }, [supabaseInitializationError, fetchAllData, currentUser, isDataFetchedAtLeastOnce, userRole]);
 
 
   const handleLogout = async () => {
@@ -402,7 +411,6 @@ export default function SettleEasePage() {
     if (error) {
       toast({ title: "Logout Error", description: error.message, variant: "destructive" });
     }
-    // onAuthStateChange handles UI updates
   };
 
 
@@ -411,7 +419,7 @@ export default function SettleEasePage() {
   const handleSetActiveView = (view: ActiveView) => {
     if (userRole === 'user' && view !== 'dashboard') {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard'); // Force to dashboard if 'user' tries to access restricted page
+      setActiveView('dashboard'); 
     } else {
       setActiveView(view);
     }
@@ -484,7 +492,6 @@ export default function SettleEasePage() {
     );
   }
 
-  // User is logged in, role might be loading, or main data might be loading
   if (isLoadingData && !isDataFetchedAtLeastOnce) {
      return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -550,10 +557,12 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-        <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" >
-            <path d="M21.41 10.59l-2.82-2.82a.996.996 0 00-1.41 0L12 12.93 6.82 7.76a.996.996 0 00-1.41 0L2.59 10.59a.996.996 0 000 1.41L5.4 14.82c.19.2.45.31.71.31s.52-.11.71-.31L12 9.66l5.18 5.17c.19.2.45.31.71.31s.52-.11.71-.31l2.82-2.82a.996.996 0 000-1.41zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-            <path d="M12 4c-2.97 0-5.58 1.64-6.99 4.01l1.43.82C7.45 7.01 9.52 6 12 6s4.55 1.01 5.56 2.83l1.43-.82C17.58 5.64 14.97 4 12 4z"/>
-        </svg>
+          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.25 6.375H3.75C3.33579 6.375 3 6.71079 3 7.125V8.625C3 9.03921 3.33579 9.375 3.75 9.375H20.25C20.6642 9.375 21 9.03921 21 8.625V7.125C21 6.71079 20.6642 6.375 20.25 6.375Z"/>
+            <path d="M20.25 11.625H3.75C3.33579 11.625 3 11.9608 3 12.375V13.875C3 14.2892 3.33579 14.625 3.75 14.625H20.25C20.6642 14.625 21 14.2892 21 13.875V12.375C21 11.9608 20.6642 11.625 20.25 11.625Z"/>
+            <path d="M12 18.75C11.5858 18.75 11.25 18.4142 11.25 18V16.875H3.75C3.33579 16.875 3 16.5392 3 16.125V14.625H21V16.125C21 16.5392 20.6642 16.875 20.25 16.875H12.75V18C12.75 18.4142 12.4142 18.75 12 18.75Z"/>
+            <path d="M19.5 3H4.5C3.67157 3 3 3.67157 3 4.5V19.5C3 20.3284 3.67157 21 4.5 21H19.5C20.3284 21 21 20.3284 21 19.5V4.5C21 3.67157 20.3284 3 19.5 3ZM19.5 1.5C21.1569 1.5 22.5 2.84315 22.5 4.5V19.5C22.5 21.1569 21.1569 22.5 19.5 22.5H4.5C2.84315 22.5 1.5 21.1569 1.5 19.5V4.5C1.5 2.84315 2.84315 1.5 4.5 1.5H19.5Z"/>
+          </svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -720,8 +729,8 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   
   const yAxisDomainTop = useMemo(() => {
       const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(overallMax, 500) * 1.1; // Ensure a minimum upper bound, then add padding
-      return Math.ceil(paddedMax / 50) * 50; // Round up to nearest 50 for a cleaner axis
+      const paddedMax = Math.max(overallMax, 500) * 1.1; 
+      return Math.ceil(paddedMax / 50) * 50; 
   }, [shareVsPaidData]);
 
 
