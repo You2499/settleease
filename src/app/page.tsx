@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
   Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
 } from 'lucide-react';
@@ -581,19 +581,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     setIsExpenseModalOpen(true);
   };
 
-  const yAxisOverallMax = useMemo(() => {
-    if (!shareVsPaidData.length) return 500; // Default minimum scale if no data
-    let maxVal = 0;
-    for (const item of shareVsPaidData) {
-      if (item.paid > maxVal) maxVal = item.paid;
-      if (item.share > maxVal) maxVal = item.share;
-    }
-    return maxVal === 0 ? 500 : maxVal; // Ensure a non-zero max if all data is zero
-  }, [shareVsPaidData]);
-
-  const yAxisDomainTop = Math.max(yAxisOverallMax, 500) * 1.1;
-
-
   if (people.length === 0 && expenses.length === 0) {
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
@@ -653,21 +640,13 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: (yAxisOverallMax > 99999) ? 60
-                          : (yAxisOverallMax > 9999) ? 45
-                          : 30,
+                    left: 0, // Removed left margin as Y-axis is gone
                     bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  <YAxis
-                    tickFormatter={formatCurrencyForAxis}
-                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    domain={[0, yAxisDomainTop]}
-                    allowDecimals={false}
-                    tickCount={6}
-                  />
+                  {/* YAxis component removed */}
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
