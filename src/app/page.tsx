@@ -635,20 +635,26 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
           <CardContent className="h-[280px]">
             {shareVsPaidData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={shareVsPaidData} 
-                  margin={{ 
-                    top: 5, 
-                    right: 10, 
-                    left: (shareVsPaidData.some(d => Math.abs(d.paid) > 99999 || Math.abs(d.share) > 99999)) ? 60 
-                          : (shareVsPaidData.some(d => Math.abs(d.paid) > 9999 || Math.abs(d.share) > 9999)) ? 45 
-                          : 30, 
-                    bottom: 20 
+                <BarChart
+                  data={shareVsPaidData}
+                  margin={{
+                    top: 5,
+                    right: 10,
+                    left: (shareVsPaidData.some(d => Math.abs(d.paid) > 99999 || Math.abs(d.share) > 99999)) ? 60
+                          : (shareVsPaidData.some(d => Math.abs(d.paid) > 9999 || Math.abs(d.share) > 9999)) ? 45
+                          : 30,
+                    bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  <YAxis tickFormatter={formatCurrencyForAxis} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <YAxis
+                    tickFormatter={formatCurrencyForAxis}
+                    tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                    domain={[0, (dataMax: number) => Math.max(dataMax, 500) * 1.1]}
+                    allowDecimals={false}
+                    tickCount={6}
+                  />
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
