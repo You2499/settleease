@@ -63,6 +63,7 @@ import {
   CATEGORIES_TABLE,
   CHART_COLORS,
   formatCurrency,
+  formatCurrencyForAxis,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS
@@ -634,10 +635,20 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
           <CardContent className="h-[280px]">
             {shareVsPaidData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={shareVsPaidData} margin={{ top: 5, right: 10, left: (shareVsPaidData.some(d => d.paid > 9999 || d.share > 9999)) ? 40 : 30, bottom: 20 }}>
+                <BarChart 
+                  data={shareVsPaidData} 
+                  margin={{ 
+                    top: 5, 
+                    right: 10, 
+                    left: (shareVsPaidData.some(d => Math.abs(d.paid) > 99999 || Math.abs(d.share) > 99999)) ? 60 
+                          : (shareVsPaidData.some(d => Math.abs(d.paid) > 9999 || Math.abs(d.share) > 9999)) ? 45 
+                          : 30, 
+                    bottom: 20 
+                  }}
+                >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  <YAxis tickFormatter={formatCurrency} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
+                  <YAxis tickFormatter={formatCurrencyForAxis} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} />
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
@@ -772,7 +783,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
               <CardContent className="text-sm space-y-1.5">
                 <div className="flex justify-between"><span>Description:</span> <span className="font-medium text-right">{expense.description}</span></div>
                 <div className="flex justify-between"><span>Total Amount:</span> <span className="font-bold text-primary text-right">{formatCurrency(Number(expense.total_amount))}</span></div>
-                <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4 text-muted-foreground" /> {expense.category}</span></div>
+                <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span></div>
 
                 <div>
                   <span className="block">Paid by:</span>
