@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -66,7 +66,8 @@ import {
   formatCurrency,
   supabaseUrl,
   supabaseAnonKey,
-  AVAILABLE_CATEGORY_ICONS
+  AVAILABLE_CATEGORY_ICONS,
+  formatCurrencyForAxis
 } from '@/lib/settleease';
 
 import type { Person, Expense, ExpenseItemDetail, Category } from '@/lib/settleease';
@@ -348,8 +349,9 @@ export default function SettleEasePage() {
         if (iconDetail) return iconDetail.IconComponent;
       }
     }
+    // Fallback to a generic icon if not found in dynamic categories or old constant
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2; // Fallback
+    return settingsIcon ? settingsIcon.IconComponent : Settings2; 
   }, [categories]);
 
 
@@ -423,7 +425,9 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z" /></svg>
+          <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M20.62,8.08l-2.34-5.57C18.12,2.21,17.8,2,17.43,2H6.57c-0.37,0-0.69,0.21-0.86,0.51L3.38,8.08C2.56,8.35,2,9.1,2,10v1c0,0.83,0.67,1.5,1.5,1.5H6v8c0,0.55,0.45,1,1,1h10c0.55,0,1-0.45,1-1v-8h2.5c0.83,0,1.5-0.67,1.5-1.5v-1C22,9.1,21.44,8.35,20.62,8.08z M6.57,4h10.86l1.5,3.57H5.07L6.57,4z M18,12.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S18.83,12.5,18,12.5z M6,12.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S6.83,12.5,6,12.5z M16,19H8v-6h8V19z"/>
+          </svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -575,7 +579,12 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
     return Math.max(maxPaid, maxShare, 500); 
   }, [shareVsPaidData]);
-  const yAxisDomainTop = Math.ceil((yAxisOverallMax * 1.1) / 50) * 50; 
+  
+  const yAxisDomainTop = useMemo(() => {
+      const dataMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
+      const paddedMax = Math.max(dataMax, 500) * 1.1; // Ensure at least 500, then add 10% padding
+      return Math.ceil(paddedMax / 50) * 50; // Round up to nearest 50 for nice ticks
+  }, [shareVsPaidData]);
 
 
   const expensesByCategory = useMemo(() => {
@@ -931,3 +940,6 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
+
+
+    
