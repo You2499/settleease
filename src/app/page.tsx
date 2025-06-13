@@ -50,6 +50,8 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { ThemeToggleButton } from '@/components/ThemeToggleButton'; // Added ThemeToggleButton import
+
 
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
@@ -63,6 +65,7 @@ import {
   CATEGORIES_TABLE,
   CHART_COLORS,
   formatCurrency,
+  formatCurrencyForAxis,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS
@@ -345,8 +348,9 @@ export default function SettleEasePage() {
       const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
       if (iconDetail) return iconDetail.IconComponent;
     }
+    // Fallback for any category not found in dynamic list or if icon_name is missing/invalid
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2;
+    return settingsIcon ? settingsIcon.IconComponent : Settings2; // Default to Settings2 if even that isn't found
   }, [categories]);
 
 
@@ -391,6 +395,7 @@ export default function SettleEasePage() {
                 {getHeaderTitle()}
               </h1>
             </div>
+            <ThemeToggleButton />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
             {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
@@ -565,10 +570,21 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5);
   }, [expenses, people, peopleMap]);
 
+
+  const yAxisOverallMax = useMemo(() => {
+    if (!shareVsPaidData.length) return 500; // Default max if no data
+    const maxPaid = Math.max(...shareVsPaidData.map(d => d.paid), 0);
+    const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
+    return Math.max(maxPaid, maxShare, 500); // Ensure a minimum sensible upper bound
+  }, [shareVsPaidData]);
+
+  const yAxisDomainTop = Math.max(yAxisOverallMax * 1.1, 550); // Add 10% padding, ensure min like 550
+
+
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized"; // Handle null/empty category names
+      const categoryName = exp.category || "Uncategorized"; 
       data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
@@ -638,15 +654,18 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0,
+                    left: 0, 
                     bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
+                  
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
                   <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                   <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={Math.min(20, 60 / shareVsPaidData.length)} />
@@ -666,7 +685,12 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={Math.min(80, window.innerWidth / 8)} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
                     {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
                   </Pie>
-                  <RechartsTooltip formatter={(value: number, name: string) => [formatCurrency(value), name]} contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} />
+                  <RechartsTooltip 
+                    formatter={(value: number, name: string) => [formatCurrency(value), name]} 
+                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} 
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                    itemStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
                   <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -704,7 +728,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                         <CardContent className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
-                            <span>Paid by: <span className="font-medium text-foreground">{displayPayerText}</span></span>
+                            <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
                           </div>
                           <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
                         </CardContent>
@@ -827,7 +851,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
                             <span className="font-semibold">{personName}</span>
                             <span
                               className={`font-bold text-xs px-1.5 py-0.5 rounded-full
-                                    ${netForThisExpense < -0.01 ? 'bg-red-100 text-red-700' : netForThisExpense > 0.01 ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
+                                    ${netForThisExpense < -0.01 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : netForThisExpense > 0.01 ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300'}`}
                             >
                               {netForThisExpense < -0.01 ? `Owes ${formatCurrency(Math.abs(netForThisExpense))}` :
                                 netForThisExpense > 0.01 ? `Is Owed ${formatCurrency(netForThisExpense)}` :
