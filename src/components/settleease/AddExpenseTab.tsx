@@ -23,18 +23,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Trash2, PlusCircle, Users, CreditCard, AlertTriangle, X, Settings2, Pencil, Save, Ban, MinusCircle } from 'lucide-react'; // Utensils, Car, ShoppingCart, PartyPopper, Lightbulb are part of CATEGORIES
+import { FileText, Trash2, PlusCircle, Users, CreditCard, AlertTriangle, X, Settings2, Pencil, Save, Ban, MinusCircle } from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
-import { EXPENSES_TABLE, PEOPLE_TABLE, CATEGORIES, formatCurrency } from '@/lib/settleease';
-import type { Person, Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease';
-
-interface PayerInputRow {
-  id: string;
-  personId: string;
-  amount: string;
-}
+import { CATEGORIES, EXPENSES_TABLE, formatCurrency } from '@/lib/settleease';
+import type { Expense, Person, PayerInputRow, ExpenseItemDetail } from '@/lib/settleease';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -75,49 +69,51 @@ export default function AddExpenseTab({
   // It was intended to reset/update form state when the `people` prop changes (e.g., after managing people).
   // useEffect(() => {
   //   if (people.length > 0) {
-  //     const existingPeopleIds = new Set(people.map((p) => { return p.id; }));
+  //     const existingPeopleIdsSet = new Set(people.map((p) => { return p.id; }));
   
   //     // Update payers
-  //     setPayers((prevPayers) => {
-  //       let updatedPayers = prevPayers.map((payer) => {
-  //         return existingPeopleIds.has(payer.personId) ? payer : { ...payer, personId: '' };
+  //     setPayers((prevPayers_setPayersEffect) => {
+  //       let updatedPayers_setPayersEffect = prevPayers_setPayersEffect.map((payer_setPayersEffect) => {
+  //         return existingPeopleIdsSet.has(payer_setPayersEffect.personId) ? payer_setPayersEffect : { ...payer_setPayersEffect, personId: '' };
   //       });
-  //       if (updatedPayers.every((p) => { return p.personId === ''; })) {
-  //         updatedPayers = [{ id: Date.now().toString(), personId: people[0].id, amount: totalAmount || '' }];
+  //       if (updatedPayers_setPayersEffect.every((p_setPayersEffect) => { return p_setPayersEffect.personId === ''; })) {
+          
+  //         const defaultPayerIdForEffect = people[0]?.id || '';
+  //         updatedPayers_setPayersEffect = [{ id: Date.now().toString(), personId: defaultPayerIdForEffect, amount: totalAmount || '' }];
   //       }
-  //       if (!isMultiplePayers && updatedPayers.length > 0 && totalAmount) {
-  //          updatedPayers[0].amount = totalAmount; // ensure single payer amount is total
+  //       if (!isMultiplePayers && updatedPayers_setPayersEffect.length > 0 && totalAmount) {
+  //          updatedPayers_setPayersEffect[0].amount = totalAmount; 
   //       }
-  //       return updatedPayers;
+  //       return updatedPayers_setPayersEffect;
   //     });
   
   //     // Update selected people for equal split
-  //     setSelectedPeopleEqual((prevSelected) => {
-  //       return prevSelected.filter((id) => { return existingPeopleIds.has(id); });
+  //     setSelectedPeopleEqual((prevSelected_setSelectedPeopleEqualEffect) => {
+  //       return prevSelected_setSelectedPeopleEqualEffect.filter((id_setSelectedPeopleEqualEffect) => { return existingPeopleIdsSet.has(id_setSelectedPeopleEqualEffect); });
   //     });
   
   //     // Update unequal shares
-  //     setUnequalShares((prevShares) => {
-  //       const newShares: Record<string, string> = {};
-  //       for (const personId in prevShares) {
-  //         if (existingPeopleIds.has(personId)) {
-  //           newShares[personId] = prevShares[personId];
+  //     setUnequalShares((prevShares_setUnequalSharesEffect) => {
+  //       const newShares_setUnequalSharesEffect: Record<string, string> = {};
+  //       for (const personId_setUnequalSharesEffect in prevShares_setUnequalSharesEffect) {
+  //         if (existingPeopleIdsSet.has(personId_setUnequalSharesEffect)) {
+  //           newShares_setUnequalSharesEffect[personId_setUnequalSharesEffect] = prevShares_setUnequalSharesEffect[personId_setUnequalSharesEffect];
   //         }
   //       }
-  //       return newShares;
+  //       return newShares_setUnequalSharesEffect;
   //     });
   
   //     // Update itemwise shares
-  //     setItems((prevItems) => {
-  //       return prevItems.map((item) => {
+  //     setItems((prevItems_setItemsEffect) => {
+  //       return prevItems_setItemsEffect.map((item_setItemsEffect) => {
   //         return {
-  //           ...item,
-  //           sharedBy: item.sharedBy.filter((id) => { return existingPeopleIds.has(id); }),
+  //           ...item_setItemsEffect,
+  //           sharedBy: item_setItemsEffect.sharedBy.filter((id_setItemsEffect) => { return existingPeopleIdsSet.has(id_setItemsEffect); }),
   //         };
   //       });
   //     });
   //   }
-  // }, [people, isMultiplePayers, totalAmount]); // Added dependencies
+  // }, [people, isMultiplePayers, totalAmount]); // This needs careful review of dependencies and logic if uncommented
   
 
   useEffect(() => {
@@ -128,7 +124,7 @@ export default function AddExpenseTab({
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
         setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
-        setPayers(expenseToEdit.paid_by.map(p => ({ id: p.personId + Date.now(), personId: p.personId, amount: p.amount.toString() })));
+        setPayers(expenseToEdit.paid_by.map(p => ({ id: p.personId + Date.now().toString() + Math.random().toString(), personId: p.personId, amount: p.amount.toString() })));
       } else {
         setIsMultiplePayers(false);
         setPayers([{ id: Date.now().toString(), personId: people[0]?.id || '', amount: expenseToEdit.total_amount.toString() }]);
@@ -169,50 +165,75 @@ export default function AddExpenseTab({
       setIsMultiplePayers(false);
       setPayers([{ id: Date.now().toString(), personId: people[0]?.id || '', amount: '' }]);
       setSplitMethod('equal');
-      setSelectedPeopleEqual(people.map(p => p.id));
+      setSelectedPeopleEqual(people.map(p => p.id)); // Default to all people selected for equal split on new expense
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
     }
-  }, [expenseToEdit, people]);
+  }, [expenseToEdit, people]); // Removed totalAmount from deps as it might cause loops with payer updates.
 
 
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
-      const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.id === 'current_user_placeholder_id');
+      // Attempt to find a common default name like "You" or use the first person.
+      const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
       return currentUserAsPerson ? currentUserAsPerson.id : people[0].id;
     }
     return '';
   }, [people]);
 
   useEffect(() => {
-    if (!isMultiplePayers && payers.length === 1) {
-      if (totalAmount !== payers[0].amount) {
-        setPayers(prev => [{ ...prev[0], amount: totalAmount }]);
-      }
-      if (!payers[0].personId && defaultPayerId) {
-         setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
-      }
-    }
-     if (isMultiplePayers && payers.length === 0 && people.length > 0 && defaultPayerId) {
-        setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: '' }]);
-    }
-    if (isMultiplePayers && payers.length === 1 && !payers[0].personId && defaultPayerId){
-         setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
-    }
+    // Initialize or adjust single payer
+    if (!isMultiplePayers) {
+      const currentPayer = payers[0];
+      let newPayerAmount = totalAmount;
+      let newPayerPersonId = currentPayer?.personId || defaultPayerId;
 
-  }, [totalAmount, isMultiplePayers, defaultPayerId, people.length]);
+      // If editing and totalAmount changes, update single payer's amount
+      if (expenseToEdit && currentPayer?.amount !== totalAmount) {
+        // This condition might be too broad if totalAmount changes for other reasons
+      }
+      
+      // If no payer is set, or the current one is empty, set default
+      if (!currentPayer?.personId && defaultPayerId) {
+         // newPayerPersonId is already set
+      }
+
+      // Only update if necessary to avoid loops
+      if (!currentPayer || currentPayer.personId !== newPayerPersonId || currentPayer.amount !== newPayerAmount) {
+        setPayers([{ id: currentPayer?.id || Date.now().toString(), personId: newPayerPersonId, amount: newPayerAmount }]);
+      }
+    } else { // Multiple payers logic
+        if (payers.length === 0 && defaultPayerId) {
+             setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: '' }]);
+        } else if (payers.length === 1 && !payers[0].personId && defaultPayerId) {
+            setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
+        }
+    }
+  }, [totalAmount, isMultiplePayers, defaultPayerId, payers, expenseToEdit, people.length]);
 
 
   useEffect(() => {
     if (splitMethod === 'equal') {
-      setSelectedPeopleEqual(prev => prev.length > 0 ? prev : people.map(p => p.id));
+      // For new expenses or if no one is selected, default to all.
+      if (!expenseToEdit || selectedPeopleEqual.length === 0) {
+        const allPeopleIds = people.map(p => p.id);
+        // Avoid unnecessary re-renders if already set to all people
+        if (selectedPeopleEqual.length !== allPeopleIds.length || !selectedPeopleEqual.every(id => allPeopleIds.includes(id))) {
+            setSelectedPeopleEqual(allPeopleIds);
+        }
+      }
     } else if (splitMethod === 'unequal') {
-       const anyShares = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
-        if (!anyShares) {
-            setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
+       // If no shares defined, initialize for all people
+       const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
+        if (!anySharesPopulated && people.length > 0) {
+            const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
+            // Avoid re-render if already empty for all
+            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) {
+                 setUnequalShares(initialEmptyShares);
+            }
         }
     }
-  }, [splitMethod, people]);
+  }, [splitMethod, people, expenseToEdit]); // selectedPeopleEqual was removed from deps to avoid loop
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -221,29 +242,32 @@ export default function AddExpenseTab({
   };
 
   const addPayer = () => {
-    setPayers([...payers, { id: Date.now().toString(), personId: '', amount: '' }]);
+    setPayers([...payers, { id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
   };
 
   const removePayer = (index: number) => {
     const newPayers = payers.filter((_, i) => i !== index);
-    if (newPayers.length === 0 && people.length > 0 && defaultPayerId) {
-      setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: '' }]);
+    if (newPayers.length === 0) { // If all payers removed, add one back if in multiple payer mode
+        if (isMultiplePayers) {
+            setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
+        } else { // Should not happen if UI prevents removing the last single payer
+            setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: totalAmount }]);
+        }
     } else {
       setPayers(newPayers);
     }
   };
   
   const handleToggleMultiplePayers = () => {
-    const currentlyMultiple = !isMultiplePayers;
-    setIsMultiplePayers(currentlyMultiple);
-    if (currentlyMultiple) {
-      if (payers.length === 0 || (payers.length === 1 && !payers[0].amount)) {
-         setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
-      }
+    const goingToMultiple = !isMultiplePayers;
+    setIsMultiplePayers(goingToMultiple);
+    if (goingToMultiple) {
+      // If was single payer with amount, keep that amount for the first multi-payer, or clear if no amount
+      const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
+      setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: firstPayerAmount }]);
     } else {
-      // Switching to single payer
-      const firstPayerPersonId = payers[0]?.personId || defaultPayerId || '';
-      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
+      // Switching to single payer: use first current payer or default, set amount to totalAmount
+      setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: totalAmount }]);
     }
   };
 
@@ -259,7 +283,7 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]); // Default to all people sharing new item
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
@@ -288,32 +312,37 @@ export default function AddExpenseTab({
     if (isNaN(amountNum) || amountNum <= 0) return "Total amount must be a positive number.";
     if (!category) return "Category must be selected.";
 
-    // Payer validation
+    if (payers.some(p => !p.personId)) return "Each payer must be selected.";
     const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    if (Math.abs(totalPaidByPayers - amountNum) > 0.001) {
+    if (Math.abs(totalPaidByPayers - amountNum) > 0.001) { // Using a small epsilon for float comparison
       return `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total expense amount (${formatCurrency(amountNum)}).`;
     }
-    if (payers.some(p => !p.personId)) return "Each payer must be selected.";
-    if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) return "Each payer's amount must be positive if multiple payers.";
+    if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) {
+        if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { // Allow single payer in multi-mode to be 0 if they are the only one, effectively making it like no one paid yet.
+             return "Each payer's amount must be positive if listed.";
+        }
+    }
+    if (!isMultiplePayers && payers.length === 1 && (parseFloat(payers[0].amount) || 0) <= 0 && amountNum > 0) {
+        return "Payer amount must be positive.";
+    }
 
 
-    // Split validation
     if (splitMethod === 'equal' && selectedPeopleEqual.length === 0) return "At least one person must be selected for equal split.";
     if (splitMethod === 'unequal') {
       const sumUnequal = Object.values(unequalShares).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
       if (Math.abs(sumUnequal - amountNum) > 0.001) return `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal total amount (${formatCurrency(amountNum)}).`;
-      if (people.some(p => !unequalShares[p.id] && parseFloat(unequalShares[p.id] || "0") < 0)) return "Unequal shares cannot be negative.";
+      if (Object.values(unequalShares).some(val => parseFloat(val || "0") < 0)) return "Unequal shares cannot be negative.";
     }
     if (splitMethod === 'itemwise') {
       if (items.length === 0) return "At least one item must be added for itemwise split.";
-      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price)) || parseFloat(item.price) <= 0 || item.sharedBy.length === 0)) {
+      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0)) {
         return "Each item must have a name, positive price, and be shared by at least one person.";
       }
-      const sumItems = items.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+      const sumItems = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
       if (Math.abs(sumItems - amountNum) > 0.001) return `Sum of item prices (${formatCurrency(sumItems)}) must equal total amount (${formatCurrency(amountNum)}).`;
     }
     return null;
-  }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, people, isMultiplePayers]);
+  }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers]);
 
   const handleSubmitExpense = async () => {
     const error = validateForm();
@@ -329,44 +358,58 @@ export default function AddExpenseTab({
 
     setIsLoading(true);
 
-    const expenseData: Omit<Expense, 'id' | 'created_at'> = {
+    const finalPayers = payers
+        .filter(p => p.personId && parseFloat(p.amount) > 0) // Ensure valid payers
+        .map(p => ({ personId: p.personId, amount: parseFloat(p.amount) }));
+
+    if (finalPayers.length === 0 && parseFloat(totalAmount) > 0) {
+        setFormError("At least one valid payer with a positive amount is required if total amount is positive.");
+        toast({ title: "Validation Error", description: "At least one valid payer with a positive amount is required.", variant: "destructive" });
+        setIsLoading(false);
+        return;
+    }
+
+
+    const expenseData: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
       description,
       total_amount: parseFloat(totalAmount),
       category,
-      paid_by: payers.map(p => ({ personId: p.personId, amount: parseFloat(p.amount) })),
+      paid_by: finalPayers,
       split_method: splitMethod,
       shares: [],
-      items: [],
+      items: [], // Will be populated for itemwise
     };
 
     if (splitMethod === 'equal') {
-      const shareAmount = parseFloat(totalAmount) / selectedPeopleEqual.length;
+      const shareAmount = selectedPeopleEqual.length > 0 ? parseFloat(totalAmount) / selectedPeopleEqual.length : 0;
       expenseData.shares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
     } else if (splitMethod === 'unequal') {
       expenseData.shares = Object.entries(unequalShares)
-        .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0)
+        .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) // Only include positive shares
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
       expenseData.items = items.map(item => ({
-        id: item.id, // Retain ID if editing
+        id: item.id, 
         name: item.name,
-        price: parseFloat(item.price),
+        price: parseFloat(item.price as string),
         sharedBy: item.sharedBy
       }));
-      // Calculate shares from items for simpler querying later
+      // Calculate shares from items
       const itemwiseSharesMap: Record<string, number> = {};
       items.forEach(item => {
-        const pricePerPerson = parseFloat(item.price) / item.sharedBy.length;
-        item.sharedBy.forEach(personId => {
-          itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPerson;
-        });
+        const itemPrice = parseFloat(item.price as string);
+        if (item.sharedBy.length > 0) {
+            const pricePerPerson = itemPrice / item.sharedBy.length;
+            item.sharedBy.forEach(personId => {
+            itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPerson;
+            });
+        }
       });
       expenseData.shares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount }));
     }
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        // Update existing expense
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
           .update({ ...expenseData, updated_at: new Date().toISOString() })
@@ -375,7 +418,6 @@ export default function AddExpenseTab({
         if (updateError) throw updateError;
         toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
       } else {
-        // Add new expense
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
           .insert([{ ...expenseData, created_at: new Date().toISOString() }])
@@ -383,20 +425,61 @@ export default function AddExpenseTab({
         if (insertError) throw insertError;
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
       }
-      onExpenseAdded(); // This will refresh data and potentially navigate
-      // Reset form if not editing (or if edit successful and we want to clear for next add)
+      onExpenseAdded(); 
       if (!expenseToEdit) {
         setDescription(''); setTotalAmount(''); setCategory(CATEGORIES[0].name);
-        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || '', amount: '' }]);
+        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
         setIsMultiplePayers(false);
-        setSplitMethod('equal'); setSelectedPeopleEqual(people.map(p => p.id));
+        setSplitMethod('equal'); 
+        setSelectedPeopleEqual(people.map(p => p.id));
         setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
       }
     } catch (error: any) {
-      console.error("Error saving expense:", error);
-      toast({ title: "Save Error", description: `Could not save expense: ${error.message}`, variant: "destructive" });
-      setFormError(`Could not save expense: ${error.message}`);
+      let errorMessage = "An unknown error occurred while saving the expense.";
+      // Attempt to get a more specific message
+      if (error) {
+        if (typeof error.message === 'string' && error.message.trim() !== '') {
+          errorMessage = error.message;
+        } else if (typeof error.code === 'string' && error.code.trim() !== '') { // Supabase often has a 'code'
+          errorMessage = `Error code: ${error.code}`;
+        } else if (typeof error.details === 'string' && error.details.trim() !== '') { // And 'details'
+          errorMessage = error.details;
+        } else if (typeof error === 'string' && error.trim() !== '') {
+          errorMessage = error;
+        }
+      }
+      
+      console.error("Error saving expense. Best guess message:", errorMessage);
+      console.error("Raw error object received in catch block:", error);
+      
+      if (error && typeof error === 'object') {
+        // Log all enumerable keys and their values
+        for (const key in error) {
+          if (Object.prototype.hasOwnProperty.call(error, key)) {
+            console.error(`Error object property - ${key}:`, error[key]);
+          }
+        }
+        // Attempt to stringify, including non-enumerable properties if possible
+        try {
+          const errorJson = JSON.stringify(error, Object.getOwnPropertyNames(error));
+          console.error("Full error (JSON with own properties):", errorJson);
+          if (errorJson === '{}' && error.toString() !== '[object Object]' && error.toString() !== '{}') {
+             console.error("Error object .toString():", error.toString());
+          }
+        } catch (stringifyError) {
+          console.error("Could not stringify the full error object due to:", stringifyError);
+          // Fallback if stringify fails (e.g. circular refs)
+          if (error.stack) {
+            console.error("Error stack:", error.stack);
+          }
+        }
+      } else {
+        console.log("Caught error is not a typical object or is null/undefined. Type:", typeof error);
+      }
+
+      toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
+      setFormError(`Could not save expense: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -418,7 +501,7 @@ export default function AddExpenseTab({
     );
   }
 
-  if (people.length === 0 && !expenseToEdit) {
+  if (people.length === 0 && !expenseToEdit) { // Allow editing even if no people (e.g. to delete)
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
         <CardHeader className="pb-2">
@@ -508,21 +591,22 @@ export default function AddExpenseTab({
                 {payers.map((payer, index) => (
                   <Card key={payer.id} className="p-3 bg-card/50 shadow-sm">
                     <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-                      <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)}>
+                      <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)} disabled={people.length === 0}>
                         <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
                         <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                       </Select>
                       <Input type="number" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-28" />
-                      <Button variant="ghost" size="icon" onClick={() => removePayer(index)} className="text-destructive hover:bg-destructive/10 h-8 w-8" disabled={payers.length <=1 && !expenseToEdit}>
+                      <Button variant="ghost" size="icon" onClick={() => removePayer(index)} className="text-destructive hover:bg-destructive/10 h-8 w-8" 
+                        disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </Card>
                 ))}
-                <Button variant="outline" size="sm" onClick={addPayer} className="text-xs"><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Another Payer</Button>
+                <Button variant="outline" size="sm" onClick={addPayer} className="text-xs" disabled={people.length === 0}><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Another Payer</Button>
               </div>
             ) : (
-              <Select value={payers[0]?.personId || ''} onValueChange={val => handlePayerChange(0, 'personId', val)}>
+              <Select value={payers[0]?.personId || ''} onValueChange={val => handlePayerChange(0, 'personId', val)} disabled={people.length === 0}>
                 <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
                 <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
               </Select>
@@ -544,27 +628,29 @@ export default function AddExpenseTab({
             {splitMethod === 'equal' && (
               <Card className="p-4 bg-card/50 shadow-sm mt-2">
                 <Label className="mb-2 block text-sm font-medium">Select who shared:</Label>
-                <ScrollArea className="max-h-40">
-                  <div className="space-y-1.5 pr-2">
-                  {people.map(person => (
-                    <div key={person.id} className="flex items-center space-x-2 p-1.5 hover:bg-secondary/30 rounded-sm">
-                      <Checkbox
-                        id={`equal-${person.id}`}
-                        checked={selectedPeopleEqual.includes(person.id)}
-                        onCheckedChange={() => handleEqualSplitChange(person.id)}
-                      />
-                      <Label htmlFor={`equal-${person.id}`} className="font-normal text-sm flex-grow cursor-pointer">{person.name}</Label>
+                {people.length > 0 ? (
+                  <ScrollArea className="max-h-40">
+                    <div className="space-y-1.5 pr-2">
+                    {people.map(person => (
+                      <div key={person.id} className="flex items-center space-x-2 p-1.5 hover:bg-secondary/30 rounded-sm">
+                        <Checkbox
+                          id={`equal-${person.id}`}
+                          checked={selectedPeopleEqual.includes(person.id)}
+                          onCheckedChange={() => handleEqualSplitChange(person.id)}
+                        />
+                        <Label htmlFor={`equal-${person.id}`} className="font-normal text-sm flex-grow cursor-pointer">{person.name}</Label>
+                      </div>
+                    ))}
                     </div>
-                  ))}
-                  </div>
-                </ScrollArea>
+                  </ScrollArea>
+                ) : <p className="text-xs text-muted-foreground">No people available to select.</p>}
               </Card>
             )}
 
             {/* Unequal Split */}
             {splitMethod === 'unequal' && (
               <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-2.5">
-                {people.map(person => (
+                {people.length > 0 ? people.map(person => (
                   <div key={person.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
                     <Label htmlFor={`unequal-${person.id}`} className="text-sm">{person.name}</Label>
                     <Input
@@ -576,7 +662,7 @@ export default function AddExpenseTab({
                       className="w-28"
                     />
                   </div>
-                ))}
+                )) : <p className="text-xs text-muted-foreground">No people available for unequal split.</p>}
               </Card>
             )}
             
@@ -588,28 +674,30 @@ export default function AddExpenseTab({
                         <div className="flex items-start justify-between gap-2 mb-2">
                         <div className="flex-grow space-y-1.5">
                             <Input value={item.name} onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} placeholder={`Item ${itemIndex + 1} Name`} className="h-8 text-sm"/>
-                            <Input type="number" value={item.price} onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} placeholder="Price" className="h-8 text-sm w-24"/>
+                            <Input type="number" value={item.price as string} onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} placeholder="Price" className="h-8 text-sm w-24"/>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0">
+                        <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0" disabled={items.length <=1}>
                             <MinusCircle className="h-4 w-4" />
                         </Button>
                         </div>
                         <Label className="text-xs block mb-1 text-muted-foreground">Shared by:</Label>
-                        <ScrollArea className="max-h-28">
-                        <div className="grid grid-cols-2 gap-x-3 gap-y-1 pr-1">
-                            {people.map(person => (
-                            <div key={person.id} className="flex items-center space-x-1.5">
-                                <Checkbox
-                                id={`item-${itemIndex}-person-${person.id}`}
-                                checked={item.sharedBy.includes(person.id)}
-                                onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
-                                className="h-3.5 w-3.5"
-                                />
-                                <Label htmlFor={`item-${itemIndex}-person-${person.id}`} className="text-xs font-normal cursor-pointer">{person.name}</Label>
-                            </div>
-                            ))}
-                        </div>
-                        </ScrollArea>
+                        {people.length > 0 ? (
+                          <ScrollArea className="max-h-28">
+                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 pr-1">
+                              {people.map(person => (
+                              <div key={person.id} className="flex items-center space-x-1.5">
+                                  <Checkbox
+                                  id={`item-${itemIndex}-person-${person.id}`}
+                                  checked={item.sharedBy.includes(person.id)}
+                                  onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
+                                  className="h-3.5 w-3.5"
+                                  />
+                                  <Label htmlFor={`item-${itemIndex}-person-${person.id}`} className="text-xs font-normal cursor-pointer">{person.name}</Label>
+                              </div>
+                              ))}
+                          </div>
+                          </ScrollArea>
+                        ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
                     </Card>
                     ))}
                     <Button variant="outline" size="sm" onClick={handleAddItem} className="text-xs mt-2"><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
@@ -621,7 +709,7 @@ export default function AddExpenseTab({
           {expenseToEdit && onCancelEdit && (
              <Button variant="outline" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
           )}
-          <Button onClick={handleSubmitExpense} disabled={isLoading}>
+          <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) }>
             {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
           </Button>
         </CardFooter>
@@ -629,3 +717,5 @@ export default function AddExpenseTab({
     </div>
   );
 }
+
+
