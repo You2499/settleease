@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell, YAxis } from 'recharts';
 import {
   Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
 } from 'lucide-react';
@@ -349,7 +349,7 @@ export default function SettleEasePage() {
       if (iconDetail) return iconDetail.IconComponent;
     }
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2;
+    return settingsIcon ? settingsIcon.IconComponent : Settings2; // Fallback
   }, [categories]);
 
 
@@ -570,8 +570,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   }, [expenses, people, peopleMap]);
 
 
-
-
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     expenses.forEach(exp => {
@@ -645,7 +643,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0, 
+                    left: 0,
                     bottom: 20
                   }}
                 >
@@ -779,9 +777,6 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2 h-6 w-6" /> Expense Details
           </DialogTitle>
-          <DialogDescription>
-            Detailed breakdown of "{expense.description}" recorded on {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}.
-          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-grow min-h-0 overflow-y-auto pr-4">
