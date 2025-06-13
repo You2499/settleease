@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -215,7 +216,9 @@ const Sidebar = React.forwardRef<
     return (
       <div
         ref={ref}
-        className="group peer hidden md:block text-sidebar-foreground"
+        className={cn(
+          "group peer hidden md:block text-sidebar-foreground flex-shrink-0" // Added flex-shrink-0
+        )}
         data-state={state}
         data-collapsible={state === "collapsed" ? collapsible : ""}
         data-variant={variant}
