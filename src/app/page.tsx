@@ -111,7 +111,7 @@ export default function SettleEasePage() {
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
-    if (!db || !userId) return 'user'; 
+    if (!db || !userId) return 'user';
     setIsLoadingRole(true);
     try {
       const { data, error } = await db
@@ -121,16 +121,16 @@ export default function SettleEasePage() {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { 
-          console.warn(`User profile or role not found for ${userId}, defaulting to 'user' role. Ensure a profile exists in '${USER_PROFILES_TABLE}'. This can happen briefly for new users.`);
-          return 'user'; 
+        if (error.code === 'PGRST116') {
+          console.warn(`User profile or role not found for ${userId} (PGRST116). Defaulting to 'user' role. This is normal and often temporary for new users as their profile (with role) is being created by a database trigger. If persistent, ensure the trigger 'on_auth_user_created' is correctly populating '${USER_PROFILES_TABLE}'.`);
+          return 'user';
         }
-        console.error("Error fetching user role:", error);
-        return 'user'; 
+        console.error(`Error fetching user role (userId: ${userId}):`, error, "Defaulting to 'user' role. This might indicate a network issue or RLS misconfiguration on the user_profiles table (ensure authenticated users can SELECT their own profile).");
+        return 'user';
       }
       return data?.role as UserRole || 'user';
-    } catch (e) {
-      console.error("Catch: Error fetching user role:", e);
+    } catch (e: any) {
+      console.error(`Catch: Unhandled exception while fetching user role (userId: ${userId}):`, e, "Defaulting to 'user' role.");
       return 'user';
     } finally {
       setIsLoadingRole(false);
@@ -139,7 +139,7 @@ export default function SettleEasePage() {
 
 
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
-    if (!db || supabaseInitializationError || !currentUser) { 
+    if (!db || supabaseInitializationError || !currentUser) {
       setIsLoadingData(false);
       return;
     }
@@ -195,7 +195,7 @@ export default function SettleEasePage() {
     }
 
     if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
-        setIsDataFetchedAtLeastOnce(true); 
+        setIsDataFetchedAtLeastOnce(true);
     }
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoadingData(false);
@@ -266,7 +266,7 @@ export default function SettleEasePage() {
     db.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setCurrentUser(session?.user ?? null);
-        setIsLoadingAuth(false); 
+        setIsLoadingAuth(false);
       }
     }).catch(err => {
         if(isMounted) setIsLoadingAuth(false);
@@ -276,8 +276,8 @@ export default function SettleEasePage() {
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       if (isMounted) {
         const newAuthUser = session?.user ?? null;
-        setCurrentUser(newAuthUser); 
-        if (!newAuthUser) { 
+        setCurrentUser(newAuthUser);
+        if (!newAuthUser) {
           setPeople([]);
           setExpenses([]);
           setCategories([]);
@@ -345,7 +345,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`${table} change received!`, payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false); 
+        fetchAllData(false);
     };
 
     const handleSubscriptionError = (tableName: string, status: string, error?: any) => {
@@ -419,7 +419,7 @@ export default function SettleEasePage() {
   const handleSetActiveView = (view: ActiveView) => {
     if (userRole === 'user' && view !== 'dashboard') {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard'); 
+      setActiveView('dashboard');
     } else {
       setActiveView(view);
     }
@@ -446,7 +446,7 @@ export default function SettleEasePage() {
       }
     }
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2; 
+    return settingsIcon ? settingsIcon.IconComponent : Settings2;
   }, [categories]);
 
 
@@ -514,7 +514,7 @@ export default function SettleEasePage() {
       <SidebarInset>
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
-            <div className="flex items-center h-10"> 
+            <div className="flex items-center h-10">
               <SidebarTrigger className="md:hidden mr-2" />
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {getHeaderTitle()}
@@ -523,7 +523,7 @@ export default function SettleEasePage() {
             <ThemeToggleButton />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-            {isLoadingData && isDataFetchedAtLeastOnce && ( 
+            {isLoadingData && isDataFetchedAtLeastOnce && (
                 <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
             )}
             {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
@@ -557,12 +557,7 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.25 6.375H3.75C3.33579 6.375 3 6.71079 3 7.125V8.625C3 9.03921 3.33579 9.375 3.75 9.375H20.25C20.6642 9.375 21 9.03921 21 8.625V7.125C21 6.71079 20.6642 6.375 20.25 6.375Z"/>
-            <path d="M20.25 11.625H3.75C3.33579 11.625 3 11.9608 3 12.375V13.875C3 14.2892 3.33579 14.625 3.75 14.625H20.25C20.6642 14.625 21 14.2892 21 13.875V12.375C21 11.9608 20.6642 11.625 20.25 11.625Z"/>
-            <path d="M12 18.75C11.5858 18.75 11.25 18.4142 11.25 18V16.875H3.75C3.33579 16.875 3 16.5392 3 16.125V14.625H21V16.125C21 16.5392 20.6642 16.875 20.25 16.875H12.75V18C12.75 18.4142 12.4142 18.75 12 18.75Z"/>
-            <path d="M19.5 3H4.5C3.67157 3 3 3.67157 3 4.5V19.5C3 20.3284 3.67157 21 4.5 21H19.5C20.3284 21 21 20.3284 21 19.5V4.5C21 3.67157 20.3284 3 19.5 3ZM19.5 1.5C21.1569 1.5 22.5 2.84315 22.5 4.5V19.5C22.5 21.1569 21.1569 22.5 19.5 22.5H4.5C2.84315 22.5 1.5 21.1569 1.5 19.5V4.5C1.5 2.84315 2.84315 1.5 4.5 1.5H19.5Z"/>
-          </svg>
+          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g stroke-width="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fill-rule="evenodd" clip-rule="evenodd"></path><path d="M6.001 16.999a5.5 5.5 0 0 1 9.365-4.034 5.5 5.5 0 0 1-1.166 8.033A5.482 5.482 0 0 1 12 20.999a5.482 5.482 0 0 1-2.599-0.698A5.501 5.501 0 0 1 6 17m6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path><path d="M17.999 16.999a5.5 5.5 0 0 0-9.365-4.034 5.5 5.5 0 0 0 1.166 8.033A5.482 5.482 0 0 0 12 20.999a5.482 5.482 0 0 0 2.599-0.698A5.501 5.501 0 0 0 18 17m-6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path></g></svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -729,15 +724,15 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   
   const yAxisDomainTop = useMemo(() => {
       const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(overallMax, 500) * 1.1; 
-      return Math.ceil(paddedMax / 50) * 50; 
+      const paddedMax = Math.max(overallMax, 500) * 1.1;
+      return Math.ceil(paddedMax / 50) * 50;
   }, [shareVsPaidData]);
 
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized"; 
+      const categoryName = exp.category || "Uncategorized";
       data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
@@ -807,7 +802,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0, 
+                    left: 0,
                     bottom: 20
                   }}
                 >
