@@ -4,31 +4,11 @@ import type { LucideIcon } from 'lucide-react';
 
 export const PEOPLE_TABLE = 'people';
 export const EXPENSES_TABLE = 'expenses';
-export const CATEGORIES_TABLE = 'categories'; // New table for dynamic categories
+export const CATEGORIES_TABLE = 'categories';
 
 export const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co";
 export const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og";
 
-export interface OldCategoryConfig {
-  name: string;
-  icon: LucideIcon;
-}
-
-// Renamed from CATEGORIES to OLD_CATEGORIES_CONSTANT to signify its legacy status
-// This can be used as a fallback during transition or for icon lookups if a dynamic category is missing an icon somehow.
-export const OLD_CATEGORIES_CONSTANT: OldCategoryConfig[] = [
-  { name: 'Food', icon: Utensils },
-  { name: 'Transport', icon: Car },
-  { name: 'Shopping', icon: ShoppingCart },
-  { name: 'Entertainment', icon: PartyPopper },
-  { name: 'Utilities', icon: Lightbulb },
-  { name: 'Groceries', icon: ShoppingCart },
-  { name: 'Bills', icon: FileText },
-  { name: 'Other', icon: Settings2 },
-  { name: 'Rent/Mortgage', icon: Home },
-  { name: 'Health', icon: Heart },
-  { name: 'Travel', icon: Plane },
-];
 
 export interface AvailableCategoryIcon {
   iconKey: string; // e.g., "Utensils"

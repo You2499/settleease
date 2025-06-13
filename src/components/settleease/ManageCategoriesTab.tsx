@@ -22,19 +22,19 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
-import { CATEGORIES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
-  onCategoriesUpdate: () => void; // To trigger data refresh in parent
+  onCategoriesUpdate: () => void;
 }
 
 export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate }: ManageCategoriesTabProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>(AVAILABLE_CATEGORY_ICONS[0]?.iconKey || '');
-  
+
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingIconKey, setEditingIconKey] = useState('');
@@ -44,7 +44,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
     const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
-    return found ? found.IconComponent : Settings2; // Default icon
+    return found ? found.IconComponent : Settings2;
   };
 
   const handleAddCategory = async () => {
@@ -121,17 +121,42 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const executeDeleteCategory = async () => {
     if (!categoryToDelete || !db || supabaseInitializationError) {
       toast({ title: "Error", description: "Cannot delete category due to system error.", variant: "destructive" });
+      if (categoryToDelete) setCategoryToDelete(null); // Clear even on system error
       return;
     }
-    // Future enhancement: Check if category is used in expenses table before deleting.
-    // For now, direct delete.
+
     setIsLoading(true);
     try {
-      const { error } = await db.from(CATEGORIES_TABLE).delete().eq('id', categoryToDelete.id);
-      if (error) throw error;
+      // Check if category is used in expenses table
+      const { count, error: countError } = await db
+        .from(EXPENSES_TABLE)
+        .select('id', { count: 'exact', head: true })
+        .eq('category', categoryToDelete.name);
+
+      if (countError) {
+        throw new Error(`Failed to check expense usage: ${countError.message}`);
+      }
+
+      if (count !== null && count > 0) {
+        toast({
+          title: "Deletion Blocked",
+          description: `Category "${categoryToDelete.name}" is used by ${count} expense(s). Please re-categorize or delete those expenses first.`,
+          variant: "destructive",
+          duration: 7000,
+        });
+        setCategoryToDelete(null);
+        setIsLoading(false);
+        return;
+      }
+
+      // Proceed with deletion if not used
+      const { error: deleteError } = await db.from(CATEGORIES_TABLE).delete().eq('id', categoryToDelete.id);
+      if (deleteError) throw deleteError;
+
       toast({ title: "Category Deleted", description: `${categoryToDelete.name} has been deleted.` });
       if (editingCategory?.id === categoryToDelete.id) handleCancelEdit();
       onCategoriesUpdate();
+
     } catch (error: any) {
       toast({ title: "Error Deleting Category", description: error.message || "Could not delete category.", variant: "destructive" });
     } finally {
@@ -167,7 +192,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
           <CardDescription>Add, edit, or remove expense categories.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Add New Category Section */}
           <div className="border p-4 rounded-md bg-card/50">
             <Label className="text-md font-medium block mb-2">Add New Category</Label>
             <div className="grid md:grid-cols-3 gap-3 items-end">
@@ -210,7 +234,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
             </div>
           </div>
 
-          {/* List Existing Categories Section */}
           <div>
             <h4 className="font-semibold mb-2 text-muted-foreground">Current Categories:</h4>
             {categories.length > 0 ? (
@@ -265,7 +288,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                               <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 text-blue-600" title="Edit category" disabled={isLoading}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 text-red-600" title="Delete category" disabled={isLoading}>
+                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 text-red-600" title="Delete category" disabled={isLoading || !!editingCategory}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -289,8 +312,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will permanently delete the category: <strong>{categoryToDelete.name}</strong>. 
-                This might affect existing expenses if they use this category (future enhancement needed to check this).
+                This action will permanently delete the category: <strong>{categoryToDelete.name}</strong>.
                 This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
@@ -306,3 +328,4 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     </div>
   );
 }
+

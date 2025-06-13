@@ -60,8 +60,7 @@ import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import {
   EXPENSES_TABLE,
   PEOPLE_TABLE,
-  CATEGORIES_TABLE, 
-  OLD_CATEGORIES_CONSTANT, // Using renamed constant
+  CATEGORIES_TABLE,
   CHART_COLORS,
   formatCurrency,
   supabaseUrl,
@@ -98,7 +97,7 @@ export default function SettleEasePage() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]); 
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDataFetched, setIsDataFetched] = useState(false);
 
@@ -155,7 +154,7 @@ export default function SettleEasePage() {
       toast({ title: "Data Error", description: `Unexpected error fetching categories.`, variant: "destructive" });
       categoriesErrorOccurred = true;
     }
-    
+
     if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
         setIsDataFetched(true);
     }
@@ -169,7 +168,7 @@ export default function SettleEasePage() {
     if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
         const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
-        if (!currentPeopleError && currentPeople && (currentPeople as any).length > 0) { 
+        if (!currentPeopleError && currentPeople && (currentPeople as any).length > 0) {
           return;
         }
       } else if (!db) {
@@ -200,7 +199,7 @@ export default function SettleEasePage() {
           initialDefaultPeopleSetupAttemptedOrCompleted = false;
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-          await fetchAllData(false); 
+          await fetchAllData(false);
         }
       }
     } catch (error) {
@@ -233,12 +232,12 @@ export default function SettleEasePage() {
       if (isMounted) {
         setCurrentUser(session?.user ?? null);
         if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
-          await addDefaultPeople(); 
+          await addDefaultPeople();
         }
         if (!isDataFetched) {
             await fetchAllData();
         } else {
-            setIsLoading(false); 
+            setIsLoading(false);
         }
         if (!authStateProcessed) { authStateProcessed = true; }
       }
@@ -269,7 +268,7 @@ export default function SettleEasePage() {
            fetchAllData();
         }
       }
-    }, 5000); 
+    }, 5000);
 
     return () => {
       isMounted = false;
@@ -280,7 +279,7 @@ export default function SettleEasePage() {
 
 
   useEffect(() => {
-    if (supabaseInitializationError || !db || !isDataFetched) return; 
+    if (supabaseInitializationError || !db || !isDataFetched) return;
 
     let isMounted = true;
 
@@ -288,9 +287,9 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`${table} change received!`, payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false); 
+        fetchAllData(false);
     };
-    
+
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
         (payload) => handleDbChange(payload, PEOPLE_TABLE)
@@ -306,7 +305,7 @@ export default function SettleEasePage() {
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${EXPENSES_TABLE}:`, err);
       });
-    
+
     const categoriesChannel = db.channel(`public:${CATEGORIES_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: CATEGORIES_TABLE },
         (payload) => handleDbChange(payload, CATEGORIES_TABLE)
@@ -346,10 +345,6 @@ export default function SettleEasePage() {
       const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
       if (iconDetail) return iconDetail.IconComponent;
     }
-    // Fallback to old constant
-    const oldCat = OLD_CATEGORIES_CONSTANT.find(c => c.name === categoryName);
-    if (oldCat && oldCat.icon) return oldCat.icon;
-
     // Final fallback to a generic icon if no match found
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
     return settingsIcon ? settingsIcon.IconComponent : Settings2;
@@ -500,7 +495,7 @@ interface DashboardTabProps {
   expenses: Expense[];
   people: Person[];
   peopleMap: Record<string, string>;
-  dynamicCategories: Category[]; 
+  dynamicCategories: Category[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
@@ -568,14 +563,14 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
         paid: totalPaidByPerson,
         share: totalShareForPerson,
       };
-    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5); 
+    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5);
   }, [expenses, people, peopleMap]);
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
-    expenses.forEach(exp => { 
+    expenses.forEach(exp => {
       const categoryName = exp.category || "Uncategorized"; // Handle null/empty category names
-      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount); 
+      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
   }, [expenses]);
@@ -768,8 +763,8 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow min-h-0 overflow-y-auto pr-4"> 
-          <div className="space-y-4 py-4"> 
+        <div className="flex-grow min-h-0 overflow-y-auto pr-4">
+          <div className="space-y-4 py-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
