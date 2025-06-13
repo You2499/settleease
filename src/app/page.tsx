@@ -32,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription as ShadDialogDescription, // Aliasing to avoid conflict if we define our own
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -354,21 +355,36 @@ export default function SettleEasePage() {
 
 
   useEffect(() => {
-    if (supabaseInitializationError || !db || !currentUser || !isDataFetchedAtLeastOnce || !userRole) {
-      if (db) {
-        // Cleanup any existing channels if prerequisites are not met
-        const channels = db.getChannels();
-        if (channels.length > 0) {
-          console.log(`Prerequisites not met for subscriptions. Removing ${channels.length} existing Supabase client channel(s).`);
-          channels.forEach(channel => {
-            db.removeChannel(channel)
-              .then(status => console.log(`Channel ${channel.topic} removed during prerequisite check with status: ${status}`))
-              .catch(e => console.warn(`Error removing channel ${channel.topic} during prerequisite check:`, e?.message || e));
-          });
-        }
+    if (supabaseInitializationError || !db || !currentUser) {
+      const channels = db?.getChannels() || [];
+      if (channels.length > 0) {
+        console.log(`Realtime prerequisites (db or currentUser) not met. Removing ${channels.length} channel(s).`);
+        channels.forEach(channel => {
+          db!.removeChannel(channel)
+            .then(status => console.log(`Channel ${channel.topic} removed during prerequisite check with status: ${status}`))
+            .catch(e => console.warn(`Error removing channel ${channel.topic} during prerequisite check:`, e?.message || e));
+        });
       }
       return;
     }
+    
+    // Defer subscription setup until initial data load is complete and role is known
+    // This helps prevent issues if subscription callbacks rely on this data
+    if (!isDataFetchedAtLeastOnce || !userRole) {
+        console.log("Realtime subscriptions deferred: Waiting for initial data fetch and user role.");
+        // Ensure any stale channels are cleaned if this state is reached after an attempt
+        const channels = db.getChannels();
+        if (channels.length > 0) {
+            console.log(`Realtime subscriptions deferred. Cleaning ${channels.length} potentially stale channel(s).`);
+            channels.forEach(channel => {
+                db.removeChannel(channel)
+                    .then(status => console.log(`Stale channel ${channel.topic} removed during deferral with status: ${status}`))
+                    .catch(e => console.warn(`Error removing stale channel ${channel.topic} during deferral:`, e?.message || e));
+            });
+        }
+        return;
+    }
+
 
     let isMounted = true;
 
@@ -376,7 +392,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`${table} change received!`, payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false); // Fetch data without showing the main loading indicator
+        fetchAllData(false); 
     };
 
     const handleSubscriptionError = (tableName: string, status: string, error?: any) => {
@@ -400,7 +416,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${PEOPLE_TABLE}`);
         else console.log(`Subscription status for ${PEOPLE_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           handleSubscriptionError(PEOPLE_TABLE, status, err);
         }
       });
@@ -412,7 +428,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${EXPENSES_TABLE}`);
         else console.log(`Subscription status for ${EXPENSES_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           handleSubscriptionError(EXPENSES_TABLE, status, err);
         }
       });
@@ -424,7 +440,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${CATEGORIES_TABLE}`);
         else console.log(`Subscription status for ${CATEGORIES_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           handleSubscriptionError(CATEGORIES_TABLE, status, err);
         }
       });
@@ -434,13 +450,18 @@ export default function SettleEasePage() {
       isMounted = false;
       console.log("Cleaning up Supabase Realtime subscriptions...");
       if (db) {
-        // Standard removal of specifically tracked channels
-        if (peopleChannel) db.removeChannel(peopleChannel).catch(err => console.warn("Error removing people channel:", err?.message || err));
-        if (expensesChannel) db.removeChannel(expensesChannel).catch(err => console.warn("Error removing expenses channel:", err?.message || err));
-        if (categoriesChannel) db.removeChannel(categoriesChannel).catch(err => console.warn("Error removing categories channel:", err?.message || err));
+        const channelsToRemove = [peopleChannel, expensesChannel, categoriesChannel].filter(Boolean);
+        if (channelsToRemove.length > 0) {
+            console.log(`Removing ${channelsToRemove.length} specifically tracked Supabase channel(s).`);
+            channelsToRemove.forEach(channel => {
+                if (channel) { // Ensure channel object exists
+                    db.removeChannel(channel)
+                        .then(status => console.log(`Tracked channel ${channel.topic} removed with status: ${status}`))
+                        .catch(err => console.warn(`Error removing tracked channel ${channel.topic}:`, err?.message || err));
+                }
+            });
+        }
         
-        // Broader cleanup: remove all active channels for this db client instance
-        // This can help catch any orphaned channels or if the specific removals above fail.
         const allClientChannels = db.getChannels();
         if (allClientChannels.length > 0) {
             console.log(`Performing broader cleanup of ${allClientChannels.length} Supabase client channel(s).`);
@@ -454,7 +475,7 @@ export default function SettleEasePage() {
         }
       }
     };
-  }, [supabaseInitializationError, fetchAllData, currentUser, isDataFetchedAtLeastOnce, userRole]);
+  }, [db, currentUser, supabaseInitializationError, isDataFetchedAtLeastOnce, userRole, fetchAllData]);
 
 
   const handleLogout = async () => {
@@ -463,7 +484,6 @@ export default function SettleEasePage() {
     if (error) {
       toast({ title: "Logout Error", description: error.message, variant: "destructive" });
     }
-    // Auth state change listener will handle UI updates and data clearing
   };
 
 
@@ -472,7 +492,7 @@ export default function SettleEasePage() {
   const handleSetActiveView = (view: ActiveView) => {
     if (userRole === 'user' && view !== 'dashboard') {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard'); // Ensure non-admins are restricted
+      setActiveView('dashboard'); 
     } else {
       setActiveView(view);
     }
@@ -498,9 +518,8 @@ export default function SettleEasePage() {
         if (iconDetail) return iconDetail.IconComponent;
       }
     }
-    // Default icon if category or its icon is not found
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2; // Fallback to a generic icon
+    return settingsIcon ? settingsIcon.IconComponent : Settings2; 
   }, [categories]);
 
 
@@ -508,7 +527,6 @@ export default function SettleEasePage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
-          {/* Using a simple SVG spinner for loading indicator */}
           <svg className="h-12 w-12 text-primary animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -547,8 +565,6 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show loading data screen only if data hasn't been fetched at least once yet.
-  // Subsequent fetches (e.g., after adding an expense) will show a smaller "Syncing data..." indicator.
   if (isLoadingData && !isDataFetchedAtLeastOnce) {
      return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
@@ -572,7 +588,7 @@ export default function SettleEasePage() {
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center h-10">
-              <SidebarTrigger className="md:hidden mr-2" /> {/* Only show on mobile */}
+              <SidebarTrigger className="md:hidden mr-2" /> 
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {getHeaderTitle()}
               </h1>
@@ -580,7 +596,6 @@ export default function SettleEasePage() {
             <ThemeToggleButton />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-            {/* Show a subtle loading indicator if data is being fetched in the background after initial load */}
             {isLoadingData && isDataFetchedAtLeastOnce && (
                 <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
             )}
@@ -608,14 +623,13 @@ interface AppActualSidebarProps {
 }
 
 function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppActualSidebarProps) {
-  const { isMobile } = useSidebar(); // from "@/components/ui/sidebar"
-  const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck; // UserCog for admin, ShieldCheck for user
+  const { isMobile } = useSidebar(); 
+  const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck; 
 
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          {/* Updated SVG with camelCase attributes */}
           <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
             <g strokeWidth="1.5">
                 <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fillRule="evenodd" clipRule="evenodd"></path>
@@ -695,7 +709,7 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
             <p className="text-xs text-sidebar-foreground/70 truncate" title={currentUserEmail}>
               Logged in as: {currentUserEmail}
             </p>
-            {userRole && ( // Display role if available
+            {userRole && ( 
               <p className="text-xs text-sidebar-foreground/70 flex items-center" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
                 Role: <RoleIcon className="ml-1 mr-0.5 h-3.5 w-3.5" /> {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
               </p>
@@ -730,13 +744,11 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     people.forEach(p => balances[p.id] = 0);
 
     expenses.forEach(expense => {
-      // Add amounts paid by each person
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach(payment => {
           balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
         });
       }
-      // Subtract shares for each person
       if (Array.isArray(expense.shares)) {
           expense.shares.forEach(share => {
             balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
@@ -744,7 +756,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
       }
     });
 
-    // Filter out those who paid exactly their share (balance is near zero)
     const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
     const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
     const transactions: { from: string, to: string, amount: number }[] = [];
@@ -752,7 +763,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
       const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
       const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-      if (amountToSettle > 0.01) { // Ensure meaningful transaction amount
+      if (amountToSettle > 0.01) { 
         transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
         debtor.amount += amountToSettle;
         creditor.amount -= amountToSettle;
@@ -787,19 +798,16 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
         }
       });
       return {
-        name: peopleMap[person.id] || person.name, // Use person's name from peopleMap or person object
+        name: peopleMap[person.id] || person.name, 
         paid: totalPaidByPerson,
         share: totalShareForPerson,
       };
-    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5); // Show all if few people, else only those with activity
+    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5); 
   }, [expenses, people, peopleMap]);
   
   const yAxisDomainTop = useMemo(() => {
-      // Calculate max value for Y-axis domain based on shareVsPaidData
       const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      // Ensure a minimum domain (e.g., 500) and add some padding
       const paddedMax = Math.max(overallMax, 500) * 1.1;
-      // Round up to the nearest 50 for cleaner axis ticks
       return Math.ceil(paddedMax / 50) * 50;
   }, [shareVsPaidData]);
 
@@ -807,7 +815,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
     expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized"; // Handle uncategorized expenses
+      const categoryName = exp.category || "Uncategorized"; 
       data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
     });
     return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
@@ -869,24 +877,23 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
       <div className="grid md:grid-cols-2 gap-6">
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="pb-2"><CardTitle className="text-lg">Share vs. Paid Comparison</CardTitle></CardHeader>
-          <CardContent className="h-[280px]"> {/* Fixed height for chart */}
+          <CardContent className="h-[280px]"> 
             {shareVsPaidData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={shareVsPaidData}
                   margin={{
                     top: 5,
-                    right: 10, // Adjusted for better label visibility
-                    left: 0,  // Adjusted for better label visibility
-                    bottom: 20 // Increased bottom margin for X-axis labels
+                    right: 10, 
+                    left: 0,  
+                    bottom: 20 
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  {/* <YAxis tickFormatter={(value) => formatCurrencyForAxis(value)} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} domain={[0, yAxisDomainTop]} /> */}
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
-                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} // Updated style
+                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} 
                     labelStyle={{ color: 'hsl(var(--foreground))' }}
                     itemStyle={{ color: 'hsl(var(--foreground))' }}
                   />
@@ -901,10 +908,10 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
 
         <Card className="shadow-lg rounded-lg">
           <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Category</CardTitle></CardHeader>
-          <CardContent className="h-[280px]"> {/* Fixed height for chart */}
+          <CardContent className="h-[280px]"> 
             {expensesByCategory.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> {/* Adjusted margins */}
+                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> 
                   <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={Math.min(80, window.innerWidth / 8)} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
                     {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
                   </Pie>
@@ -929,16 +936,14 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="max-h-[350px] pr-2"> {/* Scroll for long lists */}
+            <ScrollArea className="max-h-[350px] pr-2"> 
               <ul className="space-y-2.5">
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIconFromName(expense.category);
-                  // Determine display text for payer(s)
                   const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
                     ? "Multiple Payers"
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
                       ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
-                      // Handle case where paid_by might be an empty array or malformed (though schema should prevent this)
                       : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
 
                   return (
@@ -955,8 +960,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                             <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
                             <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
                           </div>
-                          {/* Optional: Display date if useful, formatted nicely */}
-                          {/* <div className="text-xs text-muted-foreground/80">{new Date(expense.created_at!).toLocaleDateString()}</div> */}
                         </CardContent>
                       </Card>
                     </li>
@@ -967,7 +970,6 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
           ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
         </CardContent>
       </Card>
-      {/* Expense Detail Modal */}
       {selectedExpenseForModal && (
         <ExpenseDetailModal
           expense={selectedExpenseForModal}
@@ -995,7 +997,6 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
 
   const CategoryIcon = getCategoryIconFromName(expense.category);
 
-  // Memoize involved person IDs to avoid re-calculation on every render
   const involvedPersonIds = useMemo(() => {
     const ids = new Set<string>();
     if (Array.isArray(expense.paid_by)) {
@@ -1010,14 +1011,17 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden"> {/* Ensure dialog is scrollable for long content */}
+      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden"> 
         <DialogHeader>
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2 h-6 w-6" /> Expense Details
           </DialogTitle>
+          <ShadDialogDescription className="sr-only">
+            Detailed breakdown of the selected expense, including payers, shares, and itemization if applicable.
+          </ShadDialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow min-h-0 overflow-y-auto pr-4"> {/* Make content area scrollable */}
+        <div className="flex-grow min-h-0 overflow-y-auto pr-4"> 
           <div className="space-y-4 py-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
@@ -1027,8 +1031,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
                 <div className="flex justify-between"><span>Description:</span> <span className="font-medium text-right">{expense.description}</span></div>
                 <div className="flex justify-between"><span>Total Amount:</span> <span className="font-bold text-primary text-right">{formatCurrency(Number(expense.total_amount))}</span></div>
                 <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span></div>
-                {/* <div className="flex justify-between"><span>Date:</span> <span className="font-medium text-right">{new Date(expense.created_at!).toLocaleDateString()}</span></div> */}
-
+                
                 <div>
                   <span className="block">Paid by:</span>
                   {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
@@ -1098,7 +1101,6 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
               </CardContent>
             </Card>
 
-            {/* Item-wise breakdown if applicable */}
             {expense.split_method === 'itemwise' && expense.items && expense.items.length > 0 && (
               <>
                 <Separator />
@@ -1132,7 +1134,6 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
                 </Card>
               </>
             )}
-            {/* Equal split details if applicable */}
             {(expense.split_method === 'equal' && expense.shares && expense.shares.length > 0) && (
               <>
                 <Separator />
@@ -1155,7 +1156,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
           </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t"> {/* Add border for visual separation */}
+        <DialogFooter className="pt-4 border-t"> 
           <DialogClose asChild>
             <Button type="button" variant="outline">Close</Button>
           </DialogClose>
@@ -1164,8 +1165,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
-
-
-    
-
-    
