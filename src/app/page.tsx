@@ -581,6 +581,19 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     setIsExpenseModalOpen(true);
   };
 
+  const yAxisOverallMax = useMemo(() => {
+    if (!shareVsPaidData.length) return 500; // Default minimum scale if no data
+    let maxVal = 0;
+    for (const item of shareVsPaidData) {
+      if (item.paid > maxVal) maxVal = item.paid;
+      if (item.share > maxVal) maxVal = item.share;
+    }
+    return maxVal === 0 ? 500 : maxVal; // Ensure a non-zero max if all data is zero
+  }, [shareVsPaidData]);
+
+  const yAxisDomainTop = Math.max(yAxisOverallMax, 500) * 1.1;
+
+
   if (people.length === 0 && expenses.length === 0) {
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
@@ -640,8 +653,8 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: (shareVsPaidData.some(d => Math.abs(d.paid) > 99999 || Math.abs(d.share) > 99999)) ? 60
-                          : (shareVsPaidData.some(d => Math.abs(d.paid) > 9999 || Math.abs(d.share) > 9999)) ? 45
+                    left: (yAxisOverallMax > 99999) ? 60
+                          : (yAxisOverallMax > 9999) ? 45
                           : 30,
                     bottom: 20
                   }}
@@ -651,7 +664,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   <YAxis
                     tickFormatter={formatCurrencyForAxis}
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                    domain={[0, (dataMax: number) => Math.max(dataMax, 500) * 1.1]}
+                    domain={[0, yAxisDomainTop]}
                     allowDecimals={false}
                     tickCount={6}
                   />
