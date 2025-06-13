@@ -185,7 +185,7 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
               <ScrollArea className="h-60 rounded-md border p-2 bg-background">
                 <ul className="space-y-1.5">
                   {people.map(person => (
-                    <li key={person.id} className="flex items-center justify-between p-2.5 bg-card/60 hover:bg-secondary/40 rounded-sm text-sm group">
+                    <li key={person.id} className="flex items-center justify-between p-2.5 bg-card/60 rounded-sm text-sm group">
                       {editingPersonId === person.id ? (
                         <>
                           <Input
@@ -196,21 +196,21 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                             autoFocus
                             onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
                           />
-                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-100" title="Save">
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600" title="Save">
                             <Save className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500 hover:text-gray-600 hover:bg-gray-100" title="Cancel">
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500" title="Cancel">
                             <Ban className="h-4 w-4" />
                           </Button>
                         </>
                       ) : (
                         <>
                           <span className="truncate flex-grow" title={person.name}>{person.name}</span>
-                          <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-100" title="Edit name">
+                          <div className="flex items-center space-x-0.5 transition-opacity">
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600" title="Edit name">
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-100" title="Remove person">
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600" title="Remove person">
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -239,7 +239,7 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground">
                 Remove {personToDelete.name}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -249,3 +249,4 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
     </div>
   );
 }
+

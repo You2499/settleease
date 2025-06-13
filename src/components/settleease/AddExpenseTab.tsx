@@ -188,11 +188,11 @@ export default function AddExpenseTab({
       setTotalAmount('');
       setCategory(CATEGORIES[0].name);
       setIsMultiplePayers(false);
-      setPayers([{ id: Date.now().toString(), personId: people[0]?.id || '', amount: '' }]);
-      setSplitMethod('equal');
+      setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
+      setSplitMethod('equal'); 
       setSelectedPeopleEqual(people.map(p => p.id)); // Default to all people selected for equal split on new expense
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
   }, [expenseToEdit, people]); // Removed totalAmount from deps as it might cause loops with payer updates.
 
@@ -435,7 +435,7 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        const updatePayload = { ...expenseData };
+        const updatePayload = { ...expenseData }; // Do not include updated_at here
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
           .update(updatePayload) 
@@ -622,7 +622,7 @@ export default function AddExpenseTab({
                         <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                       </Select>
                       <Input type="number" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-28" />
-                      <Button variant="ghost" size="icon" onClick={() => removePayer(index)} className="text-destructive hover:bg-destructive/10 h-8 w-8" 
+                      <Button variant="ghost" size="icon" onClick={() => removePayer(index)} className="text-destructive h-8 w-8" 
                         disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -658,7 +658,7 @@ export default function AddExpenseTab({
                   <ScrollArea className="max-h-40">
                     <div className="space-y-1.5 pr-2">
                     {people.map(person => (
-                      <div key={person.id} className="flex items-center space-x-2 p-1.5 hover:bg-secondary/30 rounded-sm">
+                      <div key={person.id} className="flex items-center space-x-2 p-1.5 rounded-sm">
                         <Checkbox
                           id={`equal-${person.id}`}
                           checked={selectedPeopleEqual.includes(person.id)}
@@ -702,7 +702,7 @@ export default function AddExpenseTab({
                             <Input value={item.name} onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} placeholder={`Item ${itemIndex + 1} Name`} className="h-8 text-sm"/>
                             <Input type="number" value={item.price as string} onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} placeholder="Price" className="h-8 text-sm w-24"/>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive hover:bg-destructive/10 h-7 w-7 shrink-0" disabled={items.length <=1}>
+                        <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive h-7 w-7 shrink-0" disabled={items.length <=1}>
                             <MinusCircle className="h-4 w-4" />
                         </Button>
                         </div>
@@ -743,3 +743,4 @@ export default function AddExpenseTab({
     </div>
   );
 }
+

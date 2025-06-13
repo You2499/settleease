@@ -122,7 +122,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
                   return (
                     <li key={expense.id}>
-                      <Card className="bg-card/70 hover:shadow-md transition-shadow">
+                      <Card className="bg-card/70 transition-shadow">
                         <CardHeader className="pb-2 pt-3 px-4">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-base font-semibold leading-tight">{expense.description}</CardTitle>
@@ -167,7 +167,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setExpenseToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteExpense} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleDeleteExpense} className="bg-destructive text-destructive-foreground">
                 Yes, delete expense
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -177,3 +177,4 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     </div>
   );
 }
+

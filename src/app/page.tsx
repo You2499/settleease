@@ -633,7 +633,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
 
                   return (
                     <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
-                      <Card className="bg-card/70 hover:shadow-md hover:border-primary/50 transition-all rounded-md">
+                      <Card className="bg-card/70 transition-all rounded-md">
                         <CardHeader className="pb-1.5 pt-2.5 px-3">
                           <div className="flex justify-between items-start">
                             <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
@@ -850,3 +850,4 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
+
