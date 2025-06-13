@@ -50,7 +50,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { ThemeToggleButton } from '@/components/ThemeToggleButton'; // Added ThemeToggleButton import
+import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 
 
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
@@ -569,6 +569,14 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
     }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5);
   }, [expenses, people, peopleMap]);
 
+  const yAxisOverallMax = useMemo(() => {
+    if (!shareVsPaidData.length) return 550; // Default min height for axis
+    const maxPaid = Math.max(...shareVsPaidData.map(d => d.paid), 0);
+    const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
+    return Math.max(maxPaid, maxShare, 500); // Ensure at least 500 for a reasonable scale start
+  }, [shareVsPaidData]);
+  const yAxisDomainTop = Math.ceil((yAxisOverallMax * 1.1) / 50) * 50; // Add padding & round to nearest 50
+
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
@@ -643,13 +651,13 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0,
+                    left: 0, // Removed dynamic left margin
                     bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  
+                  {/* YAxis removed */}
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
@@ -719,7 +727,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                             <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
                             <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
                           </div>
-                          <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
+                          {/* Date removed from here */}
                         </CardContent>
                       </Card>
                     </li>
@@ -805,8 +813,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
                     <span className="font-medium text-right block">No payers listed or data unavailable</span>
                   )}
                 </div>
-
-                <div className="flex justify-between"><span>Date:</span> <span className="font-medium text-right">{expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</span></div>
+                {/* Date removed from here */}
                 <div className="flex justify-between"><span>Split Method:</span> <span className="font-medium capitalize text-right">{expense.split_method}</span></div>
               </CardContent>
             </Card>

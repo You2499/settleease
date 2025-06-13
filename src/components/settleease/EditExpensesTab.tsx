@@ -18,7 +18,7 @@ import {
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; // Re-use for editing
-import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease'; // Removed OLD_CATEGORIES_CONSTANT
+import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 
 interface EditExpensesTabProps {
@@ -27,7 +27,7 @@ interface EditExpensesTabProps {
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
   onActionComplete: () => void; // Callback to refresh data in parent
-  dynamicCategories: DynamicCategory[]; // Added dynamic categories prop
+  dynamicCategories: DynamicCategory[];
 }
 
 export default function EditExpensesTab({ people, expenses, db, supabaseInitializationError, onActionComplete, dynamicCategories }: EditExpensesTabProps) {
@@ -45,9 +45,8 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === category.icon_name);
         if (iconDetail) return iconDetail.IconComponent;
     }
-    // Fallback to a default icon if not found in dynamic or available icons
-    const oldDefault = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return oldDefault ? oldDefault.IconComponent : Settings2;
+    const defaultIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
+    return defaultIcon ? defaultIcon.IconComponent : Settings2;
   };
 
 
@@ -107,7 +106,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         onExpenseAdded={handleActionComplete} 
         expenseToEdit={editingExpense}
         onCancelEdit={() => setEditingExpense(null)}
-        dynamicCategories={dynamicCategories} // Pass dynamic categories
+        dynamicCategories={dynamicCategories}
       />
     );
   }
@@ -148,7 +147,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                             <div className="flex items-center"><CategoryIcon className="mr-1.5 h-3.5 w-3.5" /> {expense.category}</div>
                             <span>Paid by: <span className="font-medium text-foreground">{displayPayerText}</span></span>
                           </div>
-                          <p>Date: {expense.created_at ? new Date(expense.created_at).toLocaleDateString() : 'N/A'}</p>
+                          {/* Date removed from here */}
                         </CardContent>
                         <CardFooter className="px-4 py-2.5 border-t flex justify-end space-x-2">
                           <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs">
