@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilePenLine, Trash2, Settings2, AlertTriangle } from 'lucide-react';
+import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; // Re-use for editing
 import { EXPENSES_TABLE, CATEGORIES, formatCurrency } from '@/lib/settleease';
