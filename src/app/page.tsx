@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -54,18 +54,22 @@ import {
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
+import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
+
 
 import {
   EXPENSES_TABLE,
   PEOPLE_TABLE,
-  CATEGORIES,
+  CATEGORIES_TABLE, // Import new table name
+  CATEGORIES as OLD_CATEGORIES_CONSTANT, // Keep old constant for now, rename to avoid clash
   CHART_COLORS,
   formatCurrency,
   supabaseUrl,
-  supabaseAnonKey
+  supabaseAnonKey,
+  AVAILABLE_CATEGORY_ICONS
 } from '@/lib/settleease';
 
-import type { Person, Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease';
+import type { Person, Expense, ExpenseItemDetail, PayerShare, Category } from '@/lib/settleease';
 
 
 let db: SupabaseClient | undefined;
@@ -86,7 +90,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
-type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople';
+type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories';
 
 
 export default function SettleEasePage() {
@@ -94,6 +98,7 @@ export default function SettleEasePage() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]); // State for dynamic categories
   const [isLoading, setIsLoading] = useState(true);
   const [isDataFetched, setIsDataFetched] = useState(false);
 
@@ -104,6 +109,7 @@ export default function SettleEasePage() {
 
     let peopleErrorOccurred = false;
     let expensesErrorOccurred = false;
+    let categoriesErrorOccurred = false;
 
     try {
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
@@ -134,11 +140,26 @@ export default function SettleEasePage() {
       toast({ title: "Data Error", description: `Unexpected error fetching expenses.`, variant: "destructive" });
       expensesErrorOccurred = true;
     }
+
+    try {
+      const { data: categoriesData, error: fetchCategoriesError } = await db.from(CATEGORIES_TABLE).select('*').order('name', { ascending: true });
+      if (fetchCategoriesError) {
+        console.error("Error fetching categories:", fetchCategoriesError);
+        toast({ title: "Data Error", description: `Could not fetch categories: ${fetchCategoriesError.message}`, variant: "destructive" });
+        categoriesErrorOccurred = true;
+      } else {
+        setCategories(categoriesData as Category[]);
+      }
+    } catch (error) {
+      console.error("Catch: Error fetching categories:", error);
+      toast({ title: "Data Error", description: `Unexpected error fetching categories.`, variant: "destructive" });
+      categoriesErrorOccurred = true;
+    }
     
-    if (!peopleErrorOccurred && !expensesErrorOccurred) {
+    if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
         setIsDataFetched(true);
     }
-    if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred)) {
+    if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoading(false);
     }
   }, [supabaseInitializationError]);
@@ -288,12 +309,22 @@ export default function SettleEasePage() {
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${EXPENSES_TABLE}:`, err);
       });
+    
+    const categoriesChannel = db.channel(`public:${CATEGORIES_TABLE}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: CATEGORIES_TABLE },
+        (payload) => handleDbChange(payload, CATEGORIES_TABLE)
+      ).subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') console.log(`Subscribed to ${CATEGORIES_TABLE}`);
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${CATEGORIES_TABLE}:`, err);
+      });
+
 
     return () => {
       isMounted = false;
       if (db) {
         db.removeChannel(peopleChannel);
         db.removeChannel(expensesChannel);
+        db.removeChannel(categoriesChannel);
       }
     };
   }, [supabaseInitializationError, db, fetchAllData, isDataFetched]);
@@ -307,6 +338,7 @@ export default function SettleEasePage() {
       case 'addExpense': return 'Add New Expense';
       case 'editExpenses': return 'Edit Expenses';
       case 'managePeople': return 'Manage People';
+      case 'manageCategories': return 'Manage Categories';
       default: return 'SettleEase';
     }
   };
@@ -355,10 +387,11 @@ export default function SettleEasePage() {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
-            {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} />}
-            {activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} />}
-            {activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} />}
+            {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} />}
+            {activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
+            {activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
             {activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
+            {activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
           </main>
           <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
             <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved.</p>
@@ -430,6 +463,17 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
               <span className="group-data-[state=collapsed]:hidden">Manage People</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setActiveView('manageCategories')}
+              isActive={activeView === 'manageCategories'}
+              tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+              className="justify-start"
+            >
+              <ListChecks />
+              <span className="group-data-[state=collapsed]:hidden">Manage Categories</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
@@ -444,9 +488,10 @@ interface DashboardTabProps {
   expenses: Expense[];
   people: Person[];
   peopleMap: Record<string, string>;
+  dynamicCategories: Category[]; // Using dynamic categories later
 }
 
-function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
+function DashboardTab({ expenses, people, peopleMap, dynamicCategories }: DashboardTabProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
@@ -515,7 +560,9 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
-    CATEGORIES.forEach(c => data[c.name] = 0);
+    // For now, use OLD_CATEGORIES_CONSTANT for chart grouping.
+    // Later, this should use `dynamicCategories` and potentially group by category ID or name.
+    OLD_CATEGORIES_CONSTANT.forEach(c => data[c.name] = 0);
     expenses.forEach(exp => { data[exp.category] = (data[exp.category] || 0) + Number(exp.total_amount); });
     return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
   }, [expenses]);
@@ -524,6 +571,19 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
     setSelectedExpenseForModal(expense);
     setIsExpenseModalOpen(true);
   };
+
+  const getCategoryIconFromName = (categoryName: string) => {
+    // First try dynamic categories if available and integrated
+    const dynamicCat = dynamicCategories.find(c => c.name === categoryName);
+    if (dynamicCat) {
+      const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
+      if (iconDetail) return iconDetail.IconComponent;
+    }
+    // Fallback to old constant (or a default if not found there either)
+    const oldCat = OLD_CATEGORIES_CONSTANT.find(c => c.name === categoryName);
+    return oldCat?.icon || Settings2;
+  };
+
 
   if (people.length === 0 && expenses.length === 0) {
     return (
@@ -624,7 +684,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
             <ScrollArea className="max-h-[350px] pr-2">
               <ul className="space-y-2.5">
                 {expenses.map(expense => {
-                  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
+                  const CategoryIcon = getCategoryIconFromName(expense.category);
                   const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
                     ? "Multiple Payers"
                     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
@@ -662,6 +722,7 @@ function DashboardTab({ expenses, people, peopleMap }: DashboardTabProps) {
           isOpen={isExpenseModalOpen}
           onOpenChange={setIsExpenseModalOpen}
           peopleMap={peopleMap}
+          dynamicCategories={dynamicCategories}
         />
       )}
     </div>
@@ -674,12 +735,26 @@ interface ExpenseDetailModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   peopleMap: Record<string, string>;
+  dynamicCategories: Category[]; // Using dynamic categories later
 }
 
-function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: ExpenseDetailModalProps) {
+function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, dynamicCategories }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
-  const CategoryIcon = CATEGORIES.find(c => c.name === expense.category)?.icon || Settings2;
+  const getCategoryIconFromName = (categoryName: string) => {
+    // First try dynamic categories if available and integrated
+    const dynamicCat = dynamicCategories.find(c => c.name === categoryName);
+    if (dynamicCat) {
+      const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
+      if (iconDetail) return iconDetail.IconComponent;
+    }
+    // Fallback to old constant (or a default if not found there either)
+    const oldCat = OLD_CATEGORIES_CONSTANT.find(c => c.name === categoryName);
+    return oldCat?.icon || Settings2;
+  };
+
+  const CategoryIcon = getCategoryIconFromName(expense.category);
+
 
   const involvedPersonIds = useMemo(() => {
     const ids = new Set<string>();
@@ -850,4 +925,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap }: Expens
     </Dialog>
   );
 }
-

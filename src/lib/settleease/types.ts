@@ -15,7 +15,7 @@ export interface Expense {
   id: string; // Supabase ID
   description: string;
   total_amount: number;
-  category: string;
+  category: string; // This will eventually link to Category.id or use Category.name
   paid_by: PayerShare[]; // Array of PayerShare objects
   split_method: 'equal' | 'unequal' | 'itemwise';
   shares: PayerShare[]; // Calculated shares for each person (personId and amount)
@@ -27,6 +27,13 @@ export interface Expense {
 export interface Person {
   id: string; // Supabase ID
   name: string;
+  created_at?: string; // ISO date string
+}
+
+export interface Category {
+  id: string; // Supabase ID
+  name: string;
+  icon_name: string; // e.g., "Utensils", "Car"
   created_at?: string; // ISO date string
 }
 
