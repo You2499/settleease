@@ -364,25 +364,33 @@ export default function SettleEasePage() {
     if (supabaseInitializationError || !db) {
       console.log("Realtime setup skipped: Supabase client not available or init error.");
       if (db && typeof db.removeAllChannels === 'function') {
+        // Attempt cleanup if db object exists but is in a bad state from init error
+        console.log("Realtime: Attempting to remove all channels due to init error/unavailable client.");
         db.removeAllChannels()
-          .catch(e => console.warn("Precautionary removeAllChannels (init error):", e?.message || e))
+          .catch(e => console.warn("Realtime: Precautionary removeAllChannels (init error path) failed:", e?.message || e))
           .finally(() => {
-            peopleChannelRef.current = null;
-            expensesChannelRef.current = null;
-            categoriesChannelRef.current = null;
+            if (isMounted) {
+              peopleChannelRef.current = null;
+              expensesChannelRef.current = null;
+              categoriesChannelRef.current = null;
+              console.log("Realtime: Channel refs nullified (init error path).");
+            }
           });
-      } else {
+      } else { // db itself is undefined
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
+        console.log("Realtime: Channel refs nullified (db client was null).");
       }
       return;
     }
 
     if (!currentUser) {
       console.log("Realtime setup skipped: No authenticated user.");
+      // If there are active channel refs, it implies a logout happened.
+      // The cleanup logic should handle removing them, but we ensure refs are nullified.
       if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current) {
-        console.log("User logged out; ensuring local channel refs are clear. Cleanup should have occurred.");
+        console.log("Realtime: User logged out. Ensuring local channel refs are cleared (should have been handled by prior cleanup).");
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
@@ -420,20 +428,21 @@ export default function SettleEasePage() {
         channelRef: React.MutableRefObject<RealtimeChannel | null>,
         tableName: string
       ) => {
-        if (!db) return; // Should be caught by earlier checks, but good for safety
+        if (!db || !isMounted) return; 
         if (channelRef.current && channelRef.current.state === 'joined') {
             console.log(`Realtime: Already subscribed to ${tableName}. State: ${channelRef.current.state}`);
             return;
         }
-        // If ref exists but not joined, attempt to remove it first before creating a new one.
+        
         if (channelRef.current) {
             console.log(`Realtime: Channel ref for ${tableName} exists but not joined (state: ${channelRef.current.state}). Attempting to remove first.`);
             try {
                 await db.removeChannel(channelRef.current);
                 console.log(`Realtime: Successfully removed existing (non-joined) channel for ${tableName}.`);
-            } catch (removeError) {
-                console.warn(`Realtime: Error removing existing (non-joined) channel for ${tableName}:`, removeError);
+            } catch (removeError: any) {
+                console.warn(`Realtime: Error removing existing (non-joined) channel for ${tableName}:`, removeError?.message || removeError);
             }
+            // No matter what, nullify ref if it wasn't joined, so we create a new one.
             channelRef.current = null;
         }
 
@@ -443,29 +452,27 @@ export default function SettleEasePage() {
               (payload) => handleDbChange(payload, tableName)
           );
         
-        channelRef.current = channel; // Assign to ref immediately
+        channelRef.current = channel;
 
         try {
             console.log(`Realtime: Attempting to subscribe to ${tableName}...`);
-            // The subscribe() method itself can be awaited or take a callback.
-            // We use the callback to handle various states.
-            const subscribePromise = channel.subscribe(async (status, err) => {
-              if (!isMounted) return; // Check mount status inside async callback
+            channel.subscribe(async (status, err) => {
+              if (!isMounted) {
+                 console.log(`Realtime (${tableName}): subscription callback ignored, component unmounted.`);
+                 return;
+              }
       
               console.log(`Realtime: Subscription status for ${tableName}: ${status}`, err ? `Error: ${err.message}` : '');
               if (status === 'SUBSCRIBED') {
                 console.log(`Realtime: Subscribed successfully to ${tableName}`);
               } else if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                 handleSubscriptionError(tableName, status, err);
-                // If channel failed or closed, nullify the ref so it can be retried if effect re-runs
-                if(channelRef.current === channel) { // ensure we are nullifying the correct channel instance
+                if(channelRef.current === channel) { 
+                    console.log(`Realtime: Nullifying channelRef for ${tableName} due to error/closed status.`);
                     channelRef.current = null;
                 }
               }
             });
-            // You can also await the initial subscribe attempt if needed for immediate feedback,
-            // though the callback handles ongoing status.
-            // For example: const initialStatus = await subscribePromise; console.log(`Initial subscribe status for ${tableName}: ${initialStatus}`);
           } catch (subscribeError: any) {
             if (!isMounted) return;
             console.error(`Realtime: Direct error during .subscribe() call for ${tableName}:`, subscribeError);
@@ -495,14 +502,16 @@ export default function SettleEasePage() {
           .catch(err => {
             console.error("Realtime: Error during db.removeAllChannels():", err?.message || err);
             if (err?.message?.includes("WebSocket is closed")) {
-                 console.warn("Realtime: Caught 'WebSocket is closed' during removeAllChannels. This is often due to HMR or rapid unmounts.");
+                 console.warn("Realtime: Caught 'WebSocket is closed' during removeAllChannels. This is often due to HMR or rapid unmounts/remounts or actual connection loss before cleanup.");
             }
           })
           .finally(() => {
+            // Ensure refs are nullified regardless of removeAllChannels outcome.
+            // This is critical for the next effect run to attempt a fresh setup.
+            console.log("Realtime: Nullifying channel refs in .finally() after removeAllChannels attempt.");
             peopleChannelRef.current = null;
             expensesChannelRef.current = null;
             categoriesChannelRef.current = null;
-            console.log("Realtime: Channel refs nullified after removeAllChannels.");
           });
       } else {
         console.warn("Realtime: Supabase client (db) or removeAllChannels not available during cleanup. Manually nullifying refs.");
