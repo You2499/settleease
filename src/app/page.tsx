@@ -4,9 +4,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
 
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell, YAxis } from 'recharts';
+import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, AlertTriangle, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -65,7 +64,6 @@ import {
   CATEGORIES_TABLE,
   CHART_COLORS,
   formatCurrency,
-  formatCurrencyForAxis,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS
@@ -164,7 +162,7 @@ export default function SettleEasePage() {
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoading(false);
     }
-  }, [supabaseInitializationError]);
+  }, []);
 
 
   const addDefaultPeople = useCallback(async () => {
@@ -210,7 +208,7 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [fetchAllData, supabaseInitializationError]);
+  }, [fetchAllData]);
 
 
   useEffect(() => {
@@ -278,7 +276,7 @@ export default function SettleEasePage() {
       authListener?.subscription.unsubscribe();
       clearTimeout(loadingFallbackTimeout);
     };
-  }, [addDefaultPeople, fetchAllData, supabaseInitializationError, isDataFetched, isLoading]);
+  }, [addDefaultPeople, fetchAllData, isDataFetched, isLoading]);
 
 
   useEffect(() => {
@@ -342,11 +340,13 @@ export default function SettleEasePage() {
     }
   };
 
-  const getCategoryIconFromName = useCallback((categoryName: string): React.FC<React.SVGProps<SVGSVGElement>> => {
-    const dynamicCat = categories.find(c => c.name === categoryName);
-    if (dynamicCat) {
-      const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
-      if (iconDetail) return iconDetail.IconComponent;
+ const getCategoryIconFromName = useCallback((categoryName: string): React.FC<React.SVGProps<SVGSVGElement>> => {
+    if (categories && categories.length > 0) {
+      const dynamicCat = categories.find(c => c.name === categoryName);
+      if (dynamicCat) {
+        const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
+        if (iconDetail) return iconDetail.IconComponent;
+      }
     }
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
     return settingsIcon ? settingsIcon.IconComponent : Settings2; // Fallback
@@ -388,7 +388,7 @@ export default function SettleEasePage() {
       <SidebarInset>
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
-            <div className="flex items-center">
+            <div className="flex items-center h-10"> {/* Ensure consistent height for title block */}
               <SidebarTrigger className="md:hidden mr-2" />
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {getHeaderTitle()}
@@ -421,9 +421,9 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
   const { isMobile } = useSidebar();
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
-      <SidebarHeader className="items-center p-4 border-b border-sidebar-border">
+      <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 fill-primary" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z" /></svg>
+          <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" data-ai-logo="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4 14h-3v-4H7v-2h4V8l4 4-4 4v-2h3v2z" /></svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -570,12 +570,12 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
   }, [expenses, people, peopleMap]);
 
   const yAxisOverallMax = useMemo(() => {
-    if (!shareVsPaidData.length) return 550; // Default min height for axis
+    if (!shareVsPaidData.length) return 550; 
     const maxPaid = Math.max(...shareVsPaidData.map(d => d.paid), 0);
     const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
-    return Math.max(maxPaid, maxShare, 500); // Ensure at least 500 for a reasonable scale start
+    return Math.max(maxPaid, maxShare, 500); 
   }, [shareVsPaidData]);
-  const yAxisDomainTop = Math.ceil((yAxisOverallMax * 1.1) / 50) * 50; // Add padding & round to nearest 50
+  const yAxisDomainTop = Math.ceil((yAxisOverallMax * 1.1) / 50) * 50; 
 
 
   const expensesByCategory = useMemo(() => {
@@ -651,13 +651,13 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0, // Removed dynamic left margin
+                    left: 0, 
                     bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  {/* YAxis removed */}
+                  
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
@@ -727,7 +727,7 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                             <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
                             <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
                           </div>
-                          {/* Date removed from here */}
+                          
                         </CardContent>
                       </Card>
                     </li>
@@ -813,7 +813,7 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
                     <span className="font-medium text-right block">No payers listed or data unavailable</span>
                   )}
                 </div>
-                {/* Date removed from here */}
+                
                 <div className="flex justify-between"><span>Split Method:</span> <span className="font-medium capitalize text-right">{expense.split_method}</span></div>
               </CardContent>
             </Card>
@@ -931,4 +931,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
-
