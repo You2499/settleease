@@ -6,7 +6,7 @@ import { createClient, type SupabaseClient, type User as SupabaseUser } from '@s
 
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle
+  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle, LogOut
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +52,7 @@ import {
 import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 
 
+import AuthForm from '@/components/settleease/AuthForm';
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
@@ -100,13 +101,18 @@ export default function SettleEasePage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDataFetched, setIsDataFetched] = useState(false);
+
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const [isLoadingData, setIsLoadingData] = useState(false);
+  const [isDataFetchedAtLeastOnce, setIsDataFetchedAtLeastOnce] = useState(false);
 
 
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
-    if (!db || supabaseInitializationError) return;
-    if (showLoadingIndicator) setIsLoading(true);
+    if (!db || supabaseInitializationError || !currentUser) {
+      setIsLoadingData(false);
+      return;
+    }
+    if (showLoadingIndicator) setIsLoadingData(true);
 
     let peopleErrorOccurred = false;
     let expensesErrorOccurred = false;
@@ -158,16 +164,16 @@ export default function SettleEasePage() {
     }
 
     if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
-        setIsDataFetched(true);
+        setIsDataFetchedAtLeastOnce(true); // Mark that data has been fetched successfully at least once
     }
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
-     setIsLoading(false);
+     setIsLoadingData(false);
     }
-  }, []);
+  }, [currentUser]);
 
 
   const addDefaultPeople = useCallback(async () => {
-    if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError) {
+    if (!db || initialDefaultPeopleSetupAttemptedOrCompleted || supabaseInitializationError || !currentUser) {
       if (initialDefaultPeopleSetupAttemptedOrCompleted && db) {
         const { data: currentPeople, error: currentPeopleError } = await db.from(PEOPLE_TABLE).select('id', { head: true, count: 'exact' });
         if (!currentPeopleError && currentPeople && (currentPeople as any).length > 0) {
@@ -175,6 +181,9 @@ export default function SettleEasePage() {
         }
       } else if (!db) {
         console.warn("addDefaultPeople: Supabase client (db) not available.");
+        return;
+      } else if(!currentUser) {
+        console.warn("addDefaultPeople: No current user.");
         return;
       }
     }
@@ -201,7 +210,7 @@ export default function SettleEasePage() {
           initialDefaultPeopleSetupAttemptedOrCompleted = false;
         } else {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });
-          await fetchAllData(false);
+          // fetchAllData will be called by the effect that watches currentUser
         }
       }
     } catch (error) {
@@ -209,79 +218,82 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [fetchAllData]);
+  }, [fetchAllData, currentUser]);
 
 
+  // Effect for initializing auth and listening to auth state changes
   useEffect(() => {
-    if (supabaseInitializationError) {
-      toast({ title: "Supabase Configuration Error", description: supabaseInitializationError, variant: "destructive", duration: 15000 });
-      setIsLoading(false);
-      return;
-    }
-    if (!db) {
-      toast({ title: "Supabase Error", description: "Supabase client is not available.", variant: "destructive", duration: 15000 });
-      setIsLoading(false);
+    if (supabaseInitializationError || !db) {
+      setIsLoadingAuth(false);
       return;
     }
 
     let isMounted = true;
-    let authStateProcessed = false;
+    setIsLoadingAuth(true);
 
-    const initializeApp = async () => {
-      if (!isMounted || !db) return;
-
-      const { data: { session } } = await db.auth.getSession();
+    db.auth.getSession().then(({ data: { session } }) => {
       if (isMounted) {
         setCurrentUser(session?.user ?? null);
-        if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
-          await addDefaultPeople();
-        }
-        if (!isDataFetched) {
-            await fetchAllData();
-        } else {
-            setIsLoading(false);
-        }
-        if (!authStateProcessed) { authStateProcessed = true; }
+        setIsLoadingAuth(false);
       }
-    };
-
-    initializeApp();
-
-    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
-      if (!isMounted) return;
-      setCurrentUser(session?.user ?? null);
-      if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
-        await addDefaultPeople();
-      }
-      if (!isDataFetched) {
-        await fetchAllData();
-      }
-      if (!authStateProcessed) { authStateProcessed = true; setIsLoading(false); }
+    }).catch(err => {
+        if(isMounted) setIsLoadingAuth(false);
+        console.error("Error getting session:", err);
     });
 
-    const loadingFallbackTimeout = setTimeout(() => {
-      if (isMounted && !authStateProcessed && isLoading) {
-        console.warn("Loading fallback timeout triggered.");
-        setIsLoading(false);
-        authStateProcessed = true;
-         if (!initialDefaultPeopleSetupAttemptedOrCompleted) {
-           addDefaultPeople().then(() => { if(!isDataFetched) fetchAllData(); });
-        } else if (!isDataFetched) {
-           fetchAllData();
+    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
+      if (isMounted) {
+        const newAuthUser = session?.user ?? null;
+        setCurrentUser(newAuthUser);
+        if (!newAuthUser) { // User logged out
+          setPeople([]);
+          setExpenses([]);
+          setCategories([]);
+          setActiveView('dashboard');
+          setIsDataFetchedAtLeastOnce(false); // Reset for next login
+          toast({ title: "Logged Out", description: "You have been successfully logged out." });
         }
+        // Data fetching will be handled by the useEffect dependent on currentUser
+        if (isLoadingAuth) setIsLoadingAuth(false); // Ensure loading auth is false after first auth event
       }
-    }, 5000);
+    });
 
     return () => {
       isMounted = false;
       authListener?.subscription.unsubscribe();
-      clearTimeout(loadingFallbackTimeout);
     };
-  }, [addDefaultPeople, fetchAllData, isDataFetched, isLoading]);
+  }, [supabaseInitializationError]);
 
 
+  // Effect for fetching data when currentUser changes (and auth is not loading)
   useEffect(() => {
-    if (supabaseInitializationError || !db || !isDataFetched) return;
+    if (currentUser && !isLoadingAuth) {
+      setIsLoadingData(true);
+      addDefaultPeople().then(() => {
+        fetchAllData(true).finally(() => {
+             // setIsLoadingData(false); // fetchAllData now handles this
+        });
+      });
+    } else if (!currentUser && !isLoadingAuth) {
+      // Clear data if user logs out and auth isn't in an intermediate loading state
+      setPeople([]);
+      setExpenses([]);
+      setCategories([]);
+      setIsDataFetchedAtLeastOnce(false);
+      setIsLoadingData(false);
+    }
+  }, [currentUser, isLoadingAuth, addDefaultPeople, fetchAllData]);
+
+
+  // Effect for Supabase real-time subscriptions
+  useEffect(() => {
+    if (supabaseInitializationError || !db || !currentUser || !isDataFetchedAtLeastOnce) {
+      // Remove any existing channels if conditions are not met
+      if (db) {
+        db.getChannels().forEach(channel => db.removeChannel(channel));
+      }
+      return;
+    }
 
     let isMounted = true;
 
@@ -289,13 +301,14 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`${table} change received!`, payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false);
+        fetchAllData(false); // Fetch data without primary loading indicator
     };
 
     const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
         (payload) => handleDbChange(payload, PEOPLE_TABLE)
       ).subscribe((status, err) => {
+        if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${PEOPLE_TABLE}`);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${PEOPLE_TABLE}:`, err);
       });
@@ -304,6 +317,7 @@ export default function SettleEasePage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE },
         (payload) => handleDbChange(payload, EXPENSES_TABLE)
       ).subscribe((status, err) => {
+        if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${EXPENSES_TABLE}`);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${EXPENSES_TABLE}:`, err);
       });
@@ -312,6 +326,7 @@ export default function SettleEasePage() {
       .on('postgres_changes', { event: '*', schema: 'public', table: CATEGORIES_TABLE },
         (payload) => handleDbChange(payload, CATEGORIES_TABLE)
       ).subscribe((status, err) => {
+        if (!isMounted) return;
         if (status === 'SUBSCRIBED') console.log(`Subscribed to ${CATEGORIES_TABLE}`);
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') console.error(`Subscription error on ${CATEGORIES_TABLE}:`, err);
       });
@@ -320,12 +335,25 @@ export default function SettleEasePage() {
     return () => {
       isMounted = false;
       if (db) {
-        db.removeChannel(peopleChannel);
-        db.removeChannel(expensesChannel);
-        db.removeChannel(categoriesChannel);
+        db.removeChannel(peopleChannel).catch(err => console.error("Error removing people channel", err));
+        db.removeChannel(expensesChannel).catch(err => console.error("Error removing expenses channel", err));
+        db.removeChannel(categoriesChannel).catch(err => console.error("Error removing categories channel", err));
       }
     };
-  }, [supabaseInitializationError, db, fetchAllData, isDataFetched]);
+  }, [supabaseInitializationError, db, fetchAllData, currentUser, isDataFetchedAtLeastOnce]);
+
+
+  const handleLogout = async () => {
+    if (!db) return;
+    const { error } = await db.auth.signOut();
+    if (error) {
+      toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+    } else {
+      // onAuthStateChange will handle UI updates (setting currentUser to null, clearing data)
+      // No need to manually set currentUser to null here, listener does it.
+    }
+  };
+
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -349,19 +377,18 @@ export default function SettleEasePage() {
         if (iconDetail) return iconDetail.IconComponent;
       }
     }
-    // Fallback to a generic icon if not found in dynamic categories or old constant
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
     return settingsIcon ? settingsIcon.IconComponent : Settings2; 
   }, [categories]);
 
 
-  if (isLoading && !isDataFetched) {
+  if (isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
         <div className="flex flex-col items-center">
           <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
           <p className="text-xl font-semibold">Loading SettleEase...</p>
-          <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
+          <p className="text-muted-foreground">Initializing application and checking session.</p>
         </div>
       </div>
     );
@@ -384,13 +411,35 @@ export default function SettleEasePage() {
     );
   }
 
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <AuthForm db={db} />
+      </div>
+    );
+  }
+
+  // User is logged in, but data might still be loading
+  if (isLoadingData && !isDataFetchedAtLeastOnce) {
+     return (
+      <div className="flex items-center justify-center min-h-screen bg-background text-foreground">
+        <div className="flex flex-col items-center">
+          <FileText className="w-16 h-16 text-primary animate-pulse mb-4" />
+          <p className="text-xl font-semibold">Loading Your Data...</p>
+          <p className="text-muted-foreground">Please wait while we prepare your dashboard.</p>
+        </div>
+      </div>
+    );
+  }
+
+
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppActualSidebar activeView={activeView} setActiveView={setActiveView} />
+      <AppActualSidebar activeView={activeView} setActiveView={setActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} />
       <SidebarInset>
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
-            <div className="flex items-center h-10"> {/* Ensure consistent height for title block */}
+            <div className="flex items-center h-10"> 
               <SidebarTrigger className="md:hidden mr-2" />
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {getHeaderTitle()}
@@ -399,6 +448,9 @@ export default function SettleEasePage() {
             <ThemeToggleButton />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+            {isLoadingData && isDataFetchedAtLeastOnce && ( // Show subtle loading indicator for re-fetches
+                <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
+            )}
             {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
             {activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
             {activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
@@ -417,17 +469,22 @@ export default function SettleEasePage() {
 interface AppActualSidebarProps {
   activeView: ActiveView;
   setActiveView: (view: ActiveView) => void;
+  handleLogout: () => void;
+  currentUserEmail?: string | null;
 }
 
-function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) {
+function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUserEmail }: AppActualSidebarProps) {
   const { isMobile } = useSidebar();
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.62,8.08l-2.34-5.57C18.12,2.21,17.8,2,17.43,2H6.57c-0.37,0-0.69,0.21-0.86,0.51L3.38,8.08C2.56,8.35,2,9.1,2,10v1c0,0.83,0.67,1.5,1.5,1.5H6v8c0,0.55,0.45,1,1,1h10c0.55,0,1-0.45,1-1v-8h2.5c0.83,0,1.5-0.67,1.5-1.5v-1C22,9.1,21.44,8.35,20.62,8.08z M6.57,4h10.86l1.5,3.57H5.07L6.57,4z M18,12.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S18.83,12.5,18,12.5z M6,12.5c-0.83,0-1.5-0.67-1.5-1.5s0.67-1.5,1.5-1.5s1.5,0.67,1.5,1.5S6.83,12.5,6,12.5z M16,19H8v-6h8V19z"/>
-          </svg>
+        <svg className="h-8 w-8 fill-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-2.5-3.5h5v-2h-5v2zm0-3h5v-2h-5v2zm0-3h5v-2h-5v2zM4.03 7.44l2.83 2.83-1.42 1.41L2.61 8.85l1.42-1.41zM17.14 13.73l2.83-2.83-1.41-1.41-2.83 2.83 1.41 1.41zM7.5 17.5h2V14h-2v3.5zm7-3.5h2V14h-2v3.5zM6.21 4.93l1.41 1.41L4.79 9.17 3.38 7.76l2.83-2.83zM20.62 16.24l-2.83-2.83-1.41 1.41 2.83 2.83 1.41-1.41z"/>
+            <path d="M21.29,10.29l-3.58-3.58c-0.39-0.39-1.02-0.39-1.41,0L12,11l-4.29-4.29c-0.39-0.39-1.02-0.39-1.41,0L2.71,10.29 c-0.39,0.39-0.39,1.02,0,1.41L6.3,15.29C6.49,15.48,6.74,15.58,7,15.58s0.51-0.09,0.71-0.29L12,11.41l4.29,4.29 C16.48,15.9,16.74,16,17,16s0.51-0.09,0.71-0.29l3.58-3.58C21.68,11.32,21.68,10.68,21.29,10.29z M7,13.17L5.83,12L7,10.83 V13.17z M17,13.17V10.83L18.17,12L17,13.17z"/>
+            <path d="M12 6c-1.93 0-3.5 1.57-3.5 3.5S10.07 13 12 13s3.5-1.57 3.5-3.5S13.93 6 12 6zm0 5c-.83 0-1.5-.67-1.5-1.5S11.17 8 12 8s1.5.67 1.5 1.5S12.83 11 12 11z"/>
+            <path d="M12.01,20.79c-0.26-1.09-0.88-2.05-1.77-2.79H8.5c-0.28,0-0.5,0.22-0.5,0.5v3c0,0.28,0.22,0.5,0.5,0.5h1.27 c0.13,0,0.26-0.05,0.35-0.15c0.89-0.89,1.34-1.99,1.34-3.17V20.79z M15.5,20.5c0-0.28-0.22-0.5-0.5-0.5h-1.24 c-0.89,0.74-1.51,1.7-1.77,2.79v-1.87c0-1.18,0.45-2.28,1.34-3.17c0.1-0.1,0.22-0.15,0.35-0.15h1.27c0.28,0,0.5,0.22,0.5,0.5 V20.5z"/>
+        </svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -491,7 +548,15 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <p className="text-xs text-sidebar-foreground/70">Version 1.1.0</p>
+         {currentUserEmail && (
+          <p className="text-xs text-sidebar-foreground/70 truncate mb-2" title={currentUserEmail}>
+            Logged in as: {currentUserEmail}
+          </p>
+        )}
+        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
+          <LogOut className="mr-2 h-4 w-4" /> Logout
+        </Button>
+        <p className="text-xs text-sidebar-foreground/70 mt-2">Version 1.1.0</p>
       </SidebarFooter>
     </Sidebar>
   );
@@ -572,18 +637,11 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
       };
     }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5);
   }, [expenses, people, peopleMap]);
-
-  const yAxisOverallMax = useMemo(() => {
-    if (!shareVsPaidData.length) return 550; 
-    const maxPaid = Math.max(...shareVsPaidData.map(d => d.paid), 0);
-    const maxShare = Math.max(...shareVsPaidData.map(d => d.share), 0);
-    return Math.max(maxPaid, maxShare, 500); 
-  }, [shareVsPaidData]);
   
   const yAxisDomainTop = useMemo(() => {
       const dataMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(dataMax, 500) * 1.1; // Ensure at least 500, then add 10% padding
-      return Math.ceil(paddedMax / 50) * 50; // Round up to nearest 50 for nice ticks
+      const paddedMax = Math.max(dataMax, 500) * 1.1; 
+      return Math.ceil(paddedMax / 50) * 50; 
   }, [shareVsPaidData]);
 
 
@@ -940,6 +998,3 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
-
-
-    
