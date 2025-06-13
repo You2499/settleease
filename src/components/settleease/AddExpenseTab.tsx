@@ -258,7 +258,7 @@ export default function AddExpenseTab({
             }
         }
     }
-  }, [splitMethod, people, expenseToEdit]); // selectedPeopleEqual was removed from deps to avoid loop
+  }, [splitMethod, people, expenseToEdit, selectedPeopleEqual, unequalShares]); // selectedPeopleEqual was removed from deps to avoid loop
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -435,16 +435,10 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        // For update, we spread expenseData. Supabase might auto-handle 'updated_at' if the column exists and is configured.
-        // If 'updated_at' column doesn't exist in DB or isn't auto-updating, sending it might cause an error.
-        // It's safer to not send 'updated_at' from client unless specifically required and column is confirmed.
         const updatePayload = { ...expenseData };
-        // delete (updatePayload as any).updated_at; // Ensure updated_at is not sent if not handled by DB
-                                                // Or, if you want client to set it, ensure DB column exists.
-                                                // For now, assume DB handles it or it's not critical to set from client.
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
-          .update(updatePayload) // Removed explicit updated_at
+          .update(updatePayload) 
           .eq('id', expenseToEdit.id)
           .select();
         if (updateError) throw updateError;
@@ -452,7 +446,7 @@ export default function AddExpenseTab({
       } else {
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
-          .insert([{ ...expenseData, created_at: new Date().toISOString() }]) // created_at is usually fine for inserts
+          .insert([{ ...expenseData, created_at: new Date().toISOString() }]) 
           .select();
         if (insertError) throw insertError;
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
@@ -473,9 +467,9 @@ export default function AddExpenseTab({
       if (error) {
         if (typeof error.message === 'string' && error.message.trim() !== '') {
           errorMessage = error.message;
-        } else if (typeof error.code === 'string' && error.code.trim() !== '') { // Supabase often has a 'code'
+        } else if (typeof error.code === 'string' && error.code.trim() !== '') { 
           errorMessage = `Error code: ${error.code}`;
-        } else if (typeof error.details === 'string' && error.details.trim() !== '') { // And 'details'
+        } else if (typeof error.details === 'string' && error.details.trim() !== '') { 
           errorMessage = error.details;
         } else if (typeof error === 'string' && error.trim() !== '') {
           errorMessage = error;
@@ -551,7 +545,7 @@ export default function AddExpenseTab({
 
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="space-y-6"> 
       <Card className="shadow-lg rounded-lg">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
