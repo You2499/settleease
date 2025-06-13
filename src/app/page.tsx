@@ -359,37 +359,56 @@ export default function SettleEasePage() {
 
 
   useEffect(() => {
-    if (supabaseInitializationError || !db || !currentUser) {
-      if (db && typeof db.removeAllChannels === 'function') {
-        console.log(`Realtime prerequisites (supabaseInitializationError, !db, or !currentUser) not met. Calling removeAllChannels.`);
-        db.removeAllChannels()
-          .then(statuses => console.log(`All channels removed due to prerequisite check. Statuses:`, statuses))
-          .catch(e => console.warn(`Error in removeAllChannels during prerequisite check:`, e?.message || e));
-      } else if (!db) {
-         console.log(`Realtime prerequisites (db instance not available). Cannot call removeAllChannels.`);
-      }
-      peopleChannelRef.current = null;
-      expensesChannelRef.current = null;
-      categoriesChannelRef.current = null;
-      return;
-    }
-    
-    if (!isDataFetchedAtLeastOnce || !userRole) {
-        console.log("Realtime subscriptions deferred: Waiting for initial data fetch and user role.");
-        if (db && typeof db.removeAllChannels === 'function' && 
-            (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current)) {
-            console.log(`Realtime subscriptions deferred. Cleaning potentially stale channels with removeAllChannels.`);
-            db.removeAllChannels()
-                .then(statuses => console.log(`All channels removed during deferral (!isDataFetchedAtLeastOnce or !userRole). Statuses:`, statuses))
-                .catch(e => console.warn(`Error in removeAllChannels during deferral:`, e?.message || e));
-            peopleChannelRef.current = null;
-            expensesChannelRef.current = null;
-            categoriesChannelRef.current = null;
+    let isMounted = true; // To prevent state updates on unmounted component
+
+    // Condition 1: Critical prerequisites not met (no db, or error during init)
+    if (supabaseInitializationError || !db) {
+      console.log("Realtime setup skipped: Supabase client not available or init error.");
+      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current) {
+        console.warn("Prerequisites for Realtime failed, but channel refs were not null. Attempting to clear them.");
+        // Attempt to remove channels if db client is available, otherwise just nullify refs
+        if (db && typeof db.removeAllChannels === 'function') {
+          db.removeAllChannels()
+            .catch(e => console.warn("Error during precautionary removeAllChannels (init error):", e?.message || e))
+            .finally(() => {
+              peopleChannelRef.current = null;
+              expensesChannelRef.current = null;
+              categoriesChannelRef.current = null;
+            });
+        } else {
+          peopleChannelRef.current = null;
+          expensesChannelRef.current = null;
+          categoriesChannelRef.current = null;
         }
-        return;
+      }
+      return; // Exit effect
     }
 
-    let isMounted = true;
+    // Condition 2: User not authenticated
+    if (!currentUser) {
+      console.log("Realtime setup skipped: No authenticated user.");
+      // If there was a previous user, their channels should have been cleaned by the *previous* effect's return function.
+      // We ensure local channel refs are null for the current (logged-out) state.
+      // Avoid calling removeAllChannels here again to prevent potential conflicts with ongoing cleanup.
+      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current) {
+        console.log("User logged out or became null; ensuring local channel refs are cleared without calling removeAllChannels again here.");
+        peopleChannelRef.current = null;
+        expensesChannelRef.current = null;
+        categoriesChannelRef.current = null;
+      }
+      return; // Exit effect
+    }
+    
+    // Condition 3: User authenticated, but data/role still loading for the first time
+    if (!isDataFetchedAtLeastOnce || !userRole) {
+      console.log("Realtime subscriptions deferred: Waiting for initial data fetch and user role for the authenticated user.");
+      // Do not attempt to setup or aggressively teardown channels here.
+      // Cleanup from a previous user/state is handled by this effect's return function.
+      return; // Exit effect, will re-run when these dependencies change
+    }
+
+    // All checks passed, proceed to set up subscriptions
+    console.log("Setting up Supabase Realtime subscriptions using refs...");
 
     const handleDbChange = (payload: any, table: string) => {
         if (!isMounted) return;
@@ -409,19 +428,17 @@ export default function SettleEasePage() {
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe to ${tableName}. Please check Supabase RLS and Replication settings. Status: ${status}.`, variant: "destructive", duration: 10000 });
       }
     };
-
-    console.log("Setting up Supabase Realtime subscriptions using refs...");
-
+    
     if (!peopleChannelRef.current) {
         peopleChannelRef.current = db.channel(`public:${PEOPLE_TABLE}`)
         .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
             (payload) => handleDbChange(payload, PEOPLE_TABLE)
         ).subscribe((status, err) => {
             if (!isMounted) return;
+            console.log(`Subscription status for ${PEOPLE_TABLE}: ${status}`, err ? `Error: ${err.message}` : '');
             if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${PEOPLE_TABLE}`);
-            else console.log(`Subscription status for ${PEOPLE_TABLE}: ${status}`);
             if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            handleSubscriptionError(PEOPLE_TABLE, status, err);
+              handleSubscriptionError(PEOPLE_TABLE, status, err);
             }
         });
     } else {
@@ -434,10 +451,10 @@ export default function SettleEasePage() {
             (payload) => handleDbChange(payload, EXPENSES_TABLE)
         ).subscribe((status, err) => {
             if (!isMounted) return;
+            console.log(`Subscription status for ${EXPENSES_TABLE}: ${status}`, err ? `Error: ${err.message}` : '');
             if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${EXPENSES_TABLE}`);
-            else console.log(`Subscription status for ${EXPENSES_TABLE}: ${status}`);
             if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            handleSubscriptionError(EXPENSES_TABLE, status, err);
+              handleSubscriptionError(EXPENSES_TABLE, status, err);
             }
         });
     } else {
@@ -450,10 +467,10 @@ export default function SettleEasePage() {
             (payload) => handleDbChange(payload, CATEGORIES_TABLE)
         ).subscribe((status, err) => {
             if (!isMounted) return;
+            console.log(`Subscription status for ${CATEGORIES_TABLE}: ${status}`, err ? `Error: ${err.message}` : '');
             if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${CATEGORIES_TABLE}`);
-            else console.log(`Subscription status for ${CATEGORIES_TABLE}: ${status}`);
             if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            handleSubscriptionError(CATEGORIES_TABLE, status, err);
+               handleSubscriptionError(CATEGORIES_TABLE, status, err);
             }
         });
     } else {
@@ -463,26 +480,32 @@ export default function SettleEasePage() {
     return () => {
       isMounted = false;
       console.log("Cleaning up Supabase Realtime subscriptions (useEffect cleanup)...");
+      // This cleanup runs when dependencies change OR component unmounts.
+      // It should robustly clean up channels associated with the db instance from *this* effect's closure.
       if (db && typeof db.removeAllChannels === 'function') {
-        console.log("Calling db.removeAllChannels()...");
+        console.log("Calling db.removeAllChannels() from effect cleanup...");
         db.removeAllChannels()
           .then(statuses => {
-            console.log("removeAllChannels() completed. Statuses:", statuses);
-            if (statuses.some(s => s !== 'ok')) {
-              console.warn("Some channels did not close cleanly during removeAllChannels:", statuses);
+            console.log("Effect cleanup: removeAllChannels() completed. Statuses:", statuses);
+            // 'closed' is an acceptable status if a channel was already unsubscribed individually or never fully joined.
+            if (statuses.some(s => s !== 'ok' && s !== 'closed')) { 
+              console.warn("Effect cleanup: Some channels might not have closed cleanly during removeAllChannels:", statuses);
             }
           })
           .catch(err => {
-            console.error("Error during db.removeAllChannels():", err?.message || err);
+            // Log the error but don't let it break the app or further cleanup.
+            // This is where the "WebSocket is closed" error might be caught.
+            console.error("Effect cleanup: Error during db.removeAllChannels():", err?.message || err);
           })
           .finally(() => {
+            // Crucially, always nullify our app's refs after attempting cleanup
             peopleChannelRef.current = null;
             expensesChannelRef.current = null;
             categoriesChannelRef.current = null;
-            console.log("Channel refs nullified after removeAllChannels.");
+            console.log("Effect cleanup: Channel refs nullified.");
           });
       } else {
-        console.warn("Supabase client (db) or removeAllChannels not available during cleanup. Manual ref nullification.");
+        console.warn("Effect cleanup: Supabase client (db) or removeAllChannels not available. Manually nullifying refs.");
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
