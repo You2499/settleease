@@ -35,6 +35,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     setIsLoading(true);
     setError(null);
 
+    // Define the production URL for email confirmation redirects
+    const productionSiteUrl = "https://studio--settleease-hseuo.us-central1.hosted.app/";
+
     try {
       if (isLoginView) {
         const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
@@ -46,7 +49,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           email,
           password,
           options: {
-            // emailRedirectTo: `${window.location.origin}/`, // Optional: for email confirmation
+            emailRedirectTo: productionSiteUrl, 
           },
         });
         if (signUpError) throw signUpError;
