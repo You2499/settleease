@@ -121,13 +121,12 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const executeDeleteCategory = async () => {
     if (!categoryToDelete || !db || supabaseInitializationError) {
       toast({ title: "Error", description: "Cannot delete category due to system error.", variant: "destructive" });
-      if (categoryToDelete) setCategoryToDelete(null); // Clear even on system error
+      if (categoryToDelete) setCategoryToDelete(null); 
       return;
     }
 
     setIsLoading(true);
     try {
-      // Check if category is used in expenses table
       const { count, error: countError } = await db
         .from(EXPENSES_TABLE)
         .select('id', { count: 'exact', head: true })
@@ -149,7 +148,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
         return;
       }
 
-      // Proceed with deletion if not used
       const { error: deleteError } = await db.from(CATEGORIES_TABLE).delete().eq('id', categoryToDelete.id);
       if (deleteError) throw deleteError;
 
@@ -219,7 +217,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                       return (
                         <SelectItem key={icon.iconKey} value={icon.iconKey}>
                           <div className="flex items-center">
-                            <IconComp className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <IconComp className="mr-2 h-4 w-4" />
                             {icon.label}
                           </div>
                         </SelectItem>
@@ -263,7 +261,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                       return (
                                         <SelectItem key={icon.iconKey} value={icon.iconKey}>
                                           <div className="flex items-center">
-                                            <IconComp className="mr-2 h-4 w-4 text-muted-foreground" />
+                                            <IconComp className="mr-2 h-4 w-4" />
                                             {icon.label}
                                           </div>
                                         </SelectItem>
@@ -328,4 +326,3 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     </div>
   );
 }
-

@@ -17,7 +17,7 @@ import { FileText, Trash2, PlusCircle, Users, CreditCard, AlertTriangle, X, Sett
 
 import { toast } from "@/hooks/use-toast";
 
-import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease'; // Removed OLD_CATEGORIES_CONSTANT
+import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease';
 
 interface AddExpenseTabProps {
@@ -25,7 +25,7 @@ interface AddExpenseTabProps {
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
   onExpenseAdded: () => void;
-  dynamicCategories: DynamicCategory[]; // Added dynamic categories prop
+  dynamicCategories: DynamicCategory[];
   expenseToEdit?: Expense | null;
   onCancelEdit?: () => void;
 }
@@ -35,13 +35,13 @@ export default function AddExpenseTab({
   db,
   supabaseInitializationError,
   onExpenseAdded,
-  dynamicCategories, // Use dynamic categories
+  dynamicCategories,
   expenseToEdit,
   onCancelEdit,
 }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
-  const [category, setCategory] = useState(''); // Will be set from dynamicCategories
+  const [category, setCategory] = useState('');
   
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
@@ -137,7 +137,7 @@ export default function AddExpenseTab({
     if (expenseToEdit) {
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
-      setCategory(expenseToEdit.category); // Category is already a name string
+      setCategory(expenseToEdit.category);
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
         setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
@@ -178,7 +178,7 @@ export default function AddExpenseTab({
       // Reset form for new expense
       setDescription('');
       setTotalAmount('');
-      setCategory(dynamicCategories[0]?.name || ''); // Default to first dynamic category or empty
+      setCategory(dynamicCategories[0]?.name || '');
       setIsMultiplePayers(false);
       setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
       setSplitMethod('equal'); 
@@ -312,7 +312,7 @@ export default function AddExpenseTab({
     if (!description.trim()) return "Description cannot be empty.";
     const amountNum = parseFloat(totalAmount);
     if (isNaN(amountNum) || amountNum <= 0) return "Total amount must be a positive number.";
-    if (!category) return "Category must be selected."; // Category is a string name
+    if (!category) return "Category must be selected.";
 
     if (payers.some(p => !p.personId)) return "Each payer must be selected.";
     const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
@@ -375,7 +375,7 @@ export default function AddExpenseTab({
     const expenseData: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
       description,
       total_amount: parseFloat(totalAmount),
-      category, // Category is already a name string
+      category,
       paid_by: finalPayers,
       split_method: splitMethod,
       shares: [],
@@ -562,7 +562,7 @@ export default function AddExpenseTab({
                        return (
                         <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">
-                            <IconComponent className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <IconComponent className="mr-2 h-4 w-4" />
                             {cat.name}
                           </div>
                         </SelectItem>
