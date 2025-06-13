@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { createClient, type SupabaseClient, type User as SupabaseUser, type RealtimeChannel } from '@supabase/supabase-js';
 
 import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
@@ -32,7 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as ShadDialogDescription, // Aliasing to avoid conflict if we define our own
+  DialogDescription as ShadDialogDescription,
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
@@ -110,6 +110,10 @@ export default function SettleEasePage() {
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isDataFetchedAtLeastOnce, setIsDataFetchedAtLeastOnce] = useState(false);
 
+  const peopleChannelRef = useRef<RealtimeChannel | null>(null);
+  const expensesChannelRef = useRef<RealtimeChannel | null>(null);
+  const categoriesChannelRef = useRef<RealtimeChannel | null>(null);
+
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
     if (!db || !userId) return 'user';
@@ -122,7 +126,7 @@ export default function SettleEasePage() {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { // "No rows found" - profile might not exist yet for new user
+        if (error.code === 'PGRST116') { 
           console.warn(
             `User profile or role not found for ${userId} (PGRST116). Defaulting to 'user' role. This is normal and often temporary for new users as their profile (with role) is being created by a database trigger. If persistent, ensure the trigger 'on_auth_user_created' is correctly populating '${USER_PROFILES_TABLE}'.`
           );
@@ -131,7 +135,7 @@ export default function SettleEasePage() {
         // For other errors, including potentially RLS or network issues if `error` is an empty object or has a different code:
         let errorDetails = '';
         try {
-          errorDetails = JSON.stringify(error); // Attempt to get more details from the error object
+          errorDetails = JSON.stringify(error); 
         } catch (e) {
           errorDetails = 'Error object could not be stringified.';
         }
@@ -143,7 +147,7 @@ export default function SettleEasePage() {
         return 'user';
       }
       return data?.role as UserRole || 'user';
-    } catch (e: any) { // Catch any unexpected exceptions during the fetch operation
+    } catch (e: any) { 
       let exceptionDetails = '';
       try {
         exceptionDetails = JSON.stringify(e);
@@ -356,35 +360,34 @@ export default function SettleEasePage() {
 
   useEffect(() => {
     if (supabaseInitializationError || !db || !currentUser) {
-      const channels = db?.getChannels() || [];
-      if (channels.length > 0) {
-        console.log(`Realtime prerequisites (db or currentUser) not met. Removing ${channels.length} channel(s).`);
-        channels.forEach(channel => {
-          db!.removeChannel(channel)
-            .then(status => console.log(`Channel ${channel.topic} removed during prerequisite check with status: ${status}`))
-            .catch(e => console.warn(`Error removing channel ${channel.topic} during prerequisite check:`, e?.message || e));
-        });
+      if (db && typeof db.removeAllChannels === 'function') {
+        console.log(`Realtime prerequisites (supabaseInitializationError, !db, or !currentUser) not met. Calling removeAllChannels.`);
+        db.removeAllChannels()
+          .then(statuses => console.log(`All channels removed due to prerequisite check. Statuses:`, statuses))
+          .catch(e => console.warn(`Error in removeAllChannels during prerequisite check:`, e?.message || e));
+      } else if (!db) {
+         console.log(`Realtime prerequisites (db instance not available). Cannot call removeAllChannels.`);
       }
+      peopleChannelRef.current = null;
+      expensesChannelRef.current = null;
+      categoriesChannelRef.current = null;
       return;
     }
     
-    // Defer subscription setup until initial data load is complete and role is known
-    // This helps prevent issues if subscription callbacks rely on this data
     if (!isDataFetchedAtLeastOnce || !userRole) {
         console.log("Realtime subscriptions deferred: Waiting for initial data fetch and user role.");
-        // Ensure any stale channels are cleaned if this state is reached after an attempt
-        const channels = db.getChannels();
-        if (channels.length > 0) {
-            console.log(`Realtime subscriptions deferred. Cleaning ${channels.length} potentially stale channel(s).`);
-            channels.forEach(channel => {
-                db.removeChannel(channel)
-                    .then(status => console.log(`Stale channel ${channel.topic} removed during deferral with status: ${status}`))
-                    .catch(e => console.warn(`Error removing stale channel ${channel.topic} during deferral:`, e?.message || e));
-            });
+        if (db && typeof db.removeAllChannels === 'function' && 
+            (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current)) {
+            console.log(`Realtime subscriptions deferred. Cleaning potentially stale channels with removeAllChannels.`);
+            db.removeAllChannels()
+                .then(statuses => console.log(`All channels removed during deferral (!isDataFetchedAtLeastOnce or !userRole). Statuses:`, statuses))
+                .catch(e => console.warn(`Error in removeAllChannels during deferral:`, e?.message || e));
+            peopleChannelRef.current = null;
+            expensesChannelRef.current = null;
+            categoriesChannelRef.current = null;
         }
         return;
     }
-
 
     let isMounted = true;
 
@@ -407,72 +410,82 @@ export default function SettleEasePage() {
       }
     };
 
-    console.log("Setting up Supabase Realtime subscriptions...");
+    console.log("Setting up Supabase Realtime subscriptions using refs...");
 
-    const peopleChannel = db.channel(`public:${PEOPLE_TABLE}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
-        (payload) => handleDbChange(payload, PEOPLE_TABLE)
-      ).subscribe((status, err) => {
-        if (!isMounted) return;
-        if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${PEOPLE_TABLE}`);
-        else console.log(`Subscription status for ${PEOPLE_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          handleSubscriptionError(PEOPLE_TABLE, status, err);
-        }
-      });
+    if (!peopleChannelRef.current) {
+        peopleChannelRef.current = db.channel(`public:${PEOPLE_TABLE}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: PEOPLE_TABLE },
+            (payload) => handleDbChange(payload, PEOPLE_TABLE)
+        ).subscribe((status, err) => {
+            if (!isMounted) return;
+            if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${PEOPLE_TABLE}`);
+            else console.log(`Subscription status for ${PEOPLE_TABLE}: ${status}`);
+            if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            handleSubscriptionError(PEOPLE_TABLE, status, err);
+            }
+        });
+    } else {
+         console.log(`${PEOPLE_TABLE} channel ref already exists. Status: ${peopleChannelRef.current.state}`);
+    }
 
-    const expensesChannel = db.channel(`public:${EXPENSES_TABLE}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE },
-        (payload) => handleDbChange(payload, EXPENSES_TABLE)
-      ).subscribe((status, err) => {
-        if (!isMounted) return;
-        if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${EXPENSES_TABLE}`);
-        else console.log(`Subscription status for ${EXPENSES_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          handleSubscriptionError(EXPENSES_TABLE, status, err);
-        }
-      });
+    if (!expensesChannelRef.current) {
+        expensesChannelRef.current = db.channel(`public:${EXPENSES_TABLE}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: EXPENSES_TABLE },
+            (payload) => handleDbChange(payload, EXPENSES_TABLE)
+        ).subscribe((status, err) => {
+            if (!isMounted) return;
+            if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${EXPENSES_TABLE}`);
+            else console.log(`Subscription status for ${EXPENSES_TABLE}: ${status}`);
+            if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            handleSubscriptionError(EXPENSES_TABLE, status, err);
+            }
+        });
+    } else {
+        console.log(`${EXPENSES_TABLE} channel ref already exists. Status: ${expensesChannelRef.current.state}`);
+    }
 
-    const categoriesChannel = db.channel(`public:${CATEGORIES_TABLE}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: CATEGORIES_TABLE },
-        (payload) => handleDbChange(payload, CATEGORIES_TABLE)
-      ).subscribe((status, err) => {
-        if (!isMounted) return;
-        if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${CATEGORIES_TABLE}`);
-        else console.log(`Subscription status for ${CATEGORIES_TABLE}: ${status}`);
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          handleSubscriptionError(CATEGORIES_TABLE, status, err);
-        }
-      });
-
+    if (!categoriesChannelRef.current) {
+        categoriesChannelRef.current = db.channel(`public:${CATEGORIES_TABLE}`)
+        .on('postgres_changes', { event: '*', schema: 'public', table: CATEGORIES_TABLE },
+            (payload) => handleDbChange(payload, CATEGORIES_TABLE)
+        ).subscribe((status, err) => {
+            if (!isMounted) return;
+            if (status === 'SUBSCRIBED') console.log(`Subscribed successfully to ${CATEGORIES_TABLE}`);
+            else console.log(`Subscription status for ${CATEGORIES_TABLE}: ${status}`);
+            if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            handleSubscriptionError(CATEGORIES_TABLE, status, err);
+            }
+        });
+    } else {
+        console.log(`${CATEGORIES_TABLE} channel ref already exists. Status: ${categoriesChannelRef.current.state}`);
+    }
 
     return () => {
       isMounted = false;
-      console.log("Cleaning up Supabase Realtime subscriptions...");
-      if (db) {
-        const channelsToRemove = [peopleChannel, expensesChannel, categoriesChannel].filter(Boolean);
-        if (channelsToRemove.length > 0) {
-            console.log(`Removing ${channelsToRemove.length} specifically tracked Supabase channel(s).`);
-            channelsToRemove.forEach(channel => {
-                if (channel) { // Ensure channel object exists
-                    db.removeChannel(channel)
-                        .then(status => console.log(`Tracked channel ${channel.topic} removed with status: ${status}`))
-                        .catch(err => console.warn(`Error removing tracked channel ${channel.topic}:`, err?.message || err));
-                }
-            });
-        }
-        
-        const allClientChannels = db.getChannels();
-        if (allClientChannels.length > 0) {
-            console.log(`Performing broader cleanup of ${allClientChannels.length} Supabase client channel(s).`);
-            allClientChannels.forEach(channel => {
-                db.removeChannel(channel)
-                    .then(status => console.log(`Channel ${channel.topic} removed during broad cleanup with status: ${status}`))
-                    .catch(e => console.warn(`Error during broad cleanup of channel ${channel.topic}:`, e?.message || e));
-            });
-        } else {
-            console.log("No active Supabase client channels found during broad cleanup check.");
-        }
+      console.log("Cleaning up Supabase Realtime subscriptions (useEffect cleanup)...");
+      if (db && typeof db.removeAllChannels === 'function') {
+        console.log("Calling db.removeAllChannels()...");
+        db.removeAllChannels()
+          .then(statuses => {
+            console.log("removeAllChannels() completed. Statuses:", statuses);
+            if (statuses.some(s => s !== 'ok')) {
+              console.warn("Some channels did not close cleanly during removeAllChannels:", statuses);
+            }
+          })
+          .catch(err => {
+            console.error("Error during db.removeAllChannels():", err?.message || err);
+          })
+          .finally(() => {
+            peopleChannelRef.current = null;
+            expensesChannelRef.current = null;
+            categoriesChannelRef.current = null;
+            console.log("Channel refs nullified after removeAllChannels.");
+          });
+      } else {
+        console.warn("Supabase client (db) or removeAllChannels not available during cleanup. Manual ref nullification.");
+        peopleChannelRef.current = null;
+        expensesChannelRef.current = null;
+        categoriesChannelRef.current = null;
       }
     };
   }, [db, currentUser, supabaseInitializationError, isDataFetchedAtLeastOnce, userRole, fetchAllData]);
@@ -630,13 +643,7 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <g strokeWidth="1.5">
-                <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fillRule="evenodd" clipRule="evenodd"></path>
-                <path d="M6.001 16.999a5.5 5.5 0 0 1 9.365-4.034 5.5 5.5 0 0 1-1.166 8.033A5.482 5.482 0 0 1 12 20.999a5.482 5.482 0 0 1-2.599-0.698A5.501 5.501 0 0 1 6 17m6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path>
-                <path d="M17.999 16.999a5.5 5.5 0 0 0-9.365-4.034 5.5 5.5 0 0 0 1.166 8.033A5.482 5.482 0 0 0 12 20.999a5.482 5.482 0 0 0 2.599-0.698A5.501 5.501 0 0 0 18 17m-6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path>
-            </g>
-          </svg>
+          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g strokeWidth="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fillRule="evenodd" clipRule="evenodd"></path><path d="M6.001 16.999a5.5 5.5 0 0 1 9.365-4.034 5.5 5.5 0 0 1-1.166 8.033A5.482 5.482 0 0 1 12 20.999a5.482 5.482 0 0 1-2.599-0.698A5.501 5.501 0 0 1 6 17m6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path><path d="M17.999 16.999a5.5 5.5 0 0 0-9.365-4.034 5.5 5.5 0 0 0 1.166 8.033A5.482 5.482 0 0 0 12 20.999a5.482 5.482 0 0 0 2.599-0.698A5.501 5.501 0 0 0 18 17m-6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path></g></svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
@@ -1165,3 +1172,4 @@ function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCateg
     </Dialog>
   );
 }
+
