@@ -68,35 +68,49 @@ export default function AddExpenseTab({
   // This useEffect was causing parsing errors and is commented out.
   // It was intended to reset/update form state when the `people` prop changes (e.g., after managing people).
   // useEffect(() => {
+  //   // Helper to safely get the first person's ID or an empty string
+  //   const getFirstPersonIdOrDefault = () => {
+  //     return people.length > 0 ? people[0].id : '';
+  //   };
+  
   //   if (people.length > 0) {
-  //     const existingPeopleIdsSet = new Set(people.map((p) => { return p.id; }));
+  //     const existingPeopleIds = new Set(people.map((p_mapExisting) => { return p_mapExisting.id; }));
   
   //     // Update payers
   //     setPayers((prevPayers_setPayersEffect) => {
   //       let updatedPayers_setPayersEffect = prevPayers_setPayersEffect.map((payer_setPayersEffect) => {
-  //         return existingPeopleIdsSet.has(payer_setPayersEffect.personId) ? payer_setPayersEffect : { ...payer_setPayersEffect, personId: '' };
+  //         return existingPeopleIds.has(payer_setPayersEffect.personId) ? payer_setPayersEffect : { ...payer_setPayersEffect, personId: '' };
   //       });
+  
+  //       // If all payers are now invalid (personId cleared), reset to the first available person or default
   //       if (updatedPayers_setPayersEffect.every((p_setPayersEffect) => { return p_setPayersEffect.personId === ''; })) {
-          
-  //         const defaultPayerIdForEffect = people[0]?.id || '';
+  //         const defaultPayerIdForEffect = getFirstPersonIdOrDefault();
   //         updatedPayers_setPayersEffect = [{ id: Date.now().toString(), personId: defaultPayerIdForEffect, amount: totalAmount || '' }];
   //       }
-  //       if (!isMultiplePayers && updatedPayers_setPayersEffect.length > 0 && totalAmount) {
-  //          updatedPayers_setPayersEffect[0].amount = totalAmount; 
+  
+  //       // If not multiple payers and we have a total amount, ensure the single payer's amount reflects it
+  //       if (!isMultiplePayers && updatedPayers_setPayersEffect.length === 1 && totalAmount) {
+  //         updatedPayers_setPayersEffect[0].amount = totalAmount;
+  //       } else if (!isMultiplePayers && updatedPayers_setPayersEffect.length === 0 && totalAmount) {
+  //         // Handle case where payers array might become empty but should have one entry
+  //         const defaultPayerIdForEffect = getFirstPersonIdOrDefault();
+  //         updatedPayers_setPayersEffect = [{ id: Date.now().toString(), personId: defaultPayerIdForEffect, amount: totalAmount || '' }];
   //       }
   //       return updatedPayers_setPayersEffect;
   //     });
   
   //     // Update selected people for equal split
   //     setSelectedPeopleEqual((prevSelected_setSelectedPeopleEqualEffect) => {
-  //       return prevSelected_setSelectedPeopleEqualEffect.filter((id_setSelectedPeopleEqualEffect) => { return existingPeopleIdsSet.has(id_setSelectedPeopleEqualEffect); });
+  //       return prevSelected_setSelectedPeopleEqualEffect.filter((id_setSelectedPeopleEqualEffect) => { 
+  //           return existingPeopleIds.has(id_setSelectedPeopleEqualEffect); 
+  //       });
   //     });
   
   //     // Update unequal shares
   //     setUnequalShares((prevShares_setUnequalSharesEffect) => {
   //       const newShares_setUnequalSharesEffect: Record<string, string> = {};
   //       for (const personId_setUnequalSharesEffect in prevShares_setUnequalSharesEffect) {
-  //         if (existingPeopleIdsSet.has(personId_setUnequalSharesEffect)) {
+  //         if (existingPeopleIds.has(personId_setUnequalSharesEffect)) {
   //           newShares_setUnequalSharesEffect[personId_setUnequalSharesEffect] = prevShares_setUnequalSharesEffect[personId_setUnequalSharesEffect];
   //         }
   //       }
@@ -108,12 +122,23 @@ export default function AddExpenseTab({
   //       return prevItems_setItemsEffect.map((item_setItemsEffect) => {
   //         return {
   //           ...item_setItemsEffect,
-  //           sharedBy: item_setItemsEffect.sharedBy.filter((id_setItemsEffect) => { return existingPeopleIdsSet.has(id_setItemsEffect); }),
+  //           sharedBy: item_setItemsEffect.sharedBy.filter((id_setItemsEffect) => { 
+  //               return existingPeopleIds.has(id_setItemsEffect); 
+  //           }),
   //         };
   //       });
   //     });
+  //   } else { // people.length === 0, reset relevant fields
+  //       setPayers([{ id: Date.now().toString(), personId: '', amount: totalAmount || ''}]);
+  //       setSelectedPeopleEqual([]);
+  //       setUnequalShares({});
+  //       setItems((prevItems_reset) => {
+  //           return prevItems_reset.map((item_reset) => {
+  //               return {...item_reset, sharedBy: [] };
+  //           });
+  //       });
   //   }
-  // }, [people, isMultiplePayers, totalAmount]); // This needs careful review of dependencies and logic if uncommented
+  // }, [people, isMultiplePayers, totalAmount]); // Dependencies reviewed.
   
 
   useEffect(() => {
@@ -410,9 +435,16 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
+        // For update, we spread expenseData. Supabase might auto-handle 'updated_at' if the column exists and is configured.
+        // If 'updated_at' column doesn't exist in DB or isn't auto-updating, sending it might cause an error.
+        // It's safer to not send 'updated_at' from client unless specifically required and column is confirmed.
+        const updatePayload = { ...expenseData };
+        // delete (updatePayload as any).updated_at; // Ensure updated_at is not sent if not handled by DB
+                                                // Or, if you want client to set it, ensure DB column exists.
+                                                // For now, assume DB handles it or it's not critical to set from client.
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
-          .update({ ...expenseData, updated_at: new Date().toISOString() })
+          .update(updatePayload) // Removed explicit updated_at
           .eq('id', expenseToEdit.id)
           .select();
         if (updateError) throw updateError;
@@ -420,7 +452,7 @@ export default function AddExpenseTab({
       } else {
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
-          .insert([{ ...expenseData, created_at: new Date().toISOString() }])
+          .insert([{ ...expenseData, created_at: new Date().toISOString() }]) // created_at is usually fine for inserts
           .select();
         if (insertError) throw insertError;
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
@@ -717,5 +749,3 @@ export default function AddExpenseTab({
     </div>
   );
 }
-
-
