@@ -63,7 +63,6 @@ import {
   CATEGORIES_TABLE,
   CHART_COLORS,
   formatCurrency,
-  formatCurrencyForAxis,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS
@@ -346,7 +345,6 @@ export default function SettleEasePage() {
       const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
       if (iconDetail) return iconDetail.IconComponent;
     }
-    // Final fallback to a generic icon if no match found
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
     return settingsIcon ? settingsIcon.IconComponent : Settings2;
   }, [categories]);
@@ -402,7 +400,7 @@ export default function SettleEasePage() {
             {activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
           </main>
           <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
-            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Made by Gagan Gupta</p>
           </footer>
         </div>
       </SidebarInset>
@@ -485,7 +483,7 @@ function AppActualSidebar({ activeView, setActiveView }: AppActualSidebarProps) 
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <p className="text-xs text-sidebar-foreground/70">Version 1.0.0</p>
+        <p className="text-xs text-sidebar-foreground/70">Version 1.1.0</p>
       </SidebarFooter>
     </Sidebar>
   );
@@ -640,13 +638,12 @@ function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCateg
                   margin={{
                     top: 5,
                     right: 10,
-                    left: 0, // Removed left margin as Y-axis is gone
+                    left: 0,
                     bottom: 20
                   }}
                 >
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                   <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  {/* YAxis component removed */}
                   <RechartsTooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
                     contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
