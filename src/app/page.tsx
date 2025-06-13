@@ -111,7 +111,7 @@ export default function SettleEasePage() {
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
-    if (!db || !userId) return 'user';
+    if (!db || !userId) return 'user'; // Default to 'user' if no db or userId, though this path should ideally not be hit if currentUser is set.
     setIsLoadingRole(true);
     try {
       const { data, error } = await db
@@ -126,12 +126,31 @@ export default function SettleEasePage() {
           return 'user';
         }
         // For other errors, including potentially RLS or network issues if `error` is an empty object or has a different code:
-        console.error(`Error fetching user role (userId: ${userId}):`, error, `Defaulting to 'user' role. This might indicate a network issue or RLS misconfiguration on the user_profiles table (ensure authenticated users can SELECT their own profile).`);
+        let errorDetails = '';
+        try {
+          errorDetails = JSON.stringify(error);
+        } catch (e) {
+          errorDetails = 'Error object could not be stringified.';
+        }
+        console.error(
+          `Error fetching user role (userId: ${userId}): Details: ${errorDetails}. Raw error object:`, error,
+          `Defaulting to 'user' role. This strongly suggests an RLS misconfiguration on the '${USER_PROFILES_TABLE}' table. ` +
+          `Ensure a RLS policy exists and is enabled, like: "CREATE POLICY \\"Users can view their own profile\\" ON public.user_profiles FOR SELECT TO authenticated USING (auth.uid() = user_id);"`
+        );
         return 'user';
       }
       return data?.role as UserRole || 'user';
     } catch (e: any) {
-      console.error(`Catch: Unhandled exception while fetching user role (userId: ${userId}):`, e, "Defaulting to 'user' role.");
+      let exceptionDetails = '';
+      try {
+        exceptionDetails = JSON.stringify(e);
+      } catch (stringifyError) {
+        exceptionDetails = 'Exception object could not be stringified.';
+      }
+      console.error(
+        `Catch: Unhandled exception while fetching user role (userId: ${userId}): Details: ${exceptionDetails}. Raw exception:`, e,
+        "Defaulting to 'user' role."
+      );
       return 'user';
     } finally {
       setIsLoadingRole(false);
@@ -558,11 +577,7 @@ function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUser
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-            <g strokeWidth="1.5">
-              <path d="M20.5 10 L20.5 7.5 C20.5 6.67157 19.8284 6 19 6 L17.75 6 M17.75 6 L17.75 4.5 C17.75 3.67157 17.0784 3 16.25 3 L7.75 3 C6.92157 3 6.25 3.67157 6.25 4.5 L6.25 6 M17.75 6 L6.25 6 M6.25 6 L5 6 C4.17157 6 3.5 6.67157 3.5 7.5 L3.5 10 M20.5 10 L3.5 10 M20.5 10 L20.5 12 C20.5 12.5523 20.0523 13 19.5 13 L16.5 13 C15.9477 13 15.5 13.4477 15.5 14 L15.5 16.5 C15.5 17.0523 15.0523 17.5 14.5 17.5 L9.5 17.5 C8.94772 17.5 8.5 17.0523 8.5 16.5 L8.5 14 C8.5 13.4477 8.05228 13 7.5 13 L4.5 13 C3.94772 13 3.5 12.5523 3.5 12 L3.5 10 M12 17.5 L12 21 M9.5 21 L14.5 21" stroke="currentColor" fill="none" strokeLinecap="round" strokeLinejoin="round"></path>
-            </g>
-          </svg>
+          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g strokeWidth="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fillRule="evenodd" clipRule="evenodd"></path><path d="M6.001 16.999a5.5 5.5 0 0 1 9.365-4.034 5.5 5.5 0 0 1-1.166 8.033A5.482 5.482 0 0 1 12 20.999a5.482 5.482 0 0 1-2.599-0.698A5.501 5.501 0 0 1 6 17m6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path><path d="M17.999 16.999a5.5 5.5 0 0 0-9.365-4.034 5.5 5.5 0 0 0 1.166 8.033A5.482 5.482 0 0 0 12 20.999a5.482 5.482 0 0 0 2.599-0.698A5.501 5.501 0 0 0 18 17m-6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path></g></svg>
           <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
         </div>
       </SidebarHeader>
