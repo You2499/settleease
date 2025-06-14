@@ -101,10 +101,8 @@ export default function SettleEasePage() {
         }
         
         if (isLoadingAuth && !session && !currentUser) {
-            // If still loading, and no session & no current user from previous state, it's safe to say loading is done for now.
-            // onAuthStateChange will provide the definitive state.
-            console.log("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false.");
-           // setIsLoadingAuth(false); // Deferred to onAuthStateChange or if no initial user
+            console.log("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false (fallback, onAuthStateChange preferred).");
+            setIsLoadingAuth(false); 
         }
       }
     }).catch(err => {
@@ -139,8 +137,7 @@ export default function SettleEasePage() {
           }
         }
         
-        // This is a crucial point to set isLoadingAuth to false.
-        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false.");
+        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false (primary point).");
         setIsLoadingAuth(false);
       } else {
         console.log("Auth effect: onAuthStateChange - Component unmounted, ignoring event.");
@@ -152,7 +149,7 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [db, supabaseInitializationError]); // Removed currentUser and isLoadingAuth to prevent potential loops with its own state setting. Re-evaluating based on db/init error is primary.
+  }, [db, supabaseInitializationError, currentUser, isLoadingAuth]);
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
@@ -371,7 +368,7 @@ export default function SettleEasePage() {
       console.log("User/Role/Data effect: Cleanup. isMounted=false.");
       isMounted = false;
     };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); // activeView removed to prevent re-triggering data fetches on view change if role check fails
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); 
 
 
   useEffect(() => {
@@ -433,8 +430,8 @@ export default function SettleEasePage() {
         console.error(`${baseMessage}: Status: ${status}`, error);
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe: ${error.message || 'Unknown error'}. Status: ${status}.`, variant: "destructive", duration: 10000 });
       } else {
+        // Only console log if there's no specific error object; do not toast for user.
         console.error(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
-        toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe to ${tableName}. Please check Supabase RLS and Replication settings. Status: ${status}.`, variant: "destructive", duration: 10000 });
       }
     };
 
@@ -508,7 +505,7 @@ export default function SettleEasePage() {
         db.removeAllChannels()
           .then(statuses => {
             console.log("Realtime: removeAllChannels() completed. Statuses:", statuses);
-            if (statuses.some(s => s !== 'ok' && s !== 'closed' && s !== 'timed out')) { // 'timed out' can happen if connection is already gone
+            if (statuses.some(s => s !== 'ok' && s !== 'closed' && s !== 'timed out')) { 
               console.warn("Realtime: Some channels might not have closed cleanly during removeAllChannels:", statuses);
             }
           })
@@ -669,3 +666,4 @@ export default function SettleEasePage() {
     </SidebarProvider>
   );
 }
+
