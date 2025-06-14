@@ -377,7 +377,7 @@ export default function SettleEasePage() {
       console.log("User/Role/Data effect: Cleanup. isMounted=false.");
       isMounted = false;
     };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]); 
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); 
 
 
   useEffect(() => {
