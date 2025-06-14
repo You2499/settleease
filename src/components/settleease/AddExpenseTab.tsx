@@ -58,7 +58,6 @@ export default function AddExpenseTab({
   const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   
   const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
 
@@ -317,7 +316,6 @@ export default function AddExpenseTab({
   };
 
   const validateForm = useCallback(() => {
-    setFormError(null);
     if (!description.trim()) return "Description cannot be empty.";
     const amountNum = parseFloat(totalAmount);
     if (isNaN(amountNum) || amountNum <= 0) return "Total amount must be a positive number.";
@@ -358,7 +356,6 @@ export default function AddExpenseTab({
   const handleSubmitExpense = async () => {
     const error = validateForm();
     if (error) {
-      setFormError(error);
       toast({ title: "Validation Error", description: error, variant: "destructive" });
       return;
     }
@@ -374,7 +371,6 @@ export default function AddExpenseTab({
         .map(p => ({ personId: p.personId, amount: parseFloat(p.amount) }));
 
     if (finalPayers.length === 0 && parseFloat(totalAmount) > 0) {
-        setFormError("At least one valid payer with a positive amount is required if total amount is positive.");
         toast({ title: "Validation Error", description: "At least one valid payer with a positive amount is required.", variant: "destructive" });
         setIsLoading(false);
         return;
@@ -468,7 +464,6 @@ export default function AddExpenseTab({
       }
       console.error("Error saving expense:", errorMessage, error);
       toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
-      setFormError(`Could not save expense: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -519,16 +514,6 @@ export default function AddExpenseTab({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {formError && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm">
-              <div className="flex items-center">
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                <strong>Error:</strong>
-              </div>
-              <p className="ml-6">{formError}</p>
-            </div>
-          )}
-
           <div className="space-y-3">
             <div>
               <Label htmlFor="description">Description</Label>
