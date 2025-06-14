@@ -122,8 +122,8 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         </CardHeader>
         <CardContent>
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-20rem)] pr-2"> 
-              <ul className="space-y-3">
+            <ScrollArea className="h-[calc(100vh-20rem)]"> 
+              <ul className="space-y-3 pr-4"> {/* Added pr-4 here */}
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
@@ -190,3 +190,4 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     </div>
   );
 }
+
