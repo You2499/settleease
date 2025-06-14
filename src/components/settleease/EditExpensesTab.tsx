@@ -134,7 +134,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
                   return (
                     <li key={expense.id}>
-                      <div className="bg-card/80 p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
+                      <div className="bg-card/80 p-4 rounded-lg border shadow-sm">
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
                           <span className="text-lg font-bold text-primary whitespace-nowrap">{formatCurrency(Number(expense.total_amount))}</span>
