@@ -50,8 +50,15 @@ interface AppSidebarProps {
 }
 
 export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppSidebarProps) {
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
+
+  const handleNavigation = (view: ActiveView) => {
+    setActiveView(view);
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
@@ -65,7 +72,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => setActiveView('dashboard')}
+              onClick={() => handleNavigation('dashboard')}
               isActive={activeView === 'dashboard'}
               tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
               className="justify-start"
@@ -76,7 +83,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
           </SidebarMenuItem>
            <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => setActiveView('analytics')}
+              onClick={() => handleNavigation('analytics')}
               isActive={activeView === 'analytics'}
               tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
               className="justify-start"
@@ -89,7 +96,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             <>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => setActiveView('addExpense')}
+                  onClick={() => handleNavigation('addExpense')}
                   isActive={activeView === 'addExpense'}
                   tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                   className="justify-start"
@@ -100,7 +107,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => setActiveView('editExpenses')}
+                  onClick={() => handleNavigation('editExpenses')}
                   isActive={activeView === 'editExpenses'}
                   tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                   className="justify-start"
@@ -111,7 +118,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => setActiveView('managePeople')}
+                  onClick={() => handleNavigation('managePeople')}
                   isActive={activeView === 'managePeople'}
                   tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                   className="justify-start"
@@ -122,7 +129,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => setActiveView('manageCategories')}
+                  onClick={() => handleNavigation('manageCategories')}
                   isActive={activeView === 'manageCategories'}
                   tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                   className="justify-start"
@@ -133,7 +140,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => setActiveView('manageSettlements')}
+                  onClick={() => handleNavigation('manageSettlements')}
                   isActive={activeView === 'manageSettlements'}
                   tooltip={{ content: "Manage Settlements", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                   className="justify-start"
