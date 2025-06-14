@@ -135,7 +135,7 @@ export default function PerPersonSettlementDetails({
                 <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}-${type}`}>
                   <Card className="bg-card/50 p-2.5 shadow-sm">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <div className="flex-grow text-xs sm:text-sm">
+                      <div className="flex-grow text-sm">
                         {type === 'debt' ? (
                           <>
                             Owes <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
@@ -145,7 +145,7 @@ export default function PerPersonSettlementDetails({
                             <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span> owes you
                           </>
                         )}
-                        <span className="block sm:inline sm:ml-1.5 text-primary font-semibold">{formatCurrency(txn.amount)}</span>
+                        <span className="ml-1.5 text-primary font-semibold text-sm">{formatCurrency(txn.amount)}</span>
                       </div>
                       <div className="flex space-x-1.5 w-full sm:w-auto mt-1 sm:mt-0">
                         <Button 
@@ -201,8 +201,8 @@ export default function PerPersonSettlementDetails({
                     <ScrollArea className="h-auto max-h-60"><ul className="space-y-2 pr-2 py-1">
                         {personDebtsPairwise.map((txn, i) => (
                             <li key={`pairwise-debt-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs">Owes <strong className="text-foreground">{peopleMap[txn.to]}</strong>: {formatCurrency(txn.amount)}</span>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span>Owes <strong className="text-foreground">{peopleMap[txn.to]}</strong>: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
                                     <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1" onClick={() => handleViewRelevantExpenses(txn, 'debt')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
                                 </div>
                             </Card></li>
@@ -219,8 +219,8 @@ export default function PerPersonSettlementDetails({
                      <ScrollArea className="h-auto max-h-60"><ul className="space-y-2 pr-2 py-1">
                         {personCreditsPairwise.map((txn, i) => (
                             <li key={`pairwise-credit-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs"><strong className="text-foreground">{peopleMap[txn.from]}</strong> owes you: {formatCurrency(txn.amount)}</span>
+                                <div className="flex items-center justify-between text-sm">
+                                    <span><strong className="text-foreground">{peopleMap[txn.from]}</strong> owes you: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
                                     <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1" onClick={() => handleViewRelevantExpenses(txn, 'credit')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
                                 </div>
                             </Card></li>
@@ -245,7 +245,7 @@ export default function PerPersonSettlementDetails({
                     <li key={payment.id}>
                       <Card className="bg-card/50 p-2.5 shadow-sm">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-xs sm:text-sm">
+                          <div className="flex-grow text-sm">
                             {payment.debtor_id === selectedPerson.id ? (
                               <>
                                 You paid <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
@@ -255,8 +255,8 @@ export default function PerPersonSettlementDetails({
                                 <span className="font-medium text-foreground">{peopleMap[payment.debtor_id] || 'Unknown'}</span> paid you
                               </>
                             )}
-                            <span className="block sm:inline sm:ml-1.5 text-green-600 font-semibold">{formatCurrency(payment.amount_settled)}</span>
-                            <span className="block text-muted-foreground text-[10px] sm:text-xs">
+                            <span className="ml-1.5 text-green-600 font-semibold text-sm">{formatCurrency(payment.amount_settled)}</span>
+                            <span className="block text-muted-foreground text-xs">
                                 On: {new Date(payment.settled_at).toLocaleDateString()}
                             </span>
                           </div>
@@ -298,3 +298,4 @@ export default function PerPersonSettlementDetails({
     </Card>
   );
 }
+
