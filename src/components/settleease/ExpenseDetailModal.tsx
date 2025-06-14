@@ -7,14 +7,14 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as ShadDialogDescription,
+  DialogDescription as ShadDialogDescription, // Renamed to avoid conflict
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Scroll } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
 
@@ -79,7 +79,12 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       return null;
     }
     
-    const reductionFactor = (totalOriginalBill > 0.001 && amountEffectivelySplit >= 0) ? (amountEffectivelySplit / totalOriginalBill) : (totalOriginalBill === 0 && amountEffectivelySplit === 0 ? 1 : 0) ;
+    const sumOfOriginalItemPrices = expense.items.reduce((sum, item) => sum + Number(item.price), 0);
+
+    const reductionFactor = (sumOfOriginalItemPrices > 0.001 && amountEffectivelySplit >= 0) 
+        ? (amountEffectivelySplit / sumOfOriginalItemPrices) 
+        : (sumOfOriginalItemPrices === 0 && amountEffectivelySplit === 0 ? 1 : 0);
+
 
     const aggregatedData: PersonAggregatedItemShares = {};
 
@@ -109,13 +114,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       }
     });
     return aggregatedData;
-  }, [expense.split_method, expense.items, totalOriginalBill, amountEffectivelySplit]);
+  }, [expense.split_method, expense.items, amountEffectivelySplit]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader className="pb-4 border-b -mx-6 px-6 pt-0">
-          <DialogTitle className="text-2xl text-primary flex items-center pt-6">
+      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="pb-4 border-b px-6 pt-6">
+          <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2.5 h-6 w-6" /> Expense Details
           </DialogTitle>
           <ShadDialogDescription className="sr-only">
@@ -124,7 +129,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
-          <div className="py-4 space-y-6">
+          <div className="py-4 px-0 space-y-4"> 
             
             <Card>
               <CardHeader className="pb-3 pt-4">
@@ -320,16 +325,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
                       const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
                       const personCelebrationAmount = isCelebrationContributor ? Number(expense.celebration_contribution!.amount) : 0;
-                      
-                      let effectiveAmountPaidForDisplay = amountPhysicallyPaidByThisPerson;
-                      let paymentLabel = "Physically Paid:";
-                      
-                      if (isCelebrationContributor) {
-                        effectiveAmountPaidForDisplay = amountPhysicallyPaidByThisPerson + personCelebrationAmount;
-                        paymentLabel = "Net Paid (incl. Celebration):";
-                      }
-                      
-                      const netEffectForThisPerson = (amountPhysicallyPaidByThisPerson + personCelebrationAmount) - shareOfSplitAmountForThisPerson;
+                                          
+                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
 
                       return (
                         <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
@@ -348,20 +345,15 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                           </div>
                           
                           <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>{paymentLabel}</span> 
-                              <span>{formatCurrency(effectiveAmountPaidForDisplay)}</span>
+                              <span>Physically Paid:</span> 
+                              <span>{formatCurrency(amountPhysicallyPaidByThisPerson)}</span>
                           </div>
-                          {isCelebrationContributor && amountPhysicallyPaidByThisPerson > 0 && personCelebrationAmount > 0 && (
-                             <p className="text-xs text-muted-foreground/80 pl-2">(Physically paid {formatCurrency(amountPhysicallyPaidByThisPerson)} + Contributed {formatCurrency(personCelebrationAmount)})</p>
-                          )}
-                           {isCelebrationContributor && amountPhysicallyPaidByThisPerson === 0 && personCelebrationAmount > 0 && (
-                             <p className="text-xs text-muted-foreground/80 pl-2">(Contributed {formatCurrency(personCelebrationAmount)})</p>
-                          )}
-
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
                           </div>
-                           {isCelebrationContributor && <p className="text-xs text-muted-foreground/80 italic pl-1">*You contributed {formatCurrency(personCelebrationAmount)} towards this bill.*</p>}
+                           {isCelebrationContributor && personCelebrationAmount > 0 && (
+                             <p className="text-xs text-muted-foreground/80 italic pl-1">*You contributed {formatCurrency(personCelebrationAmount)} towards this bill.*</p>
+                           )}
                         </li>
                       );
                     })}
@@ -375,9 +367,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t -mx-6 px-6 pb-0">
+        <DialogFooter className="pt-4 border-t px-6 pb-6">
           <DialogClose asChild>
-            <Button type="button" variant="outline" className="mb-6">Close</Button>
+            <Button type="button" variant="outline">Close</Button>
           </DialogClose>
         </DialogFooter>
       </DialogContent>
