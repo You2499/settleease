@@ -98,7 +98,6 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
         let involvedInTransactions = false;
         let involvementReason = "";
 
-        // Check involvement in settlement_payments as debtor
         const { count: settlementDebtorCount, error: settlementDebtorError } = await db
             .from(SETTLEMENT_PAYMENTS_TABLE)
             .select('id', { count: 'exact', head: true })
@@ -110,7 +109,6 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
             involvementReason = `${personToDelete.name} is a debtor in ${settlementDebtorCount} recorded settlement(s).`;
         }
 
-        // Check involvement in settlement_payments as creditor
         if (!involvedInTransactions) {
             const { count: settlementCreditorCount, error: settlementCreditorError } = await db
                 .from(SETTLEMENT_PAYMENTS_TABLE)
@@ -124,11 +122,10 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
             }
         }
 
-        // Check involvement in expenses
         if (!involvedInTransactions) {
             const { data: allExpenses, error: fetchExpensesError } = await db
                 .from(EXPENSES_TABLE)
-                .select('paid_by, shares, description'); // Fetch description for better error message
+                .select('paid_by, shares'); 
 
             if (fetchExpensesError) {
                 throw new Error(`Fetching expenses for check: ${fetchExpensesError.message}`);
@@ -136,15 +133,13 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
 
             if (allExpenses) {
                 for (const expense of allExpenses) {
-                    if (Array.isArray(expense.paid_by) && expense.paid_by.some(p => p.personId === personToDelete.id)) {
+                    const isPayer = Array.isArray(expense.paid_by) && expense.paid_by.some(p => p.personId === personToDelete.id);
+                    const isSharer = Array.isArray(expense.shares) && expense.shares.some(s => s.personId === personToDelete.id);
+
+                    if (isPayer || isSharer) {
                         involvedInTransactions = true;
-                        involvementReason = `${personToDelete.name} paid for the expense "${expense.description}".`;
-                        break;
-                    }
-                    if (!involvedInTransactions && Array.isArray(expense.shares) && expense.shares.some(s => s.personId === personToDelete.id)) {
-                        involvedInTransactions = true;
-                        involvementReason = `${personToDelete.name} shared in the expense "${expense.description}".`;
-                        break;
+                        involvementReason = `${personToDelete.name} is involved in one or more expenses.`;
+                        break; 
                     }
                 }
             }
@@ -161,13 +156,11 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
             return;
         }
 
-        // If not involved, proceed with deletion
         const { error: deleteError } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
         if (deleteError) throw deleteError;
 
         toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
         if (editingPersonId === personToDelete.id) handleCancelEditPerson();
-        // No onActionComplete needed here, page.tsx realtime listener handles UI update for people list
 
     } catch (error: any) {
         console.error("Error during person deletion process:", error);
