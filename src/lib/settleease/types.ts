@@ -56,5 +56,16 @@ export interface UserProfile {
   updated_at?: string;
 }
 
+export interface SettlementPayment {
+  id: string; // Supabase ID
+  debtor_id: string; // FK to people.id
+  creditor_id: string; // FK to people.id
+  amount_settled: number;
+  settled_at: string; // ISO date string
+  marked_by_user_id: string; // FK to auth.users.id
+  notes?: string;
+}
+
+
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements';

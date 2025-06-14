@@ -22,6 +22,7 @@ import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
+import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 
@@ -30,12 +31,13 @@ import {
   PEOPLE_TABLE,
   CATEGORIES_TABLE,
   USER_PROFILES_TABLE,
+  SETTLEMENT_PAYMENTS_TABLE,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS,
 } from '@/lib/settleease';
 
-import type { Person, Expense, Category, UserRole, ActiveView } from '@/lib/settleease';
+import type { Person, Expense, Category, UserRole, ActiveView, SettlementPayment } from '@/lib/settleease';
 
 
 let db: SupabaseClient | undefined;
@@ -64,6 +66,7 @@ export default function SettleEasePage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [settlementPayments, setSettlementPayments] = useState<SettlementPayment[]>([]);
 
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingRole, setIsLoadingRole] = useState(false);
@@ -73,6 +76,7 @@ export default function SettleEasePage() {
   const peopleChannelRef = useRef<RealtimeChannel | null>(null);
   const expensesChannelRef = useRef<RealtimeChannel | null>(null);
   const categoriesChannelRef = useRef<RealtimeChannel | null>(null);
+  const settlementPaymentsChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     console.log("Auth effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser);
@@ -124,6 +128,7 @@ export default function SettleEasePage() {
           setPeople([]);
           setExpenses([]);
           setCategories([]);
+          setSettlementPayments([]);
           setUserRole(null);
           setActiveView('dashboard');
           setIsDataFetchedAtLeastOnce(false);
@@ -206,6 +211,7 @@ export default function SettleEasePage() {
     let peopleErrorOccurred = false;
     let expensesErrorOccurred = false;
     let categoriesErrorOccurred = false;
+    let settlementPaymentsErrorOccurred = false;
 
     try {
       const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
@@ -251,11 +257,27 @@ export default function SettleEasePage() {
       toast({ title: "Data Error", description: `Unexpected error fetching categories.`, variant: "destructive" });
       categoriesErrorOccurred = true;
     }
+    
+    try {
+      const { data: settlementPaymentsData, error: settlementPaymentsError } = await db.from(SETTLEMENT_PAYMENTS_TABLE).select('*').order('settled_at', { ascending: false });
+      if (settlementPaymentsError) {
+        console.error("Error fetching settlement payments:", settlementPaymentsError);
+        toast({ title: "Data Error", description: `Could not fetch settlement payments: ${settlementPaymentsError.message}`, variant: "destructive" });
+        settlementPaymentsErrorOccurred = true;
+      } else {
+        setSettlementPayments(settlementPaymentsData as SettlementPayment[]);
+      }
+    } catch (error) {
+      console.error("Catch: Error fetching settlement payments:", error);
+      toast({ title: "Data Error", description: `Unexpected error fetching settlement_payments.`, variant: "destructive" });
+      settlementPaymentsErrorOccurred = true;
+    }
 
-    if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred) {
+
+    if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred) {
         setIsDataFetchedAtLeastOnce(true);
     }
-    if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
+    if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred)) {
      setIsLoadingData(false);
     }
   }, [currentUser, supabaseInitializationError]);
@@ -353,6 +375,7 @@ export default function SettleEasePage() {
       setPeople([]);
       setExpenses([]);
       setCategories([]);
+      setSettlementPayments([]);
       setUserRole(null);
       setIsLoadingRole(false);
       setIsDataFetchedAtLeastOnce(false);
@@ -381,6 +404,7 @@ export default function SettleEasePage() {
               peopleChannelRef.current = null;
               expensesChannelRef.current = null;
               categoriesChannelRef.current = null;
+              settlementPaymentsChannelRef.current = null;
               console.log("Realtime: Channel refs nullified (init error path).");
             }
           });
@@ -388,6 +412,7 @@ export default function SettleEasePage() {
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
+        settlementPaymentsChannelRef.current = null;
         console.log("Realtime: Channel refs nullified (db client was null).");
       }
       return;
@@ -395,11 +420,12 @@ export default function SettleEasePage() {
 
     if (!currentUser) {
       console.log("Realtime setup skipped: No authenticated user.");
-      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current) {
+      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current || settlementPaymentsChannelRef.current) {
         console.log("Realtime: User logged out. Ensuring local channel refs are cleared (should have been handled by prior cleanup).");
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
+        settlementPaymentsChannelRef.current = null;
       }
       return;
     }
@@ -505,6 +531,7 @@ export default function SettleEasePage() {
     setupChannel(peopleChannelRef, PEOPLE_TABLE);
     setupChannel(expensesChannelRef, EXPENSES_TABLE);
     setupChannel(categoriesChannelRef, CATEGORIES_TABLE);
+    setupChannel(settlementPaymentsChannelRef, SETTLEMENT_PAYMENTS_TABLE);
 
     return () => {
       isMounted = false;
@@ -529,12 +556,14 @@ export default function SettleEasePage() {
             peopleChannelRef.current = null;
             expensesChannelRef.current = null;
             categoriesChannelRef.current = null;
+            settlementPaymentsChannelRef.current = null;
           });
       } else {
         console.warn("Realtime: Supabase client (db) or removeAllChannels not available during cleanup. Manually nullifying refs.");
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
+        settlementPaymentsChannelRef.current = null;
       }
     };
   }, [db, currentUser, supabaseInitializationError, isDataFetchedAtLeastOnce, userRole, fetchAllData]);
@@ -568,6 +597,7 @@ export default function SettleEasePage() {
       case 'editExpenses': return userRole === 'admin' ? 'Edit Expenses' : 'Dashboard';
       case 'managePeople': return userRole === 'admin' ? 'Manage People' : 'Dashboard';
       case 'manageCategories': return userRole === 'admin' ? 'Manage Categories' : 'Dashboard';
+      case 'manageSettlements': return userRole === 'admin' ? 'Manage Settlements' : 'Dashboard';
       default: return 'SettleEase';
     }
   };
@@ -661,16 +691,25 @@ export default function SettleEasePage() {
             {isLoadingData && isDataFetchedAtLeastOnce && (
                 <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
             )}
-            {activeView === 'dashboard' && <DashboardView expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
+            {activeView === 'dashboard' && <DashboardView expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} settlementPayments={settlementPayments} />}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
             {userRole === 'admin' && activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
+            {userRole === 'admin' && activeView === 'manageSettlements' && (
+              <ManageSettlementsTab
+                expenses={expenses}
+                people={people}
+                peopleMap={peopleMap}
+                settlementPayments={settlementPayments}
+                db={db}
+                currentUserId={currentUser.id}
+                onActionComplete={() => fetchAllData(false)}
+              />
+            )}
           </main>
-          {/* Footer removed from here */}
         </div>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-

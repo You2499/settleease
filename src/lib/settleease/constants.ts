@@ -1,11 +1,12 @@
 
-import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins } from 'lucide-react';
+import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins, Handshake } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const PEOPLE_TABLE = 'people';
 export const EXPENSES_TABLE = 'expenses';
 export const CATEGORIES_TABLE = 'categories';
 export const USER_PROFILES_TABLE = 'user_profiles';
+export const SETTLEMENT_PAYMENTS_TABLE = 'settlement_payments';
 
 export const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co";
 export const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og";
@@ -26,7 +27,7 @@ export const AVAILABLE_CATEGORY_ICONS: AvailableCategoryIcon[] = [
   { iconKey: 'Car', IconComponent: Car, label: 'Car (Transport/Auto)' },
   { iconKey: 'Plane', IconComponent: Plane, label: 'Plane (Travel/Flights)' },
   { iconKey: 'ShoppingCart', IconComponent: ShoppingCart, label: 'Shopping Cart (General Shopping)' },
-  { iconKey: 'Package', IconComponent: Package, label: 'Package (Gifts/Online Orders)' },
+  { iconKey: 'Package', IconComponent: Package, label: 'Gifts/Online Orders)' },
   { iconKey: 'PartyPopper', IconComponent: PartyPopper, label: 'Party Popper (Entertainment/Events)' },
   { iconKey: 'Film', IconComponent: Film, label: 'Film (Movies/Cinema)' },
   { iconKey: 'Music', IconComponent: Music, label: 'Music (Concerts/Streaming)' },
@@ -45,6 +46,7 @@ export const AVAILABLE_CATEGORY_ICONS: AvailableCategoryIcon[] = [
   { iconKey: 'Sprout', IconComponent: Sprout, label: 'Sprout (Gardening/Nature)' },
   { iconKey: 'Smile', IconComponent: Smile, label: 'Personal Care/Wellbeing)' },
   { iconKey: 'Coins', IconComponent: Coins, label: 'Coins (Savings/Investments)' },
+  { iconKey: 'Handshake', IconComponent: Handshake, label: 'Handshake (Settlements)'},
   { iconKey: 'Settings2', IconComponent: Settings2, label: 'Settings (Miscellaneous/Other)' },
 ];
 

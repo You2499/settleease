@@ -3,7 +3,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -98,6 +98,17 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                   <span className="group-data-[state=collapsed]:hidden">Manage Categories</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => setActiveView('manageSettlements')}
+                  isActive={activeView === 'manageSettlements'}
+                  tooltip={{ content: "Manage Settlements", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <Handshake />
+                  <span className="group-data-[state=collapsed]:hidden">Manage Settlements</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </>
           )}
         </SidebarMenu>
@@ -125,4 +136,3 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
     </Sidebar>
   );
 }
-
