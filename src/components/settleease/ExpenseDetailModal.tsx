@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper } from 'lucide-react';
+import { Info, User, PartyPopper, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail } from '@/lib/settleease/types';
 
@@ -28,16 +28,17 @@ interface ExpenseDetailModalProps {
 
 interface PersonItemShare {
   itemName: string;
-  itemPrice: number;
+  itemPrice: number; // Original item price
+  adjustedItemPriceForSplit: number; // Item price after celebration reduction
   sharedByCount: number;
-  shareForPerson: number;
+  shareForPerson: number; // This person's share of the adjustedItemPriceForSplit
   itemId: string;
 }
 
 interface PersonAggregatedShares {
   [personId: string]: {
     items: PersonItemShare[];
-    totalShare: number; // This is their share of the amount *after* celebration contribution
+    totalShare: number; 
   };
 }
 
@@ -62,16 +63,21 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
 
   const personCentricItemDetails = useMemo(() => {
-    if (expense.split_method !== 'itemwise' || !expense.items || expense.items.length === 0) {
+    if (expense.split_method !== 'itemwise' || !Array.isArray(expense.items) || expense.items.length === 0) {
       return null;
     }
-
+    
     const aggregatedData: PersonAggregatedShares = {};
+    const totalOriginalBill = Number(expense.total_amount);
+    const celebrationAmount = expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0;
+    const amountActuallySplit = Math.max(0, totalOriginalBill - celebrationAmount);
+    const reductionFactor = (totalOriginalBill > 0.001) ? (amountActuallySplit / totalOriginalBill) : 0;
 
     expense.items.forEach((item: ExpenseItemDetail) => {
       if (item.sharedBy && item.sharedBy.length > 0) {
-        const itemPriceNumeric = Number(item.price);
-        const sharePerPersonForItem = itemPriceNumeric / item.sharedBy.length;
+        const originalItemPrice = Number(item.price);
+        const adjustedItemPriceForSplit = originalItemPrice * reductionFactor;
+        const sharePerPersonForItem = adjustedItemPriceForSplit / item.sharedBy.length;
 
         item.sharedBy.forEach((personId: string) => {
           if (!aggregatedData[personId]) {
@@ -80,7 +86,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           aggregatedData[personId].items.push({
             itemId: item.id || `item-${Math.random()}`, 
             itemName: item.name,
-            itemPrice: itemPriceNumeric,
+            itemPrice: originalItemPrice,
+            adjustedItemPriceForSplit: adjustedItemPriceForSplit,
             sharedByCount: item.sharedBy.length,
             shareForPerson: sharePerPersonForItem,
           });
@@ -89,13 +96,19 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       }
     });
     return aggregatedData;
-  }, [expense.split_method, expense.items]);
+  }, [expense.split_method, expense.items, expense.total_amount, expense.celebration_contribution]);
+
+  const amountBeingItemizedAfterCelebration = useMemo(() => {
+     const totalOriginalBill = Number(expense.total_amount);
+     const celebrationAmount = expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0;
+     return Math.max(0, totalOriginalBill - celebrationAmount);
+  }, [expense.total_amount, expense.celebration_contribution]);
 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="pr-6"> {/* Added pr-6 to prevent overlap with close button */}
+        <DialogHeader className="pr-6"> 
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2 h-6 w-6" /> Expense Details
           </DialogTitle>
@@ -105,8 +118,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         </DialogHeader>
 
         <div className="flex-grow min-h-0 overflow-y-auto px-4 py-4 md:grid md:grid-cols-2 md:gap-x-6 md:overflow-visible">
-          {/* Left Pane (Summary & Celebration) - Scrollable independently on mobile if needed */}
-          <div className="space-y-4 md:overflow-y-auto md:max-h-[calc(80vh-100px)] md:pr-3 custom-scrollbar"> {/* Custom scrollbar for md+ */}
+          <div className="space-y-4 md:overflow-y-auto md:max-h-[calc(80vh-100px)] md:pr-3 custom-scrollbar"> 
             <Card>
               <CardHeader className="pb-2 pt-3">
                 <CardTitle className="text-lg">Summary</CardTitle>
@@ -133,7 +145,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 </div>
                  {expense.celebration_contribution && (
                     <div className="flex justify-between text-xs">
-                        <span>Amount Split:</span>
+                        <span>Amount Split (after celebration):</span>
                         <span className="font-medium">{formatCurrency(Number(expense.total_amount) - expense.celebration_contribution.amount)}</span>
                     </div>
                   )}
@@ -165,8 +177,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             )}
           </div>
 
-          {/* Right Pane (Breakdowns) - Scrollable independently */}
-          <div className="space-y-4 mt-4 md:mt-0 md:overflow-y-auto md:max-h-[calc(80vh-100px)] md:pl-3 custom-scrollbar"> {/* Custom scrollbar for md+ */}
+          <div className="space-y-4 mt-4 md:mt-0 md:overflow-y-auto md:max-h-[calc(80vh-100px)] md:pl-3 custom-scrollbar"> 
              <Separator className="md:hidden"/>
             <Card>
               <CardHeader className="pb-2 pt-3">
@@ -180,19 +191,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const personName = peopleMap[personId] || 'Unknown Person';
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
                       const amountPhysicallyPaid = paymentRecord ? Number(paymentRecord.amount) : 0;
-
-                      const actualCelebrationContributionByThisPerson = (expense.celebration_contribution && expense.celebration_contribution.personId === personId)
-                        ? expense.celebration_contribution.amount
-                        : 0;
-                      
-                      const effectiveAmountPaidByPerson = amountPhysicallyPaid + actualCelebrationContributionByThisPerson;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
-                      const shareOfSplitAmount = shareRecord ? Number(shareRecord.amount) : 0;
+                      const shareOfSplitAmount = shareRecord ? Number(shareRecord.amount) : 0; // This share is already calculated based on amountAfterCelebration
 
-                      const netForThisExpense = effectiveAmountPaidByPerson - shareOfSplitAmount;
+                      const netForThisExpense = amountPhysicallyPaid - shareOfSplitAmount;
 
-                      const paidLabel = actualCelebrationContributionByThisPerson > 0 ? "Net Paid (incl. Celebration):" : "Physically Paid:";
+                      const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
+                      const personCelebrationAmount = isCelebrationContributor ? expense.celebration_contribution!.amount : 0;
 
                       return (
                         <li key={personId} className="p-2.5 bg-secondary/30 rounded-md space-y-0.5">
@@ -207,10 +213,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                   `Settled`}
                             </span>
                           </div>
+                          {isCelebrationContributor && (
+                            <p className="text-xs text-amber-700 dark:text-amber-500 italic">
+                              * You contributed {formatCurrency(personCelebrationAmount)} towards this expense.
+                            </p>
+                          )}
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{paidLabel}</span> <span>{formatCurrency(effectiveAmountPaidByPerson)}</span>
+                            <span>Physically Paid:</span> <span>{formatCurrency(amountPhysicallyPaid)}</span>
                           </div>
-                          {/* The celebration contribution line item is removed if actualCelebrationContributionByThisPerson > 0 because it's now part of "Net Paid" */}
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmount)}</span>
                           </div>
@@ -230,7 +240,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 <Card>
                   <CardHeader className="pb-2 pt-3">
                     <CardTitle className="text-lg">Item-wise Breakdown (Per Person)</CardTitle>
-                     <CardDescription>Shares based on items from the amount of {formatCurrency(expense.total_amount - (expense.celebration_contribution?.amount || 0))}.</CardDescription>
+                     <CardDescription>
+                        Details how each person's share of the <strong>{formatCurrency(amountBeingItemizedAfterCelebration)}</strong> (after any celebration contributions) is composed from individual items.
+                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {Object.entries(personCentricItemDetails).map(([personId, details]) => (
@@ -253,9 +265,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                   {formatCurrency(itemShare.shareForPerson)}
                                   {itemShare.sharedByCount > 1 && (
                                      <span className="ml-1 text-gray-400 text-[10px]">
-                                        (of {formatCurrency(itemShare.itemPrice)} / {itemShare.sharedByCount})
+                                        (of {formatCurrency(itemShare.adjustedItemPriceForSplit)} / {itemShare.sharedByCount})
                                      </span>
                                   )}
+                                   { Math.abs(itemShare.adjustedItemPriceForSplit - itemShare.itemPrice) > 0.01 && (
+                                      <span className="ml-1 text-gray-400 text-[10px]" title={`Original item price: ${formatCurrency(itemShare.itemPrice)}`}>
+                                        (orig. {formatCurrency(itemShare.itemPrice)})
+                                      </span>
+                                    )}
                                 </span>
                               </li>
                             ))}
@@ -265,6 +282,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                         )}
                       </Card>
                     ))}
+                     {Math.abs(amountBeingItemizedAfterCelebration - Number(expense.total_amount)) > 0.01 && (
+                        <div className="mt-2 text-xs text-muted-foreground italic">
+                          <AlertCircle className="inline h-3 w-3 mr-1" />
+                          Original item prices are proportionally reduced by the celebration contribution before splitting.
+                          The item breakdown reflects shares of this reduced amount.
+                        </div>
+                      )}
                   </CardContent>
                 </Card>
               </>
@@ -294,7 +318,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t mt-auto"> {/* Ensure footer is at the bottom */}
+        <DialogFooter className="pt-4 border-t mt-auto"> 
           <DialogClose asChild>
             <Button type="button" variant="outline">Close</Button>
           </DialogClose>

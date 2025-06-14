@@ -156,7 +156,7 @@ export default function AddExpenseTab({
         setItems(expenseToEdit.items.map(item => ({
           id: item.id || Date.now().toString() + Math.random(),
           name: item.name,
-          price: item.price.toString(),
+          price: item.price.toString(), // Original prices stored here
           sharedBy: item.sharedBy || []
         })));
       } else {
@@ -345,7 +345,7 @@ export default function AddExpenseTab({
         toast({ title: "Validation Error", description: "Payer amount must be positive.", variant: "destructive" }); return false;
     }
 
-    const currentAmountToSplit = amountToSplit; // Use the memoized value
+    const currentAmountToSplit = amountToSplit; 
 
     if (splitMethod === 'equal' && selectedPeopleEqual.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one person must be selected for equal split if there's an amount to split.", variant: "destructive" }); return false; }
     if (splitMethod === 'unequal') {
@@ -358,8 +358,20 @@ export default function AddExpenseTab({
       if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0) && currentAmountToSplit > 0.001) {
         toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
       }
-      const sumItems = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
-      if (Math.abs(sumItems - currentAmountToSplit) > 0.001) { toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItems)}) must equal amount to split (${formatCurrency(currentAmountToSplit)}).`, variant: "destructive" }); return false; }
+      const sumItemsOriginalPrices = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
+      // For itemwise, the sum of *original* item prices must match the *original* total amount if no celebration,
+      // OR the sum of *original* item prices must match the *original* total amount, and the split logic handles the celebration.
+      // The amountToSplit is what will be distributed. The item prices on the form are original.
+      // Let's ensure sum of item prices (original) isn't wildly off from original total amount.
+      // The actual test will be that shares sum to amountToSplit.
+      // The user is inputting original item prices that should conceptually sum to totalAmount.
+      // The current validation `sumItems - currentAmountToSplit` should be `sumItemsOriginalPrices - originalTotalAmountNum`
+      // If celebration, then the sum of *adjusted* item prices should equal currentAmountToSplit.
+      // This is handled internally.
+      if (Math.abs(sumItemsOriginalPrices - originalTotalAmountNum) > 0.001) {
+        toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItemsOriginalPrices)}) must equal the total bill amount (${formatCurrency(originalTotalAmountNum)}) before celebration contributions.`, variant: "destructive" }); return false;
+      }
+
     }
     return true;
   }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers, isCelebrationMode, celebrationPayerId, actualCelebrationAmount, amountToSplit]);
@@ -387,14 +399,11 @@ export default function AddExpenseTab({
     }
     
     let celebrationContributionPayload: CelebrationContribution | null = null;
-    let finalAmountEffectivelySplit = amountToSplit; 
-
-    if (isCelebrationMode && celebrationPayerId && actualCelebrationAmount > 0 && actualCelebrationAmount <= originalTotalAmountNum) {
+    if (isCelebrationMode && celebrationPayerId && actualCelebrationAmount > 0) {
         celebrationContributionPayload = { personId: celebrationPayerId, amount: actualCelebrationAmount };
-    } else {
-        finalAmountEffectivelySplit = originalTotalAmountNum;
     }
-
+    
+    const finalAmountEffectivelySplit = amountToSplit; // This is originalTotalAmountNum - actualCelebrationAmount
 
     let calculatedShares: { personId: string; amount: number; }[] = [];
     let expenseItemsPayload: ExpenseItemDetail[] | null = null;
@@ -409,68 +418,56 @@ export default function AddExpenseTab({
         .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
+      // Items payload stores original prices
       expenseItemsPayload = items.map(item => ({
         id: item.id, 
         name: item.name,
-        price: parseFloat(item.price as string),
+        price: parseFloat(item.price as string), // Store original price
         sharedBy: item.sharedBy
       }));
+
       const itemwiseSharesMap: Record<string, number> = {};
+      // Calculate reduction factor based on original total amount and amount to split
+      const reductionFactor = (originalTotalAmountNum > 0.001) ? (finalAmountEffectivelySplit / originalTotalAmountNum) : 0;
+
       items.forEach(item => {
-        const itemPrice = parseFloat(item.price as string);
+        const originalItemPrice = parseFloat(item.price as string);
+        const adjustedItemPriceToSplit = originalItemPrice * reductionFactor;
+
         if (item.sharedBy.length > 0) {
-            const pricePerPerson = itemPrice / item.sharedBy.length;
+            const pricePerPersonForItem = adjustedItemPriceToSplit / item.sharedBy.length;
             item.sharedBy.forEach(personId => {
-            itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPerson;
+            itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPersonForItem;
             });
         }
       });
-      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount }));
+      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount: Math.max(0, amount) })); // Ensure non-negative shares
     }
 
     try {
-      if (expenseToEdit && expenseToEdit.id) {
-        const baseUpdatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'celebration_contribution'>> & { items: ExpenseItemDetail[] | null } = {
-          description,
-          total_amount: originalTotalAmountNum,
-          category,
-          paid_by: finalPayers,
-          split_method: splitMethod,
-          shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItemsPayload : null,
-        };
+      const commonPayload = {
+        description,
+        total_amount: originalTotalAmountNum, // Store original total amount
+        category,
+        paid_by: finalPayers,
+        split_method: splitMethod,
+        shares: calculatedShares, // These shares sum up to finalAmountEffectivelySplit
+        items: splitMethod === 'itemwise' ? expenseItemsPayload : null, // Store original item details
+        celebration_contribution: celebrationContributionPayload,
+      };
 
-        const updatePayload = {
-            ...baseUpdatePayload,
-            ...(celebrationContributionPayload && { celebration_contribution: celebrationContributionPayload }),
-            ...(!celebrationContributionPayload && { celebration_contribution: null }), // Explicitly set to null if not active
-        };
-        
+      if (expenseToEdit && expenseToEdit.id) {
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
-          .update(updatePayload) 
+          .update({ ...commonPayload, updated_at: new Date().toISOString() }) 
           .eq('id', expenseToEdit.id)
           .select();
         if (updateError) throw updateError;
         toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
       } else {
-        const baseInsertPayload: Omit<Expense, 'id' | 'created_at' | 'updated_at' | 'celebration_contribution'> = {
-          description,
-          total_amount: originalTotalAmountNum,
-          category,
-          paid_by: finalPayers,
-          split_method: splitMethod,
-          shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItemsPayload : undefined,
-        };
-        const insertPayload = {
-            ...baseInsertPayload,
-            created_at: new Date().toISOString(),
-            ...(celebrationContributionPayload && { celebration_contribution: celebrationContributionPayload }),
-        };
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
-          .insert([insertPayload]) 
+          .insert([{ ...commonPayload, created_at: new Date().toISOString() }]) 
           .select();
         if (insertError) throw insertError;
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
