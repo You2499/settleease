@@ -115,9 +115,8 @@
   .toast-progress-bar {
     position: absolute;
     bottom: 0;
-    left: 0;
-    right: 0; /* Ensures it spans full width of parent */
-    /* width: 100%; Removed in favor of left:0, right:0 */
+    left: -1rem; /* Offset to counteract parent's p-4 padding-left */
+    width: 100%; /* This is 100% of the parent's padding-box width, correctly spanning the visual area */
     height: 4px;
     background-color: hsl(var(--primary)); /* Default for non-destructive toasts */
     /* animation property will be set via inline style in JS in Toast.tsx */
