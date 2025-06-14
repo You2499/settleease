@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { PlusCircle, Trash2, Pencil, Save, Ban, Users } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import type { Person } from '@/lib/settleease'; // Assuming types are here
-import { PEOPLE_TABLE } from '@/lib/settleease'; // Assuming constants are here
+import type { Person } from '@/lib/settleease';
+import { PEOPLE_TABLE, EXPENSES_TABLE, SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease';
 
 interface ManagePeopleTabProps {
   people: Person[];
@@ -88,69 +88,95 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
   };
 
   const handleExecuteRemovePerson = async () => {
-    if (!personToDelete) return;
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot remove person: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
-      setPersonToDelete(null);
-      return;
-    }
-    try {
-      // Check if person is involved in any expenses (as payer or in shares)
-      // This is a simplified check; more robust checks might be needed depending on data integrity requirements
-      const { data: expensePayers, error: payersError } = await db
-        .from('expenses')
-        .select('id, paid_by')
-        .contains('paid_by', JSON.stringify([{ personId: personToDelete.id }])); // Simplified, might need to check more accurately if JSON structure varies
-
-      if (payersError) {
-        console.error("Error checking payers:", payersError);
-        // Decide if you want to block deletion or just warn
-      }
-
-      const { data: expenseShares, error: sharesError } = await db
-        .from('expenses')
-        .select('id, shares')
-        .contains('shares', JSON.stringify([{ personId: personToDelete.id }])); // Simplified
-
-      if (sharesError) {
-        console.error("Error checking shares:", sharesError);
-      }
-      
-      let involvedInExpenses = false;
-      if (expensePayers && expensePayers.length > 0) involvedInExpenses = true;
-      if (!involvedInExpenses && expenseShares) {
-          for (const exp of expenseShares) {
-              if (Array.isArray(exp.shares) && exp.shares.some(s => s.personId === personToDelete.id)) {
-                  involvedInExpenses = true;
-                  break;
-              }
-          }
-      }
-
-
-      if (involvedInExpenses) {
-        toast({
-          title: "Deletion Blocked",
-          description: `${personToDelete.name} is involved in existing expenses and cannot be removed. Please edit or remove those expenses first.`,
-          variant: "destructive",
-          duration: 7000,
-        });
-        setPersonToDelete(null);
+    if (!personToDelete || !db || supabaseInitializationError) {
+        toast({ title: "Error", description: `Cannot remove person: System error. ${supabaseInitializationError || ''}`, variant: "destructive" });
+        if (personToDelete) setPersonToDelete(null);
         return;
-      }
+    }
 
+    try {
+        let involvedInTransactions = false;
+        let involvementReason = "";
 
-      const { error: deleteError } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
-      if (deleteError) throw deleteError;
+        // Check involvement in settlement_payments as debtor
+        const { count: settlementDebtorCount, error: settlementDebtorError } = await db
+            .from(SETTLEMENT_PAYMENTS_TABLE)
+            .select('id', { count: 'exact', head: true })
+            .eq('debtor_id', personToDelete.id);
 
-      toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
-      if (editingPersonId === personToDelete.id) handleCancelEditPerson();
+        if (settlementDebtorError) throw new Error(`Checking debtor settlements: ${settlementDebtorError.message}`);
+        if (settlementDebtorCount && settlementDebtorCount > 0) {
+            involvedInTransactions = true;
+            involvementReason = `${personToDelete.name} is a debtor in ${settlementDebtorCount} recorded settlement(s).`;
+        }
+
+        // Check involvement in settlement_payments as creditor
+        if (!involvedInTransactions) {
+            const { count: settlementCreditorCount, error: settlementCreditorError } = await db
+                .from(SETTLEMENT_PAYMENTS_TABLE)
+                .select('id', { count: 'exact', head: true })
+                .eq('creditor_id', personToDelete.id);
+
+            if (settlementCreditorError) throw new Error(`Checking creditor settlements: ${settlementCreditorError.message}`);
+            if (settlementCreditorCount && settlementCreditorCount > 0) {
+                involvedInTransactions = true;
+                involvementReason = `${personToDelete.name} is a creditor in ${settlementCreditorCount} recorded settlement(s).`;
+            }
+        }
+
+        // Check involvement in expenses
+        if (!involvedInTransactions) {
+            const { data: allExpenses, error: fetchExpensesError } = await db
+                .from(EXPENSES_TABLE)
+                .select('paid_by, shares, description'); // Fetch description for better error message
+
+            if (fetchExpensesError) {
+                throw new Error(`Fetching expenses for check: ${fetchExpensesError.message}`);
+            }
+
+            if (allExpenses) {
+                for (const expense of allExpenses) {
+                    if (Array.isArray(expense.paid_by) && expense.paid_by.some(p => p.personId === personToDelete.id)) {
+                        involvedInTransactions = true;
+                        involvementReason = `${personToDelete.name} paid for the expense "${expense.description}".`;
+                        break;
+                    }
+                    if (!involvedInTransactions && Array.isArray(expense.shares) && expense.shares.some(s => s.personId === personToDelete.id)) {
+                        involvedInTransactions = true;
+                        involvementReason = `${personToDelete.name} shared in the expense "${expense.description}".`;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (involvedInTransactions) {
+            toast({
+                title: "Deletion Blocked",
+                description: `${involvementReason} This person cannot be removed while involved in transactions. Please resolve or reassign these transactions first, or delete them.`,
+                variant: "destructive",
+                duration: 9000,
+            });
+            setPersonToDelete(null);
+            return;
+        }
+
+        // If not involved, proceed with deletion
+        const { error: deleteError } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
+        if (deleteError) throw deleteError;
+
+        toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
+        if (editingPersonId === personToDelete.id) handleCancelEditPerson();
+        // No onActionComplete needed here, page.tsx realtime listener handles UI update for people list
+
     } catch (error: any) {
-      toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" });
+        console.error("Error during person deletion process:", error);
+        toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" });
     } finally {
-      setPersonToDelete(null);
+        setPersonToDelete(null);
     }
   };
+
 
   return (
     <div className="space-y-6">
@@ -233,14 +259,15 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
-                This action will remove <strong>{personToDelete.name}</strong> from the group. This action cannot be undone.
-                Ensure this person is not involved in any expenses before removing.
+                This action will attempt to remove <strong>{personToDelete.name}</strong> from the group.
+                If this person is involved in any expenses or settlements, removal will be blocked.
+                This action cannot be undone if successful.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground">
-                Remove {personToDelete.name}
+              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Attempt to Remove {personToDelete.name}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -249,4 +276,3 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
     </div>
   );
 }
-
