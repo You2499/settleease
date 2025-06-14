@@ -116,7 +116,8 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    width: 100%; /* Needs a defined width for clip-path percentages to work correctly */
+    right: 0; /* Ensures it spans full width of parent */
+    /* width: 100%; Removed in favor of left:0, right:0 */
     height: 4px;
     background-color: hsl(var(--primary)); /* Default for non-destructive toasts */
     /* animation property will be set via inline style in JS in Toast.tsx */
