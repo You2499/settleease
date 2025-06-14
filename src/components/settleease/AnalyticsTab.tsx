@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
-import { CHART_COLORS } from '@/lib/settleease/constants';
+import { CHART_COLORS, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants'; // Added AVAILABLE_CATEGORY_ICONS
 import type {
   Expense, Person, Category as DynamicCategory,
   CategoryAnalyticsData, ParticipantAnalyticsData, ExpenseAmountDistributionData,
@@ -37,9 +37,11 @@ interface MonthlyExpenseData {
   totalAmount: number;
 }
 
+const UNCATEGORIZED = "Uncategorized";
+
 
 export default function AnalyticsTab({
-  expenses: allExpenses, // Renamed to avoid conflict with displayedExpenses
+  expenses: allExpenses,
   people,
   peopleMap,
   dynamicCategories,
@@ -82,16 +84,25 @@ export default function AnalyticsTab({
     });
 
     let mostExpensiveCatData: { name: string; totalAmount: number; } = { name: 'N/A', totalAmount: 0 };
-    if (dynamicCategories.length > 0 && displayedExpenses.length > 0) {
-        const categorySpending: Record<string, number> = {};
-        displayedExpenses.forEach(exp => {
-            categorySpending[exp.category] = (categorySpending[exp.category] || 0) + Number(exp.total_amount);
-        });
-        const sortedCategories = Object.entries(categorySpending).sort(([,a],[,b]) => b-a);
-        if (sortedCategories.length > 0) {
-            mostExpensiveCatData = { name: sortedCategories[0][0], totalAmount: sortedCategories[0][1] };
+    // This will be derived from detailedCategoryAnalytics later for accuracy with item-level cats
+    // For now, a simple placeholder, the real one will come from detailedCategoryAnalytics
+    const tempCategorySpending: Record<string, number> = {};
+    displayedExpenses.forEach(exp => {
+        if (exp.split_method === 'itemwise' && exp.items) {
+            exp.items.forEach(item => {
+                const cat = item.categoryName || exp.category || UNCATEGORIZED;
+                tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(item.price);
+            });
+        } else {
+            const cat = exp.category || UNCATEGORIZED;
+            tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(exp.total_amount);
         }
+    });
+    const sortedTempCategories = Object.entries(tempCategorySpending).sort(([,a],[,b]) => b-a);
+    if (sortedTempCategories.length > 0) {
+        mostExpensiveCatData = { name: sortedTempCategories[0][0], totalAmount: sortedTempCategories[0][1] };
     }
+
 
     let largestSingleExp: { description: string; amount: number; date: string } = { description: 'N/A', amount: 0, date: '' };
     if (expenseCount > 0) {
@@ -106,10 +117,10 @@ export default function AnalyticsTab({
     return {
       totalAmount, expenseCount, averageAmount, firstDate, lastDate,
       distinctParticipantCount: distinctParticipants.size,
-      mostExpensiveCategory: mostExpensiveCatData,
+      mostExpensiveCategory: mostExpensiveCatData, // This will be updated by detailedCategoryAnalytics if needed
       largestSingleExpense: largestSingleExp,
     };
-  }, [displayedExpenses, dynamicCategories]);
+  }, [displayedExpenses]);
 
   const monthlyExpenseData: MonthlyExpenseData[] = useMemo(() => {
     const data: Record<string, number> = {};
@@ -125,40 +136,102 @@ export default function AnalyticsTab({
   }, [displayedExpenses]);
 
   const detailedCategoryAnalytics: CategoryAnalyticsData[] = useMemo(() => {
-    const data: Record<string, { totalAmount: number; expenseCount: number; expensesInCategory: Expense[] }> = {};
+    const categoryDataMap: Record<string, {
+      totalAmount: number;
+      expenseIds: Set<string>;
+      potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>;
+      payerContributions: Record<string, number>;
+    }> = {};
+
+    // Initialize for all known dynamic categories and a general "Uncategorized"
+    dynamicCategories.forEach(cat => {
+      categoryDataMap[cat.name] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+    });
+    if (!categoryDataMap[UNCATEGORIZED]) {
+      categoryDataMap[UNCATEGORIZED] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+    }
+
     displayedExpenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized";
-      if (!data[categoryName]) {
-        data[categoryName] = { totalAmount: 0, expenseCount: 0, expensesInCategory: [] };
+      const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
+      const expenseTotalAmountNum = Number(exp.total_amount) || 0;
+
+      if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
+        exp.items.forEach(item => {
+          const itemPrice = Number(item.price) || 0;
+          if (itemPrice <= 0) return;
+
+          const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
+          if (!categoryDataMap[targetCategory]) { // Ensure category exists in map
+            categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+          }
+
+          categoryDataMap[targetCategory].totalAmount += itemPrice;
+          categoryDataMap[targetCategory].expenseIds.add(exp.id);
+          categoryDataMap[targetCategory].potentialMostExpensive.push({
+            type: 'item',
+            id: item.id, // item's own id
+            description: item.name,
+            amount: itemPrice,
+            date: expDate,
+            mainExpenseDescription: exp.description
+          });
+
+          if (expenseTotalAmountNum > 0) {
+            const itemProportionOfExpense = itemPrice / expenseTotalAmountNum;
+            exp.paid_by.forEach(payer => {
+              const payerAmount = Number(payer.amount) || 0;
+              const payerContributionToItem = itemProportionOfExpense * payerAmount;
+              categoryDataMap[targetCategory].payerContributions[payer.personId] =
+                (categoryDataMap[targetCategory].payerContributions[payer.personId] || 0) + payerContributionToItem;
+            });
+          }
+        });
+      } else { // Not itemwise or no items
+        if (expenseTotalAmountNum <= 0) return;
+
+        const targetCategory = exp.category || UNCATEGORIZED;
+        if (!categoryDataMap[targetCategory]) { // Ensure category exists in map
+          categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+        }
+
+        categoryDataMap[targetCategory].totalAmount += expenseTotalAmountNum;
+        categoryDataMap[targetCategory].expenseIds.add(exp.id);
+        categoryDataMap[targetCategory].potentialMostExpensive.push({
+          type: 'expense',
+          id: exp.id,
+          description: exp.description,
+          amount: expenseTotalAmountNum,
+          date: expDate
+        });
+        exp.paid_by.forEach(payer => {
+          const payerAmount = Number(payer.amount) || 0;
+          categoryDataMap[targetCategory].payerContributions[payer.personId] =
+            (categoryDataMap[targetCategory].payerContributions[payer.personId] || 0) + payerAmount;
+        });
       }
-      data[categoryName].totalAmount += Number(exp.total_amount);
-      data[categoryName].expenseCount += 1;
-      data[categoryName].expensesInCategory.push(exp);
     });
 
-    return Object.entries(data).map(([name, { totalAmount, expenseCount, expensesInCategory }]) => {
+    return Object.entries(categoryDataMap).map(([name, data]) => {
+      const { totalAmount, expenseIds, potentialMostExpensive, payerContributions } = data;
+      const expenseCount = expenseIds.size;
+
       let mostExpensiveItemData: { description: string; amount: number; date: string; } | null = null;
-      if (expensesInCategory.length > 0) {
-        const sortedItems = [...expensesInCategory].sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
+      if (potentialMostExpensive.length > 0) {
+        const sortedItems = [...potentialMostExpensive].sort((a, b) => b.amount - a.amount);
+        const topItem = sortedItems[0];
         mostExpensiveItemData = {
-          description: sortedItems[0].description,
-          amount: Number(sortedItems[0].total_amount),
-          date: new Date(sortedItems[0].created_at || Date.now()).toLocaleDateString()
+          description: topItem.type === 'item' ? `${topItem.description} (from "${topItem.mainExpenseDescription}")` : topItem.description,
+          amount: topItem.amount,
+          date: topItem.date
         };
       }
 
       let largestPayerData: { name: string; amount: number; } | null = null;
-      if (expensesInCategory.length > 0) {
-        const payerAmounts: Record<string, number> = {};
-        expensesInCategory.forEach(exp => {
-          exp.paid_by.forEach(p => {
-            payerAmounts[p.personId] = (payerAmounts[p.personId] || 0) + Number(p.amount);
-          });
-        });
-        const sortedPayers = Object.entries(payerAmounts)
-                                .map(([personId, amount]) => ({ name: peopleMap[personId] || 'Unknown', amount }))
-                                .sort((a, b) => b.amount - a.amount);
-        if (sortedPayers.length > 0) {
+      if (Object.keys(payerContributions).length > 0) {
+        const sortedPayers = Object.entries(payerContributions)
+          .map(([personId, amount]) => ({ name: peopleMap[personId] || 'Unknown', amount }))
+          .sort((a, b) => b.amount - a.amount);
+        if (sortedPayers.length > 0 && sortedPayers[0].amount > 0.001) {
           largestPayerData = sortedPayers[0];
         }
       }
@@ -167,13 +240,15 @@ export default function AnalyticsTab({
         name,
         totalAmount,
         expenseCount,
-        averageAmount: expenseCount > 0 ? totalAmount / expenseCount : 0,
+        averageAmount: expenseCount > 0 && totalAmount > 0 ? totalAmount / expenseCount : 0, // ensure totalAmount > 0 for avg
         Icon: getCategoryIconFromName(name),
         mostExpensiveItem: mostExpensiveItemData,
         largestPayer: largestPayerData,
       };
-    }).sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [displayedExpenses, getCategoryIconFromName, peopleMap]);
+    }).filter(cat => cat.totalAmount > 0.001 || dynamicCategories.some(dc => dc.name === cat.name))
+      .sort((a, b) => b.totalAmount - a.totalAmount);
+  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap]);
+
 
   const detailedParticipantAnalytics: ParticipantAnalyticsData[] = useMemo(() => {
     const peopleToAnalyze = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
@@ -187,7 +262,7 @@ export default function AnalyticsTab({
       let expensesSharedCount = 0;
       const categoryShares: Record<string, number> = {};
 
-      displayedExpenses.forEach(exp => { // Use displayedExpenses here
+      displayedExpenses.forEach(exp => {
         let personPaidThisExpense = false;
         if (Array.isArray(exp.paid_by)) {
           exp.paid_by.forEach(p => {
@@ -199,20 +274,52 @@ export default function AnalyticsTab({
         }
         if (personPaidThisExpense) expensesPaidCount++;
 
-        let personSharedThisExpense = false;
-        if (Array.isArray(exp.shares)) {
-          exp.shares.forEach(s => {
-            if (s.personId === person.id) {
-              totalShared += Number(s.amount);
-              personSharedThisExpense = true;
-              categoryShares[exp.category] = (categoryShares[exp.category] || 0) + Number(s.amount);
+        const personShareInExpense = exp.shares.find(s => s.personId === person.id);
+        if (personShareInExpense && Number(personShareInExpense.amount) > 0.001) {
+          const shareAmountForPersonInExpense = Number(personShareInExpense.amount);
+          totalShared += shareAmountForPersonInExpense;
+          expensesSharedCount++;
+
+          if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
+            let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
+            const itemsSharedByPersonDetailsThisExpense: Array<{ originalPrice: number; category: string }> = [];
+
+            exp.items.forEach(item => {
+              if (item.sharedBy.includes(person.id)) {
+                const originalItemPrice = Number(item.price) || 0;
+                sumOfOriginalPricesOfItemsSharedByPersonThisExpense += originalItemPrice;
+                itemsSharedByPersonDetailsThisExpense.push({
+                  originalPrice: originalItemPrice,
+                  category: item.categoryName || exp.category || UNCATEGORIZED,
+                });
+              }
+            });
+
+            if (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001) {
+              itemsSharedByPersonDetailsThisExpense.forEach(itemDetail => {
+                const proportionOfShare = itemDetail.originalPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense;
+                const amountForThisCategory = proportionOfShare * shareAmountForPersonInExpense;
+                categoryShares[itemDetail.category] = (categoryShares[itemDetail.category] || 0) + amountForThisCategory;
+              });
+            } else if (itemsSharedByPersonDetailsThisExpense.length > 0) {
+              // Fallback: if items have 0 price, distribute share equally or to main category
+              const fallbackCat = exp.category || itemsSharedByPersonDetailsThisExpense[0]?.category || UNCATEGORIZED;
+              categoryShares[fallbackCat] = (categoryShares[fallbackCat] || 0) + shareAmountForPersonInExpense;
+            } else {
+                 // If person has a share but not linked to specific items (edge case, should not happen with correct logic)
+                 const mainCat = exp.category || UNCATEGORIZED;
+                 categoryShares[mainCat] = (categoryShares[mainCat] || 0) + shareAmountForPersonInExpense;
             }
-          });
+          } else { // Not itemwise
+            const targetCategory = exp.category || UNCATEGORIZED;
+            categoryShares[targetCategory] = (categoryShares[targetCategory] || 0) + shareAmountForPersonInExpense;
+          }
         }
-        if (personSharedThisExpense) expensesSharedCount++;
       });
 
-      const sortedCategoryShares = Object.entries(categoryShares).sort(([, a], [, b]) => b - a);
+      const sortedCategoryShares = Object.entries(categoryShares)
+                                     .filter(([,amount]) => amount > 0.001)
+                                     .sort(([, a], [, b]) => b - a);
       const mostFreqCatShared = sortedCategoryShares.length > 0 ? { name: sortedCategoryShares[0][0], amount: sortedCategoryShares[0][1] } : null;
 
       return {
@@ -308,8 +415,15 @@ export default function AnalyticsTab({
       .slice(0, 10); // Top 10 expenses
   }, [displayedExpenses]);
 
+  const actualMostExpensiveCategoryFromAnalytics = useMemo(() => {
+    if (detailedCategoryAnalytics.length > 0) {
+      return { name: detailedCategoryAnalytics[0].name, totalAmount: detailedCategoryAnalytics[0].totalAmount };
+    }
+    return { name: 'N/A', totalAmount: 0 };
+  }, [detailedCategoryAnalytics]);
 
-  if (allExpenses.length === 0) { // Check allExpenses for initial empty state
+
+  if (allExpenses.length === 0) {
     return (
       <Card className="shadow-lg rounded-lg text-center py-10">
         <CardHeader>
@@ -330,8 +444,8 @@ export default function AnalyticsTab({
       <div className="space-y-6">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
-          if (value === 'group') setSelectedPersonIdForAnalytics(null); // Reset person if switching to group
-          else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id); // Select first person if switching to personal and none selected
+          if (value === 'group') setSelectedPersonIdForAnalytics(null);
+          else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm">
             <TabsTrigger value="group" className="flex items-center gap-2">
@@ -370,7 +484,6 @@ export default function AnalyticsTab({
                 </CardContent>
               </Card>
             )}
-            {/* Content for Personal Insights will be rendered below, filtered by selectedPersonIdForAnalytics */}
           </TabsContent>
         </Tabs>
 
@@ -388,7 +501,6 @@ export default function AnalyticsTab({
 
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
           <>
-            {/* Overall Stats - Enhanced */}
             <Card className="shadow-md rounded-lg">
               <CardHeader>
                 <CardTitle className="text-lg flex items-center"><Sigma className="mr-2 h-5 w-5 text-primary"/>
@@ -416,10 +528,10 @@ export default function AnalyticsTab({
                 )}
                 <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
                   <p className="text-xs text-muted-foreground">Top Category</p>
-                  <p className="text-base font-semibold truncate" title={enhancedOverallStats.mostExpensiveCategory.name}>
-                    {enhancedOverallStats.mostExpensiveCategory.name}
+                  <p className="text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
+                    {actualMostExpensiveCategoryFromAnalytics.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(enhancedOverallStats.mostExpensiveCategory.totalAmount)}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(actualMostExpensiveCategoryFromAnalytics.totalAmount)}</p>
                 </div>
                 <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
                   <p className="text-xs text-muted-foreground">Largest Expense</p>
@@ -437,7 +549,6 @@ export default function AnalyticsTab({
               </CardContent>
             </Card>
 
-            {/* Row for Time-based and Share vs Paid */}
             <div className="grid md:grid-cols-2 gap-6">
                 <Card className="shadow-md rounded-lg">
                 <CardHeader>
@@ -496,7 +607,6 @@ export default function AnalyticsTab({
                 </Card>
             </div>
 
-            {/* Row for Day of Week Spending and Split Method Distribution */}
             <div className="grid md:grid-cols-2 gap-6">
                 {spendingByDayOfWeekData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
@@ -539,7 +649,6 @@ export default function AnalyticsTab({
                 )}
             </div>
             
-            {/* Top N Expenses Overall */}
             {topExpensesData.length > 0 && (
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
@@ -576,7 +685,6 @@ export default function AnalyticsTab({
             </Card>
             )}
 
-            {/* Detailed Category Analytics Table */}
             <Card className="shadow-md rounded-lg">
             <CardHeader>
                 <CardTitle className="text-lg flex items-center"><SearchCheck className="mr-2 h-5 w-5 text-primary"/>Category Deep Dive</CardTitle>
@@ -615,7 +723,6 @@ export default function AnalyticsTab({
             </CardContent>
             </Card>
             
-            {/* Detailed Participant Analytics Table */}
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
                 <CardTitle className="text-lg flex items-center">
@@ -662,7 +769,6 @@ export default function AnalyticsTab({
                 </CardContent>
             </Card>
 
-            {/* Existing Charts (Category Pie / Expense Amount Dist.) */}
             <div className="grid md:grid-cols-2 gap-6">
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
@@ -708,6 +814,3 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
-
-
-    
