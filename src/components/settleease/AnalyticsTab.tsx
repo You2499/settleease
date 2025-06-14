@@ -597,7 +597,7 @@ export default function AnalyticsTab({
             <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <p className="text-sm sm:text-md text-muted-foreground">No expenses recorded yet to analyze.</p>
           <p className="text-xs sm:text-sm">Add some expenses to see detailed analytics here.</p>
         </CardContent>
@@ -613,7 +613,7 @@ export default function AnalyticsTab({
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm"> {/* Removed border */}
+          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm">
             <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
@@ -622,10 +622,10 @@ export default function AnalyticsTab({
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="group">
+          <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
           </TabsContent>
-          <TabsContent value="personal">
-            <Card className="mb-4 sm:mb-6 p-3 sm:p-4 shadow-md">
+          <TabsContent value="personal" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
+            <Card className="mb-4 sm:mb-6 px-3 py-2 sm:px-4 sm:py-3 shadow-md"> {/* Adjusted padding */}
               <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
                 Select Person for Detailed Insights:
               </Label>
@@ -644,7 +644,7 @@ export default function AnalyticsTab({
             </Card>
              {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
               <Card className="shadow-md rounded-lg text-center py-6">
-                <CardContent>
+                <CardContent className="pt-0">
                   <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
                 </CardContent>
               </Card>
@@ -654,7 +654,7 @@ export default function AnalyticsTab({
 
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
             <Card className="shadow-md rounded-lg text-center py-6">
-                <CardContent className="pt-6"> {/* Ensured pt-6 for content */}
+                <CardContent className="pt-0"> 
                 <p className="text-sm sm:text-md text-muted-foreground">
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 
                     `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :
@@ -667,45 +667,45 @@ export default function AnalyticsTab({
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
           <>
             <Card className="shadow-md rounded-lg">
-              <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+              <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center"><Sigma className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                   {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Snapshot` : 'Overall Snapshot'}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm p-4 sm:p-5 pt-3"> {/* Added pt-3 */}
-                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5"> {/* Added border and shadow-sm */}
+              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm px-4 sm:px-5 pb-4 sm:pb-5 pt-2">
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5">
                   <p className="text-xs text-muted-foreground">Total Spent {analyticsViewMode === 'personal' ? '(Your Share)' : '(Group Total)'}</p>
                   <p className="text-md sm:text-lg font-bold text-accent">{formatCurrency(enhancedOverallStats.totalAmount)}</p>
                 </div>
-                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5"> {/* Added border and shadow-sm */}
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5">
                   <p className="text-xs text-muted-foreground">Total Expenses {analyticsViewMode === 'personal' ? '(Involved In)' : ''}</p>
                   <p className="text-md sm:text-lg font-bold">{enhancedOverallStats.expenseCount}</p>
                 </div>
-                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5"> {/* Added border and shadow-sm */}
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5">
                   <p className="text-xs text-muted-foreground">Avg. Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-md sm:text-lg font-bold">{formatCurrency(enhancedOverallStats.averageAmount)}</p>
                 </div>
                 {analyticsViewMode === 'group' && (
-                  <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5"> {/* Added border and shadow-sm */}
+                  <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5">
                     <p className="text-xs text-muted-foreground">Participants</p>
                     <p className="text-md sm:text-lg font-bold">{enhancedOverallStats.distinctParticipantCount}</p>
                   </div>
                 )}
-                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}> {/* Added border and shadow-sm */}
+                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
                   <p className="text-xs text-muted-foreground">Top Category {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-sm sm:text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
                     {actualMostExpensiveCategoryFromAnalytics.name}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(actualMostExpensiveCategoryFromAnalytics.totalAmount)}</p>
                 </div>
-                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}> {/* Added border and shadow-sm */}
+                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
                    <p className="text-xs text-muted-foreground">Largest Single Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-sm sm:text-base font-semibold truncate" title={enhancedOverallStats.largestSingleExpense.description}>
                     {enhancedOverallStats.largestSingleExpense.description}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(enhancedOverallStats.largestSingleExpense.amount)} on {enhancedOverallStats.largestSingleExpense.date}</p>
                 </div>
-                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 col-span-2 md:col-span-3 space-y-0.5"> {/* Added border and shadow-sm */}
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 col-span-2 md:col-span-3 space-y-0.5">
                   <p className="text-xs text-muted-foreground">Date Range (of these expenses)</p>
                   <p className="text-xs sm:text-sm font-semibold">
                     {enhancedOverallStats.firstDate ? enhancedOverallStats.firstDate.toLocaleDateString() : 'N/A'} - {enhancedOverallStats.lastDate ? enhancedOverallStats.lastDate.toLocaleDateString() : 'N/A'}
@@ -716,13 +716,13 @@ export default function AnalyticsTab({
 
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="shadow-md rounded-lg">
-                <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                     <CardTitle className="text-md sm:text-lg flex items-center">
                         <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                         {analyticsViewMode === 'personal' ? 'Your Spending Over Time (Monthly)' : 'Group Expenses Over Time (Monthly)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                     <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyExpenseData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -736,13 +736,13 @@ export default function AnalyticsTab({
                 </CardContent>
                 </Card>
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                    <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                         <CardTitle className="text-md sm:text-lg flex items-center">
                         <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
                         Share vs. Paid {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `(For ${peopleMap[selectedPersonIdForAnalytics]})` : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                         {shareVsPaidData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
@@ -778,13 +778,13 @@ export default function AnalyticsTab({
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 {spendingByDayOfWeekData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                    <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                         <CardTitle className="text-md sm:text-lg flex items-center">
                             <CalendarClock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                             {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
@@ -800,13 +800,13 @@ export default function AnalyticsTab({
                 )}
                 {splitMethodDistributionData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                    <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                         <CardTitle className="text-md sm:text-lg flex items-center">
                             <GitFork className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                             Split Method Distribution {analyticsViewMode === 'personal' ? '(For Your Expenses)' : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
                         <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={9}>
@@ -825,13 +825,13 @@ export default function AnalyticsTab({
             
             {topExpensesData.length > 0 && (
             <Card className="shadow-md rounded-lg">
-                <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center">
                     <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-2 pt-2"> {/* Ensured pt-2 for content */}
+                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
                 <ScrollArea className="h-auto max-h-[400px]">
                     <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                         {topExpensesData.map(exp => (
@@ -852,13 +852,13 @@ export default function AnalyticsTab({
             )}
 
             <Card className="shadow-md rounded-lg">
-            <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+            <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center">
                     <SearchCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Category Deep Dive {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="p-0 sm:p-2 pt-2"> {/* Ensured pt-2 for content */}
+            <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
                 <ScrollArea className="h-auto max-h-[400px]">
                 <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>{/* */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}{/* */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                     {detailedCategoryAnalytics.map(cat => (
@@ -881,14 +881,14 @@ export default function AnalyticsTab({
             </Card>
             
             <Card className="shadow-md rounded-lg">
-                <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center">
                     <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Financial Summary` : 'Participant Financial Summary'}
                 </CardTitle>
                 <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
                 </CardHeader>
-                <CardContent className="p-0 sm:p-2 pt-2"> {/* Ensured pt-2 for content */}
+                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
                     <ScrollArea className="h-auto max-h-[400px]">
                         <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                             {detailedParticipantAnalytics.map(p => (
@@ -914,13 +914,13 @@ export default function AnalyticsTab({
 
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             <Card className="shadow-md rounded-lg">
-                <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center">
                     <PieChartIconLucide className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Spending by Category (Top 5) {analyticsViewMode === 'personal' ? '(Your Shares)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                 {pieChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
@@ -950,13 +950,13 @@ export default function AnalyticsTab({
             </Card>
             {expenseAmountDistributionData.length > 0 && (
             <Card className="shadow-md rounded-lg">
-                <CardHeader className="p-4 sm:p-5 pb-2 sm:pb-3">
+                <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
                 <CardTitle className="text-md sm:text-lg flex items-center">
                     <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-2">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
@@ -977,4 +977,3 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
-

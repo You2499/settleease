@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight, Users, Handshake, CheckCircle2, FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Person, Expense, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
-import PerPersonSettlementDetails from './PerPersonSettlementDetails'; // New component
+import PerPersonSettlementDetails from './PerPersonSettlementDetails'; 
 
 interface SettlementSummaryProps {
   simplifiedTransactions: CalculatedTransaction[];
@@ -64,7 +64,7 @@ export default function SettlementSummary({
   return (
     <Card className="shadow-lg rounded-lg">
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'overview' | 'person')} className="w-full">
-        <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3"> {/* Reduced bottom padding */}
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2"> {/* Reduced bottom padding */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <CardTitle className="flex items-center text-lg sm:text-xl">
                   <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement Hub
@@ -75,9 +75,9 @@ export default function SettlementSummary({
               </TabsList>
           </div>
         </CardHeader>
-        <CardContent className="p-4 sm:p-6 pt-0">
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2"> {/* Adjusted top padding */}
           <TabsContent value="overview" className="mt-0">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 p-3 rounded-md gap-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 px-3 py-2 rounded-md gap-2"> {/* Reduced padding */}
                   <CardDescription className="text-xs sm:text-sm flex-grow pr-2">{overviewDescription}</CardDescription>
                   <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
                       <Switch
@@ -93,7 +93,7 @@ export default function SettlementSummary({
                   </div>
               </div>
             {transactionsToDisplay.length > 0 ? (
-              <ScrollArea className="h-[200px] border rounded-md p-1 mt-3"> {/* Adjusted margin */}
+              <ScrollArea className="h-[200px] border rounded-md p-1 mt-2"> {/* Reduced margin */}
                 <ul className="space-y-2 p-2">
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
@@ -123,15 +123,15 @@ export default function SettlementSummary({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md text-center min-h-[100px] flex items-center justify-center mt-3"> {/* Adjusted margin */}
+              <div className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md text-center min-h-[100px] flex items-center justify-center mt-2"> {/* Reduced margin */}
                   <FileText className="mr-2 h-5 w-5"/>
                   All debts are settled, or no expenses to settle yet!
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="person" className="mt-0 space-y-3"> {/* Adjusted spacing */}
-              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 p-3 rounded-md">
+          <TabsContent value="person" className="mt-0 space-y-3">
+              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 px-3 py-2 rounded-md"> {/* Reduced padding */}
                   <Label htmlFor="person-select" className="text-xs sm:text-sm font-medium text-left sm:text-right">View settlement details for:</Label>
                   <Select value={selectedPersonId || ''} onValueChange={setSelectedPersonId} disabled={people.length === 0}>
                       <SelectTrigger id="person-select" className="h-9 text-xs sm:text-sm">
@@ -170,4 +170,3 @@ export default function SettlementSummary({
     </Card>
   );
 }
-

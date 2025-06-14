@@ -122,16 +122,16 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar"> 
-          <div className="space-y-4 sm:space-y-6 pt-2"> {/* Removed pt from parent, add pt-2 here */}
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0"> {/* Adjusted pt-0 here */}
+          <div className="space-y-4 sm:space-y-6 pt-2"> 
             
             <Card>
-              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
                 <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
                   <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>General Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2">
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0"> {/* pt-0 for card content */}
                 <div className="flex flex-col sm:flex-row sm:justify-between">
                   <span className="text-muted-foreground shrink-0 mr-2">Description:</span> 
                   <span className="font-medium text-left sm:text-right truncate" title={expense.description}>{expense.description}</span>
@@ -148,10 +148,10 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
             
             <Card>
-              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
                 <CardTitle className="text-md sm:text-lg font-semibold flex items-center"><CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
               </CardHeader>
-              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2">
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0"> {/* pt-0 for card content */}
                 <div>
                   <span className="font-medium text-muted-foreground block mb-1">Paid By:</span>
                   {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
@@ -195,12 +195,12 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
                 <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
                   <SplitIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-xs sm:text-sm space-y-2 sm:space-y-3">
+              <CardContent className="text-xs sm:text-sm space-y-2 sm:space-y-3 pt-0"> {/* pt-0 for card content */}
                 {expense.split_method === 'equal' && Array.isArray(expense.shares) && expense.shares.length > 0 && (
                   <div>
                     <CardDescription className="mb-1 sm:mb-1.5 text-xs">
@@ -315,7 +315,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
                 <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
                   <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Individual Net Effect
                 </CardTitle>
@@ -323,7 +323,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                   Each person's financial position for this expense, after considering their payments and share of the <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong> split amount.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-xs sm:text-sm">
+              <CardContent className="text-xs sm:text-sm pt-0"> {/* pt-0 for card content */}
                 {involvedPersonIdsOverall.length > 0 ? (
                   <ul className="space-y-2 sm:space-y-2.5">
                     {involvedPersonIdsOverall.map(personId => {
@@ -383,4 +383,3 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
-
