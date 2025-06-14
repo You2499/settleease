@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -41,38 +42,38 @@
     --sidebar-ring: 180 100% 30%; /* Teal focus ring for sidebar elements */
   }
   .dark {
-    --background: 220 15% 10%; /* Dark cool gray */
+    --background: 220 15% 18%; /* Dark cool gray - Lighter */
     --foreground: 0 0% 98%; /* Off-white */
-    --card: 220 13% 15%; /* Slightly lighter dark cool gray for cards */
+    --card: 220 13% 22%; /* Slightly lighter dark cool gray for cards - Lighter */
     --card-foreground: 0 0% 98%;
-    --popover: 220 13% 15%; /* Consistent with cards */
+    --popover: 220 13% 22%; /* Consistent with cards - Lighter */
     --popover-foreground: 0 0% 98%;
-    --primary: 122 39% 55%; /* Slightly lighter Forest Green for dark mode */
-    --primary-foreground: 240 5% 90%; /* Light gray for text on primary */
-    --secondary: 220 10% 22%; /* Medium-dark gray for secondary elements */
+    --primary: 122 39% 60%; /* Slightly lighter Forest Green for dark mode - Lighter */
+    --primary-foreground: 240 5% 95%; /* Light gray for text on primary - Lighter */
+    --secondary: 220 10% 28%; /* Medium-dark gray for secondary elements - Lighter */
     --secondary-foreground: 0 0% 98%;
-    --muted: 220 10% 22%; /* Consistent with secondary */
-    --muted-foreground: 240 5% 64.9%; /* Lighter gray for text on muted */
-    --accent: 180 100% 35%; /* Slightly lighter Teal for dark mode */
+    --muted: 220 10% 28%; /* Consistent with secondary - Lighter */
+    --muted-foreground: 240 5% 70%; /* Lighter gray for text on muted - Lighter */
+    --accent: 180 100% 40%; /* Slightly lighter Teal for dark mode - Lighter */
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%; /* Dark mode destructive color */
+    --destructive: 0 62.8% 35.6%; /* Dark mode destructive color - Lighter */
     --destructive-foreground: 0 0% 98%;
-    --border: 220 10% 28%; /* Lighter gray for borders */
-    --input: 220 10% 22%; /* Input background consistent with secondary */
-    --ring: 180 100% 40%; /* Teal focus ring for dark mode */
-    --chart-1: 122 39% 55%;
-    --chart-2: 180 100% 35%;
-    --chart-3: 150 50% 60%;
-    --chart-4: 43 74% 70%;
-    --chart-5: 27 87% 70%;
-    --sidebar-background: 220 10% 12%; /* Slightly lighter dark gray for sidebar */
+    --border: 220 10% 35%; /* Lighter gray for borders - Lighter */
+    --input: 220 10% 28%; /* Input background consistent with secondary - Lighter */
+    --ring: 180 100% 45%; /* Teal focus ring for dark mode - Lighter */
+    --chart-1: 122 39% 60%;
+    --chart-2: 180 100% 40%;
+    --chart-3: 150 50% 65%;
+    --chart-4: 43 74% 75%;
+    --chart-5: 27 87% 75%;
+    --sidebar-background: 220 10% 20%; /* Slightly lighter dark gray for sidebar - Lighter */
     --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 122 39% 55%; /* Consistent with primary color */
+    --sidebar-primary: 122 39% 60%; /* Consistent with primary color - Lighter */
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 220 10% 25%; /* Lighter hover/accent for sidebar */
+    --sidebar-accent: 220 10% 30%; /* Lighter hover/accent for sidebar - Lighter */
     --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 220 10% 20%; /* Subtle border for sidebar */
-    --sidebar-ring: 180 100% 40%; /* Consistent with main ring color */
+    --sidebar-border: 220 10% 25%; /* Subtle border for sidebar - Lighter */
+    --sidebar-ring: 180 100% 45%; /* Consistent with main ring color - Lighter */
   }
 }
 
@@ -82,5 +83,27 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Toast Progress Bar Styles */
+@layer components {
+  @keyframes toast-progress {
+    from {
+      width: 100%;
+    }
+    to {
+      width: 0%;
+    }
+  }
+
+  .toast-progress-bar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 4px; 
+    background-color: hsl(var(--primary)); 
+    width: 100%; /* Initial width, animation will take over */
+    /* animation property will be set via inline style in JS */
   }
 }

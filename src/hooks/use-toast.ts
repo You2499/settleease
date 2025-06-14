@@ -1,3 +1,4 @@
+
 "use client"
 
 // Inspired by react-hot-toast library
@@ -9,13 +10,14 @@ import type {
 } from "@/components/ui/toast"
 
 const TOAST_LIMIT = 1
-const TOAST_REMOVE_DELAY = 1000000
+const TOAST_REMOVE_DELAY = 1000000 // Keep this long for removing from DOM after visually closed
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+  duration?: number; // Added duration
 }
 
 const actionTypes = {
@@ -93,8 +95,8 @@ export const reducer = (state: State, action: Action): State => {
     case "DISMISS_TOAST": {
       const { toastId } = action
 
-      // ! Side effects ! - This could be extracted into a dismissToast() action,
-      // but I'll keep it here for simplicity
+      // If toastId is provided, add it to the remove queue.
+      // If toastId is not provided, it means dismiss all, so add all to queue.
       if (toastId) {
         addToRemoveQueue(toastId)
       } else {
@@ -109,7 +111,7 @@ export const reducer = (state: State, action: Action): State => {
           t.id === toastId || toastId === undefined
             ? {
                 ...t,
-                open: false,
+                open: false, // This will trigger the Toast component's own unmount/animation logic
               }
             : t
         ),
@@ -140,15 +142,17 @@ function dispatch(action: Action) {
   })
 }
 
-type Toast = Omit<ToasterToast, "id">
+// Define the public Toast type, which can include duration
+type Toast = Omit<ToasterToast, "id" | "open" | "onOpenChange">;
 
-function toast({ ...props }: Toast) {
+
+function toast({ duration = 5000, ...props }: Toast) {
   const id = genId()
 
-  const update = (props: ToasterToast) =>
+  const update = (newProps: Partial<ToasterToast>) =>
     dispatch({
       type: "UPDATE_TOAST",
-      toast: { ...props, id },
+      toast: { ...newProps, id },
     })
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
@@ -158,7 +162,8 @@ function toast({ ...props }: Toast) {
       ...props,
       id,
       open: true,
-      onOpenChange: (open) => {
+      duration, // Pass duration
+      onOpenChange: (open) => { // This onOpenChange is for Radix's Toast
         if (!open) dismiss()
       },
     },

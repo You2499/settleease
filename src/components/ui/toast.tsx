@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -43,15 +44,92 @@ const toastVariants = cva(
 const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(({ className, variant, ...props }, ref) => {
+    VariantProps<typeof toastVariants> & { duration?: number }
+>(({ className, variant, duration: initialDuration = 5000, onOpenChange, open, ...props }, ref) => {
+  const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const progressBarRef = React.useRef<HTMLDivElement>(null);
+
+  const effectiveDuration = initialDuration;
+
+  const clearExistingAnimationAndTimer = React.useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (progressBarRef.current) {
+      progressBarRef.current.style.animation = 'none';
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      progressBarRef.current.offsetHeight; // Trigger reflow
+    }
+  }, []);
+
+  const startAnimationAndTimer = React.useCallback((currentDuration: number) => {
+    clearExistingAnimationAndTimer(); 
+
+    if (progressBarRef.current) {
+      progressBarRef.current.style.animation = `toast-progress ${currentDuration}ms linear forwards`;
+      progressBarRef.current.style.animationPlayState = 'running';
+    }
+
+    timeoutRef.current = setTimeout(() => {
+      if (onOpenChange) {
+        onOpenChange(false); // This will trigger dismiss in useToast
+      }
+    }, currentDuration);
+  }, [onOpenChange, clearExistingAnimationAndTimer]);
+
+
+  React.useEffect(() => {
+    if (open) {
+      startAnimationAndTimer(effectiveDuration);
+    } else {
+      // If the toast is closed (e.g., by swipe or close button), clear everything.
+      clearExistingAnimationAndTimer();
+    }
+
+    return () => {
+      // Cleanup on unmount
+      clearExistingAnimationAndTimer();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, effectiveDuration, onOpenChange]); // Rerun if open state changes or initial duration changes
+
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    if (progressBarRef.current) {
+      progressBarRef.current.style.animationPlayState = 'paused';
+    }
+  };
+
+  const handleMouseLeave = () => {
+    // Reset to full duration and restart animation and timer
+    startAnimationAndTimer(effectiveDuration);
+  };
+  
   return (
     <ToastPrimitives.Root
       ref={ref}
       className={cn(toastVariants({ variant }), className)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      // Radix Toast props
+      open={open}
+      onOpenChange={onOpenChange}
+      duration={Infinity} // We handle duration manually, Radix should not auto-close
       {...props}
-    />
-  )
+    >
+      {props.children}
+      <div
+        ref={progressBarRef}
+        className="toast-progress-bar"
+        // Animation and its duration are controlled by startAnimationAndTimer
+      />
+    </ToastPrimitives.Root>
+  );
 })
 Toast.displayName = ToastPrimitives.Root.displayName
 
