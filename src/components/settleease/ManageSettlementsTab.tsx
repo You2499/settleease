@@ -16,10 +16,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Handshake, ArrowRight, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Trash2, Undo2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
+import { Separator } from '@/components/ui/separator';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -47,6 +48,7 @@ export default function ManageSettlementsTab({
   onActionComplete,
 }: ManageSettlementsTabProps) {
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
+  const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const calculatedSimplifiedSettlements = useMemo(() => {
@@ -124,6 +126,27 @@ export default function ManageSettlementsTab({
     }
   };
 
+  const handleUnmarkAsPaid = async () => {
+    if (!paymentToUnmark || !db) {
+      toast({ title: "Error", description: "Cannot unmark payment. Missing information or database connection.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).delete().eq('id', paymentToUnmark.id);
+      if (error) throw error;
+      toast({ title: "Payment Unmarked", description: `Payment record from ${peopleMap[paymentToUnmark.debtor_id]} to ${peopleMap[paymentToUnmark.creditor_id]} has been removed.` });
+      setPaymentToUnmark(null);
+      onActionComplete();
+    } catch (error: any) {
+      console.error("Error unmarking payment:", error);
+      toast({ title: "Error", description: `Could not unmark payment: ${error.message}`, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
   if (!db) {
     return (
       <Card className="shadow-lg rounded-lg">
@@ -146,11 +169,12 @@ export default function ManageSettlementsTab({
           <CardTitle className="flex items-center text-xl">
             <Handshake className="mr-2 h-5 w-5 text-primary" /> Manage Settlements
           </CardTitle>
-          <CardDescription>View outstanding simplified debts and mark them as paid. This will update the overall settlement summary on the dashboard.</CardDescription>
+          <CardDescription>View outstanding debts and mark them as paid, or unmark previously recorded payments.</CardDescription>
         </CardHeader>
         <CardContent>
+          <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Outstanding Simplified Debts</h3>
           {calculatedSimplifiedSettlements.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-22rem)]">
+            <ScrollArea className="h-[calc(50vh-14rem)] max-h-60">
               <ul className="space-y-3 pr-4">
                 {calculatedSimplifiedSettlements.map((settlement, index) => (
                   <li key={`${settlement.from}-${settlement.to}-${index}`}>
@@ -178,7 +202,48 @@ export default function ManageSettlementsTab({
               </ul>
             </ScrollArea>
           ) : (
-            <p className="text-sm text-muted-foreground p-4 text-center">All debts are settled based on current expenses and recorded payments, or no expenses to settle yet!</p>
+            <p className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md">All debts are settled based on current expenses and recorded payments, or no expenses to settle yet!</p>
+          )}
+
+          <Separator className="my-6" />
+
+          <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Recorded Settlement Payments</h3>
+          {settlementPayments.length > 0 ? (
+            <ScrollArea className="h-[calc(50vh-14rem)] max-h-60">
+              <ul className="space-y-3 pr-4">
+                {settlementPayments.sort((a,b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()).map(payment => (
+                  <li key={payment.id}>
+                     <Card className="bg-card/70 p-3">
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                        <div className="flex-grow text-sm">
+                          <div>
+                            <span className="font-medium text-foreground">{peopleMap[payment.debtor_id] || 'Unknown'}</span>
+                            <ArrowRight className="h-4 w-4 text-accent mx-1.5 inline-block" />
+                            <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
+                            <span className="block sm:inline sm:ml-2 text-primary font-semibold">{formatCurrency(payment.amount_settled)}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            Paid on: {new Date(payment.settled_at).toLocaleDateString()}
+                            {payment.notes && <span className="ml-2 italic">({payment.notes})</span>}
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setPaymentToUnmark(payment)}
+                          disabled={isLoading}
+                          className="text-xs w-full sm:w-auto mt-2 sm:mt-0"
+                        >
+                          <Undo2 className="mr-1.5 h-3.5 w-3.5" /> Unmark as Paid
+                        </Button>
+                      </div>
+                    </Card>
+                  </li>
+                ))}
+              </ul>
+            </ScrollArea>
+          ) : (
+             <p className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md">No settlement payments have been manually recorded yet.</p>
           )}
         </CardContent>
       </Card>
@@ -190,7 +255,6 @@ export default function ManageSettlementsTab({
               <AlertDialogTitle>Confirm Settlement</AlertDialogTitle>
               <AlertDialogDescription>
                 Are you sure you want to mark the payment of <strong className="text-primary">{formatCurrency(settlementToConfirm.amount)}</strong> from <strong>{peopleMap[settlementToConfirm.from]}</strong> to <strong>{peopleMap[settlementToConfirm.to]}</strong> as complete?
-                This action cannot be easily undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -202,6 +266,27 @@ export default function ManageSettlementsTab({
           </AlertDialogContent>
         </AlertDialog>
       )}
+
+      {paymentToUnmark && (
+        <AlertDialog open={paymentToUnmark !== null} onOpenChange={(open) => !open && setPaymentToUnmark(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirm Unmark Payment</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to unmark (delete) the recorded payment of <strong className="text-primary">{formatCurrency(paymentToUnmark.amount_settled)}</strong> from <strong>{peopleMap[paymentToUnmark.debtor_id]}</strong> to <strong>{peopleMap[paymentToUnmark.creditor_id]}</strong>?
+                This action will make this debt appear as outstanding again.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => setPaymentToUnmark(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleUnmarkAsPaid} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+                {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }
+
