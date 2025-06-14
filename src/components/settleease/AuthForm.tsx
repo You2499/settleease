@@ -6,9 +6,9 @@ import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake } from 'lucide-react';
+import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon } from 'lucide-react'; // Renamed Handshake to avoid conflict
 import { Separator } from '@/components/ui/separator';
 
 // Simple Google Icon SVG as a React component
@@ -31,7 +31,7 @@ interface AuthFormProps {
 export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoginView, setIsLoginView] = useState(false); // Changed from true to false
+  const [isLoginView, setIsLoginView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,108 +107,123 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-lg shadow-xl rounded-lg">
-      <CardHeader className="text-center pb-4 pt-8">
-        <div className="flex justify-center mb-4">
-          <HandCoins className="h-16 w-16 text-primary" />
-        </div>
-        <CardTitle className="text-3xl font-bold font-headline text-primary">
-          {isLoginView ? 'Welcome Back to SettleEase!' : 'Join SettleEase Today!'}
-        </CardTitle>
-        <CardDescription className="text-md pt-1 text-muted-foreground px-2">
-          {isLoginView 
-            ? 'Sign in to continue managing your group expenses effortlessly.' 
-            : 'Create an account to unlock powerful features for easy bill splitting and seamless group settlements.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="px-6 pb-6 space-y-6">
-
-        {!isLoginView && (
-          <div className="text-sm text-center text-muted-foreground mb-6 space-y-2 bg-secondary/30 p-4 rounded-md">
-            <h3 className="font-semibold text-foreground">With SettleEase, you can:</h3>
-            <ul className="list-none space-y-1.5 text-left text-xs sm:text-sm inline-block">
-              <li className="flex items-start"><Zap className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Track shared expenses with unparalleled ease.</li>
-              <li className="flex items-start"><Users className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-              <li className="flex items-start"><PieChart className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-              <li className="flex items-start"><Handshake className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
-            </ul>
-          </div>
-        )}
-
-        {error && (
-          <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
-            <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
-            <p>{error}</p>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isLoading || isGoogleLoading}
-              required
-              className="h-11 text-base"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete={isLoginView ? "current-password" : "new-password"}
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isLoading || isGoogleLoading}
-              required
-              minLength={6}
-              className="h-11 text-base"
-            />
-          </div>
-          <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isLoading || isGoogleLoading}>
-            {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-5 w-5" /> Login</> : <><UserPlus className="mr-2 h-5 w-5" /> Create Account</>)}
-          </Button>
-        </form>
-
-        <div className="relative my-5">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-sm uppercase">
-            <span className="bg-background px-3 text-muted-foreground">
-              Or
-            </span>
-          </div>
-        </div>
-
-        <Button
-          variant="outline"
-          className="w-full h-11 text-base"
-          onClick={handleGoogleSignIn}
-          disabled={isLoading || isGoogleLoading}
-        >
-          {isGoogleLoading ? (
-            "Redirecting to Google..."
+    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden">
+      <div className="md:flex min-h-[580px]"> {/* Ensure minimum height for content visibility */}
+        {/* Left Pane: Branding & Features */}
+        <div className={`md:w-2/5 flex flex-col justify-center p-8 transition-colors duration-300 ease-in-out
+                         ${isLoginView ? 'bg-secondary/20' : 'bg-primary text-primary-foreground'}`}>
+          {isLoginView ? (
+            <div className="text-center">
+              <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
+              <h1 className="text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
+              <p className="mt-3 text-muted-foreground text-base">
+                Sign in to continue simplifying your group expenses.
+              </p>
+            </div>
           ) : (
             <>
-              <GoogleIcon /> <span className="ml-2.5">Sign {isLoginView ? 'in' : 'up'} with Google</span>
+              <div className="mb-8 text-center md:text-left">
+                <HandCoins className="h-16 w-16 mx-auto md:mx-0 mb-4 text-primary-foreground/90" />
+                <h1 className="text-4xl font-bold font-headline">SettleEase</h1>
+                <p className="mt-2 text-lg text-primary-foreground/90">
+                  Simplify your shared expenses. Effortlessly.
+                </p>
+              </div>
+              <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Key Features:</h3>
+              <ul className="space-y-3 text-sm">
+                <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
+                <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+                <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
+                <li className="flex items-start"><HandshakeIcon className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
+              </ul>
             </>
           )}
-        </Button>
+        </div>
 
-      </CardContent>
-      <CardFooter className="flex-col items-center pt-5 pb-6 border-t bg-secondary/30 rounded-b-lg">
-        <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
-          {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
-        </Button>
-      </CardFooter>
+        {/* Right Pane: Form */}
+        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center">
+          <CardHeader className="px-0 pt-0 pb-4 text-center">
+             <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
+              {isLoginView ? 'Sign In' : 'Create your Account'}
+            </CardTitle>
+          </CardHeader>
+
+          <CardContent className="px-0 pb-0 space-y-5">
+            {error && (
+              <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
+                <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
+                <p>{error}</p>
+              </div>
+            )}
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading || isGoogleLoading}
+                  required
+                  className="h-11 text-base"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete={isLoginView ? "current-password" : "new-password"}
+                  placeholder="•••••••• (min. 6 characters)"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading || isGoogleLoading}
+                  required
+                  minLength={6}
+                  className="h-11 text-base"
+                />
+              </div>
+              <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isLoading || isGoogleLoading}>
+                {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-5 w-5" /> Sign In</> : <><UserPlus className="mr-2 h-5 w-5" /> Create Account</>)}
+              </Button>
+            </form>
+
+            <div className="relative my-5">
+              <div className="absolute inset-0 flex items-center">
+                <Separator />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or
+                </span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full h-11 text-base"
+              onClick={handleGoogleSignIn}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isGoogleLoading ? (
+                "Redirecting to Google..."
+              ) : (
+                <>
+                  <GoogleIcon /> <span className="ml-2.5">Sign {isLoginView ? 'in' : 'up'} with Google</span>
+                </>
+              )}
+            </Button>
+          </CardContent>
+
+          <CardFooter className="px-0 pt-6 pb-0 flex-col items-center">
+            <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
+              {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+            </Button>
+          </CardFooter>
+        </div>
+      </div>
     </Card>
   );
 }
-
