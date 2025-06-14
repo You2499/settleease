@@ -88,7 +88,6 @@ export default function SettleEasePage() {
 
     let isMounted = true;
 
-    // Setup the listener first, as it's the primary source of truth for auth state.
     console.log("Auth effect: Setting up onAuthStateChange listener.");
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
@@ -124,24 +123,15 @@ export default function SettleEasePage() {
       }
     });
     
-    // Then, attempt to get the current session. This can sometimes provide the session faster
-    // than the listener fires on initial load, or confirm state if listener doesn't fire (e.g. already authenticated).
-    // The listener above will still be the ultimate source of truth and will set isLoadingAuth=false.
     console.log("Auth effect: Attempting to get session as a secondary check/optimization.");
     db.auth.getSession().then(({ data: { session } }) => {
       console.log("Auth effect: getSession returned. Session:", !!session, "Mounted:", isMounted);
       if (isMounted) {
-        // onAuthStateChange listener is responsible for setting currentUser and isLoadingAuth.
-        // This getSession call mainly helps if the listener for some reason is delayed or doesn't fire
-        // for an existing session on initial load. The listener will ensure consistency.
-        // If session exists here, and onAuthStateChange hasn't fired, it soon will.
-        // If session is null, onAuthStateChange will also report null.
+        // Handled by onAuthStateChange
       }
     }).catch(err => {
         if(isMounted) {
             console.warn("Auth effect: Error in getSession:", err.message);
-            // If getSession fails, onAuthStateChange should still provide the state (likely no session)
-            // and set isLoadingAuth=false.
         }
     });
 
@@ -150,7 +140,7 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [db, supabaseInitializationError]); // Stable dependencies for auth setup
+  }, [db, supabaseInitializationError]); 
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
@@ -362,13 +352,13 @@ export default function SettleEasePage() {
         }
 
         console.log("User/Role/Data effect: Adding default people and fetching all data.");
-        setIsLoadingData(true); // Set true before async operations
+        setIsLoadingData(true); 
         addDefaultPeople().then(() => {
           if (!isMounted) {
             console.log("User/Role/Data effect: addDefaultPeople - Component unmounted.");
             return;
           }
-          fetchAllData(true); // This sets isLoadingData to false eventually
+          fetchAllData(true); 
         });
       });
     } else { 
@@ -576,16 +566,11 @@ export default function SettleEasePage() {
     if (error) {
       if (error.message === "Auth session missing!") {
         console.warn("Logout attempt: Auth session was already missing or token was invalid. Forcing local currentUser to null.");
-        // Explicitly set currentUser to null to ensure immediate UI reaction,
-        // especially if the tab was inactive and missed previous auth state changes.
-        // The onAuthStateChange listener will also handle full cleanup and the "Logged Out" toast.
         setCurrentUser(null); 
       } else {
         toast({ title: "Logout Error", description: error.message, variant: "destructive" });
       }
     }
-    // If no error OR "Auth session missing!", onAuthStateChange handles the "Logged Out" toast
-    // and full state cleanup when it detects newAuthUser is null.
   };
 
 
@@ -700,7 +685,7 @@ export default function SettleEasePage() {
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
             {isLoadingData && isDataFetchedAtLeastOnce && (
-                <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
+                <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
             )}
             {activeView === 'dashboard' && <DashboardView expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} settlementPayments={settlementPayments} />}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
