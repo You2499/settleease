@@ -181,15 +181,18 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
                       const amountPhysicallyPaid = paymentRecord ? Number(paymentRecord.amount) : 0;
 
-                      let effectiveAmountPaidByPerson = amountPhysicallyPaid;
-                      if (expense.celebration_contribution && expense.celebration_contribution.personId === personId) {
-                        effectiveAmountPaidByPerson += expense.celebration_contribution.amount;
-                      }
+                      const actualCelebrationContributionByThisPerson = (expense.celebration_contribution && expense.celebration_contribution.personId === personId)
+                        ? expense.celebration_contribution.amount
+                        : 0;
+                      
+                      const effectiveAmountPaidByPerson = amountPhysicallyPaid + actualCelebrationContributionByThisPerson;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
                       const shareOfSplitAmount = shareRecord ? Number(shareRecord.amount) : 0;
 
                       const netForThisExpense = effectiveAmountPaidByPerson - shareOfSplitAmount;
+
+                      const paidLabel = actualCelebrationContributionByThisPerson > 0 ? "Net Paid (incl. Celebration):" : "Physically Paid:";
 
                       return (
                         <li key={personId} className="p-2.5 bg-secondary/30 rounded-md space-y-0.5">
@@ -205,13 +208,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                             </span>
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Physically Paid:</span> <span>{formatCurrency(amountPhysicallyPaid)}</span>
+                            <span>{paidLabel}</span> <span>{formatCurrency(effectiveAmountPaidByPerson)}</span>
                           </div>
-                          {expense.celebration_contribution && expense.celebration_contribution.personId === personId && (
-                             <div className="flex justify-between text-xs text-muted-foreground">
-                                <span>Celebration Contribution:</span> <span>{formatCurrency(expense.celebration_contribution.amount)}</span>
-                             </div>
-                          )}
+                          {/* The celebration contribution line item is removed if actualCelebrationContributionByThisPerson > 0 because it's now part of "Net Paid" */}
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmount)}</span>
                           </div>
