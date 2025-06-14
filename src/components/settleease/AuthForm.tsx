@@ -107,7 +107,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   return (
     <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[580px]">
-      <div className="md:flex h-full">
+      <div className="md:flex h-full md:min-h-[580px]"> {/* Added md:min-h-[580px] here */}
         {/* Left Pane: Branding & Features */}
         <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out
                          ${isLoginView ? 'bg-secondary/20 text-primary' : 'bg-primary text-primary-foreground'}`}>
