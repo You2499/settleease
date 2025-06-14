@@ -132,6 +132,13 @@ export default function AddExpenseTab({
   //   }
   // }, [people, isMultiplePayers, totalAmount]); // Dependencies reviewed.
   
+  const defaultPayerId = useMemo(() => {
+    if (people.length > 0) {
+      const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
+      return currentUserAsPerson ? currentUserAsPerson.id : people[0].id;
+    }
+    return '';
+  }, [people]);
 
   useEffect(() => {
     if (expenseToEdit) {
@@ -144,14 +151,14 @@ export default function AddExpenseTab({
         setPayers(expenseToEdit.paid_by.map(p => ({ id: p.personId + Date.now().toString() + Math.random().toString(), personId: p.personId, amount: p.amount.toString() })));
       } else {
         setIsMultiplePayers(false);
-        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || '', amount: expenseToEdit.total_amount.toString() }]);
+        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: expenseToEdit.total_amount.toString() }]);
       }
 
       setSplitMethod(expenseToEdit.split_method);
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
         setSelectedPeopleEqual(expenseToEdit.shares.map(s => s.personId));
-      } else {
+      } else { 
         setSelectedPeopleEqual(people.map(p => p.id));
       }
 
@@ -171,7 +178,7 @@ export default function AddExpenseTab({
           sharedBy: item.sharedBy || []
         })));
       } else {
-         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
+         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
       }
 
     } else {
@@ -186,16 +193,8 @@ export default function AddExpenseTab({
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [expenseToEdit, people, dynamicCategories]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
 
-
-  const defaultPayerId = useMemo(() => {
-    if (people.length > 0) {
-      const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
-      return currentUserAsPerson ? currentUserAsPerson.id : people[0].id;
-    }
-    return '';
-  }, [people]);
 
   useEffect(() => {
     if (!isMultiplePayers) {
@@ -217,27 +216,40 @@ export default function AddExpenseTab({
             setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
         }
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, payers, expenseToEdit, people.length]);
+  }, [totalAmount, isMultiplePayers, defaultPayerId, payers]); // expenseToEdit removed as it's covered by the form init effect
+                                                               // people.length also seems covered by defaultPayerId dependency changing
 
 
   useEffect(() => {
-    if (splitMethod === 'equal') {
-      if (!expenseToEdit || selectedPeopleEqual.length === 0) {
-        const allPeopleIds = people.map(p => p.id);
-        if (selectedPeopleEqual.length !== allPeopleIds.length || !selectedPeopleEqual.every(id => allPeopleIds.includes(id))) {
-            setSelectedPeopleEqual(allPeopleIds);
-        }
-      }
-    } else if (splitMethod === 'unequal') {
+    // This effect handles initialization of share-related fields when the splitMethod changes,
+    // or when other dependencies like `people` or `expenseToEdit` change,
+    // ensuring defaults are set without overriding user's active input if not necessary.
+
+    if (splitMethod === 'unequal') {
        const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
-        if (!anySharesPopulated && people.length > 0) {
+        // Only initialize if no shares are populated AND (we are in new expense mode,
+        // OR we are editing an expense that wasn't already 'unequal' - its shares would have been loaded by the main form init effect).
+        if (!anySharesPopulated && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'unequal')) {
             const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
-            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) {
+            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) { // Avoid re-render if already empty
                  setUnequalShares(initialEmptyShares);
             }
         }
     }
-  }, [splitMethod, people, expenseToEdit, selectedPeopleEqual, unequalShares]);
+    // Note: The logic for initializing selectedPeopleEqual when splitMethod is 'equal'
+    // is handled in the main useEffect that depends on [expenseToEdit, people, dynamicCategories].
+    // That useEffect correctly sets selectedPeopleEqual to all people for new expenses,
+    // or loads from expenseToEdit.shares if editing an 'equal' expense,
+    // or defaults to all people if editing a non-'equal' expense and user switches to 'equal'.
+    // This prevents this current useEffect from interfering with user deselections for the 'equal' method.
+
+    // If splitMethod is 'itemwise', initialize items if they are empty and not editing an 'itemwise' expense.
+    // The main form init useEffect also handles this for initial load. This catches changes in splitMethod.
+    if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'itemwise')) {
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
+    }
+  }, [splitMethod, people, expenseToEdit, unequalShares, items]);
+
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -711,3 +723,5 @@ export default function AddExpenseTab({
     </div>
   );
 }
+
+    
