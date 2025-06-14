@@ -107,7 +107,8 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       toast({ title: "Category Updated", description: "Category updated successfully." });
       handleCancelEdit();
       onCategoriesUpdate();
-    } catch (error: any) {
+    } catch (error: any)
+ {
       toast({ title: "Error Updating Category", description: error.message || "Could not update category.", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -165,13 +166,13 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   if (supabaseInitializationError && !db) {
     return (
-      <Card className="shadow-lg rounded-lg">
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 p-6">
           <p>Could not connect to the database. Managing categories is currently unavailable.</p>
           <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
@@ -182,18 +183,19 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   return (
     <>
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Manage Categories
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="pb-4 border-b">
+          <CardTitle className="flex items-center text-2xl font-bold">
+            <ListChecks className="mr-3 h-6 w-6 text-primary" /> Manage Categories
           </CardTitle>
-          <CardDescription>Add, edit, or remove expense categories.</CardDescription>
+          <CardDescription>Add new expense categories, choose icons, or edit existing ones.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 space-y-6">
-          <div className="border p-4 rounded-md bg-card/50">
-            <Label className="text-md font-medium block mb-2">Add New Category</Label>
-            <div className="grid md:grid-cols-3 gap-3 items-end">
-              <div>
+        <CardContent className="flex-1 flex flex-col min-h-0 p-6 space-y-6">
+          
+          <div className="p-5 border rounded-lg shadow-sm bg-card/50">
+            <Label className="text-lg font-semibold block mb-3 text-primary">Add New Category</Label>
+            <div className="grid md:grid-cols-3 gap-4 items-end">
+              <div className="md:col-span-1">
                 <Label htmlFor="newCategoryName" className="text-xs">Category Name</Label>
                 <Input
                   id="newCategoryName"
@@ -201,14 +203,14 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="e.g., Groceries"
-                  className="mt-1"
+                  className="mt-1 h-11 text-base"
                   disabled={isLoading}
                 />
               </div>
-              <div>
+              <div className="md:col-span-1">
                 <Label htmlFor="newCategoryIcon" className="text-xs">Icon</Label>
                 <Select value={newCategoryIconKey} onValueChange={setNewCategoryIconKey} disabled={isLoading}>
-                  <SelectTrigger id="newCategoryIcon" className="mt-1">
+                  <SelectTrigger id="newCategoryIcon" className="mt-1 h-11 text-base">
                     <SelectValue placeholder="Select icon" />
                   </SelectTrigger>
                   <SelectContent>
@@ -226,33 +228,33 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} className="md:self-end h-10">
-                <PlusCircle className="mr-2 h-4 w-4" /> {isLoading ? 'Adding...' : 'Add Category'}
+              <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} className="h-11 text-base md:self-end">
+                <PlusCircle className="mr-2 h-5 w-5" /> {isLoading && !editingCategory ? 'Adding...' : 'Add Category'}
               </Button>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <h4 className="font-semibold mb-2 text-muted-foreground">Current Categories:</h4>
+            <h4 className="text-lg font-semibold mb-3 text-primary">Current Categories</h4>
             {categories.length > 0 ? (
-              <ScrollArea className="flex-1 min-h-0 rounded-md border p-1 bg-background">
-                <ul className="space-y-1.5">
+              <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1">
+                <ul className="space-y-2 p-2">
                   {categories.map(category => {
                     const IconComponent = getIconComponent(category.icon_name);
                     return (
-                      <li key={category.id} className="flex items-center justify-between p-2.5 bg-card/60 rounded-sm text-sm group">
+                      <li key={category.id} className="flex items-center justify-between p-3 bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group">
                         {editingCategory?.id === category.id ? (
                           <>
                             <Input
                               type="text"
                               value={editingName}
                               onChange={(e) => setEditingName(e.target.value)}
-                              className="flex-grow mr-2 h-8 text-sm"
+                              className="flex-grow mr-2 h-9 text-sm"
                               autoFocus
                               disabled={isLoading}
                             />
                             <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                <SelectTrigger className="w-[200px] h-8 text-sm mr-2">
+                                <SelectTrigger className="w-[180px] sm:w-[220px] h-9 text-sm mr-2">
                                     <SelectValue placeholder="Select icon" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -269,24 +271,24 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                     })}
                                 </SelectContent>
                             </Select>
-                            <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 text-green-600" title="Save" disabled={isLoading}>
+                            <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-8 w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                               <Save className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 text-gray-500" title="Cancel" disabled={isLoading}>
+                            <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
                               <Ban className="h-4 w-4" />
                             </Button>
                           </>
                         ) : (
                           <>
                             <div className="flex items-center flex-grow truncate mr-2">
-                                <IconComponent className="mr-2 h-4 w-4 text-primary flex-shrink-0" />
-                                <span className="truncate" title={category.name}>{category.name}</span>
+                                <IconComponent className="mr-2.5 h-5 w-5 text-primary flex-shrink-0" />
+                                <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
                             </div>
-                            <div className="flex items-center space-x-0.5">
-                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 text-blue-600" title="Edit category" disabled={isLoading}>
+                            <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 text-red-600" title="Delete category" disabled={isLoading || !!editingCategory}>
+                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-8 w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -298,7 +300,11 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                 </ul>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground p-2">No categories added yet. Add some to get started!</p>
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
+                  <ListChecks className="h-16 w-16 mb-4 text-primary/30" />
+                  <p className="text-lg font-medium">No Categories Yet</p>
+                  <p className="text-sm">Add some categories using the form above to organize your expenses.</p>
+              </div>
             )}
           </div>
         </CardContent>
@@ -311,12 +317,12 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               <AlertDialogTitle>Are you sure?</AlertDialogTitle>
               <AlertDialogDescription>
                 This action will permanently delete the category: <strong>{categoryToDelete.name}</strong>.
-                This action cannot be undone.
+                This action cannot be undone. Expenses using this category will not be automatically reassigned.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setCategoryToDelete(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={executeDeleteCategory} className="bg-destructive text-destructive-foreground" disabled={isLoading}>
+              <AlertDialogAction onClick={executeDeleteCategory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isLoading}>
                 {isLoading ? 'Deleting...' : `Yes, delete ${categoryToDelete.name}`}
               </AlertDialogAction>
             </AlertDialogFooter>

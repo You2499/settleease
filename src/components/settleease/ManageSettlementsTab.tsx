@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Trash2, Undo2 } from 'lucide-react';
+import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
@@ -120,7 +120,7 @@ export default function ManageSettlementsTab({
       onActionComplete();
     } catch (error: any) {
       console.error("Error marking settlement as paid:", error);
-      toast({ title: "Error", description: `Could not record settlement: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error Recording Settlement", description: error.message || "Could not record settlement.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -140,7 +140,7 @@ export default function ManageSettlementsTab({
       onActionComplete();
     } catch (error: any) {
       console.error("Error unmarking payment:", error);
-      toast({ title: "Error", description: `Could not unmark payment: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error Unmarking Payment", description: error.message || "Could not unmark payment.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -149,13 +149,13 @@ export default function ManageSettlementsTab({
 
   if (!db) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader>
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="pb-4 border-b">
           <CardTitle className="text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1">
+        <CardContent className="flex-1 p-6">
           <p>Could not connect to the database. Managing settlements is currently unavailable.</p>
         </CardContent>
       </Card>
@@ -164,68 +164,77 @@ export default function ManageSettlementsTab({
   
   return (
     <>
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <Handshake className="mr-2 h-5 w-5 text-primary" /> Manage Settlements
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="pb-4 border-b">
+          <CardTitle className="flex items-center text-2xl font-bold">
+            <Handshake className="mr-3 h-6 w-6 text-primary" /> Manage Settlements
           </CardTitle>
-          <CardDescription>View outstanding debts and mark them as paid, or unmark previously recorded payments.</CardDescription>
+          <CardDescription>View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 space-y-4">
-          <div className="flex-1 flex flex-col min-h-0">
-            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Outstanding Simplified Debts</h3>
+        <CardContent className="flex-1 grid md:grid-cols-2 gap-6 min-h-0 p-6">
+          
+          {/* Outstanding Debts Section */}
+          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-5">
+            <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
+                <FileText className="mr-2 h-5 w-5" /> Outstanding Simplified Debts
+            </h3>
             {calculatedSimplifiedSettlements.length > 0 ? (
-              <ScrollArea className="flex-1 min-h-0">
-                <ul className="space-y-3 px-4">
+              <ScrollArea className="flex-1 min-h-0 -mx-1">
+                <ul className="space-y-3 px-1">
                   {calculatedSimplifiedSettlements.map((settlement, index) => (
                     <li key={`${settlement.from}-${settlement.to}-${index}`}>
-                      <Card className="bg-card/70 p-3">
+                      <div className="bg-card/80 p-3.5 rounded-md border shadow-inner">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-sm">
+                          <div className="flex-grow text-sm mb-2 sm:mb-0">
                             <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
                             <ArrowRight className="h-4 w-4 text-accent mx-1.5 inline-block" />
                             <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
-                            <span className="block sm:inline sm:ml-2 text-primary font-semibold">{formatCurrency(settlement.amount)}</span>
+                            <span className="block sm:inline sm:ml-2 text-primary font-semibold text-base">{formatCurrency(settlement.amount)}</span>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => setSettlementToConfirm(settlement)}
                             disabled={isLoading}
-                            className="text-xs w-full sm:w-auto mt-2 sm:mt-0"
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-end sm:self-center"
                           >
-                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> Mark as Paid
+                            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark as Paid
                           </Button>
                         </div>
-                      </Card>
+                      </div>
                     </li>
                   ))}
                 </ul>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md">All debts are settled based on current expenses and recorded payments, or no expenses to settle yet!</p>
+              <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-4">
+                <Handshake className="h-12 w-12 mb-3 text-primary/30" />
+                <p className="font-medium">All Settled Up!</p>
+                <p className="text-xs">No outstanding debts based on current data.</p>
+              </div>
             )}
           </div>
 
-          <Separator className="my-2" />
-
-          <div className="flex-1 flex flex-col min-h-0">
-            <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Recorded Settlement Payments</h3>
+          {/* Recorded Payments Section */}
+          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-5">
+            <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
+                <History className="mr-2 h-5 w-5" /> Recorded Settlement Payments
+            </h3>
             {settlementPayments.length > 0 ? (
-              <ScrollArea className="flex-1 min-h-0">
-                <ul className="space-y-3 px-4">
+              <ScrollArea className="flex-1 min-h-0 -mx-1">
+                <ul className="space-y-3 px-1">
                   {settlementPayments.sort((a,b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()).map(payment => (
                     <li key={payment.id}>
-                      <Card className="bg-card/70 p-3">
+                      <div className="bg-card/80 p-3.5 rounded-md border shadow-inner">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-sm">
+                          <div className="flex-grow text-sm mb-2 sm:mb-0">
                             <div>
                               <span className="font-medium text-foreground">{peopleMap[payment.debtor_id] || 'Unknown'}</span>
-                              <ArrowRight className="h-4 w-4 text-accent mx-1.5 inline-block" />
+                              <ArrowRight className="h-4 w-4 text-green-600 mx-1.5 inline-block" />
                               <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-2 text-primary font-semibold">{formatCurrency(payment.amount_settled)}</span>
+                              <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-base">{formatCurrency(payment.amount_settled)}</span>
                             </div>
-                            <div className="text-xs text-muted-foreground mt-0.5">
+                            <div className="text-xs text-muted-foreground mt-1">
                               Paid on: {new Date(payment.settled_at).toLocaleDateString()}
                               {payment.notes && <span className="ml-2 italic">({payment.notes})</span>}
                             </div>
@@ -235,18 +244,22 @@ export default function ManageSettlementsTab({
                             variant="destructive"
                             onClick={() => setPaymentToUnmark(payment)}
                             disabled={isLoading}
-                            className="text-xs w-full sm:w-auto mt-2 sm:mt-0"
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-end sm:self-center"
                           >
-                            <Undo2 className="mr-1.5 h-3.5 w-3.5" /> Unmark as Paid
+                            <Undo2 className="mr-1.5 h-4 w-4" /> Unmark
                           </Button>
                         </div>
-                      </Card>
+                      </div>
                     </li>
                   ))}
                 </ul>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md">No settlement payments have been manually recorded yet.</p>
+               <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-4">
+                <History className="h-12 w-12 mb-3 text-primary/30" />
+                <p className="font-medium">No Payments Recorded</p>
+                <p className="text-xs">Manually mark debts as paid to see them here.</p>
+              </div>
             )}
           </div>
         </CardContent>
@@ -283,7 +296,7 @@ export default function ManageSettlementsTab({
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setPaymentToUnmark(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnmarkAsPaid} disabled={isLoading} className="bg-destructive hover:bg-destructive/90">
+              <AlertDialogAction onClick={handleUnmarkAsPaid} disabled={isLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
               </AlertDialogAction>
             </AlertDialogFooter>

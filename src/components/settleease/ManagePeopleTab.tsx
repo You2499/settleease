@@ -5,7 +5,7 @@ import React, { useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import {
@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Trash2, Pencil, Save, Ban, Users } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Save, Ban, Users, AlertTriangle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Person } from '@/lib/settleease';
 import { PEOPLE_TABLE, EXPENSES_TABLE, SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease';
@@ -34,6 +34,7 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingPersonNewName, setEditingPersonNewName] = useState('');
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAddPerson = async () => {
     if (!newPersonName.trim()) {
@@ -41,16 +42,19 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
       return;
     }
     if (!db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot add person: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
+      toast({ title: "Database Error", description: `Cannot add person: ${supabaseInitializationError || 'Supabase client not available.'}`, variant: "destructive" });
       return;
     }
+    setIsLoading(true);
     try {
       const { error } = await db.from(PEOPLE_TABLE).insert([{ name: newPersonName.trim(), created_at: new Date().toISOString() }]).select();
       if (error) throw error;
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added.` });
       setNewPersonName('');
     } catch (error: any) {
-      toast({ title: "Error", description: `Could not add person: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error Adding Person", description: error.message || "Could not add person.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -70,16 +74,19 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
       return;
     }
     if (!db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot update person: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
+      toast({ title: "Database Error", description: `Cannot update person: ${supabaseInitializationError || 'Supabase client not available.'}`, variant: "destructive" });
       return;
     }
+    setIsLoading(true);
     try {
       const { error } = await db.from(PEOPLE_TABLE).update({ name: editingPersonNewName.trim() }).eq('id', editingPersonId);
       if (error) throw error;
       toast({ title: "Person Updated", description: "Name updated successfully." });
       handleCancelEditPerson();
     } catch (error: any) {
-      toast({ title: "Error", description: `Could not update person: ${error.message}`, variant: "destructive" });
+      toast({ title: "Error Updating Person", description: error.message || "Could not update person.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -89,11 +96,11 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
 
   const handleExecuteRemovePerson = async () => {
     if (!personToDelete || !db || supabaseInitializationError) {
-        toast({ title: "Error", description: `Cannot remove person: System error. ${supabaseInitializationError || ''}`, variant: "destructive" });
+        toast({ title: "Error", description: `Cannot remove person: ${supabaseInitializationError || 'System error.'}`, variant: "destructive" });
         if (personToDelete) setPersonToDelete(null);
         return;
     }
-
+    setIsLoading(true);
     try {
         let involvedInTransactions = false;
         let involvementReason = "";
@@ -164,72 +171,95 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
 
     } catch (error: any) {
         console.error("Error during person deletion process:", error);
-        toast({ title: "Error", description: `Could not remove ${personToDelete.name}: ${error.message}`, variant: "destructive" });
+        toast({ title: "Error Removing Person", description: `Could not remove ${personToDelete?.name || 'person'}: ${error.message}`, variant: "destructive" });
     } finally {
+        setIsLoading(false);
         setPersonToDelete(null);
     }
   };
 
+  if (supabaseInitializationError && !db) {
+    return (
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader>
+          <CardTitle className="text-xl text-destructive flex items-center">
+            <AlertTriangle className="mr-2 h-5 w-5" /> Error
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex-1 p-6">
+          <p>Could not connect to the database. Managing people is currently unavailable.</p>
+          <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <>
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <Users className="mr-2 h-5 w-5 text-primary" /> Manage People
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="pb-4 border-b">
+          <CardTitle className="flex items-center text-2xl font-bold">
+            <Users className="mr-3 h-6 w-6 text-primary" /> Manage People
           </CardTitle>
-          <CardDescription>Add, edit, or remove people in your settlement group.</CardDescription>
+          <CardDescription>Add new participants to your group or edit existing ones.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0">
-          <div className="mb-4">
-            <Label htmlFor="newPersonName" className="text-sm font-medium">Add New Person</Label>
-            <div className="flex space-x-2 mt-1">
-              <Input
-                id="newPersonName"
-                type="text"
-                value={newPersonName}
-                onChange={(e) => setNewPersonName(e.target.value)}
-                placeholder="Enter person's name"
-                className="flex-grow"
-                onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
-              />
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || !!supabaseInitializationError}>
-                <PlusCircle className="mr-2 h-4 w-4" /> Add
+        <CardContent className="flex-1 flex flex-col min-h-0 p-6 space-y-6">
+          
+          <div className="p-5 border rounded-lg shadow-sm bg-card/50">
+            <Label className="text-lg font-semibold block mb-3 text-primary">Add New Person</Label>
+            <div className="flex space-x-3 items-end">
+              <div className="flex-grow">
+                <Label htmlFor="newPersonName" className="text-xs">Person's Name</Label>
+                <Input
+                  id="newPersonName"
+                  type="text"
+                  value={newPersonName}
+                  onChange={(e) => setNewPersonName(e.target.value)}
+                  placeholder="e.g., Jane Doe"
+                  className="mt-1 h-11 text-base"
+                  disabled={isLoading}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
+                />
+              </div>
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || isLoading} className="h-11">
+                <PlusCircle className="mr-2 h-5 w-5" /> {isLoading && !editingPersonId ? 'Adding...' : 'Add Person'}
               </Button>
             </div>
           </div>
+
           <div className="flex-1 flex flex-col min-h-0">
-            <h4 className="font-semibold mb-2 text-muted-foreground text-sm">Current People:</h4>
+            <h4 className="text-lg font-semibold mb-3 text-primary">Current People in Group</h4>
             {people.length > 0 ? (
-              <ScrollArea className="flex-1 min-h-0 rounded-md border p-2 bg-background">
-                <ul className="space-y-1.5">
+              <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1">
+                <ul className="space-y-2 p-2">
                   {people.map(person => (
-                    <li key={person.id} className="flex items-center justify-between p-2.5 bg-card/60 rounded-sm text-sm group">
+                    <li key={person.id} className="flex items-center justify-between p-3 bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group">
                       {editingPersonId === person.id ? (
                         <>
                           <Input
                             type="text"
                             value={editingPersonNewName}
                             onChange={(e) => setEditingPersonNewName(e.target.value)}
-                            className="flex-grow mr-2 h-8 text-sm"
+                            className="flex-grow mr-2 h-9 text-sm"
                             autoFocus
+                            disabled={isLoading}
                             onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
                           />
-                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 text-green-600" title="Save">
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-8 w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                             <Save className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 text-gray-500" title="Cancel">
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
                             <Ban className="h-4 w-4" />
                           </Button>
                         </>
                       ) : (
                         <>
-                          <span className="truncate flex-grow" title={person.name}>{person.name}</span>
-                          <div className="flex items-center space-x-0.5 transition-opacity">
-                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 text-blue-600" title="Edit name">
+                          <span className="truncate flex-grow text-sm font-medium" title={person.name}>{person.name}</span>
+                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit name" disabled={isLoading || !!editingPersonId}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 text-red-600" title="Remove person">
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-8 w-8 text-red-600 hover:text-red-700" title="Remove person" disabled={isLoading || !!editingPersonId}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -240,7 +270,11 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                 </ul>
               </ScrollArea>
             ) : (
-              <p className="text-sm text-muted-foreground p-2">No people added yet. Add some to get started!</p>
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
+                  <Users className="h-16 w-16 mb-4 text-primary/30" />
+                  <p className="text-lg font-medium">No People Yet</p>
+                  <p className="text-sm">Add people to your group using the form above.</p>
+              </div>
             )}
           </div>
         </CardContent>
@@ -258,9 +292,9 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPersonToDelete(null)}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                Attempt to Remove {personToDelete.name}
+              <AlertDialogCancel onClick={() => setPersonToDelete(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleExecuteRemovePerson} className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={isLoading}>
+                {isLoading ? 'Removing...' : `Attempt to Remove ${personToDelete.name}`}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
