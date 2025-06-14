@@ -70,17 +70,20 @@ export default function AddExpenseTab({
     return '';
   }, [people]);
 
+  // Effect to reset the "baseline" people snapshot when we switch to a "new expense" context
   useEffect(() => {
     if (!expenseToEdit) {
-      // Reset the ref when the form is conceptually for a "new" expense.
-      // This ensures that the main effect's logic for new expenses
-      // correctly identifies the initial setup vs. subsequent people prop changes.
+      // We are in a "new expense" state (either initially, or after canceling an edit)
+      // Clear the snapshot so the main effect can re-initialize it.
       initialPeopleSetForFormInstance.current = new Set();
     }
   }, [expenseToEdit]);
 
+
+  // Main effect for form initialization based on expenseToEdit, people, categories
   useEffect(() => {
     if (expenseToEdit) {
+      // Populate form for editing an existing expense
       initialPeopleSetForFormInstance.current = new Set(); // Clear ref when editing
 
       setDescription(expenseToEdit.description);
@@ -114,10 +117,8 @@ export default function AddExpenseTab({
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
         setSelectedPeopleEqual(expenseToEdit.shares.map(s => s.personId));
-      } else if (!expenseToEdit.shares && expenseToEdit.split_method === 'equal') { // Default for existing expense if shares are missing
-        setSelectedPeopleEqual(people.map(p => p.id));
-      } else {
-         setSelectedPeopleEqual(people.map(p => p.id)); // Default for other split methods or if changing to equal
+      } else { // Default for other split methods or if changing to equal while editing
+         setSelectedPeopleEqual(people.map(p => p.id));
       }
 
 
@@ -140,81 +141,92 @@ export default function AddExpenseTab({
          setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
       }
 
-    } else {
-      // Resetting form for new expense
+    } else { // NEW EXPENSE FORM
+      // Reset core form fields
       setDescription('');
-      setTotalAmount('');
+      setTotalAmount(''); 
       setCategory(dynamicCategories[0]?.name || '');
       setIsMultiplePayers(false);
-      
-      setSplitMethod('equal'); 
-      
-      setSelectedPeopleEqual(prevSelected => {
-        const currentPeopleIds = people.map(p => p.id);
-        const currentPeopleSet = new Set(currentPeopleIds);
+      setSplitMethod('equal');
 
-        if (initialPeopleSetForFormInstance.current.size === 0 && people.length > 0) {
-          // This is the first meaningful initialization for this new expense form instance
-          initialPeopleSetForFormInstance.current = new Set(currentPeopleIds);
-          return currentPeopleIds; // Select all current people
-        }
-        
-        // Preserve existing selections and add new people
-        const newSelected = new Set(prevSelected);
-        people.forEach(person => {
-          // If person is new to the group (wasn't in our initial baseline for this form)
-          // and they are not already selected, select them.
-          if (!initialPeopleSetForFormInstance.current.has(person.id) && !prevSelected.includes(person.id)) {
-            newSelected.add(person.id);
-          }
+      // Initialize payers: for new form, firstPayer, empty amount.
+      // The dedicated useEffect will sync amount from totalAmount input.
+      const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+
+      // Initialize other split-specific states
+      setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
+      
+      // Logic for selectedPeopleEqual for a NEW expense
+      const currentPeopleIds = people.map(p => p.id);
+      const previousPeopleSnapshot = initialPeopleSetForFormInstance.current;
+
+      if (previousPeopleSnapshot.size === 0 && people.length > 0) {
+        // True first time setup for this new form instance (snapshot was cleared by expenseToEdit effect)
+        setSelectedPeopleEqual(currentPeopleIds);
+        initialPeopleSetForFormInstance.current = new Set(currentPeopleIds); // Set the baseline snapshot
+      } else {
+        // Subsequent runs for this new form (e.g., people list changed while form is "new")
+        setSelectedPeopleEqual(prevSelected => {
+          const newSelected = new Set(prevSelected);
+          // Add any people who are new to the group (not in the previous snapshot)
+          currentPeopleIds.forEach(personId => {
+            if (!previousPeopleSnapshot.has(personId)) {
+              newSelected.add(personId);
+            }
+          });
+          // Ensure all selected people actually exist in the current group
+          return Array.from(newSelected).filter(id => currentPeopleIds.includes(id));
         });
 
-        // Ensure the selection only contains people currently in the group
-        const finalSelected = Array.from(newSelected).filter(id => currentPeopleSet.has(id));
-        
-        // Update the baseline if the people list has actually changed
-        if (new Set(currentPeopleIds).size !== initialPeopleSetForFormInstance.current.size || 
-            !currentPeopleIds.every(id => initialPeopleSetForFormInstance.current.has(id))) {
-            initialPeopleSetForFormInstance.current = new Set(currentPeopleIds);
+        // Update snapshot if people list has actually changed
+        const currentSnapshotSet = new Set(currentPeopleIds);
+        if (currentSnapshotSet.size !== previousPeopleSnapshot.size ||
+            !Array.from(currentSnapshotSet).every(id => previousPeopleSnapshot.has(id))) {
+          initialPeopleSetForFormInstance.current = currentSnapshotSet;
         }
-        return finalSelected;
-      });
-      
-      const firstPayer = people[0]?.id || defaultPayerId || '';
-      setPayers([{ id: Date.now().toString(), personId: firstPayer, amount: totalAmount && !isMultiplePayers ? totalAmount : '' }]);
-      setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
+      }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, totalAmount, isMultiplePayers]);
+  // This effect should run when the context (editing vs new, or core data like people/categories) changes.
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
 
 
+  // Effect to sync payer amount from totalAmount input for single payer mode, or initialize for multiple payers
   useEffect(() => {
     if (!isMultiplePayers) {
       const currentPayer = payers[0];
-      let newPayerAmount = totalAmount;
-      let newPayerPersonId = currentPayer?.personId || defaultPayerId;
-      
-      if (!currentPayer?.personId && defaultPayerId) {
-         // newPayerPersonId is already set
-      }
+      const newPayerAmount = totalAmount; // This is the live input from totalAmount state
+      const newPayerPersonId = currentPayer?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
+      // Only update if necessary to avoid potential loops if payers was in dep array
       if (!currentPayer || currentPayer.personId !== newPayerPersonId || currentPayer.amount !== newPayerAmount) {
         setPayers([{ id: currentPayer?.id || Date.now().toString(), personId: newPayerPersonId, amount: newPayerAmount }]);
       }
     } else { 
-        if (payers.length === 0 && defaultPayerId) {
-             setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: '' }]);
-        } else if (payers.length === 1 && !payers[0].personId && defaultPayerId) {
-            setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
+        // If switching to multiple payers and payers list is empty, or first payer needs default personId
+        const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+        if (payers.length === 0 && firstPayerPersonId) { // ensure people list is loaded
+             setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+        } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
+            // If there's one payer row but no person selected, set the default
+            if (payers[0].personId !== firstPayerPersonId) { // check to prevent loop if already set
+                setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
+            }
         }
+        // Note: For multiple payers, individual amounts are manually entered by the user.
+        // Total amount is not automatically distributed among them here.
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, payers]); 
+  }, [totalAmount, isMultiplePayers, defaultPayerId, people]); // `people` for defaultPayerId logic
 
 
+  // Effect to initialize unequal shares or items when split method changes (and not editing)
   useEffect(() => {
+    if (expenseToEdit) return; // Only apply for new expenses
+
     if (splitMethod === 'unequal') {
        const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
-        if (!anySharesPopulated && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'unequal')) {
+        if (!anySharesPopulated && people.length > 0) {
             const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
             if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) { 
                  setUnequalShares(initialEmptyShares);
@@ -222,10 +234,10 @@ export default function AddExpenseTab({
         }
     }
     
-    if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'itemwise')) {
+    if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 ) {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares]);
+  }, [splitMethod, people, expenseToEdit, items, unequalShares]); // Keep items & unequalShares to re-init if user empties them and changes method
 
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
@@ -235,16 +247,19 @@ export default function AddExpenseTab({
   };
 
   const addPayer = () => {
-    setPayers([...payers, { id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
+    const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+    setPayers([...payers, { id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
   };
 
   const removePayer = (index: number) => {
     const newPayers = payers.filter((_, i) => i !== index);
+    const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
     if (newPayers.length === 0) { 
         if (isMultiplePayers) {
-            setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: '' }]);
+            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
         } else { 
-            setPayers([{ id: Date.now().toString(), personId: defaultPayerId || '', amount: totalAmount }]);
+             // This case should be handled by the isMultiplePayers toggle or totalAmount effect for single payer
+            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
         }
     } else {
       setPayers(newPayers);
@@ -254,11 +269,16 @@ export default function AddExpenseTab({
   const handleToggleMultiplePayers = () => {
     const goingToMultiple = !isMultiplePayers;
     setIsMultiplePayers(goingToMultiple);
+    const firstPayerPersonId = payers[0]?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
+
     if (goingToMultiple) {
+      // From single to multiple: retain first payer's info if reasonable, else clear amount.
       const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
-      setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: firstPayerAmount }]);
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: firstPayerAmount }]);
     } else {
-      setPayers([{ id: Date.now().toString(), personId: payers[0]?.personId || defaultPayerId || '', amount: totalAmount }]);
+      // From multiple to single: use first payer's personId, set amount to totalAmount.
+      // The dedicated useEffect for totalAmount/isMultiplePayers will handle syncing this.
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
     }
   };
 
@@ -361,7 +381,7 @@ export default function AddExpenseTab({
     }
 
     let calculatedShares: { personId: string; amount: number; }[] = [];
-    let expenseItems: ExpenseItemDetail[] | null = null;
+    let expenseItemsPayload: ExpenseItemDetail[] | null = null;
 
     if (splitMethod === 'equal') {
       const shareAmount = selectedPeopleEqual.length > 0 ? parseFloat(totalAmount) / selectedPeopleEqual.length : 0;
@@ -371,7 +391,7 @@ export default function AddExpenseTab({
         .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
-      expenseItems = items.map(item => ({
+      expenseItemsPayload = items.map(item => ({
         id: item.id, 
         name: item.name,
         price: parseFloat(item.price as string),
@@ -392,6 +412,7 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
+        // Ensure items is explicitly null if not itemwise to avoid stale data
         const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = {
           description,
           total_amount: parseFloat(totalAmount),
@@ -399,7 +420,7 @@ export default function AddExpenseTab({
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItems : null,
+          items: splitMethod === 'itemwise' ? expenseItemsPayload : null, 
         };
         
         const { error: updateError } = await db
@@ -417,7 +438,7 @@ export default function AddExpenseTab({
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItems : undefined,
+          items: splitMethod === 'itemwise' ? expenseItemsPayload : undefined,
         };
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
@@ -428,17 +449,9 @@ export default function AddExpenseTab({
       }
       onExpenseAdded(); 
       if (!expenseToEdit) { 
-        setDescription(''); setTotalAmount(''); 
-        setCategory(dynamicCategories[0]?.name || '');
-        const firstPayer = people[0]?.id || defaultPayerId || '';
-        setPayers([{ id: Date.now().toString(), personId: firstPayer, amount: '' }]);
-        setIsMultiplePayers(false);
-        setSplitMethod('equal'); 
-        // For new expense, selectedPeopleEqual is handled by the main useEffect
-        // initialPeopleSetForFormInstance.current will be reset by its own effect if needed
-        // setSelectedPeopleEqual(people.map(p => p.id)); // This will be set by the main useEffect correctly
-        setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
+        // No need to manually reset fields here, the main useEffect triggered by onExpenseAdded (if it causes people/categories to refetch)
+        // or by expenseToEdit becoming null will handle it.
+        // setDescription(''); setTotalAmount(''); setCategory... etc. - these would be reset by main effect.
       }
     } catch (error: any) {
       let errorMessage = "An unknown error occurred while saving the expense.";
@@ -608,6 +621,3 @@ export default function AddExpenseTab({
     </div>
   );
 }
-
-
-    
