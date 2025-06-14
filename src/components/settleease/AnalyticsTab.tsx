@@ -443,9 +443,9 @@ export default function AnalyticsTab({
                 <CardHeader>
                     <CardTitle className="text-lg flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary"/>Expenses Over Time (Monthly)</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] pt-2">
+                <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyExpenseData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                    <LineChart data={monthlyExpenseData} margin={{ top: 10, right: 20, left: -5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
                         <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
@@ -456,7 +456,44 @@ export default function AnalyticsTab({
                     </ResponsiveContainer>
                 </CardContent>
                 </Card>
-                <ShareVsPaidChart shareVsPaidData={shareVsPaidData} />
+                <Card className="shadow-md rounded-lg">
+                    <CardHeader>
+                        <CardTitle className="text-lg flex items-center">
+                        <BarChart3 className="mr-2 h-5 w-5 text-primary" />
+                        Share vs. Paid Comparison
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="h-[300px]">
+                        {shareVsPaidData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                            data={shareVsPaidData}
+                            margin={{ top: 10, right: 20, left: 10, bottom: (shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? 25 : 5 }}
+                            >
+                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                            <XAxis 
+                                dataKey="name" 
+                                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} 
+                                interval={0} 
+                                angle={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? -30 : 0} 
+                                textAnchor={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? "end" : "middle"} 
+                                height={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? 50: 30} 
+                            />
+                             <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                            <Tooltip
+                                formatter={(value: number) => [formatCurrency(value), "Amount"]}
+                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
+                                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                                itemStyle={{ color: 'hsl(var(--foreground))' }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: "11px" }} />
+                            <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={Math.min(25, (shareVsPaidData.length > 0 ? (200 / shareVsPaidData.length / 2) : 25) * 0.8 )} />
+                            <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} barSize={Math.min(25, (shareVsPaidData.length > 0 ? (200 / shareVsPaidData.length / 2) : 25) * 0.8 )} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                        ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for comparison chart.</p>)}
+                    </CardContent>
+                </Card>
             </div>
 
             {/* Row for Day of Week Spending and Split Method Distribution */}
@@ -466,15 +503,15 @@ export default function AnalyticsTab({
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-primary"/>Spending by Day of Week</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px] pt-2">
+                    <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                        <BarChart data={spendingByDayOfWeekData} margin={{ top: 10, right: 20, left: -5, bottom: 5 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
                         <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
                         <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), "Total Spent"]}/>
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Bar dataKey="totalAmount" name="Total Spent" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} barSize={30}/>
+                        <Bar dataKey="totalAmount" name="Total Spent" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} barSize={25}/>
                         </BarChart>
                     </ResponsiveContainer>
                     </CardContent>
@@ -485,7 +522,7 @@ export default function AnalyticsTab({
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center"><GitFork className="mr-2 h-5 w-5 text-primary"/>Split Method Distribution</CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px] pt-2">
+                    <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                         <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={10}>
@@ -494,7 +531,7 @@ export default function AnalyticsTab({
                             ))}
                         </Pie>
                         <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [value, "Expenses"]}/>
-                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
+                        <Legend wrapperStyle={{ fontSize: "10px" }} />
                         </PieChart>
                     </ResponsiveContainer>
                     </CardContent>
@@ -631,7 +668,7 @@ export default function AnalyticsTab({
                 <CardHeader>
                 <CardTitle className="text-lg flex items-center"><PieChartIconLucide className="mr-2 h-5 w-5 text-primary"/>Spending by Category (Top 5)</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] pt-2">
+                <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                     <Pie data={detailedCategoryAnalytics.slice(0,5)} dataKey="totalAmount" nameKey="name" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={10}>
@@ -640,7 +677,7 @@ export default function AnalyticsTab({
                         ))}
                     </Pie>
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), "Amount"]} />
-                    <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
+                    <Legend wrapperStyle={{ fontSize: "10px" }} />
                     </PieChart>
                 </ResponsiveContainer>
                 </CardContent>
@@ -650,12 +687,12 @@ export default function AnalyticsTab({
                 <CardHeader>
                 <CardTitle className="text-lg flex items-center"><BarChart3 className="mr-2 h-5 w-5 text-primary"/>Expense Amount Distribution</CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px] pt-2">
+                <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 10, right: 20, left: 5, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
-                    <YAxis type="category" dataKey="range" width={80} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+                    <YAxis type="category" dataKey="range" width={75} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
                     <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value: number) => [value, "Number of Expenses"]} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
                     <Bar dataKey="count" name="Expenses" fill="hsl(var(--chart-4))" radius={[0, 3, 3, 0]} barSize={20} />
