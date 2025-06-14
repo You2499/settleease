@@ -359,19 +359,10 @@ export default function AddExpenseTab({
         toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
       }
       const sumItemsOriginalPrices = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
-      // For itemwise, the sum of *original* item prices must match the *original* total amount if no celebration,
-      // OR the sum of *original* item prices must match the *original* total amount, and the split logic handles the celebration.
-      // The amountToSplit is what will be distributed. The item prices on the form are original.
-      // Let's ensure sum of item prices (original) isn't wildly off from original total amount.
-      // The actual test will be that shares sum to amountToSplit.
-      // The user is inputting original item prices that should conceptually sum to totalAmount.
-      // The current validation `sumItems - currentAmountToSplit` should be `sumItemsOriginalPrices - originalTotalAmountNum`
-      // If celebration, then the sum of *adjusted* item prices should equal currentAmountToSplit.
-      // This is handled internally.
+
       if (Math.abs(sumItemsOriginalPrices - originalTotalAmountNum) > 0.001) {
         toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItemsOriginalPrices)}) must equal the total bill amount (${formatCurrency(originalTotalAmountNum)}) before celebration contributions.`, variant: "destructive" }); return false;
       }
-
     }
     return true;
   }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers, isCelebrationMode, celebrationPayerId, actualCelebrationAmount, amountToSplit]);
@@ -403,7 +394,7 @@ export default function AddExpenseTab({
         celebrationContributionPayload = { personId: celebrationPayerId, amount: actualCelebrationAmount };
     }
     
-    const finalAmountEffectivelySplit = amountToSplit; // This is originalTotalAmountNum - actualCelebrationAmount
+    const finalAmountEffectivelySplit = amountToSplit; 
 
     let calculatedShares: { personId: string; amount: number; }[] = [];
     let expenseItemsPayload: ExpenseItemDetail[] | null = null;
@@ -418,17 +409,20 @@ export default function AddExpenseTab({
         .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
-      // Items payload stores original prices
       expenseItemsPayload = items.map(item => ({
         id: item.id, 
         name: item.name,
-        price: parseFloat(item.price as string), // Store original price
+        price: parseFloat(item.price as string), 
         sharedBy: item.sharedBy
       }));
 
       const itemwiseSharesMap: Record<string, number> = {};
-      // Calculate reduction factor based on original total amount and amount to split
-      const reductionFactor = (originalTotalAmountNum > 0.001) ? (finalAmountEffectivelySplit / originalTotalAmountNum) : 0;
+      const sumOfOriginalItemPrices = expenseItemsPayload.reduce((sum, item) => sum + Number(item.price), 0);
+      
+      const reductionFactor = (sumOfOriginalItemPrices > 0.001 && finalAmountEffectivelySplit >= 0) 
+        ? (finalAmountEffectivelySplit / sumOfOriginalItemPrices) 
+        : (sumOfOriginalItemPrices === 0 && finalAmountEffectivelySplit === 0 ? 1 : 0);
+
 
       items.forEach(item => {
         const originalItemPrice = parseFloat(item.price as string);
@@ -441,19 +435,19 @@ export default function AddExpenseTab({
             });
         }
       });
-      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount: Math.max(0, amount) })); // Ensure non-negative shares
+      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount: Math.max(0, amount) })); 
     }
 
     try {
       const commonPayload = {
         description,
-        total_amount: originalTotalAmountNum, // Store original total amount
+        total_amount: originalTotalAmountNum, 
         category,
         paid_by: finalPayers,
         split_method: splitMethod,
-        shares: calculatedShares, // These shares sum up to finalAmountEffectivelySplit
-        items: splitMethod === 'itemwise' ? expenseItemsPayload : null, // Store original item details
-        celebration_contribution: celebrationContributionPayload,
+        shares: calculatedShares, 
+        items: splitMethod === 'itemwise' ? expenseItemsPayload : null,
+        ...(celebrationContributionPayload && { celebration_contribution: celebrationContributionPayload }),
       };
 
       if (expenseToEdit && expenseToEdit.id) {
@@ -476,20 +470,24 @@ export default function AddExpenseTab({
       if (!expenseToEdit) { 
         // Fields are reset by the main useEffect if not editing
       }
-    } catch (error: any) {
+    } catch (caughtError: unknown) {
       let errorMessage = "An unknown error occurred while saving the expense.";
-      if (error) {
-        if (typeof error.message === 'string' && error.message.trim() !== '') {
-          errorMessage = error.message;
-        } else if (typeof error.code === 'string' && error.code.trim() !== '') { 
-          errorMessage = `Error code: ${error.code}`;
-        } else if (typeof error.details === 'string' && error.details.trim() !== '') { 
-          errorMessage = error.details;
-        } else if (typeof error === 'string' && error.trim() !== '') {
-          errorMessage = error;
+      
+      if (caughtError instanceof Error) {
+        errorMessage = caughtError.message;
+      } else if (typeof caughtError === 'string') {
+        errorMessage = caughtError;
+      } else if (typeof caughtError === 'object' && caughtError !== null) {
+        const potentialError = caughtError as { message?: unknown; code?: unknown; details?: unknown };
+        if (typeof potentialError.message === 'string' && potentialError.message.trim() !== '') {
+          errorMessage = potentialError.message;
+        } else if (typeof potentialError.code === 'string' && potentialError.code.trim() !== '') {
+          errorMessage = `Error code: ${potentialError.code}`;
+        } else if (typeof potentialError.details === 'string' && potentialError.details.trim() !== '') {
+          errorMessage = potentialError.details;
         }
       }
-      console.error("Error saving expense:", errorMessage, error);
+      console.error("Error saving expense:", errorMessage, caughtError);
       toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
     } finally {
       setIsLoading(false);
