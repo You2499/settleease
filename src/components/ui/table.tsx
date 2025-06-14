@@ -71,15 +71,17 @@ TableRow.displayName = "TableRow"
 const TableHead = React.forwardRef<
   HTMLTableCellElement,
   React.ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => ( // Explicitly destructure children
   <th
     ref={ref}
     className={cn(
       "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
       className
     )}
-    {...props}
-  />
+    {...props} // Spread remaining props
+  >
+    {children} {/* Render children inside the th element */}
+  </th>
 ))
 TableHead.displayName = "TableHead"
 
