@@ -91,7 +91,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:max-w-xl md:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2 h-6 w-6" /> Expense Details
