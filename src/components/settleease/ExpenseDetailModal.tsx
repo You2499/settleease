@@ -14,7 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, AlertCircle, CalendarDays, Users, Scale, SlidersHorizontal, ClipboardList, ListTree, ReceiptText, ShoppingBag } from 'lucide-react';
+import { ScrollArea } from "@/components/ui/scroll-area"; // Added import
+import { Info, User, PartyPopper, CalendarDays, Users, Scale, SlidersHorizontal, ClipboardList, ListTree, ReceiptText, ShoppingBag, Coins, CreditCard } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
 import { format } from 'date-fns';
@@ -51,7 +52,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     if (expense.split_method === 'equal') return Scale;
     if (expense.split_method === 'unequal') return SlidersHorizontal;
     if (expense.split_method === 'itemwise') return ClipboardList;
-    return ReceiptText; // Default icon
+    return ReceiptText;
   }, [expense.split_method]);
 
   const dateAdded = expense.created_at ? format(new Date(expense.created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A';
@@ -71,13 +72,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     if (expense.celebration_contribution) {
         ids.add(expense.celebration_contribution.personId);
     }
-    // For itemwise, ensure all people who shared items are included
     if (expense.split_method === 'itemwise' && Array.isArray(expense.items)) {
         expense.items.forEach(item => item.sharedBy.forEach(id => ids.add(id)));
     }
     return Array.from(ids);
   }, [expense]);
-
 
   const itemwiseBreakdownForDisplay = useMemo(() => {
     if (expense.split_method !== 'itemwise' || !Array.isArray(expense.items) || expense.items.length === 0) {
@@ -154,11 +153,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             
             <Card>
               <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold">Payment & Contribution</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center"><CreditCard className="mr-2 h-5 w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div>
-                  <span className="font-medium text-muted-foreground block mb-1">Paid by (Physical Payments):</span>
+                  <span className="font-medium text-muted-foreground block mb-1">Physically Paid By:</span>
                   {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
                     <ul className="list-disc list-inside pl-4 space-y-0.5">
                       {expense.paid_by.map((p: PayerShare) => (
@@ -193,7 +192,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 )}
                 <Separator className="my-2.5" />
                 <div className="flex justify-between font-semibold">
-                  <span>Net Amount Split:</span>
+                  <span>Net Amount For Splitting:</span>
                   <span className="text-accent">{formatCurrency(amountEffectivelySplit)}</span>
                 </div>
               </CardContent>
@@ -202,25 +201,26 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             <Card>
               <CardHeader className="pb-3 pt-4">
                 <CardTitle className="text-lg font-semibold flex items-center">
-                  <SplitIcon className="mr-2 h-5 w-5 text-muted-foreground"/> Split Breakdown
+                  <SplitIcon className="mr-2 h-5 w-5 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
                 </CardTitle>
-                <CardDescription className="capitalize">{expense.split_method} Split</CardDescription>
               </CardHeader>
               <CardContent className="text-sm space-y-3">
                 {expense.split_method === 'equal' && expense.shares && expense.shares.length > 0 && (
                   <div>
-                    <p className="mb-1">Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"}:</p>
+                    <CardDescription className="mb-1.5 text-xs">
+                        Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"} after any contributions.
+                    </CardDescription>
                     <ul className="list-disc list-inside pl-4 text-muted-foreground space-y-0.5">
                       {expense.shares.map(share => (
                         <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
                       ))}
                     </ul>
-                    <p className="mt-2 font-medium">Amount per person: <span className="text-primary">{formatCurrency(amountEffectivelySplit / expense.shares.length)}</span></p>
+                    <p className="mt-2 font-medium">Share per person: <span className="text-primary">{formatCurrency(amountEffectivelySplit / expense.shares.length)}</span></p>
                   </div>
                 )}
                 {expense.split_method === 'unequal' && expense.shares && expense.shares.length > 0 && (
                    <div>
-                    <p className="mb-1.5 text-muted-foreground">Specific shares assigned:</p>
+                    <CardDescription className="mb-1.5 text-xs">Specific shares assigned after any contributions.</CardDescription>
                     <ul className="space-y-1">
                       {expense.shares.map(share => (
                         <li key={share.personId} className="flex justify-between p-1.5 bg-secondary/20 rounded-sm">
@@ -249,10 +249,10 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     </div>
                     {itemwiseBreakdownForDisplay && (
                         <div>
-                            <h4 className="font-medium text-muted-foreground mb-1.5 flex items-center"><ListTree className="mr-2 h-4 w-4"/>Individual Item Shares:</h4>
+                            <h4 className="font-medium text-muted-foreground mb-1.5 flex items-center"><ListTree className="mr-2 h-4 w-4"/>Individual Item Shares (Adjusted):</h4>
                             <CardDescription className="text-xs mb-2">
-                                Based on splitting {formatCurrency(amountEffectivelySplit)} after celebration contribution.
-                                Original item prices are proportionally reduced.
+                                Based on splitting {formatCurrency(amountEffectivelySplit)} (original bill of {formatCurrency(totalOriginalBill)} minus any contributions).
+                                Original item prices are proportionally reduced before calculating individual shares.
                             </CardDescription>
                             <div className="space-y-2.5">
                             {Object.entries(itemwiseBreakdownForDisplay).map(([personId, details]) => (
@@ -290,6 +290,16 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     )}
                   </div>
                 )}
+                 {expense.shares.length === 0 && amountEffectivelySplit > 0.001 && (
+                    <p className="text-sm text-destructive-foreground bg-destructive/20 p-2 rounded-md">
+                        No shares were assigned for the amount of {formatCurrency(amountEffectivelySplit)} that was to be split.
+                    </p>
+                )}
+                {amountEffectivelySplit < 0.001 && totalOriginalBill > 0.001 && (
+                    <p className="text-sm text-muted-foreground p-2 bg-secondary/20 rounded-md">
+                        The entire bill of {formatCurrency(totalOriginalBill)} was covered by the celebration contribution. No amount remained for splitting.
+                    </p>
+                )}
               </CardContent>
             </Card>
 
@@ -314,27 +324,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
                       const personCelebrationAmount = isCelebrationContributor ? expense.celebration_contribution!.amount : 0;
                       
-                      const effectivePaidByPerson = amountPhysicallyPaid + (isCelebrationContributor ? 0 : 0); // The celebration amount's effect is embedded in `shareOfSplitAmount` being lower for everyone.
-                                                                                                               // Or, for the contributor, their `paid_by` should reflect the total amount they covered.
-                                                                                                               // Let's keep `amountPhysicallyPaid` as is from `paid_by` which is their cash out.
-                                                                                                               // The net calculation will show their overpayment.
-
-                      // Revised Net calculation: what they paid MINUS what their share was.
-                      // If celebration, their `amountPhysicallyPaid` includes their celebration part in the `paid_by` record.
-                      // No, paid_by is literal. If they paid 1000, and 500 was celebration, they are still "out" 1000 initially.
-                      // Their share is of the reduced amount.
-
-                      // Let's use 'Net Paid (incl. Celebration)' for contributor.
-                      const displayPaidAmount = isCelebrationContributor 
-                                                ? amountPhysicallyPaid // This should be the total cash they put in. If celebration was part of it, it's included here.
-                                                : amountPhysicallyPaid;
+                      const effectivePaid = isCelebrationContributor ? amountPhysicallyPaid : amountPhysicallyPaid;
                       
-                      const displayPaidLabel = isCelebrationContributor
-                                               ? "Physically Paid (incl. Celebration portion if applicable)"
-                                               : "Physically Paid";
-
-                      const netForThisExpense = displayPaidAmount - shareOfSplitAmount;
-
+                      const netForThisExpense = effectivePaid - shareOfSplitAmount;
 
                       return (
                         <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
@@ -353,11 +345,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                           </div>
                           {isCelebrationContributor && (
                             <p className="text-xs text-amber-700 dark:text-amber-500 italic flex items-center">
-                              <PartyPopper className="inline h-3 w-3 mr-1 shrink-0"/> Contributed {formatCurrency(personCelebrationAmount)} for this expense.
+                              <PartyPopper className="inline h-3 w-3 mr-1 shrink-0"/> You contributed {formatCurrency(personCelebrationAmount)} for this expense.
                             </p>
                           )}
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>{displayPaidLabel}:</span> <span>{formatCurrency(displayPaidAmount)}</span>
+                            <span>
+                              {isCelebrationContributor ? "Net Paid (incl. Contribution):" : "Physically Paid:"}
+                            </span> 
+                            <span>{formatCurrency(effectivePaid)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmount)}</span>
