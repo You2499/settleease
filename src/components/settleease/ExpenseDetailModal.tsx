@@ -14,8 +14,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Info, User, PartyPopper, CalendarDays, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Info, User, PartyPopper, CalendarDays, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
 import { format } from 'date-fns';
@@ -83,15 +83,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       return null;
     }
     
-    const reductionFactor = (totalOriginalBill > 0.001 && amountEffectivelySplit > 0.001) ? (amountEffectivelySplit / totalOriginalBill) : (totalOriginalBill === 0 && amountEffectivelySplit === 0 ? 1 : 0) ;
+    const reductionFactor = (totalOriginalBill > 0.001 && amountEffectivelySplit >= 0) ? (amountEffectivelySplit / totalOriginalBill) : (totalOriginalBill === 0 && amountEffectivelySplit === 0 ? 1 : 0) ;
 
 
     const aggregatedData: PersonAggregatedItemShares = {};
 
     expense.items.forEach((item: ExpenseItemDetail) => {
       const originalItemPriceNum = Number(item.price);
-      // If amountEffectivelySplit is 0 (e.g. celebration covers full bill), adjustedItemPriceForSplit should be 0
-      const adjustedItemPriceForSplit = (amountEffectivelySplit > 0.001) ? (originalItemPriceNum * reductionFactor) : 0;
+      const adjustedItemPriceForSplit = (amountEffectivelySplit >= 0) ? (originalItemPriceNum * reductionFactor) : 0;
 
 
       if (item.sharedBy && item.sharedBy.length > 0) {
@@ -120,9 +119,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col">
-        {/* DialogContent has p-6 by default. Children are within this padding. */}
-        <DialogHeader className="pb-4 border-b"> {/* Relies on parent p-6 for PL/PR/PT. Modifies PB. */}
+      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2.5 h-6 w-6" /> Expense Details
           </DialogTitle>
@@ -131,8 +129,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow min-h-0"> {/* Fills space between header/footer, within parent's p-6 */}
-          <div className="pt-4 space-y-6"> {/* Vertical padding for content inside ScrollArea. Horizontal padding comes from DialogContent's p-6. */}
+        <ScrollArea className="flex-grow min-h-0 pr-1"> {/* Added pr-1 to prevent scrollbar overlapping content edge too much */}
+          <div className="py-4 px-6 space-y-4"> {/* py-4 for vertical space, px-6 matches DialogContent default */}
             
             <Card>
               <CardHeader className="pb-3 pt-4">
@@ -315,7 +313,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 <CardTitle className="text-lg font-semibold flex items-center">
                   <Users className="mr-2 h-5 w-5 text-muted-foreground"/> Individual Net Effect
                 </CardTitle>
-                <CardDescription>How this expense impacts each person's balance based on the net amount split ({formatCurrency(amountEffectivelySplit)}).</CardDescription>
+                 <CardDescription>
+                  Each person's financial position for this expense, after considering their payments and share of the <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong> split amount.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {involvedPersonIdsOverall.length > 0 ? (
@@ -329,14 +329,10 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const shareOfSplitAmountForThisPerson = shareRecord ? Number(shareRecord.amount) : 0;
 
                       const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
-                      const personCelebrationAmount = isCelebrationContributor ? expense.celebration_contribution!.amount : 0;
+                      const personCelebrationAmount = isCelebrationContributor ? Number(expense.celebration_contribution!.amount) : 0;
                       
-                      // Net effect = (what they effectively put IN for others) - (what they effectively owe FROM the split)
-                      // What they effectively put IN = their physical payment + their celebration (if any, as it reduces what others owe)
-                      // OR, more simply for calculation: total paid by them (physically) - their share of what needed to be split.
-                      // The "celebration contribution" is a form of payment.
-                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
-
+                      const netAmountPaidIncludingCelebration = amountPhysicallyPaidByThisPerson + (isCelebrationContributor ? personCelebrationAmount : 0);
+                      const netEffectForThisPerson = netAmountPaidIncludingCelebration - shareOfSplitAmountForThisPerson;
 
                       return (
                         <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
@@ -353,17 +349,30 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                   `Settled`}
                             </span>
                           </div>
-                          {isCelebrationContributor && (
-                            <p className="text-xs text-amber-700 dark:text-amber-500 italic flex items-center">
-                              <PartyPopper className="inline h-3 w-3 mr-1 shrink-0"/> You contributed {formatCurrency(personCelebrationAmount)} towards this bill.
+                          
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                              <span>
+                                  {isCelebrationContributor ? 'Net Paid (incl. Celebration):' : 'Physically Paid:'}
+                              </span> 
+                              <span>
+                                  {isCelebrationContributor ? formatCurrency(netAmountPaidIncludingCelebration) : formatCurrency(amountPhysicallyPaidByThisPerson)}
+                              </span>
+                          </div>
+
+                          {isCelebrationContributor && amountPhysicallyPaidByThisPerson > 0 && (
+                            <p className="text-xs text-muted-foreground/80 pl-2">
+                                (Physically paid {formatCurrency(amountPhysicallyPaidByThisPerson)} + Contributed {formatCurrency(personCelebrationAmount)})
                             </p>
                           )}
-                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Physically Paid:</span> 
-                            <span>{formatCurrency(amountPhysicallyPaidByThisPerson)}</span>
-                          </div>
+                          {isCelebrationContributor && amountPhysicallyPaidByThisPerson === 0 && (
+                            <p className="text-xs text-muted-foreground/80 pl-2">
+                                (Contributed {formatCurrency(personCelebrationAmount)})
+                            </p>
+                          )}
+
+
                           <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Share of Split Amount ({formatCurrency(amountEffectivelySplit)}):</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
+                            <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
                           </div>
                         </li>
                       );
@@ -378,7 +387,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </div>
         </ScrollArea>
 
-        <DialogFooter className="border-t pt-4 mt-auto"> {/* Relies on parent p-6. Modifies PT. mt-auto to push down. */}
+        <DialogFooter className="px-6 pb-6 pt-4 border-t mt-auto">
           <DialogClose asChild>
             <Button type="button" variant="outline">Close</Button>
           </DialogClose>
@@ -387,6 +396,3 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
-
-
-    
