@@ -88,7 +88,7 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
         paid: totalPaidByPerson,
         share: totalShareForPerson,
       };
-    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5);
+    }).filter(d => d.paid > 0 || d.share > 0);
   }, [expenses, people, peopleMap]);
   
   const yAxisDomainTop = useMemo(() => {
