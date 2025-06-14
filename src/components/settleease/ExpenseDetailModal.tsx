@@ -14,9 +14,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info } from 'lucide-react';
+import { Info, User } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense } from '@/lib/settleease/types';
+import type { Expense, ExpenseItemDetail } from '@/lib/settleease/types';
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -26,12 +26,27 @@ interface ExpenseDetailModalProps {
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
+interface PersonItemShare {
+  itemName: string;
+  itemPrice: number;
+  sharedByCount: number;
+  shareForPerson: number;
+  itemId: string;
+}
+
+interface PersonAggregatedShares {
+  [personId: string]: {
+    items: PersonItemShare[];
+    totalShare: number;
+  };
+}
+
 export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
   const CategoryIcon = getCategoryIconFromName(expense.category);
 
-  const involvedPersonIds = useMemo(() => {
+  const involvedPersonIdsOverall = useMemo(() => {
     const ids = new Set<string>();
     if (Array.isArray(expense.paid_by)) {
       expense.paid_by.forEach(p => ids.add(p.personId));
@@ -41,6 +56,37 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     }
     return Array.from(ids);
   }, [expense.paid_by, expense.shares]);
+
+
+  const personCentricItemDetails = useMemo(() => {
+    if (expense.split_method !== 'itemwise' || !expense.items || expense.items.length === 0) {
+      return null;
+    }
+
+    const aggregatedData: PersonAggregatedShares = {};
+
+    expense.items.forEach((item: ExpenseItemDetail) => {
+      if (item.sharedBy && item.sharedBy.length > 0) {
+        const itemPriceNumeric = Number(item.price);
+        const sharePerPersonForItem = itemPriceNumeric / item.sharedBy.length;
+
+        item.sharedBy.forEach((personId: string) => {
+          if (!aggregatedData[personId]) {
+            aggregatedData[personId] = { items: [], totalShare: 0 };
+          }
+          aggregatedData[personId].items.push({
+            itemId: item.id || `item-${Math.random()}`, // Use item.id or a fallback
+            itemName: item.name,
+            itemPrice: itemPriceNumeric,
+            sharedByCount: item.sharedBy.length,
+            shareForPerson: sharePerPersonForItem,
+          });
+          aggregatedData[personId].totalShare += sharePerPersonForItem;
+        });
+      }
+    });
+    return aggregatedData;
+  }, [expense.split_method, expense.items]);
 
 
   return (
@@ -94,9 +140,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 <CardDescription>How this specific expense affects each person's balance before overall settlement.</CardDescription>
               </CardHeader>
               <CardContent>
-                {involvedPersonIds.length > 0 ? (
+                {involvedPersonIdsOverall.length > 0 ? (
                   <ul className="space-y-2 text-sm">
-                    {involvedPersonIds.map(personId => {
+                    {involvedPersonIdsOverall.map(personId => {
                       const personName = peopleMap[personId] || 'Unknown Person';
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
                       const amountPaidThisExpense = paymentRecord ? Number(paymentRecord.amount) : 0;
@@ -135,39 +181,51 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
               </CardContent>
             </Card>
 
-            {expense.split_method === 'itemwise' && expense.items && expense.items.length > 0 && (
+            {expense.split_method === 'itemwise' && personCentricItemDetails && Object.keys(personCentricItemDetails).length > 0 && (
               <>
                 <Separator />
                 <Card>
                   <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-lg">Item-wise Breakdown</CardTitle>
+                    <CardTitle className="text-lg">Item-wise Breakdown (Per Person)</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {expense.items.map((item, index) => (
-                      <Card key={item.id || index.toString()} className="p-3 bg-card/70 shadow-sm">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <h4 className="font-semibold text-sm">{item.name || `Item ${index + 1}`}</h4>
-                          <span className="text-sm font-medium text-primary">{formatCurrency(Number(item.price))}</span>
+                  <CardContent className="space-y-4">
+                    {Object.entries(personCentricItemDetails).map(([personId, details]) => (
+                      <Card key={personId} className="p-3 bg-card/70 shadow-sm">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold text-md flex items-center">
+                            <User className="mr-1.5 h-4 w-4 text-muted-foreground" />
+                            {peopleMap[personId] || 'Unknown Person'}
+                          </h4>
+                          <span className="text-sm font-semibold text-primary">
+                            Total Share: {formatCurrency(details.totalShare)}
+                          </span>
                         </div>
-                        {item.sharedBy && item.sharedBy.length > 0 ? (
-                          <>
-                            <p className="text-xs text-muted-foreground mb-1">Shared by:</p>
-                            <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
-                              {item.sharedBy.map(personId => (
-                                <li key={personId} className="flex justify-between">
-                                  <span>{peopleMap[personId] || 'Unknown'}</span>
-                                  <span className="text-muted-foreground">{formatCurrency(Number(item.price) / item.sharedBy.length)}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </>
-                        ) : <p className="text-xs text-muted-foreground">Not shared by anyone.</p>}
+                        {details.items.length > 0 ? (
+                          <ul className="space-y-1 text-xs pl-2 border-l-2 border-primary/20">
+                            {details.items.map((itemShare) => (
+                              <li key={itemShare.itemId} className="flex justify-between pl-2">
+                                <span className="truncate" title={itemShare.itemName}>{itemShare.itemName}</span>
+                                <span className="text-muted-foreground whitespace-nowrap">
+                                  {formatCurrency(itemShare.shareForPerson)}
+                                  {itemShare.sharedByCount > 1 && (
+                                     <span className="ml-1 text-gray-400 text-[10px]">
+                                        (of {formatCurrency(itemShare.itemPrice)} / {itemShare.sharedByCount})
+                                     </span>
+                                  )}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-xs text-muted-foreground pl-2">Not involved in sharing any items.</p>
+                        )}
                       </Card>
                     ))}
                   </CardContent>
                 </Card>
               </>
             )}
+
             {(expense.split_method === 'equal' && expense.shares && expense.shares.length > 0) && (
               <>
                 <Separator />
@@ -182,7 +240,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                         <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
                       ))}
                     </ul>
-                    <p className="text-sm mt-2">Amount per person: <span className="font-semibold text-primary">{formatCurrency(Number(expense.total_amount) / expense.shares.length)}</span></p>
+                    {expense.shares.length > 0 && (
+                        <p className="text-sm mt-2">Amount per person: <span className="font-semibold text-primary">{formatCurrency(Number(expense.total_amount) / expense.shares.length)}</span></p>
+                    )}
                   </CardContent>
                 </Card>
               </>
@@ -199,3 +259,5 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
+
+    
