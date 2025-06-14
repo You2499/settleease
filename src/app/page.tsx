@@ -83,10 +83,11 @@ export default function SettleEasePage() {
     }
 
     let isMounted = true;
-    if (!currentUser && !isLoadingAuth) {
-      console.log("Auth effect: No currentUser and not loading. Setting isLoadingAuth=true to check session.");
-       setIsLoadingAuth(true);
-    }
+    // The following block was removed as it was causing a loop:
+    // if (!currentUser && !isLoadingAuth) {
+    //   console.log("Auth effect: No currentUser and not loading. Setting isLoadingAuth=true to check session.");
+    //    setIsLoadingAuth(true);
+    // }
 
 
     console.log("Auth effect: Attempting to get session.");
@@ -107,7 +108,7 @@ export default function SettleEasePage() {
       }
     }).catch(err => {
         if(isMounted) {
-            console.warn("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false."); // Changed from console.error
+            console.warn("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false."); 
             setIsLoadingAuth(false);
         }
     });
@@ -434,12 +435,10 @@ export default function SettleEasePage() {
           console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
         }
       } else if (error) {
-        // For other errors that DO have an error object (but are not CHANNEL_ERROR)
         console.error(`${baseMessage}: Status: ${status}`, error);
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe: ${error.message || 'Unknown error'}. Status: ${status}.`, variant: "destructive", duration: 10000 });
       } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
-         // TIMED_OUT or other statuses without an explicit error object
-        console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
+         console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
       } else {
          console.warn(`${baseMessage}: Unhandled status ${status} without an error object.`);
       }
@@ -485,12 +484,18 @@ export default function SettleEasePage() {
               console.log(`Realtime: Subscription status for ${tableName}: ${status}`, err ? `Error: ${err.message}` : '');
               if (status === 'SUBSCRIBED') {
                 console.log(`Realtime: Subscribed successfully to ${tableName}`);
-              } else if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+              } else if ((err && status !== 'CHANNEL_ERROR') || status === 'TIMED_OUT' || status === 'CLOSED') { // Only toast for actual errors or unrecoverable states
                 handleSubscriptionError(tableName, status, err);
                 if(channelRef.current === channel) {
                     console.log(`Realtime: Nullifying channelRef for ${tableName} due to error/closed status.`);
                     channelRef.current = null;
                 }
+              } else if (status === 'CHANNEL_ERROR') { // Don't toast for channel errors, but log them
+                  console.warn(`Subscription error on ${tableName}: Status was ${status}. Error details:`, err);
+                  if(channelRef.current === channel) {
+                    console.log(`Realtime: Nullifying channelRef for ${tableName} due to CHANNEL_ERROR.`);
+                    channelRef.current = null;
+                  }
               }
             });
           } catch (subscribeError: any) {
