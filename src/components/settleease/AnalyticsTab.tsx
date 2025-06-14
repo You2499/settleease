@@ -592,7 +592,7 @@ export default function AnalyticsTab({
   if (allExpenses.length === 0) {
     return (
       <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
             <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
@@ -613,11 +613,11 @@ export default function AnalyticsTab({
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm">
-            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm p-1">
+            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2 border">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2 border">
               <UserSquare className="h-4 w-4"/> Personal Insights
             </TabsTrigger>
           </TabsList>
@@ -722,7 +722,7 @@ export default function AnalyticsTab({
                         {analyticsViewMode === 'personal' ? 'Your Spending Over Time (Monthly)' : 'Group Expenses Over Time (Monthly)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                     <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={monthlyExpenseData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -742,7 +742,7 @@ export default function AnalyticsTab({
                         Share vs. Paid {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `(For ${peopleMap[selectedPersonIdForAnalytics]})` : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                         {shareVsPaidData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
@@ -784,7 +784,7 @@ export default function AnalyticsTab({
                             {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                     <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
@@ -806,7 +806,7 @@ export default function AnalyticsTab({
                             Split Method Distribution {analyticsViewMode === 'personal' ? '(For Your Expenses)' : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
                         <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={9}>
@@ -831,7 +831,7 @@ export default function AnalyticsTab({
                     Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
+                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1">
                 <ScrollArea className="h-auto max-h-[400px]">
                     <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                         {topExpensesData.map(exp => (
@@ -858,7 +858,7 @@ export default function AnalyticsTab({
                     Category Deep Dive {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
+            <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1">
                 <ScrollArea className="h-auto max-h-[400px]">
                 <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>{/* */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}{/* */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                     {detailedCategoryAnalytics.map(cat => (
@@ -888,7 +888,7 @@ export default function AnalyticsTab({
                 </CardTitle>
                 <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1"> {/* Adjusted padding */}
+                <CardContent className="px-0 sm:px-2 pb-0 sm:pb-2 pt-1">
                     <ScrollArea className="h-auto max-h-[400px]">
                         <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                             {detailedParticipantAnalytics.map(p => (
@@ -920,7 +920,7 @@ export default function AnalyticsTab({
                     Spending by Category (Top 5) {analyticsViewMode === 'personal' ? '(Your Shares)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                 {pieChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
@@ -956,7 +956,7 @@ export default function AnalyticsTab({
                     Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1"> {/* Adjusted pt */}
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
