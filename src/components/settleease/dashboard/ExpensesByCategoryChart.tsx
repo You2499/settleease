@@ -23,7 +23,7 @@ export default function ExpensesByCategoryChart({ expensesByCategory }: Expenses
       <CardContent className="h-[280px]">
         {expensesByCategory.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}>
+            <PieChart margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
               <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={Math.min(80, (typeof window !== "undefined" ? window.innerWidth : 300) / 8)} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
                 {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
               </Pie>
@@ -41,3 +41,4 @@ export default function ExpensesByCategoryChart({ expensesByCategory }: Expenses
     </Card>
   );
 }
+
