@@ -58,7 +58,7 @@ export default function AddExpenseTab({
   
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
-  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
+  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
 
   const [isLoading, setIsLoading] = useState(false);
   
@@ -84,6 +84,8 @@ export default function AddExpenseTab({
     const currentTotal = parseFloat(totalAmount) || 0;
     return Math.max(0, currentTotal - actualCelebrationAmount);
   }, [totalAmount, actualCelebrationAmount]);
+
+  const defaultItemCategory = useMemo(() => category || (dynamicCategories.length > 0 ? dynamicCategories[0].name : ''), [category, dynamicCategories]);
 
 
   useEffect(() => {
@@ -153,10 +155,11 @@ export default function AddExpenseTab({
           id: item.id || Date.now().toString() + Math.random(),
           name: item.name,
           price: item.price.toString(),
-          sharedBy: item.sharedBy || []
+          sharedBy: item.sharedBy || [],
+          categoryName: item.categoryName || defaultItemCategory,
         })));
       } else {
-         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
+         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
       }
 
     } else { 
@@ -174,7 +177,7 @@ export default function AddExpenseTab({
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
       
       const currentPeopleIds = people.map(p => p.id);
       const previousPeopleSnapshot = initialPeopleSetForFormInstance.current;
@@ -200,7 +203,7 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
 
   useEffect(() => {
     if (!isMultiplePayers) {
@@ -238,9 +241,9 @@ export default function AddExpenseTab({
     }
     
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 ) {
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id), categoryName: defaultItemCategory }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares]); 
+  }, [splitMethod, people, expenseToEdit, items, unequalShares, defaultItemCategory]); 
 
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
@@ -293,7 +296,7 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]); 
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]); 
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
@@ -351,8 +354,8 @@ export default function AddExpenseTab({
     }
     if (splitMethod === 'itemwise') {
       if (items.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one item must be added for itemwise split if there's an amount to split.", variant: "destructive" }); return false; }
-      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0) && currentAmountToSplit > 0.001) {
-        toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
+      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0 || !item.categoryName) && currentAmountToSplit > 0.001) {
+        toast({ title: "Validation Error", description: "Each item must have a name, positive price, a selected category, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
       }
       const sumItemsOriginalPrices = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
 
@@ -409,7 +412,8 @@ export default function AddExpenseTab({
         id: item.id, 
         name: item.name,
         price: parseFloat(item.price as string), 
-        sharedBy: item.sharedBy
+        sharedBy: item.sharedBy,
+        categoryName: item.categoryName || defaultItemCategory, // Ensure categoryName is included
       }));
 
       const itemwiseSharesMap: Record<string, number> = {};
@@ -543,10 +547,10 @@ export default function AddExpenseTab({
                 <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-base h-11" />
               </div>
               <div>
-                <Label htmlFor="category" className="text-base">Category</Label>
+                <Label htmlFor="category" className="text-base">Main Category</Label>
                 <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
                   <SelectTrigger id="category" className="mt-1 text-base h-11">
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="Select main category" />
                   </SelectTrigger>
                   <SelectContent>
                     {dynamicCategories.map(cat => {
@@ -708,6 +712,7 @@ export default function AddExpenseTab({
                     <ItemwiseSplitSection
                     items={items}
                     people={people}
+                    dynamicCategories={dynamicCategories}
                     handleItemChange={handleItemChange}
                     handleItemSharedByChange={handleItemSharedByChange}
                     removeItem={removeItem}

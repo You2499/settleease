@@ -11,9 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution } from '@/lib/settleease/types';
+import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares } from '@/lib/settleease/types';
+import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -21,22 +23,6 @@ interface ExpenseDetailModalProps {
   onOpenChange: (open: boolean) => void;
   peopleMap: Record<string, string>;
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
-}
-
-interface PersonItemShareDetails {
-  itemName: string;
-  originalItemPrice: number;
-  adjustedItemPriceForSplit: number;
-  shareForPerson: number;
-  sharedByCount: number;
-  itemId: string;
-}
-
-interface PersonAggregatedItemShares {
-  [personId: string]: {
-    items: PersonItemShareDetails[];
-    totalShareOfAdjustedItems: number;
-  };
 }
 
 
@@ -106,6 +92,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             adjustedItemPriceForSplit: adjustedItemPriceForSplit,
             sharedByCount: item.sharedBy.length,
             shareForPerson: sharePerPersonForItem,
+            itemCategoryName: item.categoryName, // Pass item category name
           });
           aggregatedData[personId].totalShareOfAdjustedItems += sharePerPersonForItem;
         });
@@ -113,6 +100,16 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     });
     return aggregatedData;
   }, [expense.split_method, expense.items, amountEffectivelySplit]);
+
+  const getItemCategoryIcon = (categoryName?: string) => {
+    if (!categoryName) return Settings2; // Default icon
+    const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.label.toLowerCase().includes(categoryName.toLowerCase()) || icon.iconKey.toLowerCase() === categoryName.toLowerCase());
+    if (iconDetail) return iconDetail.IconComponent;
+    // Fallback for dynamic categories if name matches
+    const dynamicCatIconKey = expense.category === categoryName ? CategoryIcon : Settings2; // Simplified, assumes getCategoryIconFromName works well for main
+    return dynamicCatIconKey; // This might need refinement if dynamicCategories is available here.
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -143,7 +140,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                   <span className="font-bold text-xl text-primary text-right">{formatCurrency(totalOriginalBill)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Category:</span> 
+                  <span className="text-muted-foreground">Main Category:</span> 
                   <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span>
                 </div>
               </CardContent>
@@ -234,15 +231,24 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     <div>
                         <h4 className="font-medium text-muted-foreground mb-1.5 flex items-center"><ShoppingBag className="mr-2 h-4 w-4"/>Original Items & Prices:</h4>
                         <ul className="space-y-1 text-xs">
-                        {expense.items.map(item => (
-                            <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
-                                <div className="flex justify-between items-center">
-                                    <span className="font-medium truncate" title={item.name}>{item.name}</span>
-                                    <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
-                                </div>
-                                <div className="text-muted-foreground/80">Shared by: {item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
-                            </li>
-                        ))}
+                        {expense.items.map(item => {
+                            const ItemCatIcon = getItemCategoryIcon(item.categoryName);
+                            return (
+                                <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-medium truncate flex items-center" title={item.name}>
+                                          <ItemCatIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                          {item.name}
+                                          {item.categoryName && item.categoryName !== expense.category && (
+                                            <span className="ml-1.5 text-gray-500 text-[10px] italic">({item.categoryName})</span>
+                                          )}
+                                        </span>
+                                        <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
+                                    </div>
+                                    <div className="text-muted-foreground/80 pl-5">Shared by: {item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                </li>
+                            );
+                        })}
                         </ul>
                          <p className="text-xs text-muted-foreground mt-1.5">Total of original items: {formatCurrency(expense.items.reduce((sum, item) => sum + Number(item.price), 0))}</p>
                     </div>
@@ -266,17 +272,23 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                 </div>
                                 {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).length > 0 ? (
                                   <ul className="space-y-0.5 text-xs pl-1.5 border-l-2 border-primary/30">
-                                    {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).map((itemShare) => (
-                                      <li key={itemShare.itemId} className="flex justify-between pl-1.5">
-                                        <span className="truncate mr-1" title={itemShare.itemName}>{itemShare.itemName}</span>
-                                        <span className="text-muted-foreground whitespace-nowrap">
-                                          {formatCurrency(itemShare.shareForPerson)}
-                                          <span className="ml-1 text-gray-400 text-[9px]" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
-                                            (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
-                                          </span>
-                                        </span>
-                                      </li>
-                                    ))}
+                                    {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).map((itemShare) => {
+                                       const ItemShareCatIcon = getItemCategoryIcon(itemShare.itemCategoryName);
+                                       return (
+                                        <li key={itemShare.itemId} className="flex justify-between pl-1.5">
+                                            <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
+                                                <ItemShareCatIcon className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                                {itemShare.itemName}
+                                            </span>
+                                            <span className="text-muted-foreground whitespace-nowrap">
+                                            {formatCurrency(itemShare.shareForPerson)}
+                                            <span className="ml-1 text-gray-400 text-[9px]" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
+                                                (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
+                                            </span>
+                                            </span>
+                                        </li>
+                                       );
+                                    })}
                                   </ul>
                                 ) : (
                                   <p className="text-xs text-muted-foreground pl-1.5">Not involved in sharing any items contributing to the split amount.</p>

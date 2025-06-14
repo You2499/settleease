@@ -9,6 +9,7 @@ export interface ExpenseItemDetail {
   name: string;
   price: number | string; // Allow string for input, convert to number for storage/calculation
   sharedBy: string[]; // Array of person IDs
+  categoryName?: string; // Optional: Category specific to this item
 }
 
 export interface CelebrationContribution {
@@ -126,3 +127,20 @@ export interface TopExpenseData extends Expense {
   // For now, just reusing Expense type is fine if all necessary fields are there
 }
 
+// Used in ExpenseDetailModal for itemwise breakdown
+export interface PersonItemShareDetails {
+  itemName: string;
+  originalItemPrice: number;
+  adjustedItemPriceForSplit: number;
+  shareForPerson: number;
+  sharedByCount: number;
+  itemId: string;
+  itemCategoryName?: string; // Added for per-item category display
+}
+
+export interface PersonAggregatedItemShares {
+  [personId: string]: {
+    items: PersonItemShareDetails[];
+    totalShareOfAdjustedItems: number;
+  };
+}

@@ -8,12 +8,16 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from "@/components/ui/card";
-import { PlusCircle, MinusCircle } from 'lucide-react';
-import type { Person, ExpenseItemDetail } from '@/lib/settleease/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { PlusCircle, MinusCircle, Settings2 } from 'lucide-react';
+import type { Person, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
+import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+
 
 interface ItemwiseSplitSectionProps {
   items: ExpenseItemDetail[];
   people: Person[];
+  dynamicCategories: DynamicCategory[];
   handleItemChange: <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => void;
   handleItemSharedByChange: (itemIndex: number, personId: string) => void;
   removeItem: (index: number) => void;
@@ -23,6 +27,7 @@ interface ItemwiseSplitSectionProps {
 export default function ItemwiseSplitSection({
   items,
   people,
+  dynamicCategories,
   handleItemChange,
   handleItemSharedByChange,
   removeItem,
@@ -32,25 +37,48 @@ export default function ItemwiseSplitSection({
     <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-4">
         {items.map((item, itemIndex) => (
         <Card key={item.id} className="p-4 bg-background shadow-md rounded-lg">
-            <div className="flex items-center justify-between gap-3 mb-3">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-3 mb-3 items-center">
                 <Input 
                     value={item.name} 
                     onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
                     placeholder={`Item ${itemIndex + 1} Name`} 
-                    className="flex-grow h-10"
+                    className="h-10"
                 />
                 <Input 
                     type="number" 
                     value={item.price as string} 
                     onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
                     placeholder="Price" 
-                    className="w-32 h-10"
+                    className="w-full md:w-28 h-10"
                 />
+                <Select
+                  value={item.categoryName || ''}
+                  onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
+                  disabled={dynamicCategories.length === 0}
+                >
+                  <SelectTrigger className="h-10 w-full md:w-40">
+                    <SelectValue placeholder="Item Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dynamicCategories.map(cat => {
+                      const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                      const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                      return (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          <div className="flex items-center">
+                            <IconComponent className="mr-2 h-4 w-4" />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
                 <Button 
                     variant="ghost" 
                     size="icon" 
                     onClick={() => removeItem(itemIndex)} 
-                    className="text-destructive h-10 w-10" 
+                    className="text-destructive h-10 w-10 md:w-auto justify-self-end md:justify-self-auto"
                     disabled={items.length <=1}
                     aria-label={`Remove item ${itemIndex + 1}`}
                 >
