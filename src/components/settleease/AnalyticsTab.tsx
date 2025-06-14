@@ -591,7 +591,7 @@ export default function AnalyticsTab({
 
   if (allExpenses.length === 0) {
     return (
-      <Card className="shadow-lg rounded-lg text-center py-10">
+      <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
             <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
@@ -613,7 +613,7 @@ export default function AnalyticsTab({
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm border">
             <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
@@ -625,7 +625,7 @@ export default function AnalyticsTab({
           <TabsContent value="group">
           </TabsContent>
           <TabsContent value="personal">
-            <Card className="mb-4 sm:mb-6 p-3 sm:p-4 shadow-sm">
+            <Card className="mb-4 sm:mb-6 p-3 sm:p-4 shadow-md">
               <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
                 Select Person for Detailed Insights:
               </Label>
@@ -977,3 +977,4 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
+

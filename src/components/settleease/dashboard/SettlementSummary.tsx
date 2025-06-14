@@ -76,7 +76,7 @@ export default function SettlementSummary({
           </div>
         </CardHeader>
         <CardContent className="p-4 sm:p-6 pt-0">
-          <TabsContent value="overview" className="mt-0 space-y-4">
+          <TabsContent value="overview" className="mt-0"> {/* Removed space-y-4 */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 p-3 rounded-md gap-2">
                   <CardDescription className="text-xs sm:text-sm flex-grow pr-2">{overviewDescription}</CardDescription>
                   <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
@@ -93,7 +93,7 @@ export default function SettlementSummary({
                   </div>
               </div>
             {transactionsToDisplay.length > 0 ? (
-              <ScrollArea className="h-[200px] border rounded-md p-1">
+              <ScrollArea className="h-[200px] border rounded-md p-1 mt-4"> {/* Added mt-4 */}
                 <ul className="space-y-2 p-2">
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
@@ -123,7 +123,7 @@ export default function SettlementSummary({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md text-center min-h-[100px] flex items-center justify-center">
+              <div className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md text-center min-h-[100px] flex items-center justify-center mt-4"> {/* Added mt-4 */}
                   <FileText className="mr-2 h-5 w-5"/>
                   All debts are settled, or no expenses to settle yet!
               </div>
@@ -170,3 +170,4 @@ export default function SettlementSummary({
     </Card>
   );
 }
+
