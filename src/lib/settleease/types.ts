@@ -11,6 +11,11 @@ export interface ExpenseItemDetail {
   sharedBy: string[]; // Array of person IDs
 }
 
+export interface CelebrationContribution {
+  personId: string;
+  amount: number;
+}
+
 export interface Expense {
   id: string; // Supabase ID
   description: string;
@@ -18,8 +23,9 @@ export interface Expense {
   category: string; // This will eventually link to Category.id or use Category.name
   paid_by: PayerShare[]; // Array of PayerShare objects
   split_method: 'equal' | 'unequal' | 'itemwise';
-  shares: PayerShare[]; // Calculated shares for each person (personId and amount)
+  shares: PayerShare[]; // Calculated shares for each person (personId and amount) based on the net amount split
   items?: ExpenseItemDetail[]; // For itemwise split method
+  celebration_contribution?: CelebrationContribution | null; // New field for celebration contributions
   created_at?: string; // ISO date string
   updated_at?: string; // ISO date string
 }

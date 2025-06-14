@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, AlertTriangle, Users, Settings2 } from 'lucide-react';
+import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper } from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
@@ -22,7 +23,7 @@ import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 
 import { EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
+import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory, CelebrationContribution } from '@/lib/settleease/types';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -44,11 +45,17 @@ export default function AddExpenseTab({
   onCancelEdit,
 }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
-  const [totalAmount, setTotalAmount] = useState('');
+  const [totalAmount, setTotalAmount] = useState(''); // This is the Original Total Bill Amount
   const [category, setCategory] = useState('');
   
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
+
+  // Celebration Contribution State
+  const [isCelebrationMode, setIsCelebrationMode] = useState(false);
+  const [celebrationPayerId, setCelebrationPayerId] = useState<string>('');
+  const [celebrationAmountInput, setCelebrationAmountInput] = useState<string>('');
+
 
   const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
   
@@ -61,6 +68,8 @@ export default function AddExpenseTab({
   
   const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
 
+  const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
+
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
       const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
@@ -68,6 +77,18 @@ export default function AddExpenseTab({
     }
     return '';
   }, [people]);
+
+  const actualCelebrationAmount = useMemo(() => {
+    if (!isCelebrationMode || !celebrationPayerId) return 0;
+    const parsedAmount = parseFloat(celebrationAmountInput);
+    return isNaN(parsedAmount) || parsedAmount < 0 ? 0 : parsedAmount;
+  }, [isCelebrationMode, celebrationPayerId, celebrationAmountInput]);
+
+  const amountToSplit = useMemo(() => {
+    const currentTotal = parseFloat(totalAmount) || 0;
+    return Math.max(0, currentTotal - actualCelebrationAmount);
+  }, [totalAmount, actualCelebrationAmount]);
+
 
   useEffect(() => {
     if (!expenseToEdit) {
@@ -105,6 +126,16 @@ export default function AddExpenseTab({
         }]);
       }
 
+      if (expenseToEdit.celebration_contribution) {
+        setIsCelebrationMode(true);
+        setCelebrationPayerId(expenseToEdit.celebration_contribution.personId);
+        setCelebrationAmountInput(expenseToEdit.celebration_contribution.amount.toString());
+      } else {
+        setIsCelebrationMode(false);
+        setCelebrationPayerId('');
+        setCelebrationAmountInput('');
+      }
+
       setSplitMethod(expenseToEdit.split_method);
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
@@ -138,6 +169,10 @@ export default function AddExpenseTab({
       setCategory(dynamicCategories[0]?.name || '');
       setIsMultiplePayers(false);
       setSplitMethod('equal');
+
+      setIsCelebrationMode(false);
+      setCelebrationPayerId('');
+      setCelebrationAmountInput('');
 
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
@@ -286,40 +321,48 @@ export default function AddExpenseTab({
 
   const validateForm = useCallback(() => {
     if (!description.trim()) { toast({ title: "Validation Error", description: "Description cannot be empty.", variant: "destructive" }); return false; }
-    const amountNum = parseFloat(totalAmount);
-    if (isNaN(amountNum) || amountNum <= 0) { toast({ title: "Validation Error", description: "Total amount must be a positive number.", variant: "destructive" }); return false; }
+    const originalTotalAmountNum = parseFloat(totalAmount);
+    if (isNaN(originalTotalAmountNum) || originalTotalAmountNum <= 0) { toast({ title: "Validation Error", description: "Total Bill Amount must be a positive number.", variant: "destructive" }); return false; }
     if (!category) { toast({ title: "Validation Error", description: "Category must be selected.", variant: "destructive" }); return false; }
+
+    if (isCelebrationMode) {
+      if (!celebrationPayerId) { toast({ title: "Validation Error", description: "Celebratory payer must be selected.", variant: "destructive" }); return false; }
+      if (actualCelebrationAmount <= 0) { toast({ title: "Validation Error", description: "Celebration contribution amount must be positive.", variant: "destructive" }); return false; }
+      if (actualCelebrationAmount > originalTotalAmountNum) { toast({ title: "Validation Error", description: "Celebration contribution cannot exceed total bill amount.", variant: "destructive" }); return false; }
+    }
 
     if (payers.some(p => !p.personId)) { toast({ title: "Validation Error", description: "Each payer must be selected.", variant: "destructive" }); return false; }
     const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    if (Math.abs(totalPaidByPayers - amountNum) > 0.001) { 
-      toast({ title: "Validation Error", description: `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total expense amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false;
+    if (Math.abs(totalPaidByPayers - originalTotalAmountNum) > 0.001) { 
+      toast({ title: "Validation Error", description: `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total bill amount (${formatCurrency(originalTotalAmountNum)}).`, variant: "destructive" }); return false;
     }
     if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) {
         if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { 
              toast({ title: "Validation Error", description: "Each payer's amount must be positive if listed.", variant: "destructive" }); return false;
         }
     }
-    if (!isMultiplePayers && payers.length === 1 && (parseFloat(payers[0].amount) || 0) <= 0 && amountNum > 0) {
+    if (!isMultiplePayers && payers.length === 1 && (parseFloat(payers[0].amount) || 0) <= 0 && originalTotalAmountNum > 0) {
         toast({ title: "Validation Error", description: "Payer amount must be positive.", variant: "destructive" }); return false;
     }
 
-    if (splitMethod === 'equal' && selectedPeopleEqual.length === 0) { toast({ title: "Validation Error", description: "At least one person must be selected for equal split.", variant: "destructive" }); return false; }
+    const currentAmountToSplit = amountToSplit; // Use the memoized value
+
+    if (splitMethod === 'equal' && selectedPeopleEqual.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one person must be selected for equal split if there's an amount to split.", variant: "destructive" }); return false; }
     if (splitMethod === 'unequal') {
       const sumUnequal = Object.values(unequalShares).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      if (Math.abs(sumUnequal - amountNum) > 0.001) { toast({ title: "Validation Error", description: `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal total amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false; }
+      if (Math.abs(sumUnequal - currentAmountToSplit) > 0.001) { toast({ title: "Validation Error", description: `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal amount to split (${formatCurrency(currentAmountToSplit)}).`, variant: "destructive" }); return false; }
       if (Object.values(unequalShares).some(val => parseFloat(val || "0") < 0)) { toast({ title: "Validation Error", description: "Unequal shares cannot be negative.", variant: "destructive" }); return false; }
     }
     if (splitMethod === 'itemwise') {
-      if (items.length === 0) { toast({ title: "Validation Error", description: "At least one item must be added for itemwise split.", variant: "destructive" }); return false; }
-      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0)) {
-        toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person.", variant: "destructive" }); return false;
+      if (items.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one item must be added for itemwise split if there's an amount to split.", variant: "destructive" }); return false; }
+      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0) && currentAmountToSplit > 0.001) {
+        toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
       }
       const sumItems = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
-      if (Math.abs(sumItems - amountNum) > 0.001) { toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItems)}) must equal total amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false; }
+      if (Math.abs(sumItems - currentAmountToSplit) > 0.001) { toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItems)}) must equal amount to split (${formatCurrency(currentAmountToSplit)}).`, variant: "destructive" }); return false; }
     }
     return true;
-  }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers]);
+  }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers, isCelebrationMode, celebrationPayerId, actualCelebrationAmount, amountToSplit]);
 
   const handleSubmitExpense = async () => {
     if (!validateForm()) return;
@@ -331,26 +374,44 @@ export default function AddExpenseTab({
 
     setIsLoading(true);
 
+    const originalTotalAmountNum = parseFloat(totalAmount);
+
     const finalPayers = payers
         .filter(p => p.personId && parseFloat(p.amount) > 0) 
         .map(p => ({ personId: p.personId, amount: parseFloat(p.amount) }));
 
-    if (finalPayers.length === 0 && parseFloat(totalAmount) > 0) {
+    if (finalPayers.length === 0 && originalTotalAmountNum > 0) {
         toast({ title: "Validation Error", description: "At least one valid payer with a positive amount is required.", variant: "destructive" });
         setIsLoading(false);
         return;
     }
+    
+    let celebrationContributionPayload: CelebrationContribution | null = null;
+    let finalAmountEffectivelySplit = amountToSplit; // Use the memoized value which considers celebration
+
+    if (isCelebrationMode && celebrationPayerId && actualCelebrationAmount > 0 && actualCelebrationAmount <= originalTotalAmountNum) {
+        celebrationContributionPayload = { personId: celebrationPayerId, amount: actualCelebrationAmount };
+    } else {
+        // Ensure finalAmountEffectivelySplit is the original total if no celebration
+        finalAmountEffectivelySplit = originalTotalAmountNum;
+    }
+
 
     let calculatedShares: { personId: string; amount: number; }[] = [];
     let expenseItemsPayload: ExpenseItemDetail[] | null = null;
 
-    if (splitMethod === 'equal') {
-      const shareAmount = selectedPeopleEqual.length > 0 ? parseFloat(totalAmount) / selectedPeopleEqual.length : 0;
+    if (finalAmountEffectivelySplit < 0.001 && splitMethod !== 'itemwise') { // If effectively zero amount to split, shares are zero for equal/unequal
+        calculatedShares = []; // Or could be populated with involved people with 0 amount.
+                               // For itemwise, if finalAmountEffectivelySplit is 0, sum of items must be 0.
+    } else if (splitMethod === 'equal') {
+      const shareAmount = selectedPeopleEqual.length > 0 ? finalAmountEffectivelySplit / selectedPeopleEqual.length : 0;
       calculatedShares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
     } else if (splitMethod === 'unequal') {
       calculatedShares = Object.entries(unequalShares)
         .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
+       // If finalAmountEffectivelySplit is zero, unequal shares should also sum to zero.
+       // If not, the sum should match finalAmountEffectivelySplit. The validation covers this.
     } else if (splitMethod === 'itemwise') {
       expenseItemsPayload = items.map(item => ({
         id: item.id, 
@@ -373,14 +434,15 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = {
+        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null, celebration_contribution: CelebrationContribution | null } = {
           description,
-          total_amount: parseFloat(totalAmount),
+          total_amount: originalTotalAmountNum, // Store original total
           category,
           paid_by: finalPayers,
           split_method: splitMethod,
-          shares: calculatedShares,
+          shares: calculatedShares, // Shares are of the amountToSplit
           items: splitMethod === 'itemwise' ? expenseItemsPayload : null, 
+          celebration_contribution: celebrationContributionPayload,
         };
         
         const { error: updateError } = await db
@@ -393,12 +455,13 @@ export default function AddExpenseTab({
       } else {
         const insertPayload: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
           description,
-          total_amount: parseFloat(totalAmount),
+          total_amount: originalTotalAmountNum, // Store original total
           category,
           paid_by: finalPayers,
           split_method: splitMethod,
-          shares: calculatedShares,
+          shares: calculatedShares, // Shares are of the amountToSplit
           items: splitMethod === 'itemwise' ? expenseItemsPayload : undefined,
+          celebration_contribution: celebrationContributionPayload,
         };
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
@@ -480,9 +543,9 @@ export default function AddExpenseTab({
             <Label htmlFor="description">Description</Label>
             <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's" className="mt-1" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="totalAmount">Total Amount</Label>
+              <Label htmlFor="totalAmount">Total Bill Amount</Label>
               <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1" />
             </div>
             <div>
@@ -508,6 +571,15 @@ export default function AddExpenseTab({
               </Select>
             </div>
           </div>
+           {(parseFloat(totalAmount) || 0) > 0 && (
+             <div className="mt-2 text-sm pl-1">
+                <span className="font-medium">Amount to be Split: </span>
+                <span className="font-semibold text-primary">{formatCurrency(amountToSplit)}</span>
+                {isCelebrationMode && actualCelebrationAmount > 0 && (
+                    <span className="text-muted-foreground ml-2 text-xs"> (after {formatCurrency(actualCelebrationAmount)} contribution by {peopleMap[celebrationPayerId] || 'Payer'})</span>
+                )}
+            </div>
+           )}
         </div>
 
         <Separator />
@@ -523,6 +595,85 @@ export default function AddExpenseTab({
           removePayer={removePayer}
           expenseToEdit={expenseToEdit}
         />
+        
+        <Separator />
+
+        <div>
+          <div className="flex items-center space-x-2 mb-2">
+            <Checkbox
+              id="celebrationMode"
+              checked={isCelebrationMode}
+              onCheckedChange={(checked) => {
+                const newIsCelebrationMode = !!checked;
+                setIsCelebrationMode(newIsCelebrationMode);
+                if (!newIsCelebrationMode) {
+                  setCelebrationPayerId('');
+                  setCelebrationAmountInput('');
+                } else if (people.length > 0 && !celebrationPayerId) {
+                  setCelebrationPayerId(defaultPayerId || people[0].id);
+                }
+              }}
+            />
+            <Label htmlFor="celebrationMode" className="text-lg font-medium flex items-center cursor-pointer">
+                <PartyPopper className="mr-2 h-5 w-5 text-yellow-500"/> Celebration Contribution?
+            </Label>
+          </div>
+          {isCelebrationMode && (
+            <Card className="p-4 bg-card/50 shadow-sm space-y-3 mt-1">
+              <div>
+                <Label htmlFor="celebrationPayer">Celebratory Payer</Label>
+                <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
+                  <SelectTrigger id="celebrationPayer" className="mt-1">
+                    <SelectValue placeholder="Select who is contributing" />
+                  </SelectTrigger>
+                  <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="celebrationAmount">Contribution Amount</Label>
+                <Input
+                  id="celebrationAmount"
+                  type="number"
+                  value={celebrationAmountInput}
+                  onChange={e => setCelebrationAmountInput(e.target.value)}
+                  placeholder="Amount"
+                  className="mt-1"
+                />
+                <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
+                  {[10, 25, 50, 100].map(perc => (
+                    <Button
+                      key={perc}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentTotalNum = parseFloat(totalAmount) || 0;
+                        if (currentTotalNum > 0) {
+                          setCelebrationAmountInput(((currentTotalNum * perc) / 100).toFixed(2));
+                        } else {
+                           setCelebrationAmountInput('0.00');
+                        }
+                      }}
+                      className="text-xs px-2 py-1 h-auto"
+                    >
+                      {perc}%
+                    </Button>
+                  ))}
+                   <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCelebrationAmountInput(totalAmount)}
+                      className="text-xs px-2 py-1 h-auto"
+                      disabled={!totalAmount || parseFloat(totalAmount) <=0}
+                    >
+                     Full Amount
+                    </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
 
         <Separator />
 
@@ -566,5 +717,3 @@ export default function AddExpenseTab({
     </Card>
   );
 }
-
-    
