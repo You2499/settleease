@@ -149,7 +149,7 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [db, supabaseInitializationError, currentUser, isLoadingAuth]);
+  }, [currentUser, isLoadingAuth]);
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
@@ -426,11 +426,20 @@ export default function SettleEasePage() {
     const handleSubscriptionError = (tableName: string, status: string, error?: any) => {
       if (!isMounted) return;
       const baseMessage = `Subscription error on ${tableName}`;
-      if (error) {
+
+      if (status === 'CHANNEL_ERROR') {
+        if (error) {
+          console.warn(`${baseMessage}: Status: ${status}. Error details:`, error);
+        } else {
+          console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
+        }
+      } else if (error) {
         console.error(`${baseMessage}: Status: ${status}`, error);
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe: ${error.message || 'Unknown error'}. Status: ${status}.`, variant: "destructive", duration: 10000 });
-      } else {
+      } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
         console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
+      } else {
+         console.warn(`${baseMessage}: Unhandled status ${status} without an error object.`);
       }
     };
 
