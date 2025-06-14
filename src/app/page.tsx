@@ -677,7 +677,7 @@ export default function SettleEasePage() {
     <SidebarProvider defaultOpen={true}>
       <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
-        <div className="flex flex-col h-screen">
+        <div className="flex flex-col h-full"> {/* Changed h-screen to h-full */}
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center h-10">
               <SidebarTrigger className="md:hidden mr-2" />
@@ -713,3 +713,4 @@ export default function SettleEasePage() {
     </SidebarProvider>
   );
 }
+
