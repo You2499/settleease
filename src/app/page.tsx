@@ -107,7 +107,7 @@ export default function SettleEasePage() {
       }
     }).catch(err => {
         if(isMounted) {
-            console.error("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false.");
+            console.warn("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false."); // Changed from console.error
             setIsLoadingAuth(false);
         }
     });
@@ -434,9 +434,11 @@ export default function SettleEasePage() {
           console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
         }
       } else if (error) {
+        // For other errors that DO have an error object (but are not CHANNEL_ERROR)
         console.error(`${baseMessage}: Status: ${status}`, error);
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe: ${error.message || 'Unknown error'}. Status: ${status}.`, variant: "destructive", duration: 10000 });
       } else if (status === 'TIMED_OUT' || status === 'CLOSED') {
+         // TIMED_OUT or other statuses without an explicit error object
         console.warn(`${baseMessage}: Status was ${status} but no error object was provided. This often points to RLS or Realtime Replication issues in Supabase.`);
       } else {
          console.warn(`${baseMessage}: Unhandled status ${status} without an error object.`);
