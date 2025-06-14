@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus } from 'lucide-react';
+import { AlertTriangle, LogIn, UserPlus, HandCoins } from 'lucide-react'; // Added HandCoins
 import { Separator } from '@/components/ui/separator';
 
 // Simple Google Icon SVG as a React component
@@ -25,7 +25,7 @@ const GoogleIcon = () => (
 
 interface AuthFormProps {
   db: SupabaseClient | undefined;
-  onAuthSuccess?: (user: SupabaseUser) => void; // Optional: onAuthStateChange in page.tsx should handle it
+  onAuthSuccess?: (user: SupabaseUser) => void;
 }
 
 export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
@@ -86,19 +86,17 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsGoogleLoading(true);
     setError(null);
-
-    const productionSiteUrl = "https://studio--settleease-hseuo.us-central1.hosted.app/";
     
+    const productionSiteUrl = "https://studio--settleease-hseuo.us-central1.hosted.app/";
+
     try {
       const { error: googleError } = await db.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: productionSiteUrl, // Ensure Supabase redirects back here after Google auth
+          redirectTo: productionSiteUrl, 
         },
       });
       if (googleError) throw googleError;
-      // Note: signInWithOAuth redirects the user. If successful, onAuthStateChange will handle the session.
-      // If there's an immediate error (e.g., misconfiguration), it's caught here.
     } catch (err: any) {
       console.error("Auth error (Google):", err);
       const errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred with Google Sign-In.");
@@ -106,29 +104,31 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       toast({ title: "Google Sign-In Error", description: errorMessage, variant: "destructive" });
       setIsGoogleLoading(false);
     }
-    // setIsLoading(false) is not set here because a successful call redirects
   };
 
   return (
-    <Card className="w-full max-w-sm shadow-xl">
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl font-headline text-primary">
-          {isLoginView ? 'Welcome Back to SettleEase' : 'Join SettleEase'}
+    <Card className="w-full max-w-md shadow-xl rounded-lg">
+      <CardHeader className="text-center pb-4 pt-8">
+        <div className="flex justify-center mb-4">
+          <HandCoins className="h-16 w-16 text-primary" />
+        </div>
+        <CardTitle className="text-3xl font-bold font-headline text-primary">
+          {isLoginView ? 'Welcome Back!' : 'Create Account'}
         </CardTitle>
-        <CardDescription>
-          {isLoginView ? 'Sign in to manage your expenses.' : 'Create an account to get started.'}
+        <CardDescription className="text-md pt-1">
+          {isLoginView ? 'Sign in to continue with SettleEase.' : 'Join SettleEase to manage your group expenses effortlessly.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="px-6 pb-6 space-y-6">
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
             <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
             <p>{error}</p>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address</Label>
             <Input
               id="email"
               type="email"
@@ -138,9 +138,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               onChange={(e) => setEmail(e.target.value)}
               disabled={isLoading || isGoogleLoading}
               required
+              className="h-11 text-base"
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
@@ -152,27 +153,28 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               disabled={isLoading || isGoogleLoading}
               required
               minLength={6}
+              className="h-11 text-base"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading || isGoogleLoading}>
-            {isLoading ? (isLoginView ? 'Logging in...' : 'Signing up...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4" /> Login</> : <><UserPlus className="mr-2 h-4 w-4" /> Sign Up</>)}
+          <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isLoading || isGoogleLoading}>
+            {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-5 w-5" /> Login</> : <><UserPlus className="mr-2 h-5 w-5" /> Create Account</>)}
           </Button>
         </form>
 
-        <div className="relative my-4">
+        <div className="relative my-5">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t" />
           </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with
+          <div className="relative flex justify-center text-sm uppercase">
+            <span className="bg-background px-3 text-muted-foreground">
+              Or
             </span>
           </div>
         </div>
 
         <Button
           variant="outline"
-          className="w-full"
+          className="w-full h-11 text-base"
           onClick={handleGoogleSignIn}
           disabled={isLoading || isGoogleLoading}
         >
@@ -180,17 +182,18 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             "Redirecting to Google..."
           ) : (
             <>
-              <GoogleIcon /> <span className="ml-2">Sign {isLoginView ? 'in' : 'up'} with Google</span>
+              <GoogleIcon /> <span className="ml-2.5">Sign {isLoginView ? 'in' : 'up'} with Google</span>
             </>
           )}
         </Button>
 
       </CardContent>
-      <CardFooter className="flex-col items-center space-y-2 pt-4 border-t">
-        <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm">
+      <CardFooter className="flex-col items-center pt-5 pb-6 border-t bg-secondary/30 rounded-b-lg">
+        <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
           {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Login"}
         </Button>
       </CardFooter>
     </Card>
   );
 }
+
