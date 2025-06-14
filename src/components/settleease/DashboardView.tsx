@@ -8,6 +8,9 @@ import { ArrowRight, FileText, Settings2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import ExpenseDetailModal from './ExpenseDetailModal';
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+
 
 import { formatCurrency, CHART_COLORS, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Person, Expense, Category } from '@/lib/settleease';
@@ -23,42 +26,92 @@ interface DashboardViewProps {
 export default function DashboardView({ expenses, people, peopleMap, dynamicCategories, getCategoryIconFromName }: DashboardViewProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [simplifySettlement, setSimplifySettlement] = useState(true);
 
   const settlement = useMemo(() => {
     if (people.length === 0 || expenses.length === 0) return [];
-    const balances: Record<string, number> = {};
-    people.forEach(p => balances[p.id] = 0);
 
-    expenses.forEach(expense => {
-      if (Array.isArray(expense.paid_by)) {
-        expense.paid_by.forEach(payment => {
-          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
-        });
-      }
-      if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
+    if (simplifySettlement) {
+      // Simplified settlement logic (current algorithm)
+      const balances: Record<string, number> = {};
+      people.forEach(p => balances[p.id] = 0);
+
+      expenses.forEach(expense => {
+        if (Array.isArray(expense.paid_by)) {
+          expense.paid_by.forEach(payment => {
+            balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
           });
-      }
-    });
+        }
+        if (Array.isArray(expense.shares)) {
+            expense.shares.forEach(share => {
+              balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
+            });
+        }
+      });
 
-    const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
-    const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
-    const transactions: { from: string, to: string, amount: number }[] = [];
-    let debtorIdx = 0, creditorIdx = 0;
-    while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
-      const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
-      const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-      if (amountToSettle > 0.01) {
-        transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
-        debtor.amount += amountToSettle;
-        creditor.amount -= amountToSettle;
+      const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
+      const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
+      const transactions: { from: string, to: string, amount: number }[] = [];
+      let debtorIdx = 0, creditorIdx = 0;
+      while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
+        const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
+        const amountToSettle = Math.min(-debtor.amount, creditor.amount);
+        if (amountToSettle > 0.01) {
+          transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
+          debtor.amount += amountToSettle;
+          creditor.amount -= amountToSettle;
+        }
+        if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
+        if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
       }
-      if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
-      if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
+      return transactions;
+    } else {
+      // Non-simplified settlement logic (detailed pairwise debts)
+      const pairwiseDebts: Record<string, Record<string, number>> = {}; // Stores debtorId -> creditorId -> amount
+
+      expenses.forEach(expense => {
+        if (expense.total_amount <= 0.001) return; // Skip expenses with no or negligible total amount
+
+        expense.shares.forEach(share => {
+          const sharerId = share.personId;
+          const sharerTotalOwedForThisExpense = Number(share.amount);
+
+          if (sharerTotalOwedForThisExpense <= 0.001) return;
+
+          expense.paid_by.forEach(payment => {
+            const payerId = payment.personId;
+            const payerAmountForThisExpense = Number(payment.amount);
+
+            if (payerAmountForThisExpense <= 0.001) return;
+
+            if (sharerId !== payerId) {
+              const proportionPaidByThisPayer = payerAmountForThisExpense / expense.total_amount;
+              const amountOwedBySharerToThisPayer = sharerTotalOwedForThisExpense * proportionPaidByThisPayer;
+
+              if (amountOwedBySharerToThisPayer > 0.001) {
+                if (!pairwiseDebts[sharerId]) {
+                  pairwiseDebts[sharerId] = {};
+                }
+                pairwiseDebts[sharerId][payerId] = (pairwiseDebts[sharerId][payerId] || 0) + amountOwedBySharerToThisPayer;
+              }
+            }
+          });
+        });
+      });
+
+      const nonSimplifiedTxns: { from: string, to: string, amount: number }[] = [];
+      for (const debtorId in pairwiseDebts) {
+        for (const creditorId in pairwiseDebts[debtorId]) {
+          const amount = pairwiseDebts[debtorId][creditorId];
+          if (amount > 0.01) { // Final filter before displaying
+            nonSimplifiedTxns.push({ from: debtorId, to: creditorId, amount });
+          }
+        }
+      }
+      nonSimplifiedTxns.sort((a,b) => (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '') || (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || ''));
+      return nonSimplifiedTxns;
     }
-    return transactions;
-  }, [expenses, people]);
+  }, [expenses, people, simplifySettlement, peopleMap]);
 
   const shareVsPaidData = useMemo(() => {
     if (!people.length) return [];
@@ -88,7 +141,7 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
         paid: totalPaidByPerson,
         share: totalShareForPerson,
       };
-    }).filter(d => d.paid > 0 || d.share > 0);
+    }).filter(d => d.paid > 0.01 || d.share > 0.01); // Filter for non-zero activity
   }, [expenses, people, peopleMap]);
   
   const yAxisDomainTop = useMemo(() => {
@@ -104,13 +157,17 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
       const categoryName = exp.category || "Uncategorized";
       data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
     });
-    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
+    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0.01);
   }, [expenses]);
 
   const handleExpenseCardClick = (expense: Expense) => {
     setSelectedExpenseForModal(expense);
     setIsExpenseModalOpen(true);
   };
+  
+  const settlementCardDescription = simplifySettlement
+    ? "Minimum transactions required to settle all debts."
+    : "Detailed pairwise debts reflecting direct expense involvements.";
 
   if (people.length === 0 && expenses.length === 0) {
     return (
@@ -140,15 +197,32 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
   return (
     <div className="space-y-6">
       <Card className="shadow-lg rounded-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-xl"><ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary</CardTitle>
-          <CardDescription className="text-sm">Minimum transactions required to settle all debts.</CardDescription>
+        <CardHeader className="pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center text-xl">
+              <ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary
+            </CardTitle>
+            <CardDescription className="text-sm mt-1">
+              {settlementCardDescription}
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2 pt-1 sm:pt-0">
+            <Switch
+              id="simplify-settlement-toggle"
+              checked={simplifySettlement}
+              onCheckedChange={setSimplifySettlement}
+              aria-label="Toggle settlement simplification"
+            />
+            <Label htmlFor="simplify-settlement-toggle" className="text-sm font-medium">
+              Simplify
+            </Label>
+          </div>
         </CardHeader>
         <CardContent>
           {settlement.length > 0 ? (
             <ul className="space-y-1.5">
               {settlement.map((txn, i) => (
-                <li key={i} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-md text-sm">
+                <li key={`${txn.from}-${txn.to}-${i}`} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-md text-sm">
                   <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
                   <ArrowRight className="h-4 w-4 text-accent mx-2 shrink-0" />
                   <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
@@ -269,3 +343,5 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
   );
 }
 
+
+    
