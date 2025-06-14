@@ -16,10 +16,10 @@ interface EqualSplitSectionProps {
 
 export default function EqualSplitSection({ people, selectedPeopleEqual, handleEqualSplitChange }: EqualSplitSectionProps) {
   return (
-    <Card className="p-4 bg-card/50 shadow-sm mt-2">
-      <Label className="mb-2 block text-sm font-medium">Select who shared:</Label>
+    <Card className="p-4 bg-card/50 shadow-sm mt-2 flex flex-col">
+      <Label className="mb-2 block text-sm font-medium shrink-0">Select who shared:</Label>
       {people.length > 0 ? (
-        <ScrollArea className="max-h-40">
+        <ScrollArea className="max-h-40"> 
           <div className="space-y-1.5 pr-2">
           {people.map(person => (
             <div key={person.id} className="flex items-center space-x-2 p-1.5 rounded-sm">
@@ -37,3 +37,4 @@ export default function EqualSplitSection({ people, selectedPeopleEqual, handleE
     </Card>
   );
 }
+
