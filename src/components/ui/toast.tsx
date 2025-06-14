@@ -55,7 +55,8 @@ const Toast = React.forwardRef<
   const setupInitialAnimation = React.useCallback(() => {
     if (progressBarRef.current) {
       progressBarRef.current.style.animation = 'none';
-      progressBarRef.current.style.width = '100%'; // Explicitly set initial width
+      // For clip-path, reset to fully visible
+      progressBarRef.current.style.clipPath = 'inset(0 0% 0 0)';
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       progressBarRef.current.offsetHeight; // Trigger reflow to apply reset
       progressBarRef.current.style.animation = `toast-progress ${autoDismissTotalMs}ms linear forwards`;

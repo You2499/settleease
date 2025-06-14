@@ -105,10 +105,10 @@
 @layer components {
   @keyframes toast-progress {
     from {
-      width: 100%;
+      clip-path: inset(0 0% 0 0); /* Fully visible: top, right 0%, bottom, left 0% */
     }
     to {
-      width: 0%;
+      clip-path: inset(0 100% 0 0); /* Fully clipped from right: top, right 100%, bottom, left 0% */
     }
   }
 
@@ -116,10 +116,9 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    /* width: 100%; /* Initial width set by JS before animation */
+    width: 100%; /* Needs a defined width for clip-path percentages to work correctly */
     height: 4px;
     background-color: hsl(var(--primary)); /* Default for non-destructive toasts */
-    /* transform-origin: left; /* Not needed for width animation */
     /* animation property will be set via inline style in JS in Toast.tsx */
   }
 
