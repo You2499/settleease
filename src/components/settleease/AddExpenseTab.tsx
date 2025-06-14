@@ -8,17 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
-import { FileText, Trash2, PlusCircle, Users, CreditCard, AlertTriangle, X, Settings2, Pencil, Save, Ban, MinusCircle } from 'lucide-react';
+import { CreditCard, AlertTriangle, Users, Settings2 } from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
-import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
-import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease';
+import PayerInputSection from './addexpense/PayerInputSection';
+import SplitMethodSelector from './addexpense/SplitMethodSelector';
+import EqualSplitSection from './addexpense/EqualSplitSection';
+import UnequalSplitSection from './addexpense/UnequalSplitSection';
+import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
+
+import { EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import { formatCurrency } from '@/lib/settleease';
+import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -46,7 +50,7 @@ export default function AddExpenseTab({
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
 
-  const [splitMethod, setSplitMethod] = useState<'equal' | 'unequal' | 'itemwise'>('equal');
+  const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
   
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
@@ -70,19 +74,23 @@ export default function AddExpenseTab({
       setTotalAmount(expenseToEdit.total_amount.toString());
       setCategory(expenseToEdit.category);
       
-      if (Array.isArray(expenseToEdit.paid_by)) {
-        if (expenseToEdit.paid_by.length > 0) {
+      if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
           setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
           setPayers(expenseToEdit.paid_by.map(p => ({ 
             id: p.personId + Date.now().toString() + Math.random().toString(),
             personId: p.personId, 
             amount: p.amount.toString() 
           })));
-        } else { // expenseToEdit.paid_by is an empty array []
-          setIsMultiplePayers(false);
-          setPayers([{ id: Date.now().toString(), personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), amount: '' }]);
-        }
-      } else { // expenseToEdit.paid_by is null, undefined, or not an array. Treat as single payer for initialization.
+      } else if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length === 0) {
+        // Case: paid_by is an empty array
+        setIsMultiplePayers(false); // Default to single payer UI
+        setPayers([{ 
+          id: Date.now().toString(), 
+          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), 
+          amount: expenseToEdit.total_amount.toString() // Or potentially '' if totalAmount itself isn't reliable for this case
+        }]);
+      } else { 
+        // Fallback for non-array paid_by (legacy or unexpected format)
         setIsMultiplePayers(false);
         setPayers([{ 
           id: Date.now().toString(), 
@@ -90,6 +98,7 @@ export default function AddExpenseTab({
           amount: expenseToEdit.total_amount.toString() 
         }]);
       }
+
 
       setSplitMethod(expenseToEdit.split_method);
 
@@ -119,7 +128,7 @@ export default function AddExpenseTab({
       }
 
     } else {
-      // Reset form for new expense
+      // Resetting form for new expense
       setDescription('');
       setTotalAmount('');
       setCategory(dynamicCategories[0]?.name || '');
@@ -170,7 +179,7 @@ export default function AddExpenseTab({
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'itemwise')) {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [splitMethod, people, expenseToEdit, items]); // unequalShares removed from deps as it was causing re-renders; items kept for itemwise init
+  }, [splitMethod, people, expenseToEdit, items, unequalShares]);
 
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
@@ -305,7 +314,6 @@ export default function AddExpenseTab({
         return;
     }
 
-    // Base expense data structure
     let calculatedShares: { personId: string; amount: number; }[] = [];
     let expenseItems: ExpenseItemDetail[] | null = null;
 
@@ -338,15 +346,14 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        // Construct precise update payload
-        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> = {
+        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = { // Ensure items is typed to allow null
           description,
           total_amount: parseFloat(totalAmount),
           category,
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItems : null, // Set items to null if not itemwise
+          items: splitMethod === 'itemwise' ? expenseItems : null, // Explicitly set to null if not itemwise
         };
         
         const { error: updateError } = await db
@@ -357,7 +364,6 @@ export default function AddExpenseTab({
         if (updateError) throw updateError;
         toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
       } else {
-        // Construct insert payload
         const insertPayload: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
           description,
           total_amount: parseFloat(totalAmount),
@@ -365,7 +371,7 @@ export default function AddExpenseTab({
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItems : undefined, // items can be undefined for insert if not itemwise
+          items: splitMethod === 'itemwise' ? expenseItems : undefined,
         };
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
@@ -375,7 +381,7 @@ export default function AddExpenseTab({
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
       }
       onExpenseAdded(); 
-      if (!expenseToEdit) { // Reset form only if it was a new expense
+      if (!expenseToEdit) { 
         setDescription(''); setTotalAmount(''); 
         setCategory(dynamicCategories[0]?.name || '');
         setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
@@ -398,32 +404,7 @@ export default function AddExpenseTab({
           errorMessage = error;
         }
       }
-      
-      console.error("Error saving expense. Best guess message:", errorMessage);
-      console.error("Raw error object received in catch block:", error);
-      
-      if (error && typeof error === 'object') {
-        for (const key in error) {
-          if (Object.prototype.hasOwnProperty.call(error, key)) {
-            console.error(`Error object property - ${key}:`, error[key]);
-          }
-        }
-        try {
-          const errorJson = JSON.stringify(error, Object.getOwnPropertyNames(error));
-          console.error("Full error (JSON with own properties):", errorJson);
-          if (errorJson === '{}' && error.toString() !== '[object Object]' && error.toString() !== '{}') {
-             console.error("Error object .toString():", error.toString());
-          }
-        } catch (stringifyError) {
-          console.error("Could not stringify the full error object due to:", stringifyError);
-          if (error.stack) {
-            console.error("Error stack:", error.stack);
-          }
-        }
-      } else {
-        console.log("Caught error is not a typical object or is null/undefined. Type:", typeof error);
-      }
-
+      console.error("Error saving expense:", errorMessage, error);
       toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
       setFormError(`Could not save expense: ${errorMessage}`);
     } finally {
@@ -522,129 +503,49 @@ export default function AddExpenseTab({
           </div>
 
           <Separator />
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-lg font-medium">Paid By</Label>
-              <div className="flex items-center space-x-2">
-                <Label htmlFor="multiplePayersSwitch" className="text-sm text-muted-foreground">Multiple Payers?</Label>
-                <Checkbox id="multiplePayersSwitch" checked={isMultiplePayers} onCheckedChange={handleToggleMultiplePayers} />
-              </div>
-            </div>
-            {isMultiplePayers ? (
-              <div className="space-y-2.5">
-                {payers.map((payer, index) => (
-                  <Card key={payer.id} className="p-3 bg-card/50 shadow-sm">
-                    <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
-                      <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)} disabled={people.length === 0}>
-                        <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
-                        <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                      </Select>
-                      <Input type="number" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-28" />
-                      <Button variant="ghost" size="icon" onClick={() => removePayer(index)} className="text-destructive h-8 w-8" 
-                        disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
-                <Button variant="outline" size="sm" onClick={addPayer} className="text-xs" disabled={people.length === 0}><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Another Payer</Button>
-              </div>
-            ) : (
-              <Select value={payers[0]?.personId || ''} onValueChange={val => handlePayerChange(0, 'personId', val)} disabled={people.length === 0}>
-                <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
-                <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-              </Select>
-            )}
-          </div>
+          
+          <PayerInputSection
+            isMultiplePayers={isMultiplePayers}
+            onToggleMultiplePayers={handleToggleMultiplePayers}
+            payers={payers}
+            people={people}
+            defaultPayerId={defaultPayerId}
+            handlePayerChange={handlePayerChange}
+            addPayer={addPayer}
+            removePayer={removePayer}
+            expenseToEdit={expenseToEdit}
+          />
 
           <Separator />
 
-          <div className="space-y-3">
-            <Label className="text-lg font-medium">Split Method</Label>
-            <RadioGroup value={splitMethod} onValueChange={(val) => setSplitMethod(val as any)} className="flex space-x-4">
-              <div className="flex items-center space-x-1.5"><RadioGroupItem value="equal" id="splitEqual" /><Label htmlFor="splitEqual" className="font-normal text-sm">Equally</Label></div>
-              <div className="flex items-center space-x-1.5"><RadioGroupItem value="unequal" id="splitUnequal" /><Label htmlFor="splitUnequal" className="font-normal text-sm">Unequally</Label></div>
-              <div className="flex items-center space-x-1.5"><RadioGroupItem value="itemwise" id="splitItemwise" /><Label htmlFor="splitItemwise" className="font-normal text-sm">Item-wise</Label></div>
-            </RadioGroup>
+          <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
 
-            {splitMethod === 'equal' && (
-              <Card className="p-4 bg-card/50 shadow-sm mt-2">
-                <Label className="mb-2 block text-sm font-medium">Select who shared:</Label>
-                {people.length > 0 ? (
-                  <ScrollArea className="max-h-40">
-                    <div className="space-y-1.5 pr-2">
-                    {people.map(person => (
-                      <div key={person.id} className="flex items-center space-x-2 p-1.5 rounded-sm">
-                        <Checkbox
-                          id={`equal-${person.id}`}
-                          checked={selectedPeopleEqual.includes(person.id)}
-                          onCheckedChange={() => handleEqualSplitChange(person.id)}
-                        />
-                        <Label htmlFor={`equal-${person.id}`} className="font-normal text-sm flex-grow cursor-pointer">{person.name}</Label>
-                      </div>
-                    ))}
-                    </div>
-                  </ScrollArea>
-                ) : <p className="text-xs text-muted-foreground">No people available to select.</p>}
-              </Card>
-            )}
+          {splitMethod === 'equal' && (
+            <EqualSplitSection 
+              people={people}
+              selectedPeopleEqual={selectedPeopleEqual}
+              handleEqualSplitChange={handleEqualSplitChange}
+            />
+          )}
 
-            {splitMethod === 'unequal' && (
-              <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-2.5">
-                {people.length > 0 ? people.map(person => (
-                  <div key={person.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                    <Label htmlFor={`unequal-${person.id}`} className="text-sm">{person.name}</Label>
-                    <Input
-                      id={`unequal-${person.id}`}
-                      type="number"
-                      value={unequalShares[person.id] || ''}
-                      onChange={e => handleUnequalShareChange(person.id, e.target.value)}
-                      placeholder="Amount"
-                      className="w-28"
-                    />
-                  </div>
-                )) : <p className="text-xs text-muted-foreground">No people available for unequal split.</p>}
-              </Card>
-            )}
-            
-            {splitMethod === 'itemwise' && (
-                <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-3">
-                    {items.map((item, itemIndex) => (
-                    <Card key={item.id} className="p-3 bg-background shadow-inner">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-grow space-y-1.5">
-                            <Input value={item.name} onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} placeholder={`Item ${itemIndex + 1} Name`} className="h-8 text-sm"/>
-                            <Input type="number" value={item.price as string} onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} placeholder="Price" className="h-8 text-sm w-24"/>
-                        </div>
-                        <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive h-7 w-7 shrink-0" disabled={items.length <=1}>
-                            <MinusCircle className="h-4 w-4" />
-                        </Button>
-                        </div>
-                        <Label className="text-xs block mb-1 text-muted-foreground">Shared by:</Label>
-                        {people.length > 0 ? (
-                          <ScrollArea className="max-h-28">
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-1 pr-1">
-                              {people.map(person => (
-                              <div key={person.id} className="flex items-center space-x-1.5">
-                                  <Checkbox
-                                  id={`item-${itemIndex}-person-${person.id}`}
-                                  checked={item.sharedBy.includes(person.id)}
-                                  onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
-                                  className="h-3.5 w-3.5"
-                                  />
-                                  <Label htmlFor={`item-${itemIndex}-person-${person.id}`} className="text-xs font-normal cursor-pointer">{person.name}</Label>
-                              </div>
-                              ))}
-                          </div>
-                          </ScrollArea>
-                        ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
-                    </Card>
-                    ))}
-                    <Button variant="outline" size="sm" onClick={handleAddItem} className="text-xs mt-2"><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
-                </Card>
-            )}
-          </div>
+          {splitMethod === 'unequal' && (
+            <UnequalSplitSection
+              people={people}
+              unequalShares={unequalShares}
+              handleUnequalShareChange={handleUnequalShareChange}
+            />
+          )}
+          
+          {splitMethod === 'itemwise' && (
+            <ItemwiseSplitSection
+              items={items}
+              people={people}
+              handleItemChange={handleItemChange}
+              handleItemSharedByChange={handleItemSharedByChange}
+              removeItem={removeItem}
+              addItem={handleAddItem}
+            />
+          )}
         </CardContent>
         <CardFooter className="border-t pt-4 flex justify-end space-x-2">
           {expenseToEdit && onCancelEdit && (
@@ -658,5 +559,3 @@ export default function AddExpenseTab({
     </div>
   );
 }
-
-    

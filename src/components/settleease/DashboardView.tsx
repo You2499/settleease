@@ -2,18 +2,17 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
-import { ArrowRight, FileText, Settings2 } from 'lucide-react';
+import { FileText, Settings2 } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import ExpenseDetailModal from './ExpenseDetailModal';
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
+import SettlementSummary from './dashboard/SettlementSummary';
+import ShareVsPaidChart from './dashboard/ShareVsPaidChart';
+import ExpensesByCategoryChart from './dashboard/ExpensesByCategoryChart';
+import ExpenseLog from './dashboard/ExpenseLog';
 
-
-import { formatCurrency, CHART_COLORS, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
-import type { Person, Expense, Category } from '@/lib/settleease';
+import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import type { Person, Expense, Category } from '@/lib/settleease/types';
 
 interface DashboardViewProps {
   expenses: Expense[];
@@ -32,7 +31,6 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
     if (people.length === 0 || expenses.length === 0) return [];
 
     if (simplifySettlement) {
-      // Simplified settlement logic (current algorithm)
       const balances: Record<string, number> = {};
       people.forEach(p => balances[p.id] = 0);
 
@@ -66,11 +64,10 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
       }
       return transactions;
     } else {
-      // Non-simplified settlement logic (detailed pairwise debts)
-      const pairwiseDebts: Record<string, Record<string, number>> = {}; // Stores debtorId -> creditorId -> amount
+      const pairwiseDebts: Record<string, Record<string, number>> = {}; 
 
       expenses.forEach(expense => {
-        if (expense.total_amount <= 0.001) return; // Skip expenses with no or negligible total amount
+        if (expense.total_amount <= 0.001) return; 
 
         expense.shares.forEach(share => {
           const sharerId = share.personId;
@@ -103,7 +100,7 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
       for (const debtorId in pairwiseDebts) {
         for (const creditorId in pairwiseDebts[debtorId]) {
           const amount = pairwiseDebts[debtorId][creditorId];
-          if (amount > 0.01) { // Final filter before displaying
+          if (amount > 0.01) { 
             nonSimplifiedTxns.push({ from: debtorId, to: creditorId, amount });
           }
         }
@@ -141,15 +138,9 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
         paid: totalPaidByPerson,
         share: totalShareForPerson,
       };
-    }).filter(d => d.paid > 0.01 || d.share > 0.01); // Filter for non-zero activity
+    }).filter(d => d.paid > 0.01 || d.share > 0.01); 
   }, [expenses, people, peopleMap]);
   
-  const yAxisDomainTop = useMemo(() => {
-      const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(overallMax, 500) * 1.1;
-      return Math.ceil(paddedMax / 50) * 50;
-  }, [shareVsPaidData]);
-
 
   const expensesByCategory = useMemo(() => {
     const data: Record<string, number> = {};
@@ -193,143 +184,28 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
     );
   }
 
-
   return (
     <div className="space-y-6">
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="pb-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-          <div>
-            <CardTitle className="flex items-center text-xl">
-              <ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary
-            </CardTitle>
-            <CardDescription className="text-sm mt-1">
-              {settlementCardDescription}
-            </CardDescription>
-          </div>
-          <div className="flex items-center space-x-2 pt-1 sm:pt-0">
-            <Switch
-              id="simplify-settlement-toggle"
-              checked={simplifySettlement}
-              onCheckedChange={setSimplifySettlement}
-              aria-label="Toggle settlement simplification"
-            />
-            <Label htmlFor="simplify-settlement-toggle" className="text-sm font-medium">
-              Simplify
-            </Label>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {settlement.length > 0 ? (
-            <ul className="space-y-1.5">
-              {settlement.map((txn, i) => (
-                <li key={`${txn.from}-${txn.to}-${i}`} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-md text-sm">
-                  <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
-                  <ArrowRight className="h-4 w-4 text-accent mx-2 shrink-0" />
-                  <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
-                  <span className="ml-auto font-semibold text-primary pl-2">{formatCurrency(txn.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (<p className="text-sm text-muted-foreground p-2">All debts are settled, or no expenses to settle yet!</p>)}
-        </CardContent>
-      </Card>
+      <SettlementSummary
+        settlement={settlement}
+        peopleMap={peopleMap}
+        simplifySettlement={simplifySettlement}
+        setSimplifySettlement={setSimplifySettlement}
+        settlementCardDescription={settlementCardDescription}
+      />
 
       <div className="grid md:grid-cols-2 gap-6">
-        <Card className="shadow-lg rounded-lg">
-          <CardHeader className="pb-2"><CardTitle className="text-lg">Share vs. Paid Comparison</CardTitle></CardHeader>
-          <CardContent className="h-[280px]">
-            {shareVsPaidData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={shareVsPaidData}
-                  margin={{
-                    top: 5,
-                    right: 10,
-                    left: 0,
-                    bottom: 20
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  <RechartsTooltip
-                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
-                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                  <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={Math.min(20, 60 / shareVsPaidData.length)} />
-                  <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} barSize={Math.min(20, 60 / shareVsPaidData.length)} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for comparison chart.</p>)}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg rounded-lg">
-          <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Category</CardTitle></CardHeader>
-          <CardContent className="h-[280px]">
-            {expensesByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}>
-                  <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={Math.min(80, (typeof window !== "undefined" ? window.innerWidth : 300) / 8)} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
-                    {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value: number, name: string) => [formatCurrency(value), name]}
-                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for category chart.</p>)}
-          </CardContent>
-        </Card>
+        <ShareVsPaidChart shareVsPaidData={shareVsPaidData} />
+        <ExpensesByCategoryChart expensesByCategory={expensesByCategory} />
       </div>
 
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-xl"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
-          <CardDescription className="text-sm">A list of all recorded expenses, most recent first. Click an expense for details.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {expenses.length > 0 ? (
-            <ScrollArea className="max-h-[350px] pr-2">
-              <ul className="space-y-2.5">
-                {expenses.map(expense => {
-                  const CategoryIcon = getCategoryIconFromName(expense.category);
-                  const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
-                    ? "Multiple Payers"
-                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
-                      ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
-                      : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
+      <ExpenseLog
+        expenses={expenses}
+        peopleMap={peopleMap}
+        handleExpenseCardClick={handleExpenseCardClick}
+        getCategoryIconFromName={getCategoryIconFromName}
+      />
 
-                  return (
-                    <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
-                      <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
-                        <CardHeader className="pb-1.5 pt-2.5 px-3">
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
-                            <span className="text-md font-bold text-primary">{formatCurrency(Number(expense.total_amount))}</span>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
-                            <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </li>
-                  )
-                })}
-              </ul>
-            </ScrollArea>
-          ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
-        </CardContent>
-      </Card>
       {selectedExpenseForModal && (
         <ExpenseDetailModal
           expense={selectedExpenseForModal}
@@ -342,6 +218,3 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
     </div>
   );
 }
-
-
-    
