@@ -55,82 +55,6 @@ export default function AddExpenseTab({
 
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-
-
-  // This useEffect was causing parsing errors and is commented out.
-  // It was intended to reset/update form state when the `people` prop changes (e.g., after managing people).
-  // useEffect(() => {
-  //   // Helper to safely get the first person's ID or an empty string
-  //   const getFirstPersonIdOrDefault = () => {
-  //     return people.length > 0 ? people[0].id : '';
-  //   };
-  
-  //   if (people.length > 0) {
-  //     const existingPeopleIds = new Set(people.map((p_mapExisting) => { return p_mapExisting.id; }));
-  
-  //     // Update payers
-  //     setPayers((prevPayers_setPayersEffect) => {
-  //       let updatedPayers_setPayersEffect = prevPayers_setPayersEffect.map((payer_setPayersEffect) => {
-  //         return existingPeopleIds.has(payer_setPayersEffect.personId) ? payer_setPayersEffect : { ...payer_setPayersEffect, personId: '' };
-  //       });
-  
-  //       // If all payers are now invalid (personId cleared), reset to the first available person or default
-  //       if (updatedPayers_setPayersEffect.every((p_setPayersEffect) => { return p_setPayersEffect.personId === ''; })) {
-  //         const defaultPayerIdForEffect = getFirstPersonIdOrDefault();
-  //         updatedPayers_setPayersEffect = [{ id: Date.now().toString(), personId: defaultPayerIdForEffect, amount: totalAmount || '' }];
-  //       }
-  
-  //       // If not multiple payers and we have a total amount, ensure the single payer's amount reflects it
-  //       if (!isMultiplePayers && updatedPayers_setPayersEffect.length === 1 && totalAmount) {
-  //         updatedPayers_setPayersEffect[0].amount = totalAmount;
-  //       } else if (!isMultiplePayers && updatedPayers_setPayersEffect.length === 0 && totalAmount) {
-  //         // Handle case where payers array might become empty but should have one entry
-  //         const defaultPayerIdForEffect = getFirstPersonIdOrDefault();
-  //         updatedPayers_setPayersEffect = [{ id: Date.now().toString(), personId: defaultPayerIdForEffect, amount: totalAmount || '' }];
-  //       }
-  //       return updatedPayers_setPayersEffect;
-  //     });
-  
-  //     // Update selected people for equal split
-  //     setSelectedPeopleEqual((prevSelected_setSelectedPeopleEqualEffect) => {
-  //       return prevSelected_setSelectedPeopleEqualEffect.filter((id_setSelectedPeopleEqualEffect) => { 
-  //           return existingPeopleIds.has(id_setSelectedPeopleEqualEffect); 
-  //       });
-  //     });
-  
-  //     // Update unequal shares
-  //     setUnequalShares((prevShares_setUnequalSharesEffect) => {
-  //       const newShares_setUnequalSharesEffect: Record<string, string> = {};
-  //       for (const personId_setUnequalSharesEffect in prevShares_setUnequalSharesEffect) {
-  //         if (existingPeopleIds.has(personId_setUnequalSharesEffect)) {
-  //           newShares_setUnequalSharesEffect[personId_setUnequalSharesEffect] = prevShares_setUnequalSharesEffect[personId_setUnequalSharesEffect];
-  //         }
-  //       }
-  //       return newShares_setUnequalSharesEffect;
-  //     });
-  
-  //     // Update itemwise shares
-  //     setItems((prevItems_setItemsEffect) => {
-  //       return prevItems_setItemsEffect.map((item_setItemsEffect) => {
-  //         return {
-  //           ...item_setItemsEffect,
-  //           sharedBy: item_setItemsEffect.sharedBy.filter((id_setItemsEffect) => { 
-  //               return existingPeopleIds.has(id_setItemsEffect); 
-  //           }),
-  //         };
-  //       });
-  //     });
-  //   } else { // people.length === 0, reset relevant fields
-  //       setPayers([{ id: Date.now().toString(), personId: '', amount: totalAmount || ''}]);
-  //       setSelectedPeopleEqual([]);
-  //       setUnequalShares({});
-  //       setItems((prevItems_reset) => {
-  //           return prevItems_reset.map((item_reset) => {
-  //               return {...item_reset, sharedBy: [] };
-  //           });
-  //       });
-  //   }
-  // }, [people, isMultiplePayers, totalAmount]); // Dependencies reviewed.
   
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
@@ -146,12 +70,25 @@ export default function AddExpenseTab({
       setTotalAmount(expenseToEdit.total_amount.toString());
       setCategory(expenseToEdit.category);
       
-      if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
-        setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
-        setPayers(expenseToEdit.paid_by.map(p => ({ id: p.personId + Date.now().toString() + Math.random().toString(), personId: p.personId, amount: p.amount.toString() })));
-      } else {
+      if (Array.isArray(expenseToEdit.paid_by)) {
+        if (expenseToEdit.paid_by.length > 0) {
+          setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
+          setPayers(expenseToEdit.paid_by.map(p => ({ 
+            id: p.personId + Date.now().toString() + Math.random().toString(),
+            personId: p.personId, 
+            amount: p.amount.toString() 
+          })));
+        } else { // expenseToEdit.paid_by is an empty array []
+          setIsMultiplePayers(false);
+          setPayers([{ id: Date.now().toString(), personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), amount: '' }]);
+        }
+      } else { // expenseToEdit.paid_by is null, undefined, or not an array. Treat as single payer for initialization.
         setIsMultiplePayers(false);
-        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: expenseToEdit.total_amount.toString() }]);
+        setPayers([{ 
+          id: Date.now().toString(), 
+          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), 
+          amount: expenseToEdit.total_amount.toString() 
+        }]);
       }
 
       setSplitMethod(expenseToEdit.split_method);
@@ -216,39 +153,24 @@ export default function AddExpenseTab({
             setPayers(prev => [{ ...prev[0], personId: defaultPayerId }]);
         }
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, payers]); // expenseToEdit removed as it's covered by the form init effect
-                                                               // people.length also seems covered by defaultPayerId dependency changing
+  }, [totalAmount, isMultiplePayers, defaultPayerId, payers]); 
 
 
   useEffect(() => {
-    // This effect handles initialization of share-related fields when the splitMethod changes,
-    // or when other dependencies like `people` or `expenseToEdit` change,
-    // ensuring defaults are set without overriding user's active input if not necessary.
-
     if (splitMethod === 'unequal') {
        const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
-        // Only initialize if no shares are populated AND (we are in new expense mode,
-        // OR we are editing an expense that wasn't already 'unequal' - its shares would have been loaded by the main form init effect).
         if (!anySharesPopulated && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'unequal')) {
             const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
-            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) { // Avoid re-render if already empty
+            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) { 
                  setUnequalShares(initialEmptyShares);
             }
         }
     }
-    // Note: The logic for initializing selectedPeopleEqual when splitMethod is 'equal'
-    // is handled in the main useEffect that depends on [expenseToEdit, people, dynamicCategories].
-    // That useEffect correctly sets selectedPeopleEqual to all people for new expenses,
-    // or loads from expenseToEdit.shares if editing an 'equal' expense,
-    // or defaults to all people if editing a non-'equal' expense and user switches to 'equal'.
-    // This prevents this current useEffect from interfering with user deselections for the 'equal' method.
-
-    // If splitMethod is 'itemwise', initialize items if they are empty and not editing an 'itemwise' expense.
-    // The main form init useEffect also handles this for initial load. This catches changes in splitMethod.
+    
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 && (!expenseToEdit || expenseToEdit.split_method !== 'itemwise')) {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [splitMethod, people, expenseToEdit, unequalShares, items]);
+  }, [splitMethod, people, expenseToEdit, items]); // unequalShares removed from deps as it was causing re-renders; items kept for itemwise init
 
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
@@ -383,26 +305,19 @@ export default function AddExpenseTab({
         return;
     }
 
-
-    const expenseData: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
-      description,
-      total_amount: parseFloat(totalAmount),
-      category,
-      paid_by: finalPayers,
-      split_method: splitMethod,
-      shares: [],
-      items: [], 
-    };
+    // Base expense data structure
+    let calculatedShares: { personId: string; amount: number; }[] = [];
+    let expenseItems: ExpenseItemDetail[] | null = null;
 
     if (splitMethod === 'equal') {
       const shareAmount = selectedPeopleEqual.length > 0 ? parseFloat(totalAmount) / selectedPeopleEqual.length : 0;
-      expenseData.shares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
+      calculatedShares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
     } else if (splitMethod === 'unequal') {
-      expenseData.shares = Object.entries(unequalShares)
+      calculatedShares = Object.entries(unequalShares)
         .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
         .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
     } else if (splitMethod === 'itemwise') {
-      expenseData.items = items.map(item => ({
+      expenseItems = items.map(item => ({
         id: item.id, 
         name: item.name,
         price: parseFloat(item.price as string),
@@ -418,12 +333,22 @@ export default function AddExpenseTab({
             });
         }
       });
-      expenseData.shares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount }));
+      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount }));
     }
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        const updatePayload = { ...expenseData }; 
+        // Construct precise update payload
+        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> = {
+          description,
+          total_amount: parseFloat(totalAmount),
+          category,
+          paid_by: finalPayers,
+          split_method: splitMethod,
+          shares: calculatedShares,
+          items: splitMethod === 'itemwise' ? expenseItems : null, // Set items to null if not itemwise
+        };
+        
         const { error: updateError } = await db
           .from(EXPENSES_TABLE)
           .update(updatePayload) 
@@ -432,15 +357,25 @@ export default function AddExpenseTab({
         if (updateError) throw updateError;
         toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
       } else {
+        // Construct insert payload
+        const insertPayload: Omit<Expense, 'id' | 'created_at' | 'updated_at'> = {
+          description,
+          total_amount: parseFloat(totalAmount),
+          category,
+          paid_by: finalPayers,
+          split_method: splitMethod,
+          shares: calculatedShares,
+          items: splitMethod === 'itemwise' ? expenseItems : undefined, // items can be undefined for insert if not itemwise
+        };
         const { error: insertError } = await db
           .from(EXPENSES_TABLE)
-          .insert([{ ...expenseData, created_at: new Date().toISOString() }]) 
+          .insert([{ ...insertPayload, created_at: new Date().toISOString() }]) 
           .select();
         if (insertError) throw insertError;
         toast({ title: "Expense Added", description: `${description} has been added successfully.` });
       }
       onExpenseAdded(); 
-      if (!expenseToEdit) {
+      if (!expenseToEdit) { // Reset form only if it was a new expense
         setDescription(''); setTotalAmount(''); 
         setCategory(dynamicCategories[0]?.name || '');
         setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
