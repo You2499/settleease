@@ -176,7 +176,7 @@ export default function ManageSettlementsTab({
             <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Outstanding Simplified Debts</h3>
             {calculatedSimplifiedSettlements.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0">
-                <ul className="space-y-3 pr-4">
+                <ul className="space-y-3 px-4">
                   {calculatedSimplifiedSettlements.map((settlement, index) => (
                     <li key={`${settlement.from}-${settlement.to}-${index}`}>
                       <Card className="bg-card/70 p-3">
@@ -213,7 +213,7 @@ export default function ManageSettlementsTab({
             <h3 className="text-lg font-semibold mb-2 text-muted-foreground">Recorded Settlement Payments</h3>
             {settlementPayments.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0">
-                <ul className="space-y-3 pr-4">
+                <ul className="space-y-3 px-4">
                   {settlementPayments.sort((a,b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()).map(payment => (
                     <li key={payment.id}>
                       <Card className="bg-card/70 p-3">

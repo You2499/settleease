@@ -101,7 +101,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
 
-        <div className="flex-grow min-h-0 overflow-y-auto pr-4">
+        <div className="flex-grow min-h-0 overflow-y-auto px-4">
           <div className="space-y-4 py-4">
             <Card>
               <CardHeader className="pb-2 pt-3">
@@ -259,5 +259,3 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
-
-    

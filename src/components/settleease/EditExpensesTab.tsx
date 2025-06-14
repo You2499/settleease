@@ -123,7 +123,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         <CardContent className="flex-1 min-h-0">
           {expenses.length > 0 ? (
             <ScrollArea className="flex-1 min-h-0 h-full">
-              <ul className="space-y-2.5 pr-4">
+              <ul className="space-y-2.5 px-4">
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
