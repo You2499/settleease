@@ -4,76 +4,38 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createClient, type SupabaseClient, type User as SupabaseUser, type RealtimeChannel } from '@supabase/supabase-js';
 
-import { BarChart, Bar, XAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell } from 'recharts';
 import {
-  Users, PlusCircle, Trash2, LayoutDashboard, CreditCard, ArrowRight, FileText, Settings2, Pencil, Save, Ban, Menu, Info, MinusCircle, FilePenLine, ListChecks, AlertTriangle, LogOut, ShieldCheck, UserCog, Balance
+  Settings2, AlertTriangle, FileText
 } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription as ShadDialogDescription,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
 import {
   SidebarProvider,
-  Sidebar,
-  SidebarHeader,
-  SidebarContent,
-  SidebarFooter,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
   SidebarInset,
   SidebarTrigger,
-  useSidebar,
 } from "@/components/ui/sidebar";
 import { ThemeToggleButton } from '@/components/ThemeToggleButton';
-
 
 import AuthForm from '@/components/settleease/AuthForm';
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
-
+import AppSidebar from '@/components/settleease/AppSidebar';
+import DashboardView from '@/components/settleease/DashboardView';
 
 import {
   EXPENSES_TABLE,
   PEOPLE_TABLE,
   CATEGORIES_TABLE,
   USER_PROFILES_TABLE,
-  CHART_COLORS,
-  formatCurrency,
   supabaseUrl,
   supabaseAnonKey,
   AVAILABLE_CATEGORY_ICONS,
-  formatCurrencyForAxis
 } from '@/lib/settleease';
 
-import type { Person, Expense, ExpenseItemDetail, Category, UserRole } from '@/lib/settleease';
+import type { Person, Expense, Category, UserRole, ActiveView } from '@/lib/settleease';
 
 
 let db: SupabaseClient | undefined;
@@ -94,8 +56,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
-type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories';
-
 
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
@@ -114,6 +74,86 @@ export default function SettleEasePage() {
   const expensesChannelRef = useRef<RealtimeChannel | null>(null);
   const categoriesChannelRef = useRef<RealtimeChannel | null>(null);
 
+  useEffect(() => {
+    console.log("Auth effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser);
+    if (supabaseInitializationError || !db) {
+      console.log("Auth effect: Supabase init error or no DB. Setting isLoadingAuth=false.");
+      setIsLoadingAuth(false);
+      return;
+    }
+
+    let isMounted = true;
+    if (!currentUser && !isLoadingAuth) {
+      console.log("Auth effect: No currentUser and not loading. Setting isLoadingAuth=true to check session.");
+       setIsLoadingAuth(true);
+    }
+
+
+    console.log("Auth effect: Attempting to get session.");
+    db.auth.getSession().then(({ data: { session } }) => {
+      console.log("Auth effect: getSession returned. Session:", !!session, "Mounted:", isMounted);
+      if (isMounted) {
+        if (!session && currentUser) {
+          console.log("Auth effect: getSession returned no session, but currentUser exists. This might be due to a recent logout or token issue. Relying on onAuthStateChange.");
+        } else if (session && !currentUser) {
+           console.log("Auth effect: getSession found session, but no currentUser locally. Setting currentUser.");
+           setCurrentUser(session.user);
+        }
+        
+        if (isLoadingAuth && !session && !currentUser) {
+            // If still loading, and no session & no current user from previous state, it's safe to say loading is done for now.
+            // onAuthStateChange will provide the definitive state.
+            console.log("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false.");
+           // setIsLoadingAuth(false); // Deferred to onAuthStateChange or if no initial user
+        }
+      }
+    }).catch(err => {
+        if(isMounted) {
+            console.error("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false.");
+            setIsLoadingAuth(false);
+        }
+    });
+
+    console.log("Auth effect: Setting up onAuthStateChange listener.");
+    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
+      console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
+      if (isMounted) {
+        const newAuthUser = session?.user ?? null;
+        console.log("Auth effect: onAuthStateChange - newAuthUser:", !!newAuthUser, "current local currentUser:", !!currentUser);
+        
+        if (newAuthUser?.id !== currentUser?.id || (newAuthUser === null && currentUser !== null)) {
+            console.log("Auth effect: onAuthStateChange - User state changed. Updating currentUser.");
+            setCurrentUser(newAuthUser);
+        }
+
+        if (!newAuthUser) {
+          console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data, setting role to null.");
+          setPeople([]);
+          setExpenses([]);
+          setCategories([]);
+          setUserRole(null);
+          setActiveView('dashboard');
+          setIsDataFetchedAtLeastOnce(false);
+          if (_event === "SIGNED_OUT") {
+            toast({ title: "Logged Out", description: "You have been successfully logged out." });
+          }
+        }
+        
+        // This is a crucial point to set isLoadingAuth to false.
+        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false.");
+        setIsLoadingAuth(false);
+      } else {
+        console.log("Auth effect: onAuthStateChange - Component unmounted, ignoring event.");
+      }
+    });
+
+    return () => {
+      console.log("Auth effect: Cleanup. Unsubscribing auth listener. isMounted=false.");
+      isMounted = false;
+      authListener?.subscription.unsubscribe();
+    };
+  }, [db, supabaseInitializationError]); // Removed currentUser and isLoadingAuth to prevent potential loops with its own state setting. Re-evaluating based on db/init error is primary.
+
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
     if (!db || !userId) return 'user';
@@ -126,16 +166,15 @@ export default function SettleEasePage() {
         .single();
 
       if (error) {
-        if (error.code === 'PGRST116') { 
+        if (error.code === 'PGRST116') {
           console.warn(
             `User profile or role not found for ${userId} (PGRST116). Defaulting to 'user' role. This is normal and often temporary for new users as their profile (with role) is being created by a database trigger. If persistent, ensure the trigger 'on_auth_user_created' is correctly populating '${USER_PROFILES_TABLE}'.`
           );
           return 'user';
         }
-        // For other errors, including potentially RLS or network issues if `error` is an empty object or has a different code:
         let errorDetails = '';
         try {
-          errorDetails = JSON.stringify(error); 
+          errorDetails = JSON.stringify(error);
         } catch (e) {
           errorDetails = 'Error object could not be stringified.';
         }
@@ -147,7 +186,7 @@ export default function SettleEasePage() {
         return 'user';
       }
       return data?.role as UserRole || 'user';
-    } catch (e: any) { 
+    } catch (e: any) {
       let exceptionDetails = '';
       try {
         exceptionDetails = JSON.stringify(e);
@@ -227,7 +266,7 @@ export default function SettleEasePage() {
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred)) {
      setIsLoadingData(false);
     }
-  }, [currentUser]);
+  }, [currentUser, supabaseInitializationError]);
 
 
   const addDefaultPeople = useCallback(async () => {
@@ -278,93 +317,70 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [currentUser, userRole]);
+  }, [currentUser, userRole, supabaseInitializationError]);
 
 
   useEffect(() => {
-    if (supabaseInitializationError || !db) {
-      setIsLoadingAuth(false);
+    let isMounted = true;
+    console.log("User/Role/Data effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser);
+
+    if (isLoadingAuth) {
+      console.log("User/Role/Data effect: Still loading auth, skipping.");
       return;
     }
 
-    let isMounted = true;
-    setIsLoadingAuth(true);
-
-    db.auth.getSession().then(({ data: { session } }) => {
-      if (isMounted) {
-        setCurrentUser(session?.user ?? null);
-        setIsLoadingAuth(false);
-      }
-    }).catch(err => {
-        if(isMounted) setIsLoadingAuth(false);
-        console.error("Error getting session:", err);
-    });
-
-    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
-      if (isMounted) {
-        const newAuthUser = session?.user ?? null;
-        setCurrentUser(newAuthUser);
-        if (!newAuthUser) {
-          setPeople([]);
-          setExpenses([]);
-          setCategories([]);
-          setUserRole(null);
-          setIsLoadingRole(false);
-          setActiveView('dashboard');
-          setIsDataFetchedAtLeastOnce(false);
-          toast({ title: "Logged Out", description: "You have been successfully logged out." });
-        }
-         if (isLoadingAuth) setIsLoadingAuth(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-      authListener?.subscription.unsubscribe();
-    };
-  }, []);
-
-
-  useEffect(() => {
-    let isMounted = true;
-    if (currentUser && !isLoadingAuth) {
+    if (currentUser) {
+      console.log("User/Role/Data effect: currentUser exists. Fetching role.");
       setIsLoadingRole(true);
       fetchUserRole(currentUser.id).then(role => {
-        if (!isMounted) return;
+        if (!isMounted) {
+          console.log("User/Role/Data effect: fetchUserRole - Component unmounted.");
+          return;
+        }
+        console.log("User/Role/Data effect: fetchUserRole - Role fetched:", role);
         setUserRole(role);
         setIsLoadingRole(false);
 
         if (role === 'user' && activeView !== 'dashboard') {
+          console.log("User/Role/Data effect: User role is 'user' but not on dashboard. Resetting to dashboard.");
           setActiveView('dashboard');
         }
-        
+
+        console.log("User/Role/Data effect: Adding default people and fetching all data.");
         setIsLoadingData(true);
         addDefaultPeople().then(() => {
-          if (!isMounted) return;
-          fetchAllData(true);
+          if (!isMounted) {
+            console.log("User/Role/Data effect: addDefaultPeople - Component unmounted.");
+            return;
+          }
+          fetchAllData(true); // This sets isLoadingData to false eventually
         });
       });
-    } else if (!currentUser && !isLoadingAuth) {
+    } else { // No currentUser and not isLoadingAuth
+      console.log("User/Role/Data effect: No currentUser and not loading auth. Resetting app state.");
       setPeople([]);
       setExpenses([]);
       setCategories([]);
       setUserRole(null);
       setIsLoadingRole(false);
       setIsDataFetchedAtLeastOnce(false);
-      setIsLoadingData(false);
+      setIsLoadingData(false); // Ensure this is false if no user
       setActiveView('dashboard');
     }
-    return () => { isMounted = false; };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]);
+    return () => {
+      console.log("User/Role/Data effect: Cleanup. isMounted=false.");
+      isMounted = false;
+    };
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); // activeView removed to prevent re-triggering data fetches on view change if role check fails
 
 
   useEffect(() => {
     let isMounted = true;
+    console.log("Realtime effect: Start. DB:", !!db, "currentUser:", !!currentUser, "SupabaseInitError:", !!supabaseInitializationError, "isDataFetchedOnce:", isDataFetchedAtLeastOnce, "userRole:", userRole);
 
     if (supabaseInitializationError || !db) {
       console.log("Realtime setup skipped: Supabase client not available or init error.");
       if (db && typeof db.removeAllChannels === 'function') {
-        // Attempt cleanup if db object exists but is in a bad state from init error
         console.log("Realtime: Attempting to remove all channels due to init error/unavailable client.");
         db.removeAllChannels()
           .catch(e => console.warn("Realtime: Precautionary removeAllChannels (init error path) failed:", e?.message || e))
@@ -376,7 +392,7 @@ export default function SettleEasePage() {
               console.log("Realtime: Channel refs nullified (init error path).");
             }
           });
-      } else { // db itself is undefined
+      } else {
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
@@ -387,8 +403,6 @@ export default function SettleEasePage() {
 
     if (!currentUser) {
       console.log("Realtime setup skipped: No authenticated user.");
-      // If there are active channel refs, it implies a logout happened.
-      // The cleanup logic should handle removing them, but we ensure refs are nullified.
       if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current) {
         console.log("Realtime: User logged out. Ensuring local channel refs are cleared (should have been handled by prior cleanup).");
         peopleChannelRef.current = null;
@@ -397,7 +411,7 @@ export default function SettleEasePage() {
       }
       return;
     }
-    
+
     if (!isDataFetchedAtLeastOnce || !userRole) {
       console.log("Realtime subscriptions deferred: Waiting for initial data fetch and user role.");
       return;
@@ -409,7 +423,7 @@ export default function SettleEasePage() {
         if (!isMounted) return;
         console.log(`Realtime: ${table} change received!`, payload.eventType, payload.new || payload.old || payload);
         toast({ title: "Data Synced", description: `${table} has been updated.`, duration: 2000});
-        fetchAllData(false); 
+        fetchAllData(false);
     };
 
     const handleSubscriptionError = (tableName: string, status: string, error?: any) => {
@@ -423,17 +437,17 @@ export default function SettleEasePage() {
         toast({ title: `Realtime Error (${tableName})`, description: `Could not subscribe to ${tableName}. Please check Supabase RLS and Replication settings. Status: ${status}.`, variant: "destructive", duration: 10000 });
       }
     };
-    
+
     const setupChannel = async (
         channelRef: React.MutableRefObject<RealtimeChannel | null>,
         tableName: string
       ) => {
-        if (!db || !isMounted) return; 
+        if (!db || !isMounted) return;
         if (channelRef.current && channelRef.current.state === 'joined') {
             console.log(`Realtime: Already subscribed to ${tableName}. State: ${channelRef.current.state}`);
             return;
         }
-        
+
         if (channelRef.current) {
             console.log(`Realtime: Channel ref for ${tableName} exists but not joined (state: ${channelRef.current.state}). Attempting to remove first.`);
             try {
@@ -442,7 +456,6 @@ export default function SettleEasePage() {
             } catch (removeError: any) {
                 console.warn(`Realtime: Error removing existing (non-joined) channel for ${tableName}:`, removeError?.message || removeError);
             }
-            // No matter what, nullify ref if it wasn't joined, so we create a new one.
             channelRef.current = null;
         }
 
@@ -451,7 +464,7 @@ export default function SettleEasePage() {
           .on('postgres_changes', { event: '*', schema: 'public', table: tableName },
               (payload) => handleDbChange(payload, tableName)
           );
-        
+
         channelRef.current = channel;
 
         try {
@@ -461,13 +474,13 @@ export default function SettleEasePage() {
                  console.log(`Realtime (${tableName}): subscription callback ignored, component unmounted.`);
                  return;
               }
-      
+
               console.log(`Realtime: Subscription status for ${tableName}: ${status}`, err ? `Error: ${err.message}` : '');
               if (status === 'SUBSCRIBED') {
                 console.log(`Realtime: Subscribed successfully to ${tableName}`);
               } else if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
                 handleSubscriptionError(tableName, status, err);
-                if(channelRef.current === channel) { 
+                if(channelRef.current === channel) {
                     console.log(`Realtime: Nullifying channelRef for ${tableName} due to error/closed status.`);
                     channelRef.current = null;
                 }
@@ -495,7 +508,7 @@ export default function SettleEasePage() {
         db.removeAllChannels()
           .then(statuses => {
             console.log("Realtime: removeAllChannels() completed. Statuses:", statuses);
-            if (statuses.some(s => s !== 'ok' && s !== 'closed')) { 
+            if (statuses.some(s => s !== 'ok' && s !== 'closed' && s !== 'timed out')) { // 'timed out' can happen if connection is already gone
               console.warn("Realtime: Some channels might not have closed cleanly during removeAllChannels:", statuses);
             }
           })
@@ -506,8 +519,6 @@ export default function SettleEasePage() {
             }
           })
           .finally(() => {
-            // Ensure refs are nullified regardless of removeAllChannels outcome.
-            // This is critical for the next effect run to attempt a fresh setup.
             console.log("Realtime: Nullifying channel refs in .finally() after removeAllChannels attempt.");
             peopleChannelRef.current = null;
             expensesChannelRef.current = null;
@@ -537,7 +548,7 @@ export default function SettleEasePage() {
   const handleSetActiveView = (view: ActiveView) => {
     if (userRole === 'user' && view !== 'dashboard') {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard'); 
+      setActiveView('dashboard');
     } else {
       setActiveView(view);
     }
@@ -564,7 +575,7 @@ export default function SettleEasePage() {
       }
     }
     const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2; 
+    return settingsIcon ? settingsIcon.IconComponent : Settings2;
   }, [categories]);
 
 
@@ -628,12 +639,12 @@ export default function SettleEasePage() {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <AppActualSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
+      <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
         <div className="flex flex-col h-screen">
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center h-10">
-              <SidebarTrigger className="md:hidden mr-2" /> 
+              <SidebarTrigger className="md:hidden mr-2" />
               <h1 className="text-2xl font-headline font-bold text-primary">
                 {getHeaderTitle()}
               </h1>
@@ -644,7 +655,7 @@ export default function SettleEasePage() {
             {isLoadingData && isDataFetchedAtLeastOnce && (
                 <div className="text-center py-2 text-sm text-muted-foreground">Syncing data...</div>
             )}
-            {activeView === 'dashboard' && <DashboardTab expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
+            {activeView === 'dashboard' && <DashboardView expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} />}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
@@ -658,550 +669,3 @@ export default function SettleEasePage() {
     </SidebarProvider>
   );
 }
-
-interface AppActualSidebarProps {
-  activeView: ActiveView;
-  setActiveView: (view: ActiveView) => void;
-  handleLogout: () => void;
-  currentUserEmail?: string | null;
-  userRole: UserRole;
-}
-
-function AppActualSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppActualSidebarProps) {
-  const { isMobile } = useSidebar(); 
-  const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck; 
-
-  return (
-    <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
-      <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2 h-10">
-          <svg className="h-8 w-8 text-sidebar-primary flex-shrink-0" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><g strokeWidth="1.5"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm0 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8-3.582 8-8 8zm-3.5-9.793l-.707.707L12 13.707l4.207-4.207-.707-.707L12 12.293l-3.5-3.5z" fillRule="evenodd" clipRule="evenodd"></path><path d="M6.001 16.999a5.5 5.5 0 0 1 9.365-4.034 5.5 5.5 0 0 1-1.166 8.033A5.482 5.482 0 0 1 12 20.999a5.482 5.482 0 0 1-2.599-0.698A5.501 5.501 0 0 1 6 17m6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path><path d="M17.999 16.999a5.5 5.5 0 0 0-9.365-4.034 5.5 5.5 0 0 0 1.166 8.033A5.482 5.482 0 0 0 12 20.999a5.482 5.482 0 0 0 2.599-0.698A5.501 5.501 0 0 0 18 17m-6-1.001a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5"></path></g></svg>
-          <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
-        </div>
-      </SidebarHeader>
-      <SidebarContent className="p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => setActiveView('dashboard')}
-              isActive={activeView === 'dashboard'}
-              tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
-            >
-              <LayoutDashboard />
-              <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          {userRole === 'admin' && (
-            <>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setActiveView('addExpense')}
-                  isActive={activeView === 'addExpense'}
-                  tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start"
-                >
-                  <CreditCard />
-                  <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setActiveView('editExpenses')}
-                  isActive={activeView === 'editExpenses'}
-                  tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start"
-                >
-                  <FilePenLine />
-                  <span className="group-data-[state=collapsed]:hidden">Edit Expenses</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setActiveView('managePeople')}
-                  isActive={activeView === 'managePeople'}
-                  tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start"
-                >
-                  <Users />
-                  <span className="group-data-[state=collapsed]:hidden">Manage People</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => setActiveView('manageCategories')}
-                  isActive={activeView === 'manageCategories'}
-                  tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start"
-                >
-                  <ListChecks />
-                  <span className="group-data-[state=collapsed]:hidden">Manage Categories</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </>
-          )}
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-         {currentUserEmail && (
-          <div className="mb-2 space-y-0.5">
-            <p className="text-xs text-sidebar-foreground/70 truncate" title={currentUserEmail}>
-              Logged in as: {currentUserEmail}
-            </p>
-            {userRole && ( 
-              <p className="text-xs text-sidebar-foreground/70 flex items-center" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
-                Role: <RoleIcon className="ml-1 mr-0.5 h-3.5 w-3.5" /> {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-              </p>
-            )}
-          </div>
-        )}
-        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
-          <LogOut className="mr-2 h-4 w-4" /> Logout
-        </Button>
-        <p className="text-xs text-sidebar-foreground/70 mt-2">Version 1.1.0</p>
-      </SidebarFooter>
-    </Sidebar>
-  );
-}
-
-
-interface DashboardTabProps {
-  expenses: Expense[];
-  people: Person[];
-  peopleMap: Record<string, string>;
-  dynamicCategories: Category[];
-  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
-}
-
-function DashboardTab({ expenses, people, peopleMap, dynamicCategories, getCategoryIconFromName }: DashboardTabProps) {
-  const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-
-  const settlement = useMemo(() => {
-    if (people.length === 0 || expenses.length === 0) return [];
-    const balances: Record<string, number> = {};
-    people.forEach(p => balances[p.id] = 0);
-
-    expenses.forEach(expense => {
-      if (Array.isArray(expense.paid_by)) {
-        expense.paid_by.forEach(payment => {
-          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
-        });
-      }
-      if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
-          });
-      }
-    });
-
-    const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
-    const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
-    const transactions: { from: string, to: string, amount: number }[] = [];
-    let debtorIdx = 0, creditorIdx = 0;
-    while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
-      const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
-      const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-      if (amountToSettle > 0.01) { 
-        transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
-        debtor.amount += amountToSettle;
-        creditor.amount -= amountToSettle;
-      }
-      if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
-      if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
-    }
-    return transactions;
-  }, [expenses, people]);
-
-  const shareVsPaidData = useMemo(() => {
-    if (!people.length) return [];
-
-    return people.map(person => {
-      let totalPaidByPerson = 0;
-      let totalShareForPerson = 0;
-
-      expenses.forEach(expense => {
-        if (Array.isArray(expense.paid_by)) {
-          expense.paid_by.forEach(payment => {
-            if (payment.personId === person.id) {
-              totalPaidByPerson += Number(payment.amount);
-            }
-          });
-        }
-        if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            if (share.personId === person.id) {
-              totalShareForPerson += Number(share.amount);
-            }
-          });
-        }
-      });
-      return {
-        name: peopleMap[person.id] || person.name, 
-        paid: totalPaidByPerson,
-        share: totalShareForPerson,
-      };
-    }).filter(d => d.paid > 0 || d.share > 0 || people.length <= 5); 
-  }, [expenses, people, peopleMap]);
-  
-  const yAxisDomainTop = useMemo(() => {
-      const overallMax = shareVsPaidData.reduce((max, item) => Math.max(max, item.paid, item.share), 0);
-      const paddedMax = Math.max(overallMax, 500) * 1.1;
-      return Math.ceil(paddedMax / 50) * 50;
-  }, [shareVsPaidData]);
-
-
-  const expensesByCategory = useMemo(() => {
-    const data: Record<string, number> = {};
-    expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized"; 
-      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
-    });
-    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0);
-  }, [expenses]);
-
-  const handleExpenseCardClick = (expense: Expense) => {
-    setSelectedExpenseForModal(expense);
-    setIsExpenseModalOpen(true);
-  };
-
-  if (people.length === 0 && expenses.length === 0) {
-    return (
-      <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Welcome to SettleEase!</CardTitle></CardHeader>
-        <CardContent className="space-y-3"><FileText className="mx-auto h-12 w-12 text-primary/70" />
-          <p className="text-md text-muted-foreground">No people added and no expenses recorded yet.</p>
-          <p className="text-sm">Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  if (expenses.length === 0) {
-     return (
-      <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Ready to Settle?</CardTitle></CardHeader>
-        <CardContent className="space-y-3"><FileText className="mx-auto h-12 w-12 text-primary/70" />
-          <p className="text-md text-muted-foreground">No expenses recorded yet.</p>
-          <p className="text-sm">Navigate to "Add Expense" to start managing your group finances.</p>
-           {people.length === 0 && <p className="text-sm mt-2">First, go to "Manage People" to add participants to your group.</p>}
-        </CardContent>
-      </Card>
-    );
-  }
-
-
-  return (
-    <div className="space-y-6">
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-xl"><ArrowRight className="mr-2 h-5 w-5 text-primary" /> Settlement Summary</CardTitle>
-          <CardDescription className="text-sm">Minimum transactions required to settle all debts.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {settlement.length > 0 ? (
-            <ul className="space-y-1.5">
-              {settlement.map((txn, i) => (
-                <li key={i} className="flex items-center justify-between p-2.5 bg-secondary/30 rounded-md text-sm">
-                  <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
-                  <ArrowRight className="h-4 w-4 text-accent mx-2 shrink-0" />
-                  <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
-                  <span className="ml-auto font-semibold text-primary pl-2">{formatCurrency(txn.amount)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (<p className="text-sm text-muted-foreground p-2">All debts are settled, or no expenses to settle yet!</p>)}
-        </CardContent>
-      </Card>
-
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="shadow-lg rounded-lg">
-          <CardHeader className="pb-2"><CardTitle className="text-lg">Share vs. Paid Comparison</CardTitle></CardHeader>
-          <CardContent className="h-[280px]"> 
-            {shareVsPaidData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={shareVsPaidData}
-                  margin={{
-                    top: 5,
-                    right: 10, 
-                    left: 0,  
-                    bottom: 20 
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
-                  <RechartsTooltip
-                    formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
-                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} 
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                  <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={Math.min(20, 60 / shareVsPaidData.length)} />
-                  <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} barSize={Math.min(20, 60 / shareVsPaidData.length)} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for comparison chart.</p>)}
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg rounded-lg">
-          <CardHeader className="pb-2"><CardTitle className="text-lg">Expenses by Category</CardTitle></CardHeader>
-          <CardContent className="h-[280px]"> 
-            {expensesByCategory.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart margin={{ top: 0, right: 0, bottom: 20, left: 0 }}> 
-                  <Pie data={expensesByCategory} cx="50%" cy="50%" labelLine={false} outerRadius={Math.min(80, window.innerWidth / 8)} fill="#8884d8" dataKey="amount" nameKey="name" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={11}>
-                    {expensesByCategory.map((entry, index) => (<RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
-                  </Pie>
-                  <RechartsTooltip 
-                    formatter={(value: number, name: string) => [formatCurrency(value), name]} 
-                    contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }} 
-                    labelStyle={{ color: 'hsl(var(--foreground))' }}
-                    itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  />
-                  <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "10px" }} />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for category chart.</p>)}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center text-xl"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
-          <CardDescription className="text-sm">A list of all recorded expenses, most recent first. Click an expense for details.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {expenses.length > 0 ? (
-            <ScrollArea className="max-h-[350px] pr-2"> 
-              <ul className="space-y-2.5">
-                {expenses.map(expense => {
-                  const CategoryIcon = getCategoryIconFromName(expense.category);
-                  const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
-                    ? "Multiple Payers"
-                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
-                      ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
-                      : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
-
-                  return (
-                    <li key={expense.id} onClick={() => handleExpenseCardClick(expense)} className="cursor-pointer">
-                      <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
-                        <CardHeader className="pb-1.5 pt-2.5 px-3">
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-[0.9rem] font-semibold leading-tight">{expense.description}</CardTitle>
-                            <span className="text-md font-bold text-primary">{formatCurrency(Number(expense.total_amount))}</span>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="px-3 pb-2 text-xs text-muted-foreground space-y-0.5">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center"><CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}</div>
-                            <span>Paid by: <span className="font-medium">{displayPayerText}</span></span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </li>
-                  )
-                })}
-              </ul>
-            </ScrollArea>
-          ) : (<p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>)}
-        </CardContent>
-      </Card>
-      {selectedExpenseForModal && (
-        <ExpenseDetailModal
-          expense={selectedExpenseForModal}
-          isOpen={isExpenseModalOpen}
-          onOpenChange={setIsExpenseModalOpen}
-          peopleMap={peopleMap}
-          getCategoryIconFromName={getCategoryIconFromName}
-        />
-      )}
-    </div>
-  );
-}
-
-
-interface ExpenseDetailModalProps {
-  expense: Expense;
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  peopleMap: Record<string, string>;
-  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
-}
-
-function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName }: ExpenseDetailModalProps) {
-  if (!expense) return null;
-
-  const CategoryIcon = getCategoryIconFromName(expense.category);
-
-  const involvedPersonIds = useMemo(() => {
-    const ids = new Set<string>();
-    if (Array.isArray(expense.paid_by)) {
-      expense.paid_by.forEach(p => ids.add(p.personId));
-    }
-    if (Array.isArray(expense.shares)) {
-      expense.shares.forEach(s => ids.add(s.personId));
-    }
-    return Array.from(ids);
-  }, [expense.paid_by, expense.shares]);
-
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-xl max-h-[90vh] flex flex-col overflow-hidden"> 
-        <DialogHeader>
-          <DialogTitle className="text-2xl text-primary flex items-center">
-            <Info className="mr-2 h-6 w-6" /> Expense Details
-          </DialogTitle>
-          <ShadDialogDescription className="sr-only"> 
-            Detailed breakdown of the selected expense, including payers, shares, and itemization if applicable.
-          </ShadDialogDescription>
-        </DialogHeader>
-
-        <div className="flex-grow min-h-0 overflow-y-auto pr-4"> 
-          <div className="space-y-4 py-4">
-            <Card>
-              <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-lg">Summary</CardTitle>
-              </CardHeader>
-              <CardContent className="text-sm space-y-1.5">
-                <div className="flex justify-between"><span>Description:</span> <span className="font-medium text-right">{expense.description}</span></div>
-                <div className="flex justify-between"><span>Total Amount:</span> <span className="font-bold text-primary text-right">{formatCurrency(Number(expense.total_amount))}</span></div>
-                <div className="flex justify-between items-center"><span>Category:</span> <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span></div>
-                
-                <div>
-                  <span className="block">Paid by:</span>
-                  {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
-                    <ul className="list-disc list-inside pl-4">
-                      {expense.paid_by.map(p => (
-                        <li key={p.personId} className="flex justify-between text-xs">
-                          <span>{peopleMap[p.personId] || 'Unknown'}</span>
-                          <span className="font-medium">{formatCurrency(Number(p.amount))}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="font-medium text-right block">No payers listed or data unavailable</span>
-                  )}
-                </div>
-                
-                <div className="flex justify-between"><span>Split Method:</span> <span className="font-medium capitalize text-right">{expense.split_method}</span></div>
-              </CardContent>
-            </Card>
-
-            <Separator />
-
-            <Card>
-              <CardHeader className="pb-2 pt-3">
-                <CardTitle className="text-lg">Individual Breakdown for this Expense</CardTitle>
-                <CardDescription>How this specific expense affects each person's balance before overall settlement.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {involvedPersonIds.length > 0 ? (
-                  <ul className="space-y-2 text-sm">
-                    {involvedPersonIds.map(personId => {
-                      const personName = peopleMap[personId] || 'Unknown Person';
-                      const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
-                      const amountPaidThisExpense = paymentRecord ? Number(paymentRecord.amount) : 0;
-
-                      const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
-                      const shareOfThisExpense = shareRecord ? Number(shareRecord.amount) : 0;
-
-                      const netForThisExpense = amountPaidThisExpense - shareOfThisExpense;
-
-                      return (
-                        <li key={personId} className="p-2.5 bg-secondary/30 rounded-md space-y-0.5">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold">{personName}</span>
-                            <span
-                              className={`font-bold text-xs px-1.5 py-0.5 rounded-full
-                                    ${netForThisExpense < -0.01 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' : netForThisExpense > 0.01 ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' : 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300'}`}
-                            >
-                              {netForThisExpense < -0.01 ? `Owes ${formatCurrency(Math.abs(netForThisExpense))}` :
-                                netForThisExpense > 0.01 ? `Is Owed ${formatCurrency(netForThisExpense)}` :
-                                  `Settled`}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Amount Paid:</span> <span>{formatCurrency(amountPaidThisExpense)}</span>
-                          </div>
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Share of Expense:</span> <span>{formatCurrency(shareOfThisExpense)}</span>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No individuals involved in payments or shares for this expense.</p>
-                )}
-              </CardContent>
-            </Card>
-
-            {expense.split_method === 'itemwise' && expense.items && expense.items.length > 0 && (
-              <>
-                <Separator />
-                <Card>
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-lg">Item-wise Breakdown</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {expense.items.map((item, index) => (
-                      <Card key={item.id || index.toString()} className="p-3 bg-card/70 shadow-sm">
-                        <div className="flex justify-between items-center mb-1.5">
-                          <h4 className="font-semibold text-sm">{item.name || `Item ${index + 1}`}</h4>
-                          <span className="text-sm font-medium text-primary">{formatCurrency(Number(item.price))}</span>
-                        </div>
-                        {item.sharedBy && item.sharedBy.length > 0 ? (
-                          <>
-                            <p className="text-xs text-muted-foreground mb-1">Shared by:</p>
-                            <ul className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-xs">
-                              {item.sharedBy.map(personId => (
-                                <li key={personId} className="flex justify-between">
-                                  <span>{peopleMap[personId] || 'Unknown'}</span>
-                                  <span className="text-muted-foreground">{formatCurrency(Number(item.price) / item.sharedBy.length)}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </>
-                        ) : <p className="text-xs text-muted-foreground">Not shared by anyone.</p>}
-                      </Card>
-                    ))}
-                  </CardContent>
-                </Card>
-              </>
-            )}
-            {(expense.split_method === 'equal' && expense.shares && expense.shares.length > 0) && (
-              <>
-                <Separator />
-                <Card>
-                  <CardHeader className="pb-2 pt-3">
-                    <CardTitle className="text-lg">Equal Split Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm mb-1">Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"}:</p>
-                    <ul className="list-disc list-inside text-sm space-y-0.5">
-                      {expense.shares.map(share => (
-                        <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
-                      ))}
-                    </ul>
-                    <p className="text-sm mt-2">Amount per person: <span className="font-semibold text-primary">{formatCurrency(Number(expense.total_amount) / expense.shares.length)}</span></p>
-                  </CardContent>
-                </Card>
-              </>
-            )}
-          </div>
-        </div>
-
-        <DialogFooter className="pt-4 border-t"> 
-          <DialogClose asChild>
-            <Button type="button" variant="outline">Close</Button>
-          </DialogClose>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-

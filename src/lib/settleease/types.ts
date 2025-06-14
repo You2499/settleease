@@ -55,3 +55,6 @@ export interface UserProfile {
   created_at?: string;
   updated_at?: string;
 }
+
+// Active view type for navigation
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories';
