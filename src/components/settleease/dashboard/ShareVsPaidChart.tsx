@@ -28,7 +28,7 @@ export default function ShareVsPaidChart({ shareVsPaidData }: ShareVsPaidChartPr
               margin={{
                 top: 5,
                 right: 10,
-                left: 0,
+                left: 10,
                 bottom: 20
               }}
             >
@@ -50,4 +50,5 @@ export default function ShareVsPaidChart({ shareVsPaidData }: ShareVsPaidChartPr
     </Card>
   );
 }
+
 

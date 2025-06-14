@@ -30,7 +30,7 @@ export default function ExpenseLog({
       <CardContent>
         {expenses.length > 0 ? (
           <ScrollArea className="h-[350px]">
-            <ul className="space-y-2.5 pr-4"> {/* pr-4 added here, removed from ScrollArea */}
+            <ul className="space-y-2.5 px-4"> {/* Changed pr-4 to px-4 */}
               {expenses.map(expense => {
                 const CategoryIcon = getCategoryIconFromName(expense.category);
                 const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
@@ -65,3 +65,4 @@ export default function ExpenseLog({
     </Card>
   );
 }
+
