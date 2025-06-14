@@ -45,61 +45,73 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants> & { duration?: number }
->(({ className, variant, duration: initialDuration = 5000, onOpenChange, open, ...props }, ref) => {
+>(({ className, variant, duration: autoDismissTotalMs = 5000, onOpenChange, open, ...props }, ref) => {
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-  const progressBarRef = React.useRef<HTMLDivElement>(null);
+  const progressBarRef = React.useRef<HTMLDivElement | null>(null);
+  const timeoutRunStartTimeRef = React.useRef<number>(0);
+  const remainingDurationOnPauseRef = React.useRef<number>(autoDismissTotalMs);
+  const isPausedRef = React.useRef<boolean>(false);
 
-  const effectiveDuration = initialDuration;
-
-  const clearExistingAnimationAndTimer = React.useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+  const setupInitialAnimation = React.useCallback(() => {
     if (progressBarRef.current) {
       progressBarRef.current.style.animation = 'none';
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-      progressBarRef.current.offsetHeight; // Trigger reflow
-    }
-  }, []);
-
-  const startAnimationAndTimer = React.useCallback((currentDuration: number) => {
-    clearExistingAnimationAndTimer();
-
-    if (progressBarRef.current) {
-      progressBarRef.current.style.transformOrigin = 'left'; // Ensure transform origin is set
-      progressBarRef.current.style.animation = `toast-progress ${currentDuration}ms linear forwards`;
+      progressBarRef.current.offsetHeight; // Trigger reflow to apply reset
+      progressBarRef.current.style.transformOrigin = 'left';
+      progressBarRef.current.style.animation = `toast-progress ${autoDismissTotalMs}ms linear forwards`;
       progressBarRef.current.style.animationPlayState = 'running';
     }
+  }, [autoDismissTotalMs]);
 
+  const startDismissTimer = React.useCallback((duration: number) => {
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    timeoutRunStartTimeRef.current = Date.now();
     timeoutRef.current = setTimeout(() => {
-      if (onOpenChange) {
-        onOpenChange(false); // This will trigger dismiss in useToast
+      if (onOpenChange && !isPausedRef.current) {
+        onOpenChange(false);
       }
-    }, currentDuration);
-  }, [onOpenChange, clearExistingAnimationAndTimer]);
-
+    }, duration);
+  }, [onOpenChange]);
 
   React.useEffect(() => {
     if (open) {
-      startAnimationAndTimer(effectiveDuration);
+      isPausedRef.current = false;
+      remainingDurationOnPauseRef.current = autoDismissTotalMs;
+      setupInitialAnimation();
+      startDismissTimer(autoDismissTotalMs);
     } else {
-      // If the toast is closed (e.g., by swipe or close button), clear everything.
-      clearExistingAnimationAndTimer();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      // Optionally stop animation if progressBarRef.current exists and is paused
+      if (progressBarRef.current && progressBarRef.current.style.animationPlayState === 'paused') {
+         // It might already be 'none' or handled by unmount, but defensive stop.
+         progressBarRef.current.style.animationPlayState = 'paused';
+      } else if (progressBarRef.current) {
+        // If closing while running, setting to none might be abrupt,
+        // Radix data-[state=closed] handles visual exit.
+        // Consider if explicit animation stop is needed beyond Radix's exit.
+      }
     }
-
     return () => {
-      // Cleanup on unmount
-      clearExistingAnimationAndTimer();
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, effectiveDuration, onOpenChange]); // Rerun if open state changes or initial duration changes
-
+  }, [open, autoDismissTotalMs, setupInitialAnimation, startDismissTimer]);
 
   const handleMouseEnter = () => {
+    if (!open || isPausedRef.current) return;
+
+    isPausedRef.current = true;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
+      timeoutRef.current = null; // Important: Mark timer as cleared
+
+      const elapsedSinceTimerStart = Date.now() - timeoutRunStartTimeRef.current;
+      // remainingDurationOnPauseRef should have been set to the duration this timer was supposed to run for
+      // So we update it based on how much of *that* specific timer duration has passed.
+      // This was the error in prior logic. remainingDurationOnPauseRef should reflect the current running segment's total intended run time before this pause.
+      // The value it *had* when startDismissTimer was last called is what we subtract from.
+      // Let's simplify: timeoutRunStartTimeRef tracks start of current segment. remainingDurationOnPauseRef has the *actual* remaining time for the toast.
+      const newRemaining = remainingDurationOnPauseRef.current - elapsedSinceTimerStart;
+      remainingDurationOnPauseRef.current = Math.max(0, newRemaining);
     }
     if (progressBarRef.current) {
       progressBarRef.current.style.animationPlayState = 'paused';
@@ -107,8 +119,19 @@ const Toast = React.forwardRef<
   };
 
   const handleMouseLeave = () => {
-    // Reset to full duration and restart animation and timer
-    startAnimationAndTimer(effectiveDuration);
+    if (!open || !isPausedRef.current) return;
+
+    isPausedRef.current = false;
+    if (remainingDurationOnPauseRef.current > 0) {
+      // Restart the JS timer for the *truly remaining* duration
+      startDismissTimer(remainingDurationOnPauseRef.current);
+      if (progressBarRef.current) {
+        // Resume the CSS animation; it will continue from its paused point
+        progressBarRef.current.style.animationPlayState = 'running';
+      }
+    } else if (onOpenChange) { // If duration effectively ran out
+      onOpenChange(false);
+    }
   };
   
   return (
@@ -117,17 +140,15 @@ const Toast = React.forwardRef<
       className={cn(toastVariants({ variant }), className)}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      // Radix Toast props
       open={open}
       onOpenChange={onOpenChange}
-      duration={Infinity} // We handle duration manually, Radix should not auto-close
+      duration={Infinity} // We handle duration manually
       {...props}
     >
       {props.children}
       <div
         ref={progressBarRef}
         className="toast-progress-bar"
-        // Animation and its duration are controlled by startAnimationAndTimer
       />
     </ToastPrimitives.Root>
   );
