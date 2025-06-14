@@ -107,13 +107,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   return (
     <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[580px]">
-      <div className="md:flex h-full"> {/* Ensure minimum height for content visibility */}
+      <div className="md:flex h-full">
         {/* Left Pane: Branding & Features */}
-        <div className={`md:w-2/5 flex flex-col justify-center p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-0
+        <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out
                          ${isLoginView ? 'bg-secondary/20 text-primary' : 'bg-primary text-primary-foreground'}`}>
-          <div className="flex flex-col justify-center flex-1 min-h-0"> 
+          <div className="flex flex-col flex-1 justify-center min-h-0"> 
             {isLoginView ? (
-              <div className="text-center">
+              <div className="flex flex-col flex-1 items-center justify-center text-center">
                 <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
                 <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
@@ -151,15 +151,15 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </CardTitle>
             </CardHeader>
 
-            <CardContent className="px-0 pb-0 space-y-4 sm:space-y-5">
+            <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
                   <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
                   <p>{error}</p>
                 </div>
               )}
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-                <div className="space-y-1.5 sm:space-y-2">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="email" className="text-sm">Email Address</Label>
                   <Input
                     id="email"
@@ -173,7 +173,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     className="h-10 text-sm sm:h-11 sm:text-base"
                   />
                 </div>
-                <div className="space-y-1.5 sm:space-y-2">
+                <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="password" className="text-sm">Password</Label>
                   <Input
                     id="password"
@@ -193,7 +193,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 </Button>
               </form>
 
-              <div className="relative my-4 sm:my-5">
+              <div className="relative my-3 sm:my-4">
                 <div className="absolute inset-0 flex items-center">
                   <Separator />
                 </div>
@@ -219,7 +219,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </Button>
             </CardContent>
 
-            <CardFooter className="px-0 pt-4 sm:pt-6 pb-0 flex-col items-center">
+            <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
               <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
