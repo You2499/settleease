@@ -19,10 +19,10 @@ export default function EqualSplitSection({ people, selectedPeopleEqual, handleE
     <Card className="p-4 bg-card/50 shadow-sm mt-2 flex flex-col">
       <Label className="mb-2 block text-sm font-medium shrink-0">Select who shared:</Label>
       {people.length > 0 ? (
-        <ScrollArea className="h-40"> {/* Changed from max-h-40 flex-1 min-h-0 */}
-          <div className="space-y-1.5 pr-2">
+        <ScrollArea className="h-40 rounded-md border p-1 bg-background">
+          <div className="space-y-1.5 p-1">
           {people.map(person => (
-            <div key={person.id} className="flex items-center space-x-2 p-1.5 rounded-sm">
+            <div key={person.id} className="flex items-center space-x-2 p-2 bg-card/50 rounded-sm">
               <Checkbox
                 id={`equal-${person.id}`}
                 checked={selectedPeopleEqual.includes(person.id)}
