@@ -4,7 +4,7 @@
 import * as React from "react"
 import * as ToastPrimitives from "@radix-ui/react-toast"
 import { cva, type VariantProps } from "class-variance-authority"
-import { X } from "lucide-react"
+import { X, AlertTriangle } from "lucide-react" // Added AlertTriangle for destructive toast
 
 import { cn } from "@/lib/utils"
 
@@ -26,13 +26,13 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName
 
 const toastVariants = cva(
-  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
+  "group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full",
   {
     variants: {
       variant: {
-        default: "border bg-background text-foreground",
+        default: "border bg-background text-foreground", // Standard background
         destructive:
-          "destructive group border-destructive bg-destructive text-destructive-foreground",
+          "destructive group border-destructive bg-destructive text-destructive-foreground", // Destructive colors
       },
     },
     defaultVariants: {
@@ -45,7 +45,7 @@ const Toast = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Root>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Root> &
     VariantProps<typeof toastVariants> & { duration?: number }
->(({ className, variant, duration: autoDismissTotalMs = 5000, onOpenChange, open, ...props }, ref) => {
+>(({ className, variant, duration: autoDismissTotalMs = 5000, onOpenChange, open, children, ...props }, ref) => {
   const timeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const progressBarRef = React.useRef<HTMLDivElement | null>(null);
   const timeoutRunStartTimeRef = React.useRef<number>(0);
@@ -81,14 +81,10 @@ const Toast = React.forwardRef<
       startDismissTimer(autoDismissTotalMs);
     } else {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      // Optionally stop animation if progressBarRef.current exists and is paused
       if (progressBarRef.current && progressBarRef.current.style.animationPlayState === 'paused') {
-         // It might already be 'none' or handled by unmount, but defensive stop.
          progressBarRef.current.style.animationPlayState = 'paused';
       } else if (progressBarRef.current) {
-        // If closing while running, setting to none might be abrupt,
         // Radix data-[state=closed] handles visual exit.
-        // Consider if explicit animation stop is needed beyond Radix's exit.
       }
     }
     return () => {
@@ -102,14 +98,9 @@ const Toast = React.forwardRef<
     isPausedRef.current = true;
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
-      timeoutRef.current = null; // Important: Mark timer as cleared
+      timeoutRef.current = null; 
 
       const elapsedSinceTimerStart = Date.now() - timeoutRunStartTimeRef.current;
-      // remainingDurationOnPauseRef should have been set to the duration this timer was supposed to run for
-      // So we update it based on how much of *that* specific timer duration has passed.
-      // This was the error in prior logic. remainingDurationOnPauseRef should reflect the current running segment's total intended run time before this pause.
-      // The value it *had* when startDismissTimer was last called is what we subtract from.
-      // Let's simplify: timeoutRunStartTimeRef tracks start of current segment. remainingDurationOnPauseRef has the *actual* remaining time for the toast.
       const newRemaining = remainingDurationOnPauseRef.current - elapsedSinceTimerStart;
       remainingDurationOnPauseRef.current = Math.max(0, newRemaining);
     }
@@ -123,13 +114,11 @@ const Toast = React.forwardRef<
 
     isPausedRef.current = false;
     if (remainingDurationOnPauseRef.current > 0) {
-      // Restart the JS timer for the *truly remaining* duration
       startDismissTimer(remainingDurationOnPauseRef.current);
       if (progressBarRef.current) {
-        // Resume the CSS animation; it will continue from its paused point
         progressBarRef.current.style.animationPlayState = 'running';
       }
-    } else if (onOpenChange) { // If duration effectively ran out
+    } else if (onOpenChange) { 
       onOpenChange(false);
     }
   };
@@ -142,13 +131,16 @@ const Toast = React.forwardRef<
       onMouseLeave={handleMouseLeave}
       open={open}
       onOpenChange={onOpenChange}
-      duration={Infinity} // We handle duration manually
+      duration={Infinity} 
       {...props}
     >
-      {props.children}
+      {variant === "destructive" && (
+        <AlertTriangle className="h-5 w-5 text-destructive-foreground mr-2 shrink-0" />
+      )}
+      <div className="flex-1">{children}</div> {/* Content wrapper */}
       <div
         ref={progressBarRef}
-        className="toast-progress-bar"
+        className="toast-progress-bar" // Class defined in globals.css
       />
     </ToastPrimitives.Root>
   );
@@ -162,7 +154,8 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive",
+      "inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+      "group-[.destructive]:border-destructive-foreground/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive-foreground group-[.destructive]:hover:text-destructive group-[.destructive]:focus:ring-destructive-foreground",
       className
     )}
     {...props}
@@ -177,7 +170,8 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600",
+      "absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-70 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100",
+      "group-[.destructive]:text-destructive-foreground/70 group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive-foreground group-[.destructive]:focus:ring-offset-destructive",
       className
     )}
     toast-close=""
@@ -194,7 +188,7 @@ const ToastTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Title
     ref={ref}
-    className={cn("text-sm font-semibold", className)}
+    className={cn("text-sm font-semibold", className)} // Adjusted padding to p-0 as parent has p-4
     {...props}
   />
 ))
@@ -206,7 +200,7 @@ const ToastDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ToastPrimitives.Description
     ref={ref}
-    className={cn("text-sm opacity-90", className)}
+    className={cn("text-sm opacity-90", className)} // Adjusted padding to p-0
     {...props}
   />
 ))
