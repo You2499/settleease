@@ -55,9 +55,9 @@ const Toast = React.forwardRef<
   const setupInitialAnimation = React.useCallback(() => {
     if (progressBarRef.current) {
       progressBarRef.current.style.animation = 'none';
+      progressBarRef.current.style.width = '100%'; // Explicitly set initial width
       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
       progressBarRef.current.offsetHeight; // Trigger reflow to apply reset
-      progressBarRef.current.style.transformOrigin = 'left';
       progressBarRef.current.style.animation = `toast-progress ${autoDismissTotalMs}ms linear forwards`;
       progressBarRef.current.style.animationPlayState = 'running';
     }
@@ -82,9 +82,9 @@ const Toast = React.forwardRef<
     } else {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (progressBarRef.current && progressBarRef.current.style.animationPlayState === 'paused') {
-         progressBarRef.current.style.animationPlayState = 'paused';
+         progressBarRef.current.style.animationPlayState = 'paused'; // Keep it paused if it was when closed
       } else if (progressBarRef.current) {
-        // Radix data-[state=closed] handles visual exit.
+        // Let Radix handle visual exit; animation 'forwards' should keep it at 0% width
       }
     }
     return () => {
