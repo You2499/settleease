@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon } from 'lucide-react'; // Renamed Handshake to avoid conflict
+import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon, PartyPopper } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // Google Icon SVG as a React component
@@ -132,6 +132,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               <ul className="space-y-3 text-sm">
                 <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
                 <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+                <li className="flex items-start"><PartyPopper className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
                 <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
                 <li className="flex items-start"><HandshakeIcon className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
               </ul>
