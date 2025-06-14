@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight, Users, Handshake, CheckCircle2, FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Person, Expense, SettlementPayment, CalculatedTransaction } from '@/lib/settleease/types';
+import type { Person, Expense, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
 import PerPersonSettlementDetails from './PerPersonSettlementDetails'; // New component
 
 interface SettlementSummaryProps {
@@ -24,6 +24,7 @@ interface SettlementSummaryProps {
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void; // To open the main expense detail modal
+  userRole: UserRole;
 }
 
 export default function SettlementSummary({
@@ -36,6 +37,7 @@ export default function SettlementSummary({
   onMarkAsPaid,
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
+  userRole,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<'overview' | 'person'>('overview');
   const [simplifySettlement, setSimplifySettlement] = useState(true);
@@ -103,15 +105,17 @@ export default function SettlementSummary({
                               <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
                               <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-xs sm:text-sm">{formatCurrency(txn.amount)}</span>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleInternalMarkAsPaid(txn)}
-                              disabled={isLoading}
-                              className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
-                            >
-                              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
-                            </Button>
+                            {userRole === 'admin' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleInternalMarkAsPaid(txn)}
+                                disabled={isLoading}
+                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                              >
+                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
+                              </Button>
+                            )}
                           </div>
                       </Card>
                     </li>
@@ -152,6 +156,7 @@ export default function SettlementSummary({
                       onViewExpenseDetails={onViewExpenseDetails}
                       isLoadingParent={isLoading}
                       setIsLoadingParent={setIsLoading}
+                      userRole={userRole}
                   />
               ) : (
                   <div className="text-sm text-muted-foreground p-3 text-center min-h-[100px] flex items-center justify-center">
@@ -165,4 +170,3 @@ export default function SettlementSummary({
     </Card>
   );
 }
-

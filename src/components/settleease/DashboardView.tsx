@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { FileText } from 'lucide-react';
+import { FileText, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
@@ -14,7 +14,7 @@ import ExpensesByCategoryChart from './dashboard/ExpensesByCategoryChart';
 import ExpenseLog from './dashboard/ExpenseLog';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
-import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction } from '@/lib/settleease/types';
+import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
 
 interface DashboardViewProps {
   expenses: Expense[];
@@ -26,6 +26,7 @@ interface DashboardViewProps {
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
+  userRole: UserRole;
 }
 
 export default function DashboardView({
@@ -38,6 +39,7 @@ export default function DashboardView({
   db,
   currentUserId,
   onActionComplete,
+  userRole,
 }: DashboardViewProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -254,13 +256,14 @@ export default function DashboardView({
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
-        allExpenses={expenses}
+        allExpenses={allExpenses}
         people={people}
         peopleMap={peopleMap}
         settlementPayments={settlementPayments}
         onMarkAsPaid={handleMarkAsPaid}
         onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
-        onViewExpenseDetails={handleExpenseCardClick} // For the small modal to eventually call this
+        onViewExpenseDetails={handleExpenseCardClick}
+        userRole={userRole} 
       />
 
       <div className="grid md:grid-cols-2 gap-6">

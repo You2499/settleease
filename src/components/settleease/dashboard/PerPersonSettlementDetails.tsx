@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight, CheckCircle2, Undo2, FileText, ExternalLink, Landmark, Hourglass, ReceiptText } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Person, Expense, SettlementPayment, CalculatedTransaction } from '@/lib/settleease/types';
+import type { Person, Expense, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
 import RelevantExpensesModal from './RelevantExpensesModal'; // New component
 
 interface PerPersonSettlementDetailsProps {
@@ -23,6 +23,7 @@ interface PerPersonSettlementDetailsProps {
   onViewExpenseDetails: (expense: Expense) => void; // To open the main expense detail modal
   isLoadingParent: boolean;
   setIsLoadingParent: (loading: boolean) => void;
+  userRole: UserRole;
 }
 
 export default function PerPersonSettlementDetails({
@@ -37,6 +38,7 @@ export default function PerPersonSettlementDetails({
   onViewExpenseDetails,
   isLoadingParent,
   setIsLoadingParent,
+  userRole,
 }: PerPersonSettlementDetailsProps) {
   const [relevantExpenses, setRelevantExpenses] = useState<Expense[]>([]);
   const [isRelevantExpensesModalOpen, setIsRelevantExpensesModalOpen] = useState(false);
@@ -157,7 +159,7 @@ export default function PerPersonSettlementDetails({
                         >
                            <ExternalLink className="mr-1 h-3 w-3"/> Expenses
                         </Button>
-                        {type === 'debt' && (
+                        {type === 'debt' && userRole === 'admin' && (
                           <Button
                             size="sm"
                             onClick={() => handleInternalMarkAsPaid(txn)}
@@ -260,15 +262,17 @@ export default function PerPersonSettlementDetails({
                                 On: {new Date(payment.settled_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleInternalUnmarkPayment(payment)}
-                            disabled={isLoadingParent}
-                            className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
-                          >
-                            <Undo2 className="mr-1 h-3 w-3" /> Unmark
-                          </Button>
+                          {userRole === 'admin' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleInternalUnmarkPayment(payment)}
+                              disabled={isLoadingParent}
+                              className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                            >
+                              <Undo2 className="mr-1 h-3 w-3" /> Unmark
+                            </Button>
+                          )}
                         </div>
                       </Card>
                     </li>
@@ -296,4 +300,3 @@ export default function PerPersonSettlementDetails({
     </Card>
   );
 }
-

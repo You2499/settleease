@@ -698,6 +698,7 @@ export default function SettleEasePage() {
                 db={db}
                 currentUserId={currentUser.id}
                 onActionComplete={() => fetchAllData(false)}
+                userRole={userRole}
               />
             )}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
