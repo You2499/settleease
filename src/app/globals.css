@@ -116,10 +116,10 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    right: 0; /* Use left and right for full width */
+    width: 100%; /* Changed from right: 0 for potentially better animation precision */
     height: 4px;
     background-color: hsl(var(--primary)); /* Default for non-destructive toasts */
-    transform-origin: left; /* Important for scaleX animation */
+    transform-origin: left; /* Important for scaleX animation (shrinks from right to left) */
     /* animation property will be set via inline style in JS in Toast.tsx */
   }
 
@@ -139,3 +139,4 @@
     scrollbar-width: none;  /* Firefox */
   }
 }
+
