@@ -108,10 +108,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   return (
     <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden">
       <div className="md:flex min-h-[580px]"> {/* Ensure minimum height for content visibility */}
-        {/* Left Pane: Branding & Features - Fixed width, content vertically centered */}
+        {/* Left Pane: Branding & Features */}
         <div className={`md:w-2/5 flex flex-col justify-center p-8 transition-colors duration-300 ease-in-out
-                         ${isLoginView ? 'bg-secondary/20' : 'bg-primary text-primary-foreground'}`}>
-          <div className="min-h-[480px] flex flex-col justify-center"> {/* Wrapper to stabilize left pane content height, matching right pane's content wrapper */}
+                         ${isLoginView ? 'bg-secondary/20 !text-primary' : 'bg-primary text-primary-foreground'}`}>
+          <div className="h-[480px] flex flex-col justify-center"> {/* Fixed height wrapper for left pane content */}
             {isLoginView ? (
               <div className="text-center">
                 <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
@@ -142,9 +142,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           </div>
         </div>
 
-        {/* Right Pane: Form - Fixed width, content vertically centered */}
+        {/* Right Pane: Form */}
         <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center">
-          <div className="min-h-[480px] flex flex-col justify-center"> {/* Wrapper to stabilize right pane content height */}
+          <div className="h-[480px] flex flex-col justify-center"> {/* Fixed height wrapper for right pane content */}
             <CardHeader className="px-0 pt-0 pb-4 text-center">
               <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
                 {isLoginView ? 'Sign In' : 'Create your Account'}
