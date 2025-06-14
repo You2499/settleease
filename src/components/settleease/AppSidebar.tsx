@@ -3,7 +3,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,17 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             >
               <LayoutDashboard />
               <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => setActiveView('analytics')}
+              isActive={activeView === 'analytics'}
+              tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+              className="justify-start"
+            >
+              <BarChartBig />
+              <span className="group-data-[state=collapsed]:hidden">Analytics</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
           {userRole === 'admin' && (
@@ -136,3 +147,4 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
     </Sidebar>
   );
 }
+

@@ -23,6 +23,7 @@ import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
+import AnalyticsTab from '@/components/settleease/AnalyticsTab'; // Added import
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 
@@ -346,10 +347,11 @@ export default function SettleEasePage() {
         setUserRole(role);
         setIsLoadingRole(false);
 
-        if (role === 'user' && activeView !== 'dashboard') {
-          console.log("User/Role/Data effect: User role is 'user' but not on dashboard. Resetting to dashboard.");
+        if (role === 'user' && !['dashboard', 'analytics'].includes(activeView)) {
+          console.log("User/Role/Data effect: User role is 'user' but not on dashboard or analytics. Resetting to dashboard.");
           setActiveView('dashboard');
         }
+
 
         console.log("User/Role/Data effect: Adding default people and fetching all data.");
         setIsLoadingData(true); 
@@ -377,7 +379,7 @@ export default function SettleEasePage() {
       console.log("User/Role/Data effect: Cleanup. isMounted=false.");
       isMounted = false;
     };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); 
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]); 
 
 
   useEffect(() => {
@@ -577,7 +579,7 @@ export default function SettleEasePage() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = (view: ActiveView) => {
-    if (userRole === 'user' && view !== 'dashboard') {
+    if (userRole === 'user' && !['dashboard', 'analytics'].includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
       setActiveView('dashboard');
     } else {
@@ -589,6 +591,7 @@ export default function SettleEasePage() {
   const getHeaderTitle = () => {
     switch (activeView) {
       case 'dashboard': return 'Dashboard';
+      case 'analytics': return 'Analytics';
       case 'addExpense': return userRole === 'admin' ? 'Add New Expense' : 'Dashboard';
       case 'editExpenses': return userRole === 'admin' ? 'Edit Expenses' : 'Dashboard';
       case 'managePeople': return userRole === 'admin' ? 'Manage People' : 'Dashboard';
@@ -699,6 +702,15 @@ export default function SettleEasePage() {
                 currentUserId={currentUser.id}
                 onActionComplete={() => fetchAllData(false)}
                 userRole={userRole}
+              />
+            )}
+            {activeView === 'analytics' && (
+              <AnalyticsTab
+                expenses={expenses}
+                people={people}
+                peopleMap={peopleMap}
+                dynamicCategories={categories}
+                getCategoryIconFromName={getCategoryIconFromName}
               />
             )}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}

@@ -82,4 +82,5 @@ export interface CalculatedTransaction {
 
 
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics';
+
