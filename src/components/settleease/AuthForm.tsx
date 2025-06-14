@@ -111,33 +111,35 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         {/* Left Pane: Branding & Features */}
         <div className={`md:w-2/5 flex flex-col justify-center p-8 transition-colors duration-300 ease-in-out
                          ${isLoginView ? 'bg-secondary/20' : 'bg-primary text-primary-foreground'}`}>
-          {isLoginView ? (
-            <div className="text-center">
-              <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
-              <h1 className="text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
-              <p className="mt-3 text-muted-foreground text-base">
-                Sign in to continue simplifying your group expenses.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="mb-8 text-center md:text-left">
-                <HandCoins className="h-16 w-16 mx-auto md:mx-0 mb-4 text-primary-foreground/90" />
-                <h1 className="text-4xl font-bold font-headline">SettleEase</h1>
-                <p className="mt-2 text-lg text-primary-foreground/90">
-                  Simplify your shared expenses. Effortlessly.
+          <div className="min-h-[440px] flex flex-col justify-center"> {/* ADDED WRAPPER */}
+            {isLoginView ? (
+              <div className="text-center">
+                <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
+                <h1 className="text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
+                <p className="mt-3 text-muted-foreground text-base">
+                  Sign in to continue simplifying your group expenses.
                 </p>
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Key Features:</h3>
-              <ul className="space-y-3 text-sm">
-                <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
-                <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-                <li className="flex items-start"><PartyPopper className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
-                <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                <li className="flex items-start"><HandshakeIcon className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
-              </ul>
-            </>
-          )}
+            ) : (
+              <>
+                <div className="mb-8 text-center md:text-left">
+                  <HandCoins className="h-16 w-16 mx-auto md:mx-0 mb-4 text-primary-foreground/90" />
+                  <h1 className="text-4xl font-bold font-headline">SettleEase</h1>
+                  <p className="mt-2 text-lg text-primary-foreground/90">
+                    Simplify your shared expenses. Effortlessly.
+                  </p>
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Key Features:</h3>
+                <ul className="space-y-3 text-sm">
+                  <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
+                  <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+                  <li className="flex items-start"><PartyPopper className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
+                  <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
+                  <li className="flex items-start"><HandshakeIcon className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
+                </ul>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right Pane: Form */}
