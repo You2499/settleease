@@ -69,22 +69,15 @@ export default function AddExpenseTab({
     return '';
   }, [people]);
 
-  // Effect to reset the "baseline" people snapshot when we switch to a "new expense" context
   useEffect(() => {
     if (!expenseToEdit) {
-      // We are in a "new expense" state (either initially, or after canceling an edit)
-      // Clear the snapshot so the main effect can re-initialize it.
       initialPeopleSetForFormInstance.current = new Set();
     }
   }, [expenseToEdit]);
 
-
-  // Main effect for form initialization based on expenseToEdit, people, categories
   useEffect(() => {
     if (expenseToEdit) {
-      // Populate form for editing an existing expense
-      initialPeopleSetForFormInstance.current = new Set(); // Clear ref when editing
-
+      initialPeopleSetForFormInstance.current = new Set(); 
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
       setCategory(expenseToEdit.category);
@@ -116,10 +109,9 @@ export default function AddExpenseTab({
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
         setSelectedPeopleEqual(expenseToEdit.shares.map(s => s.personId));
-      } else { // Default for other split methods or if changing to equal while editing
+      } else { 
          setSelectedPeopleEqual(people.map(p => p.id));
       }
-
 
       if (expenseToEdit.split_method === 'unequal' && Array.isArray(expenseToEdit.shares)) {
         const initialUnequalShares: Record<string, string> = {};
@@ -140,46 +132,36 @@ export default function AddExpenseTab({
          setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
       }
 
-    } else { // NEW EXPENSE FORM
-      // Reset core form fields
+    } else { 
       setDescription('');
       setTotalAmount(''); 
       setCategory(dynamicCategories[0]?.name || '');
       setIsMultiplePayers(false);
       setSplitMethod('equal');
 
-      // Initialize payers: for new form, firstPayer, empty amount.
-      // The dedicated useEffect will sync amount from totalAmount input.
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
-      // Initialize other split-specific states
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id) }]);
       
-      // Logic for selectedPeopleEqual for a NEW expense
       const currentPeopleIds = people.map(p => p.id);
       const previousPeopleSnapshot = initialPeopleSetForFormInstance.current;
 
       if (previousPeopleSnapshot.size === 0 && people.length > 0) {
-        // True first time setup for this new form instance (snapshot was cleared by expenseToEdit effect)
         setSelectedPeopleEqual(currentPeopleIds);
-        initialPeopleSetForFormInstance.current = new Set(currentPeopleIds); // Set the baseline snapshot
+        initialPeopleSetForFormInstance.current = new Set(currentPeopleIds); 
       } else {
-        // Subsequent runs for this new form (e.g., people list changed while form is "new")
         setSelectedPeopleEqual(prevSelected => {
           const newSelected = new Set(prevSelected);
-          // Add any people who are new to the group (not in the previous snapshot)
           currentPeopleIds.forEach(personId => {
             if (!previousPeopleSnapshot.has(personId)) {
               newSelected.add(personId);
             }
           });
-          // Ensure all selected people actually exist in the current group
           return Array.from(newSelected).filter(id => currentPeopleIds.includes(id));
         });
 
-        // Update snapshot if people list has actually changed
         const currentSnapshotSet = new Set(currentPeopleIds);
         if (currentSnapshotSet.size !== previousPeopleSnapshot.size ||
             !Array.from(currentSnapshotSet).every(id => previousPeopleSnapshot.has(id))) {
@@ -187,41 +169,32 @@ export default function AddExpenseTab({
         }
       }
     }
-  // This effect should run when the context (editing vs new, or core data like people/categories) changes.
   }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
 
-
-  // Effect to sync payer amount from totalAmount input for single payer mode, or initialize for multiple payers
   useEffect(() => {
     if (!isMultiplePayers) {
       const currentPayer = payers[0];
-      const newPayerAmount = totalAmount; // This is the live input from totalAmount state
+      const newPayerAmount = totalAmount; 
       const newPayerPersonId = currentPayer?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
-      // Only update if necessary to avoid potential loops if payers was in dep array
       if (!currentPayer || currentPayer.personId !== newPayerPersonId || currentPayer.amount !== newPayerAmount) {
         setPayers([{ id: currentPayer?.id || Date.now().toString(), personId: newPayerPersonId, amount: newPayerAmount }]);
       }
     } else { 
-        // If switching to multiple payers and payers list is empty, or first payer needs default personId
         const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-        if (payers.length === 0 && firstPayerPersonId) { // ensure people list is loaded
+        if (payers.length === 0 && firstPayerPersonId) { 
              setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
         } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
-            // If there's one payer row but no person selected, set the default
-            if (payers[0].personId !== firstPayerPersonId) { // check to prevent loop if already set
+            if (payers[0].personId !== firstPayerPersonId) { 
                 setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
             }
         }
-        // Note: For multiple payers, individual amounts are manually entered by the user.
-        // Total amount is not automatically distributed among them here.
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, people]); // `people` for defaultPayerId logic
+  }, [totalAmount, isMultiplePayers, defaultPayerId, people, payers]); 
 
 
-  // Effect to initialize unequal shares or items when split method changes (and not editing)
   useEffect(() => {
-    if (expenseToEdit) return; // Only apply for new expenses
+    if (expenseToEdit) return; 
 
     if (splitMethod === 'unequal') {
        const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
@@ -236,7 +209,7 @@ export default function AddExpenseTab({
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 ) {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares]); // Keep items & unequalShares to re-init if user empties them and changes method
+  }, [splitMethod, people, expenseToEdit, items, unequalShares]); 
 
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
@@ -257,7 +230,6 @@ export default function AddExpenseTab({
         if (isMultiplePayers) {
             setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
         } else { 
-             // This case should be handled by the isMultiplePayers toggle or totalAmount effect for single payer
             setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
         }
     } else {
@@ -271,12 +243,9 @@ export default function AddExpenseTab({
     const firstPayerPersonId = payers[0]?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
     if (goingToMultiple) {
-      // From single to multiple: retain first payer's info if reasonable, else clear amount.
       const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: firstPayerAmount }]);
     } else {
-      // From multiple to single: use first payer's personId, set amount to totalAmount.
-      // The dedicated useEffect for totalAmount/isMultiplePayers will handle syncing this.
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
     }
   };
@@ -316,49 +285,45 @@ export default function AddExpenseTab({
   };
 
   const validateForm = useCallback(() => {
-    if (!description.trim()) return "Description cannot be empty.";
+    if (!description.trim()) { toast({ title: "Validation Error", description: "Description cannot be empty.", variant: "destructive" }); return false; }
     const amountNum = parseFloat(totalAmount);
-    if (isNaN(amountNum) || amountNum <= 0) return "Total amount must be a positive number.";
-    if (!category) return "Category must be selected.";
+    if (isNaN(amountNum) || amountNum <= 0) { toast({ title: "Validation Error", description: "Total amount must be a positive number.", variant: "destructive" }); return false; }
+    if (!category) { toast({ title: "Validation Error", description: "Category must be selected.", variant: "destructive" }); return false; }
 
-    if (payers.some(p => !p.personId)) return "Each payer must be selected.";
+    if (payers.some(p => !p.personId)) { toast({ title: "Validation Error", description: "Each payer must be selected.", variant: "destructive" }); return false; }
     const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
     if (Math.abs(totalPaidByPayers - amountNum) > 0.001) { 
-      return `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total expense amount (${formatCurrency(amountNum)}).`;
+      toast({ title: "Validation Error", description: `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total expense amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false;
     }
     if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) {
         if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { 
-             return "Each payer's amount must be positive if listed.";
+             toast({ title: "Validation Error", description: "Each payer's amount must be positive if listed.", variant: "destructive" }); return false;
         }
     }
     if (!isMultiplePayers && payers.length === 1 && (parseFloat(payers[0].amount) || 0) <= 0 && amountNum > 0) {
-        return "Payer amount must be positive.";
+        toast({ title: "Validation Error", description: "Payer amount must be positive.", variant: "destructive" }); return false;
     }
 
-
-    if (splitMethod === 'equal' && selectedPeopleEqual.length === 0) return "At least one person must be selected for equal split.";
+    if (splitMethod === 'equal' && selectedPeopleEqual.length === 0) { toast({ title: "Validation Error", description: "At least one person must be selected for equal split.", variant: "destructive" }); return false; }
     if (splitMethod === 'unequal') {
       const sumUnequal = Object.values(unequalShares).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      if (Math.abs(sumUnequal - amountNum) > 0.001) return `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal total amount (${formatCurrency(amountNum)}).`;
-      if (Object.values(unequalShares).some(val => parseFloat(val || "0") < 0)) return "Unequal shares cannot be negative.";
+      if (Math.abs(sumUnequal - amountNum) > 0.001) { toast({ title: "Validation Error", description: `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal total amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false; }
+      if (Object.values(unequalShares).some(val => parseFloat(val || "0") < 0)) { toast({ title: "Validation Error", description: "Unequal shares cannot be negative.", variant: "destructive" }); return false; }
     }
     if (splitMethod === 'itemwise') {
-      if (items.length === 0) return "At least one item must be added for itemwise split.";
+      if (items.length === 0) { toast({ title: "Validation Error", description: "At least one item must be added for itemwise split.", variant: "destructive" }); return false; }
       if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0)) {
-        return "Each item must have a name, positive price, and be shared by at least one person.";
+        toast({ title: "Validation Error", description: "Each item must have a name, positive price, and be shared by at least one person.", variant: "destructive" }); return false;
       }
       const sumItems = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
-      if (Math.abs(sumItems - amountNum) > 0.001) return `Sum of item prices (${formatCurrency(sumItems)}) must equal total amount (${formatCurrency(amountNum)}).`;
+      if (Math.abs(sumItems - amountNum) > 0.001) { toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItems)}) must equal total amount (${formatCurrency(amountNum)}).`, variant: "destructive" }); return false; }
     }
-    return null;
+    return true;
   }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers]);
 
   const handleSubmitExpense = async () => {
-    const error = validateForm();
-    if (error) {
-      toast({ title: "Validation Error", description: error, variant: "destructive" });
-      return;
-    }
+    if (!validateForm()) return;
+
     if (!db || supabaseInitializationError) {
       toast({ title: "Database Error", description: `Supabase client not available. ${supabaseInitializationError || ''}`, variant: "destructive" });
       return;
@@ -408,7 +373,6 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        // Ensure items is explicitly null if not itemwise to avoid stale data
         const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = {
           description,
           total_amount: parseFloat(totalAmount),
@@ -445,9 +409,7 @@ export default function AddExpenseTab({
       }
       onExpenseAdded(); 
       if (!expenseToEdit) { 
-        // No need to manually reset fields here, the main useEffect triggered by onExpenseAdded (if it causes people/categories to refetch)
-        // or by expenseToEdit becoming null will handle it.
-        // setDescription(''); setTotalAmount(''); setCategory... etc. - these would be reset by main effect.
+        // Fields are reset by the main useEffect if not editing
       }
     } catch (error: any) {
       let errorMessage = "An unknown error occurred while saving the expense.";
@@ -471,13 +433,13 @@ export default function AddExpenseTab({
   
   if (supabaseInitializationError && !db) {
     return (
-      <Card className="shadow-lg rounded-lg">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           <p>Could not connect to the database. Adding or editing expenses is currently unavailable.</p>
           <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
@@ -487,7 +449,7 @@ export default function AddExpenseTab({
 
   if (people.length === 0 && !expenseToEdit) { 
     return (
-      <Card className="text-center py-10 shadow-lg rounded-lg">
+      <Card className="text-center py-10 shadow-lg rounded-lg h-full flex flex-col items-center justify-center">
         <CardHeader className="pb-2">
           <CardTitle className="text-xl font-semibold text-primary flex items-center justify-center">
             <Users className="mr-2 h-6 w-6" /> Add People First
@@ -503,106 +465,104 @@ export default function AddExpenseTab({
 
 
   return (
-    <div className="space-y-6"> 
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader>
-          <CardTitle className="flex items-center text-xl">
-            <CreditCard className="mr-2 h-5 w-5 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
-          </CardTitle>
-          <CardDescription>
-            {expenseToEdit ? 'Update the details of the expense.' : 'Enter the details of the expense, who paid, and how it should be split.'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-3">
+    <Card className="shadow-lg rounded-lg h-full flex flex-col">
+      <CardHeader>
+        <CardTitle className="flex items-center text-xl">
+          <CreditCard className="mr-2 h-5 w-5 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+        </CardTitle>
+        <CardDescription>
+          {expenseToEdit ? 'Update the details of the expense.' : 'Enter the details of the expense, who paid, and how it should be split.'}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex-1 space-y-6 min-h-0 overflow-y-auto">
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's" className="mt-1" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="description">Description</Label>
-              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's" className="mt-1" />
+              <Label htmlFor="totalAmount">Total Amount</Label>
+              <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="totalAmount">Total Amount</Label>
-                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1" />
-              </div>
-              <div>
-                <Label htmlFor="category">Category</Label>
-                <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
-                  <SelectTrigger id="category" className="mt-1">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dynamicCategories.map(cat => {
-                       const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
-                       const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
-                       return (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          <div className="flex items-center">
-                            <IconComponent className="mr-2 h-4 w-4" />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                       );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div>
+              <Label htmlFor="category">Category</Label>
+              <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
+                <SelectTrigger id="category" className="mt-1">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dynamicCategories.map(cat => {
+                      const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                      const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                      return (
+                      <SelectItem key={cat.id} value={cat.name}>
+                        <div className="flex items-center">
+                          <IconComponent className="mr-2 h-4 w-4" />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                      );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+        </div>
 
-          <Separator />
-          
-          <PayerInputSection
-            isMultiplePayers={isMultiplePayers}
-            onToggleMultiplePayers={handleToggleMultiplePayers}
-            payers={payers}
+        <Separator />
+        
+        <PayerInputSection
+          isMultiplePayers={isMultiplePayers}
+          onToggleMultiplePayers={handleToggleMultiplePayers}
+          payers={payers}
+          people={people}
+          defaultPayerId={defaultPayerId}
+          handlePayerChange={handlePayerChange}
+          addPayer={addPayer}
+          removePayer={removePayer}
+          expenseToEdit={expenseToEdit}
+        />
+
+        <Separator />
+
+        <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+
+        {splitMethod === 'equal' && (
+          <EqualSplitSection 
             people={people}
-            defaultPayerId={defaultPayerId}
-            handlePayerChange={handlePayerChange}
-            addPayer={addPayer}
-            removePayer={removePayer}
-            expenseToEdit={expenseToEdit}
+            selectedPeopleEqual={selectedPeopleEqual}
+            handleEqualSplitChange={handleEqualSplitChange}
           />
+        )}
 
-          <Separator />
-
-          <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
-
-          {splitMethod === 'equal' && (
-            <EqualSplitSection 
-              people={people}
-              selectedPeopleEqual={selectedPeopleEqual}
-              handleEqualSplitChange={handleEqualSplitChange}
-            />
-          )}
-
-          {splitMethod === 'unequal' && (
-            <UnequalSplitSection
-              people={people}
-              unequalShares={unequalShares}
-              handleUnequalShareChange={handleUnequalShareChange}
-            />
-          )}
-          
-          {splitMethod === 'itemwise' && (
-            <ItemwiseSplitSection
-              items={items}
-              people={people}
-              handleItemChange={handleItemChange}
-              handleItemSharedByChange={handleItemSharedByChange}
-              removeItem={removeItem}
-              addItem={handleAddItem}
-            />
-          )}
-        </CardContent>
-        <CardFooter className="border-t pt-4 flex justify-end space-x-2">
-          {expenseToEdit && onCancelEdit && (
-             <Button variant="outline" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
-          )}
-          <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
-            {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
+        {splitMethod === 'unequal' && (
+          <UnequalSplitSection
+            people={people}
+            unequalShares={unequalShares}
+            handleUnequalShareChange={handleUnequalShareChange}
+          />
+        )}
+        
+        {splitMethod === 'itemwise' && (
+          <ItemwiseSplitSection
+            items={items}
+            people={people}
+            handleItemChange={handleItemChange}
+            handleItemSharedByChange={handleItemSharedByChange}
+            removeItem={removeItem}
+            addItem={addItem}
+          />
+        )}
+      </CardContent>
+      <CardFooter className="border-t pt-4 flex justify-end space-x-2">
+        {expenseToEdit && onCancelEdit && (
+            <Button variant="outline" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
+        )}
+        <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
+          {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
+        </Button>
+      </CardFooter>
+    </Card>
   );
 }

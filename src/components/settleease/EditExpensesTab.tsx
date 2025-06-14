@@ -83,13 +83,13 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
   if (supabaseInitializationError && !db) {
     return (
-      <Card className="shadow-lg rounded-lg">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1">
           <p>Could not connect to the database. Editing expenses is currently unavailable.</p>
           <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
@@ -112,18 +112,18 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg rounded-lg">
+    <>
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <FilePenLine className="mr-2 h-5 w-5 text-primary" /> Edit or Delete Expenses
           </CardTitle>
           <CardDescription>Select an expense to modify or remove it.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 min-h-0">
           {expenses.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-20rem)]"> 
-              <ul className="space-y-3 pr-4"> {/* Added pr-4 here */}
+            <ScrollArea className="flex-1 min-h-0 h-full"> {/* Ensure ScrollArea takes full height of CardContent */}
+              <ul className="space-y-3 pr-4">
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
@@ -187,7 +187,6 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </>
   );
 }
-

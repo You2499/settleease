@@ -172,15 +172,15 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
 
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg rounded-lg">
+    <>
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <Users className="mr-2 h-5 w-5 text-primary" /> Manage People
           </CardTitle>
           <CardDescription>Add, edit, or remove people in your settlement group.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-1 flex flex-col min-h-0">
           <div className="mb-4">
             <Label htmlFor="newPersonName" className="text-sm font-medium">Add New Person</Label>
             <div className="flex space-x-2 mt-1">
@@ -198,10 +198,10 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
               </Button>
             </div>
           </div>
-          <div>
+          <div className="flex-1 flex flex-col min-h-0">
             <h4 className="font-semibold mb-2 text-muted-foreground text-sm">Current People:</h4>
             {people.length > 0 ? (
-              <ScrollArea className="h-60 rounded-md border p-2 bg-background">
+              <ScrollArea className="flex-1 min-h-0 rounded-md border p-2 bg-background">
                 <ul className="space-y-1.5">
                   {people.map(person => (
                     <li key={person.id} className="flex items-center justify-between p-2.5 bg-card/60 rounded-sm text-sm group">
@@ -266,6 +266,6 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </>
   );
 }

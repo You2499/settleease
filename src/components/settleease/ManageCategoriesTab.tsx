@@ -181,15 +181,15 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-lg rounded-lg">
+    <>
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader>
           <CardTitle className="flex items-center text-xl">
             <ListChecks className="mr-2 h-5 w-5 text-primary" /> Manage Categories
           </CardTitle>
           <CardDescription>Add, edit, or remove expense categories.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="flex-1 flex flex-col min-h-0 space-y-6">
           <div className="border p-4 rounded-md bg-card/50">
             <Label className="text-md font-medium block mb-2">Add New Category</Label>
             <div className="grid md:grid-cols-3 gap-3 items-end">
@@ -232,11 +232,11 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
             </div>
           </div>
 
-          <div>
+          <div className="flex-1 flex flex-col min-h-0">
             <h4 className="font-semibold mb-2 text-muted-foreground">Current Categories:</h4>
             {categories.length > 0 ? (
-              <ScrollArea className="h-72 rounded-md border p-1 bg-background">
-                <ul className="space-y-1.5 p-1">
+              <ScrollArea className="flex-1 min-h-0 rounded-md border p-1 bg-background">
+                <ul className="space-y-1.5">
                   {categories.map(category => {
                     const IconComponent = getIconComponent(category.icon_name);
                     return (
@@ -323,6 +323,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
           </AlertDialogContent>
         </AlertDialog>
       )}
-    </div>
+    </>
   );
 }
