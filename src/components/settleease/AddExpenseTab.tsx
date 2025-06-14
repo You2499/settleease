@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper } from 'lucide-react';
+import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info } from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
@@ -45,23 +45,20 @@ export default function AddExpenseTab({
   onCancelEdit,
 }: AddExpenseTabProps) {
   const [description, setDescription] = useState('');
-  const [totalAmount, setTotalAmount] = useState(''); // This is the Original Total Bill Amount
+  const [totalAmount, setTotalAmount] = useState('');
   const [category, setCategory] = useState('');
   
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
 
-  // Celebration Contribution State
   const [isCelebrationMode, setIsCelebrationMode] = useState(false);
   const [celebrationPayerId, setCelebrationPayerId] = useState<string>('');
   const [celebrationAmountInput, setCelebrationAmountInput] = useState<string>('');
-
 
   const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
   
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
-  
   const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [] }]);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -156,7 +153,7 @@ export default function AddExpenseTab({
         setItems(expenseToEdit.items.map(item => ({
           id: item.id || Date.now().toString() + Math.random(),
           name: item.name,
-          price: item.price.toString(), // Original prices stored here
+          price: item.price.toString(),
           sharedBy: item.sharedBy || []
         })));
       } else {
@@ -448,46 +445,42 @@ export default function AddExpenseTab({
         shares: calculatedShares, 
         items: splitMethod === 'itemwise' ? expenseItemsPayload : null,
         ...(celebrationContributionPayload && { celebration_contribution: celebrationContributionPayload }),
+        // updated_at will be handled by Supabase trigger or default value
       };
 
+      let errorPayload: any = null;
       if (expenseToEdit && expenseToEdit.id) {
-        const { error: updateError } = await db
+        const { error } = await db
           .from(EXPENSES_TABLE)
-          .update({ ...commonPayload, updated_at: new Date().toISOString() }) 
+          .update({ ...commonPayload, updated_at: new Date().toISOString() })
           .eq('id', expenseToEdit.id)
           .select();
-        if (updateError) throw updateError;
-        toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
+        errorPayload = error;
+        if (!error) toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
       } else {
-        const { error: insertError } = await db
+        const { error } = await db
           .from(EXPENSES_TABLE)
-          .insert([{ ...commonPayload, created_at: new Date().toISOString() }]) 
+          .insert([{ ...commonPayload, created_at: new Date().toISOString() }])
           .select();
-        if (insertError) throw insertError;
-        toast({ title: "Expense Added", description: `${description} has been added successfully.` });
+        errorPayload = error;
+        if (!error) toast({ title: "Expense Added", description: `${description} has been added successfully.` });
       }
+
+      if (errorPayload) throw errorPayload;
+      
       onExpenseAdded(); 
       if (!expenseToEdit) { 
         // Fields are reset by the main useEffect if not editing
       }
-    } catch (caughtError: unknown) {
+    } catch (error: any) {
       let errorMessage = "An unknown error occurred while saving the expense.";
       
-      if (caughtError instanceof Error) {
-        errorMessage = caughtError.message;
-      } else if (typeof caughtError === 'string') {
-        errorMessage = caughtError;
-      } else if (typeof caughtError === 'object' && caughtError !== null) {
-        const potentialError = caughtError as { message?: unknown; code?: unknown; details?: unknown };
-        if (typeof potentialError.message === 'string' && potentialError.message.trim() !== '') {
-          errorMessage = potentialError.message;
-        } else if (typeof potentialError.code === 'string' && potentialError.code.trim() !== '') {
-          errorMessage = `Error code: ${potentialError.code}`;
-        } else if (typeof potentialError.details === 'string' && potentialError.details.trim() !== '') {
-          errorMessage = potentialError.details;
-        }
+      if (error && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
       }
-      console.error("Error saving expense:", errorMessage, caughtError);
+      console.error("Error saving expense:", errorMessage, error);
       toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -526,32 +519,34 @@ export default function AddExpenseTab({
     );
   }
 
-
   return (
     <Card className="shadow-lg rounded-lg h-full flex flex-col">
       <CardHeader>
-        <CardTitle className="flex items-center text-xl">
-          <CreditCard className="mr-2 h-5 w-5 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+        <CardTitle className="flex items-center text-2xl font-bold">
+          <CreditCard className="mr-3 h-6 w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Log New Expense'}
         </CardTitle>
         <CardDescription>
-          {expenseToEdit ? 'Update the details of the expense.' : 'Enter the details of the expense, who paid, and how it should be split.'}
+          {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-6">
-        <div className="space-y-3">
+      
+      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-6 p-6">
+        
+        {/* Section 1: Core Expense Details */}
+        <div className="space-y-4">
           <div>
-            <Label htmlFor="description">Description</Label>
-            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's" className="mt-1" />
+            <Label htmlFor="description" className="text-base">Description</Label>
+            <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's, Monthly Groceries" className="mt-1 text-base py-3" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="totalAmount">Total Bill Amount</Label>
-              <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1" />
+              <Label htmlFor="totalAmount" className="text-base">Total Bill Amount</Label>
+              <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-base py-3" />
             </div>
             <div>
-              <Label htmlFor="category">Category</Label>
+              <Label htmlFor="category" className="text-base">Category</Label>
               <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
-                <SelectTrigger id="category" className="mt-1">
+                <SelectTrigger id="category" className="mt-1 text-base py-3 h-auto">
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -571,35 +566,46 @@ export default function AddExpenseTab({
               </Select>
             </div>
           </div>
-           {(parseFloat(totalAmount) || 0) > 0 && (
-             <div className="mt-2 text-sm pl-1">
-                <span className="font-medium">Amount to be Split: </span>
-                <span className="font-semibold text-primary">{formatCurrency(amountToSplit)}</span>
+          {(parseFloat(totalAmount) || 0) > 0 && (
+             <Card className="p-3 bg-muted/50 border-dashed border-primary/50">
+                <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                        <Wallet className="mr-2 h-4 w-4"/>
+                        <span>Amount to be Split:</span>
+                    </div>
+                    <span className="font-bold text-lg text-primary">{formatCurrency(amountToSplit)}</span>
+                </div>
                 {isCelebrationMode && actualCelebrationAmount > 0 && (
-                    <span className="text-muted-foreground ml-2 text-xs"> (after {formatCurrency(actualCelebrationAmount)} contribution by {peopleMap[celebrationPayerId] || 'Payer'})</span>
+                    <p className="text-xs text-muted-foreground mt-1 text-right">
+                        (After {formatCurrency(actualCelebrationAmount)} contribution by {peopleMap[celebrationPayerId] || 'Payer'})
+                    </p>
                 )}
-            </div>
+            </Card>
            )}
         </div>
 
-        <Separator />
+        <Separator className="my-6" />
         
-        <PayerInputSection
-          isMultiplePayers={isMultiplePayers}
-          onToggleMultiplePayers={handleToggleMultiplePayers}
-          payers={payers}
-          people={people}
-          defaultPayerId={defaultPayerId}
-          handlePayerChange={handlePayerChange}
-          addPayer={addPayer}
-          removePayer={removePayer}
-          expenseToEdit={expenseToEdit}
-        />
+        {/* Section 2: Payer Information */}
+        <div className="space-y-3">
+          <PayerInputSection
+            isMultiplePayers={isMultiplePayers}
+            onToggleMultiplePayers={handleToggleMultiplePayers}
+            payers={payers}
+            people={people}
+            defaultPayerId={defaultPayerId}
+            handlePayerChange={handlePayerChange}
+            addPayer={addPayer}
+            removePayer={removePayer}
+            expenseToEdit={expenseToEdit}
+          />
+        </div>
         
-        <Separator />
+        <Separator className="my-6" />
 
-        <div>
-          <div className="flex items-center space-x-2 mb-2">
+        {/* Section 3: Celebration Contribution (Optional) */}
+        <div className="space-y-3">
+          <div className="flex items-center space-x-3">
             <Checkbox
               id="celebrationMode"
               checked={isCelebrationMode}
@@ -613,31 +619,36 @@ export default function AddExpenseTab({
                   setCelebrationPayerId(defaultPayerId || people[0].id);
                 }
               }}
+              className="h-5 w-5"
             />
-            <Label htmlFor="celebrationMode" className="text-lg font-medium flex items-center cursor-pointer">
-                <PartyPopper className="mr-2 h-5 w-5 text-yellow-500"/> Celebration Contribution?
+            <Label htmlFor="celebrationMode" className="text-lg font-medium flex items-center cursor-pointer hover:text-primary transition-colors">
+                <PartyPopper className="mr-2 h-5 w-5 text-yellow-500"/> Is this a Celebration Contribution?
             </Label>
           </div>
           {isCelebrationMode && (
-            <Card className="p-4 bg-card/50 shadow-sm space-y-3 mt-1">
+            <Card className="p-4 bg-accent/10 shadow-inner space-y-4 mt-2 border-accent/30">
+              <CardDescription className="text-xs flex items-start text-muted-foreground">
+                <Info size={16} className="mr-2 mt-0.5 shrink-0 text-accent" />
+                A celebration contribution means one person covers a part of the bill as a treat for others. This amount is subtracted *before* splitting the remaining cost.
+              </CardDescription>
               <div>
-                <Label htmlFor="celebrationPayer">Celebratory Payer</Label>
+                <Label htmlFor="celebrationPayer" className="text-base">Who is treating?</Label>
                 <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
-                  <SelectTrigger id="celebrationPayer" className="mt-1">
+                  <SelectTrigger id="celebrationPayer" className="mt-1 text-base py-3 h-auto">
                     <SelectValue placeholder="Select who is contributing" />
                   </SelectTrigger>
                   <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
-                <Label htmlFor="celebrationAmount">Contribution Amount</Label>
+                <Label htmlFor="celebrationAmount" className="text-base">Contribution Amount</Label>
                 <Input
                   id="celebrationAmount"
                   type="number"
                   value={celebrationAmountInput}
                   onChange={e => setCelebrationAmountInput(e.target.value)}
-                  placeholder="Amount"
-                  className="mt-1"
+                  placeholder="Amount they are covering"
+                  className="mt-1 text-base py-3"
                 />
                 <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
                   {[10, 25, 50, 100].map(perc => (
@@ -654,9 +665,9 @@ export default function AddExpenseTab({
                            setCelebrationAmountInput('0.00');
                         }
                       }}
-                      className="text-xs px-2 py-1 h-auto"
+                      className="text-xs px-2.5 py-1.5 h-auto"
                     >
-                      {perc}%
+                      {perc}% of Bill
                     </Button>
                   ))}
                    <Button
@@ -664,10 +675,10 @@ export default function AddExpenseTab({
                       variant="outline"
                       size="sm"
                       onClick={() => setCelebrationAmountInput(totalAmount)}
-                      className="text-xs px-2 py-1 h-auto"
+                      className="text-xs px-2.5 py-1.5 h-auto"
                       disabled={!totalAmount || parseFloat(totalAmount) <=0}
                     >
-                     Full Amount
+                     Full Bill Amount
                     </Button>
                 </div>
               </div>
@@ -675,43 +686,46 @@ export default function AddExpenseTab({
           )}
         </div>
 
-        <Separator />
+        <Separator className="my-6" />
 
-        <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
-
-        {splitMethod === 'equal' && (
-          <EqualSplitSection 
-            people={people}
-            selectedPeopleEqual={selectedPeopleEqual}
-            handleEqualSplitChange={handleEqualSplitChange}
-          />
-        )}
-
-        {splitMethod === 'unequal' && (
-          <UnequalSplitSection
-            people={people}
-            unequalShares={unequalShares}
-            handleUnequalShareChange={handleUnequalShareChange}
-          />
-        )}
-        
-        {splitMethod === 'itemwise' && (
-          <ItemwiseSplitSection
-            items={items}
-            people={people}
-            handleItemChange={handleItemChange}
-            handleItemSharedByChange={handleItemSharedByChange}
-            removeItem={removeItem}
-            addItem={handleAddItem}
-          />
-        )}
+        {/* Section 4: Split Method & Details */}
+        <div className="space-y-4">
+          <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+          
+          {/* The content for each split method will appear here */}
+          {splitMethod === 'equal' && (
+            <EqualSplitSection 
+              people={people}
+              selectedPeopleEqual={selectedPeopleEqual}
+              handleEqualSplitChange={handleEqualSplitChange}
+            />
+          )}
+          {splitMethod === 'unequal' && (
+            <UnequalSplitSection
+              people={people}
+              unequalShares={unequalShares}
+              handleUnequalShareChange={handleUnequalShareChange}
+            />
+          )}
+          {splitMethod === 'itemwise' && (
+            <ItemwiseSplitSection
+              items={items}
+              people={people}
+              handleItemChange={handleItemChange}
+              handleItemSharedByChange={handleItemSharedByChange}
+              removeItem={removeItem}
+              addItem={addItem}
+            />
+          )}
+        </div>
       </CardContent>
-      <CardFooter className="border-t pt-4 flex justify-end space-x-2">
+
+      <CardFooter className="border-t pt-6 flex justify-end space-x-3">
         {expenseToEdit && onCancelEdit && (
-            <Button variant="outline" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
+            <Button variant="outline" size="lg" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
         )}
-        <Button onClick={handleSubmitExpense} disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
-          {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
+        <Button onClick={handleSubmitExpense} size="lg" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
+          {isLoading ? (expenseToEdit ? "Updating Expense..." : "Adding Expense...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
         </Button>
       </CardFooter>
     </Card>
