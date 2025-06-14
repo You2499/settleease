@@ -18,7 +18,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Info, User, PartyPopper, CalendarDays, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
-import { format } from 'date-fns';
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -55,8 +54,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     return ReceiptText;
   }, [expense.split_method]);
 
-  const dateAdded = expense.created_at ? format(new Date(expense.created_at), "MMM d, yyyy 'at' h:mm a") : 'N/A';
-
   const totalOriginalBill = Number(expense.total_amount);
   const celebrationAmount = expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0;
   const amountEffectivelySplit = Math.max(0, totalOriginalBill - celebrationAmount);
@@ -85,13 +82,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     
     const reductionFactor = (totalOriginalBill > 0.001 && amountEffectivelySplit >= 0) ? (amountEffectivelySplit / totalOriginalBill) : (totalOriginalBill === 0 && amountEffectivelySplit === 0 ? 1 : 0) ;
 
-
     const aggregatedData: PersonAggregatedItemShares = {};
 
     expense.items.forEach((item: ExpenseItemDetail) => {
       const originalItemPriceNum = Number(item.price);
       const adjustedItemPriceForSplit = (amountEffectivelySplit >= 0) ? (originalItemPriceNum * reductionFactor) : 0;
-
 
       if (item.sharedBy && item.sharedBy.length > 0) {
         const sharePerPersonForItem = (adjustedItemPriceForSplit > 0.001 && item.sharedBy.length > 0)
@@ -129,8 +124,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-grow min-h-0 pr-1"> {/* Added pr-1 to prevent scrollbar overlapping content edge too much */}
-          <div className="py-4 px-6 space-y-4"> {/* py-4 for vertical space, px-6 matches DialogContent default */}
+        <ScrollArea className="flex-grow min-h-0">
+          <div className="py-4 px-6 space-y-6">
             
             <Card>
               <CardHeader className="pb-3 pt-4">
@@ -148,10 +143,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Category:</span> 
                   <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span>
-                </div>
-                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Date Added:</span> 
-                  <span className="font-medium text-xs text-muted-foreground/80">{dateAdded}</span>
                 </div>
               </CardContent>
             </Card>
@@ -369,6 +360,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                 (Contributed {formatCurrency(personCelebrationAmount)})
                             </p>
                           )}
+                          {isCelebrationContributor && (
+                            <p className="text-xs text-muted-foreground/80 pl-2 italic">
+                                *You contributed {formatCurrency(personCelebrationAmount)} for this expense.*
+                            </p>
+                          )}
 
 
                           <div className="flex justify-between text-xs text-muted-foreground">
@@ -387,7 +383,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </div>
         </ScrollArea>
 
-        <DialogFooter className="px-6 pb-6 pt-4 border-t mt-auto">
+        <DialogFooter className="px-6 pb-6 pt-4 border-t">
           <DialogClose asChild>
             <Button type="button" variant="outline">Close</Button>
           </DialogClose>
@@ -396,3 +392,4 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
+
