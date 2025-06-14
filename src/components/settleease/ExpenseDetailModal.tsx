@@ -123,7 +123,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         </DialogHeader>
         
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar"> 
-          <div className="pt-0 space-y-4 sm:space-y-6"> {/* Changed pt-3 sm:pt-4 to pt-0 */}
+          <div className="space-y-4 sm:space-y-6 pt-2"> {/* Removed pt from parent, add pt-2 here */}
             
             <Card>
               <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">

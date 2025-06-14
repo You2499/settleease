@@ -23,11 +23,11 @@ export default function ExpenseLog({
 }: ExpenseLogProps) {
   return (
     <Card className="shadow-lg rounded-lg">
-      <CardHeader className="p-4 sm:p-6 pb-2"> {/* Changed pb-3 to pb-2 */}
+      <CardHeader className="p-4 sm:p-6 pb-2">
         <CardTitle className="flex items-center text-lg sm:text-xl"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
         <CardDescription className="text-xs sm:text-sm">A list of all recorded expenses, most recent first. Click an expense for details.</CardDescription>
       </CardHeader>
-      <CardContent className="p-4 sm:p-6 pt-0">
+      <CardContent className="p-4 sm:p-6 pt-2"> {/* Adjusted pt to pt-2 to give a bit of space after header */}
         {expenses.length > 0 ? (
           <ScrollArea className="h-[350px]">
             <ul className="space-y-2.5 px-0.5 sm:px-1">
