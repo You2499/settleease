@@ -2,9 +2,9 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { BarChart3, LineChart, PieChart as PieChartIconLucide, Users, TrendingUp, DollarSign, CalendarDays, Sigma, ListFilter } from 'lucide-react';
+import { BarChart3, LineChart as LineChartIcon, PieChart as PieChartIconLucide, Users, TrendingUp, DollarSign, CalendarDays, Sigma, ListFilter } from 'lucide-react';
 import {
-  BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell
+  LineChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell as RechartsCell
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -336,3 +336,6 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
+
+
+    
