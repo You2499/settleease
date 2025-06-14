@@ -2,8 +2,9 @@
 "use client";
 
 import React from 'react';
+import { Button } from "@/components/ui/button";
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Scale, SlidersHorizontal, ClipboardList } from 'lucide-react';
 import type { Expense } from '@/lib/settleease/types';
 
 interface SplitMethodSelectorProps {
@@ -12,14 +13,30 @@ interface SplitMethodSelectorProps {
 }
 
 export default function SplitMethodSelector({ splitMethod, setSplitMethod }: SplitMethodSelectorProps) {
+  const options: { value: Expense['split_method']; label: string; Icon: React.ElementType }[] = [
+    { value: 'equal', label: 'Equally', Icon: Scale },
+    { value: 'unequal', label: 'Unequally', Icon: SlidersHorizontal },
+    { value: 'itemwise', label: 'Item-wise', Icon: ClipboardList },
+  ];
+
   return (
     <div className="space-y-3">
       <Label className="text-lg font-medium">Split Method</Label>
-      <RadioGroup value={splitMethod} onValueChange={(val) => setSplitMethod(val as Expense['split_method'])} className="flex space-x-4">
-        <div className="flex items-center space-x-1.5"><RadioGroupItem value="equal" id="splitEqual" /><Label htmlFor="splitEqual" className="font-normal text-sm">Equally</Label></div>
-        <div className="flex items-center space-x-1.5"><RadioGroupItem value="unequal" id="splitUnequal" /><Label htmlFor="splitUnequal" className="font-normal text-sm">Unequally</Label></div>
-        <div className="flex items-center space-x-1.5"><RadioGroupItem value="itemwise" id="splitItemwise" /><Label htmlFor="splitItemwise" className="font-normal text-sm">Item-wise</Label></div>
-      </RadioGroup>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        {options.map(({ value, label, Icon }) => (
+          <Button
+            key={value}
+            variant={splitMethod === value ? 'default' : 'outline'}
+            size="lg"
+            onClick={() => setSplitMethod(value)}
+            className="w-full justify-center sm:justify-start"
+          >
+            <Icon className="mr-2 h-5 w-5" />
+            {label}
+          </Button>
+        ))}
+      </div>
     </div>
   );
 }
+
