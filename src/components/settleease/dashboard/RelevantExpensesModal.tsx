@@ -5,8 +5,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import { FileText, ExternalLink } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense } from '@/lib/settleease/types';
 
@@ -50,23 +49,18 @@ export default function RelevantExpensesModal({
                         : 'N/A');
                   return (
                     <li key={expense.id}>
-                      <Card className="bg-card/60 hover:bg-card/80 transition-colors">
+                      <Card 
+                        className="bg-card/60 hover:bg-card/80 transition-colors cursor-pointer"
+                        onClick={() => onExpenseClick(expense)}
+                      >
                         <CardContent className="p-3">
                           <div className="flex justify-between items-center">
-                            <div className="flex-grow">
+                            <div className="flex-grow mr-2">
                               <p className="text-sm font-medium truncate" title={expense.description}>{expense.description}</p>
                               <p className="text-xs text-muted-foreground">
                                 Total: {formatCurrency(expense.total_amount)} | Paid by: {displayPayerText}
                               </p>
                             </div>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={() => onExpenseClick(expense)}
-                              className="ml-2 text-xs h-auto px-2 py-1 text-primary hover:text-primary/80"
-                            >
-                              <ExternalLink className="mr-1 h-3 w-3"/> View
-                            </Button>
                           </div>
                         </CardContent>
                       </Card>
@@ -85,3 +79,4 @@ export default function RelevantExpensesModal({
     </Dialog>
   );
 }
+

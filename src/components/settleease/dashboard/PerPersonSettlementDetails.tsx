@@ -233,7 +233,9 @@ export default function PerPersonSettlementDetails({
 
         <AccordionItem value="recorded-payments">
           <AccordionTrigger className="text-base hover:no-underline">
-            <Landmark className="mr-2 h-4 w-4 text-muted-foreground"/> Recorded Payments ({personRecordedPayments.length})
+            <span className="flex items-center">
+              <Landmark className="mr-2 h-4 w-4 text-muted-foreground"/> Recorded Payments ({personRecordedPayments.length})
+            </span>
           </AccordionTrigger>
           <AccordionContent>
             {personRecordedPayments.length > 0 ? (
@@ -294,3 +296,4 @@ export default function PerPersonSettlementDetails({
     </Card>
   );
 }
+
