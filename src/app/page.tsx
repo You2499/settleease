@@ -683,11 +683,23 @@ export default function SettleEasePage() {
             </div>
             <ThemeToggleButton />
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar">
             {isLoadingData && isDataFetchedAtLeastOnce && (
                 <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
             )}
-            {activeView === 'dashboard' && <DashboardView expenses={expenses} people={people} peopleMap={peopleMap} dynamicCategories={categories} getCategoryIconFromName={getCategoryIconFromName} settlementPayments={settlementPayments} />}
+            {activeView === 'dashboard' && (
+              <DashboardView
+                expenses={expenses}
+                people={people}
+                peopleMap={peopleMap}
+                dynamicCategories={categories}
+                getCategoryIconFromName={getCategoryIconFromName}
+                settlementPayments={settlementPayments}
+                db={db}
+                currentUserId={currentUser.id}
+                onActionComplete={() => fetchAllData(false)}
+              />
+            )}
             {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}

@@ -2,17 +2,19 @@
 "use client";
 
 import React, { useState, useMemo } from 'react';
-import { FileText, Settings2 } from 'lucide-react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "@/hooks/use-toast";
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
 import ShareVsPaidChart from './dashboard/ShareVsPaidChart';
 import ExpensesByCategoryChart from './dashboard/ExpensesByCategoryChart';
 import ExpenseLog from './dashboard/ExpenseLog';
 
-import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
-import type { Person, Expense, Category, SettlementPayment } from '@/lib/settleease/types';
+import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
+import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction } from '@/lib/settleease/types';
 
 interface DashboardViewProps {
   expenses: Expense[];
@@ -21,164 +23,178 @@ interface DashboardViewProps {
   dynamicCategories: Category[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   settlementPayments: SettlementPayment[];
+  db: SupabaseClient | undefined;
+  currentUserId: string;
+  onActionComplete: () => void;
 }
 
-export default function DashboardView({ expenses, people, peopleMap, dynamicCategories, getCategoryIconFromName, settlementPayments }: DashboardViewProps) {
+export default function DashboardView({
+  expenses,
+  people,
+  peopleMap,
+  dynamicCategories,
+  getCategoryIconFromName,
+  settlementPayments,
+  db,
+  currentUserId,
+  onActionComplete,
+}: DashboardViewProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
-  const [simplifySettlement, setSimplifySettlement] = useState(true);
 
-  const settlement = useMemo(() => {
-    if (people.length === 0) return [];
+  const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
+    if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
 
-    // Calculate initial balances from expenses
-    const balances: Record<string, number> = {};
-    people.forEach(p => balances[p.id] = 0);
+    // 1. Calculate initial balances from expenses only
+    const initialBalances: Record<string, number> = {};
+    people.forEach(p => initialBalances[p.id] = 0);
 
     expenses.forEach(expense => {
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach(payment => {
-          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
+          initialBalances[payment.personId] = (initialBalances[payment.personId] || 0) + Number(payment.amount);
         });
       }
       if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
-          });
-      }
-    });
-    
-    // Adjust balances based on settlement_payments
-    settlementPayments.forEach(payment => {
-        if (balances[payment.debtor_id] !== undefined) {
-            balances[payment.debtor_id] += Number(payment.amount_settled);
-        }
-        if (balances[payment.creditor_id] !== undefined) {
-            balances[payment.creditor_id] -= Number(payment.amount_settled);
-        }
-    });
-
-
-    if (simplifySettlement) {
-      const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
-      const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
-      const transactions: { from: string, to: string, amount: number }[] = [];
-      let debtorIdx = 0, creditorIdx = 0;
-      while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
-        const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
-        const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-        if (amountToSettle > 0.01) {
-          transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
-          debtor.amount += amountToSettle;
-          creditor.amount -= amountToSettle;
-        }
-        if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
-        if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
-      }
-      return transactions;
-    } else { // Non-simplified view
-      // 1. Calculate raw pairwise debts from expenses
-      const pairwiseDebts: Record<string, Record<string, number>> = {};
-      expenses.forEach(expense => {
-        if (expense.total_amount <= 0.001) return;
         expense.shares.forEach(share => {
-          const sharerId = share.personId;
-          const sharerTotalOwedForThisExpense = Number(share.amount);
-          if (sharerTotalOwedForThisExpense <= 0.001) return;
+          initialBalances[share.personId] = (initialBalances[share.personId] || 0) - Number(share.amount);
+        });
+      }
+    });
 
-          expense.paid_by.forEach(payment => {
-            const payerId = payment.personId;
-            const payerAmountForThisExpense = Number(payment.amount);
-            if (payerAmountForThisExpense <= 0.001) return;
+    // 2. Calculate balances after recorded settlement payments (for simplified view)
+    const balancesAfterPayments = { ...initialBalances };
+    settlementPayments.forEach(payment => {
+      if (balancesAfterPayments[payment.debtor_id] !== undefined) {
+        balancesAfterPayments[payment.debtor_id] += Number(payment.amount_settled);
+      }
+      if (balancesAfterPayments[payment.creditor_id] !== undefined) {
+        balancesAfterPayments[payment.creditor_id] -= Number(payment.amount_settled);
+      }
+    });
 
-            if (sharerId !== payerId) {
-              const proportionPaidByThisPayer = payerAmountForThisExpense / expense.total_amount;
-              const amountOwedBySharerToThisPayer = sharerTotalOwedForThisExpense * proportionPaidByThisPayer;
+    // 3. Calculate simplified transactions
+    const sTransactions: CalculatedTransaction[] = [];
+    const debtors = Object.entries(balancesAfterPayments).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
+    const creditors = Object.entries(balancesAfterPayments).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
+    let dIdx = 0, cIdx = 0;
+    while (dIdx < debtors.length && cIdx < creditors.length) {
+      const debtor = debtors[dIdx], creditor = creditors[cIdx];
+      const amountToSettle = Math.min(-debtor.amount, creditor.amount);
+      if (amountToSettle > 0.01) {
+        sTransactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
+        debtor.amount += amountToSettle;
+        creditor.amount -= amountToSettle;
+      }
+      if (Math.abs(debtor.amount) < 0.01) dIdx++;
+      if (Math.abs(creditor.amount) < 0.01) cIdx++;
+    }
 
-              if (amountOwedBySharerToThisPayer > 0.001) {
-                if (!pairwiseDebts[sharerId]) pairwiseDebts[sharerId] = {};
-                pairwiseDebts[sharerId][payerId] = (pairwiseDebts[sharerId][payerId] || 0) + amountOwedBySharerToThisPayer;
-              }
+    // 4. Calculate pairwise transactions (raw debts adjusted by specific pairwise payments)
+    const rawPairwiseDebtsFromExpenses: Record<string, Record<string, { amount: number, expenseIds: Set<string> }>> = {};
+    expenses.forEach(expense => {
+      if (expense.total_amount <= 0.001 || !expense.shares || !expense.paid_by) return;
+
+      expense.shares.forEach(share => {
+        const sharerId = share.personId;
+        const sharerTotalOwedForThisExpense = Number(share.amount);
+        if (sharerTotalOwedForThisExpense <= 0.001) return;
+
+        expense.paid_by.forEach(payment => {
+          const payerId = payment.personId;
+          const payerAmountForThisExpense = Number(payment.amount);
+          if (payerAmountForThisExpense <= 0.001 || expense.total_amount <= 0.001) return; // Avoid division by zero
+
+          if (sharerId !== payerId) {
+            const proportionPaidByThisPayer = payerAmountForThisExpense / expense.total_amount;
+            const amountOwedBySharerToThisPayer = sharerTotalOwedForThisExpense * proportionPaidByThisPayer;
+
+            if (amountOwedBySharerToThisPayer > 0.001) {
+              if (!rawPairwiseDebtsFromExpenses[sharerId]) rawPairwiseDebtsFromExpenses[sharerId] = {};
+              if (!rawPairwiseDebtsFromExpenses[sharerId][payerId]) rawPairwiseDebtsFromExpenses[sharerId][payerId] = { amount: 0, expenseIds: new Set() };
+              
+              rawPairwiseDebtsFromExpenses[sharerId][payerId].amount += amountOwedBySharerToThisPayer;
+              rawPairwiseDebtsFromExpenses[sharerId][payerId].expenseIds.add(expense.id);
             }
-          });
+          }
         });
       });
+    });
 
-      // 2. Create a map of settled amounts from settlementPayments
-      const settledAmountsMap: Record<string, Record<string, number>> = {};
-      settlementPayments.forEach(sp => {
-        if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
-        settledAmountsMap[sp.debtor_id][sp.creditor_id] = (settledAmountsMap[sp.debtor_id][sp.creditor_id] || 0) + Number(sp.amount_settled);
-      });
+    const settledAmountsMap: Record<string, Record<string, number>> = {};
+    settlementPayments.forEach(sp => {
+      if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
+      settledAmountsMap[sp.debtor_id][sp.creditor_id] = (settledAmountsMap[sp.debtor_id][sp.creditor_id] || 0) + Number(sp.amount_settled);
+    });
 
-      // 3. Adjust pairwiseDebts with settledAmountsMap
-      const nonSimplifiedTxns: { from: string, to: string, amount: number }[] = [];
-      for (const debtorId in pairwiseDebts) {
-        for (const creditorId in pairwiseDebts[debtorId]) {
-          let amount = pairwiseDebts[debtorId][creditorId];
-          const alreadySettled = settledAmountsMap[debtorId]?.[creditorId] || 0;
-          const netAmount = amount - alreadySettled;
-          
-          if (netAmount > 0.01) {
-            nonSimplifiedTxns.push({ from: debtorId, to: creditorId, amount: netAmount });
-          }
+    const pTransactions: CalculatedTransaction[] = [];
+    for (const debtorId in rawPairwiseDebtsFromExpenses) {
+      for (const creditorId in rawPairwiseDebtsFromExpenses[debtorId]) {
+        let netAmount = rawPairwiseDebtsFromExpenses[debtorId][creditorId].amount;
+        const alreadySettled = settledAmountsMap[debtorId]?.[creditorId] || 0;
+        netAmount -= alreadySettled;
+        
+        if (netAmount > 0.01) {
+          pTransactions.push({ 
+            from: debtorId, 
+            to: creditorId, 
+            amount: netAmount,
+            contributingExpenseIds: Array.from(rawPairwiseDebtsFromExpenses[debtorId][creditorId].expenseIds)
+          });
         }
       }
-      nonSimplifiedTxns.sort((a,b) => (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '') || (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || ''));
-      return nonSimplifiedTxns;
     }
-  }, [expenses, people, settlementPayments, simplifySettlement, peopleMap]);
+    pTransactions.sort((a,b) => (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '') || (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || ''));
 
-  const shareVsPaidData = useMemo(() => {
-    if (!people.length) return [];
+    return { simplifiedTransactions: sTransactions, pairwiseTransactions: pTransactions };
+  }, [expenses, people, settlementPayments, peopleMap]);
 
-    return people.map(person => {
-      let totalPaidByPerson = 0;
-      let totalShareForPerson = 0;
 
-      expenses.forEach(expense => {
-        if (Array.isArray(expense.paid_by)) {
-          expense.paid_by.forEach(payment => {
-            if (payment.personId === person.id) {
-              totalPaidByPerson += Number(payment.amount);
-            }
-          });
-        }
-        if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            if (share.personId === person.id) {
-              totalShareForPerson += Number(share.amount);
-            }
-          });
-        }
-      });
-      return {
-        name: peopleMap[person.id] || person.name,
-        paid: totalPaidByPerson,
-        share: totalShareForPerson,
-      };
-    }).filter(d => d.paid > 0.01 || d.share > 0.01); 
-  }, [expenses, people, peopleMap]);
-  
+  const handleMarkAsPaid = async (transaction: CalculatedTransaction) => {
+    if (!db || !currentUserId) {
+      toast({ title: "Error", description: "Cannot mark as paid. DB or User missing.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
+        {
+          debtor_id: transaction.from,
+          creditor_id: transaction.to,
+          amount_settled: transaction.amount,
+          marked_by_user_id: currentUserId,
+          settled_at: new Date().toISOString(),
+        },
+      ]);
+      if (error) throw error;
+      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete.` });
+      onActionComplete();
+    } catch (error: any) {
+      console.error("Error marking settlement as paid:", error);
+      toast({ title: "Error", description: `Could not record settlement: ${error.message}`, variant: "destructive" });
+    }
+  };
 
-  const expensesByCategory = useMemo(() => {
-    const data: Record<string, number> = {};
-    expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized";
-      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
-    });
-    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0.01);
-  }, [expenses]);
+  const handleUnmarkSettlementPayment = async (payment: SettlementPayment) => {
+    if (!db) {
+      toast({ title: "Error", description: "Cannot unmark payment. DB missing.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).delete().eq('id', payment.id);
+      if (error) throw error;
+      toast({ title: "Payment Unmarked", description: `Payment record from ${peopleMap[payment.debtor_id]} to ${peopleMap[payment.creditor_id]} has been removed.` });
+      onActionComplete();
+    } catch (error: any) {
+      console.error("Error unmarking payment:", error);
+      toast({ title: "Error", description: `Could not unmark payment: ${error.message}`, variant: "destructive" });
+    }
+  };
 
   const handleExpenseCardClick = (expense: Expense) => {
     setSelectedExpenseForModal(expense);
     setIsExpenseModalOpen(true);
   };
   
-  const settlementCardDescription = simplifySettlement
-    ? "Minimum transactions required to settle all debts."
-    : "Detailed pairwise debts reflecting direct expense involvements.";
-
   if (people.length === 0 && expenses.length === 0) {
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
@@ -190,7 +206,7 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
       </Card>
     );
   }
-  if (expenses.length === 0 && settlementPayments.length === 0) { // Check settlementPayments too
+  if (expenses.length === 0 && settlementPayments.length === 0) {
      return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
         <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Ready to Settle?</CardTitle></CardHeader>
@@ -203,19 +219,53 @@ export default function DashboardView({ expenses, people, peopleMap, dynamicCate
     );
   }
 
+  const shareVsPaidData = useMemo(() => {
+    if (!people.length) return [];
+    return people.map(person => {
+      let totalPaidByPerson = 0;
+      let totalShareForPerson = 0;
+      expenses.forEach(expense => {
+        if (Array.isArray(expense.paid_by)) {
+          expense.paid_by.forEach(payment => {
+            if (payment.personId === person.id) totalPaidByPerson += Number(payment.amount);
+          });
+        }
+        if (Array.isArray(expense.shares)) {
+          expense.shares.forEach(share => {
+            if (share.personId === person.id) totalShareForPerson += Number(share.amount);
+          });
+        }
+      });
+      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalShareForPerson };
+    }).filter(d => d.paid > 0.01 || d.share > 0.01);
+  }, [expenses, people, peopleMap]);
+
+  const expensesByCategoryData = useMemo(() => {
+    const data: Record<string, number> = {};
+    expenses.forEach(exp => {
+      const categoryName = exp.category || "Uncategorized";
+      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
+    });
+    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0.01);
+  }, [expenses]);
+
   return (
     <div className="space-y-6">
       <SettlementSummary
-        settlement={settlement}
+        simplifiedTransactions={simplifiedTransactions}
+        pairwiseTransactions={pairwiseTransactions}
+        allExpenses={expenses}
+        people={people}
         peopleMap={peopleMap}
-        simplifySettlement={simplifySettlement}
-        setSimplifySettlement={setSimplifySettlement}
-        settlementCardDescription={settlementCardDescription}
+        settlementPayments={settlementPayments}
+        onMarkAsPaid={handleMarkAsPaid}
+        onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
+        onViewExpenseDetails={handleExpenseCardClick} // For the small modal to eventually call this
       />
 
       <div className="grid md:grid-cols-2 gap-6">
         <ShareVsPaidChart shareVsPaidData={shareVsPaidData} />
-        <ExpensesByCategoryChart expensesByCategory={expensesByCategory} />
+        <ExpensesByCategoryChart expensesByCategory={expensesByCategoryData} />
       </div>
 
       <ExpenseLog

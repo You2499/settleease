@@ -72,6 +72,14 @@ export interface SettlementPayment {
   notes?: string;
 }
 
+// Used for displaying calculated settlements
+export interface CalculatedTransaction {
+  from: string; // debtorId
+  to: string;   // creditorId
+  amount: number;
+  contributingExpenseIds?: string[]; // Optional: for pairwise transactions to trace back
+}
+
 
 // Active view type for navigation
 export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements';
