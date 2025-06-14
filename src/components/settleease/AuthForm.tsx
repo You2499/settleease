@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins } from 'lucide-react'; // Added HandCoins
+import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // Simple Google Icon SVG as a React component
@@ -113,13 +113,28 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           <HandCoins className="h-16 w-16 text-primary" />
         </div>
         <CardTitle className="text-3xl font-bold font-headline text-primary">
-          {isLoginView ? 'Welcome Back!' : 'Create Account'}
+          {isLoginView ? 'Welcome Back to SettleEase!' : 'Join SettleEase Today!'}
         </CardTitle>
-        <CardDescription className="text-md pt-1">
-          {isLoginView ? 'Sign in to continue with SettleEase.' : 'Join SettleEase to manage your group expenses effortlessly.'}
+        <CardDescription className="text-md pt-1 text-muted-foreground px-2">
+          {isLoginView 
+            ? 'Sign in to continue managing your group expenses effortlessly.' 
+            : 'Create an account to unlock powerful features for easy bill splitting and seamless group settlements.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="px-6 pb-6 space-y-6">
+
+        {!isLoginView && (
+          <div className="text-sm text-center text-muted-foreground mb-6 space-y-2 bg-secondary/30 p-4 rounded-md">
+            <h3 className="font-semibold text-foreground">With SettleEase, you can:</h3>
+            <ul className="list-none space-y-1.5 text-left text-xs sm:text-sm inline-block">
+              <li className="flex items-start"><Zap className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Track shared expenses with unparalleled ease.</li>
+              <li className="flex items-start"><Users className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+              <li className="flex items-start"><PieChart className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
+              <li className="flex items-start"><Handshake className="h-4 w-4 mr-2 mt-0.5 text-primary shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
+            </ul>
+          </div>
+        )}
+
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
             <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
