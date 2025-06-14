@@ -176,7 +176,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   id="password"
                   type="password"
                   autoComplete={isLoginView ? "current-password" : "new-password"}
-                  placeholder="•••••••• (min. 6 characters)"
+                  placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   disabled={isLoading || isGoogleLoading}
@@ -227,3 +227,4 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     </Card>
   );
 }
+
