@@ -19,35 +19,23 @@ import {
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
 
-// Google Gemini SVG Icon from Wikimedia Commons
+// Google Gemini SVG Icon
 const GeminiIcon = () => (
   <svg
     width="1em"
     height="1em"
-    viewBox="0 0 1024 1024"
+    viewBox="0 0 16 16"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     className="inline-block align-middle"
   >
-    <path fill="url(#paint0_linear_13_98_new)" d="M608.896 1024c-91.947 0-182.229-35.05-250.261-100.487-70.232-67.642-111.787-158.925-111.787-258.048V256c0-99.122 41.555-190.405 111.787-258.048C426.667 29.927 516.949-5.123 608.896 0c91.947 0 182.229 35.05 250.261 100.487C929.39 168.13 970.945 259.412 970.945 358.535v122.093h-124.01V358.535c0-63.862-20.89-120.027-58.486-160.587-37.596-40.56-87.187-62.592-157.332-62.592-70.146 0-119.737 22.032-157.332 62.592-37.596 40.56-58.486 96.725-58.486 160.587V665.46c0 63.862 20.89 120.027 58.486 160.587 37.596 40.56 87.187 62.592 157.332 62.592 70.146 0 119.737-22.032 157.332-62.592 37.596-40.56 58.486-96.725 58.486-160.587V543.147h124.01v122.313c0 99.122-41.555 190.405-111.787 258.048-68.031 65.437-158.314 100.487-250.261 100.487Z"/>
-    <path fill="url(#paint1_linear_13_98_new)" d="M300.16 398.507c-23.263-14.684-36.642-39.851-36.642-66.729V209.685c0-26.878 13.379-52.045 36.642-66.729C323.423 128.272 352.292 121 381.36 121h165.523L381.36 0H257.344C158.56 0 68.277 35.05 0 100.487 22.032 74.771 49.187 55.08 79.42 42.018c30.232-12.858 63.13-19.456 97.094-19.456h50.537v142.808c0 43.997-18.051 84.344-48.283 113.45-30.232 29.106-69.616 44.977-111.99 44.977H22.032l102.4 102.4h102.4c29.068 0 57.937-7.168 81.2-21.856Z"/>
-    <path fill="url(#paint2_linear_13_98_new)" d="M166.487 726.187c30.232 12.858 63.13 19.456 97.094 19.456h50.537v142.808c0 43.997-18.051 84.344-48.283 113.45-30.232 29.106-69.616 44.977-111.99 44.977H22.032l102.4 102.4h102.4c29.068 0 57.937-7.168 81.2-21.856 23.263-14.684 36.642-39.851 36.642-66.729V822.016c0-26.878-13.379-52.045-36.642-66.729-23.263-14.684-52.132-21.856-81.2-21.856H100.487L0 835.834V623.53c41.555 67.642 111.787 102.656 209.685 102.656l102.4-102.4-102.4-102.4-33.258 34.645Z"/>
+    <path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)"/>
     <defs>
-        <linearGradient id="paint0_linear_13_98_new" x1="422.49" x2="1007.83" y1="30.336" y2="978.082" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#6E95FC"/>
-            <stop offset=".25" stop-color="#5FA0FF"/>
-            <stop offset=".5" stop-color="#51ABFF"/>
-            <stop offset=".75" stop-color="#42B5FF"/>
-            <stop offset="1" stop-color="#34BEFF"/>
-        </linearGradient>
-        <linearGradient id="paint1_linear_13_98_new" x1="32.256" x2="490.368" y1="203.349" y2="210.155" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#8AB4F8"/>
-            <stop offset="1" stop-color="#A7C5FC"/>
-        </linearGradient>
-        <linearGradient id="paint2_linear_13_98_new" x1="29.44" x2="484.245" y1="846.421" y2="839.982" gradientUnits="userSpaceOnUse">
-            <stop stop-color="#1A73E8"/>
-            <stop offset="1" stop-color="#2A85FC"/>
-        </linearGradient>
+      <radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)">
+        <stop offset=".067" stopColor="#9168C0"/>
+        <stop offset=".343" stopColor="#5684D1"/>
+        <stop offset=".672" stopColor="#1BA1E3"/>
+      </radialGradient>
     </defs>
   </svg>
 );
