@@ -536,17 +536,17 @@ export default function AddExpenseTab({
           <div className="space-y-4">
             <div>
               <Label htmlFor="description" className="text-base">Description</Label>
-              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's, Monthly Groceries" className="mt-1 text-base py-3" />
+              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's, Monthly Groceries" className="mt-1 text-base h-11" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="totalAmount" className="text-base">Total Bill Amount</Label>
-                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-base py-3" />
+                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-base h-11" />
               </div>
               <div>
                 <Label htmlFor="category" className="text-base">Category</Label>
                 <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
-                  <SelectTrigger id="category" className="mt-1 text-base py-3 h-auto">
+                  <SelectTrigger id="category" className="mt-1 text-base h-11">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -633,7 +633,7 @@ export default function AddExpenseTab({
                 <div>
                     <Label htmlFor="celebrationPayer" className="text-base">Who is treating?</Label>
                     <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
-                    <SelectTrigger id="celebrationPayer" className="mt-1 text-base py-3 h-auto">
+                    <SelectTrigger id="celebrationPayer" className="mt-1 text-base h-11">
                         <SelectValue placeholder="Select who is contributing" />
                     </SelectTrigger>
                     <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
@@ -647,7 +647,7 @@ export default function AddExpenseTab({
                     value={celebrationAmountInput}
                     onChange={e => setCelebrationAmountInput(e.target.value)}
                     placeholder="Amount they are covering"
-                    className="mt-1 text-base py-3"
+                    className="mt-1 text-base h-11"
                     />
                     <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
                     {[10, 25, 50, 100].map(perc => (
@@ -736,3 +736,4 @@ export default function AddExpenseTab({
 
 
     
+
