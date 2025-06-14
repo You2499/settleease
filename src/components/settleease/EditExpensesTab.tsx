@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
@@ -122,8 +122,8 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         </CardHeader>
         <CardContent className="flex-1 min-h-0">
           {expenses.length > 0 ? (
-            <ScrollArea className="flex-1 min-h-0 h-full"> {/* Ensure ScrollArea takes full height of CardContent */}
-              <ul className="space-y-3 pr-4">
+            <ScrollArea className="flex-1 min-h-0 h-full">
+              <ul className="space-y-2.5 pr-4">
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
@@ -132,32 +132,29 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                       ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
                       : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
 
-
                   return (
                     <li key={expense.id}>
-                      <Card className="bg-card/70">
-                        <CardHeader className="pb-2 pt-3 px-4">
-                          <div className="flex justify-between items-start">
-                            <CardTitle className="text-base font-semibold leading-tight">{expense.description}</CardTitle>
-                            <span className="text-base font-bold text-primary">{formatCurrency(Number(expense.total_amount))}</span>
+                      <div className="bg-card/80 p-3 rounded-md border shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex justify-between items-start mb-1.5">
+                          <h4 className="text-md font-semibold leading-tight flex-grow mr-2 truncate" title={expense.description}>{expense.description}</h4>
+                          <span className="text-md font-bold text-primary whitespace-nowrap">{formatCurrency(Number(expense.total_amount))}</span>
+                        </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-2.5 gap-1 sm:gap-3">
+                          <div className="flex items-center">
+                            <CategoryIcon className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" /> 
+                            <span className="truncate" title={expense.category}>{expense.category}</span>
                           </div>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-3 text-xs text-muted-foreground space-y-1">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center"><CategoryIcon className="mr-1.5 h-3.5 w-3.5" /> {expense.category}</div>
-                            <span>Paid by: <span className="font-medium text-foreground">{displayPayerText}</span></span>
-                          </div>
-                          {/* Date removed from here */}
-                        </CardContent>
-                        <CardFooter className="px-4 py-2.5 border-t flex justify-end space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs">
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                          <span className="sm:ml-auto whitespace-nowrap">Paid by: <span className="font-medium text-foreground/90">{displayPayerText}</span></span>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-2.5 py-1 h-auto">
+                            <Pencil className="mr-1.5 h-3 w-3" /> Edit
                           </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs">
-                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                          <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-2.5 py-1 h-auto">
+                            <Trash2 className="mr-1.5 h-3 w-3" /> Delete
                           </Button>
-                        </CardFooter>
-                      </Card>
+                        </div>
+                      </div>
                     </li>
                   );
                 })}
@@ -190,3 +187,4 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     </>
   );
 }
+
