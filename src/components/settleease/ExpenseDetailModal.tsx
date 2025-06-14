@@ -7,13 +7,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as ShadDialogDescription,
+  DialogDescription as ShadDialogDescription, // Renamed to avoid conflict
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
+import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution } from '@/lib/settleease/types';
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -39,6 +39,7 @@ interface PersonAggregatedItemShares {
   };
 }
 
+
 export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
@@ -51,7 +52,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   }, [expense.split_method]);
 
   const totalOriginalBill = Number(expense.total_amount);
-  const celebrationAmount = expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0;
+  const celebrationContributionOpt: CelebrationContribution | null | undefined = expense.celebration_contribution;
+  const celebrationAmount = celebrationContributionOpt ? Number(celebrationContributionOpt.amount) : 0;
   const amountEffectivelySplit = Math.max(0, totalOriginalBill - celebrationAmount);
 
   const involvedPersonIdsOverall = useMemo(() => {
@@ -62,14 +64,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     if (Array.isArray(expense.shares)) {
       expense.shares.forEach(s => ids.add(s.personId));
     }
-    if (expense.celebration_contribution) {
-        ids.add(expense.celebration_contribution.personId);
+    if (celebrationContributionOpt) {
+        ids.add(celebrationContributionOpt.personId);
     }
     if (expense.split_method === 'itemwise' && Array.isArray(expense.items)) {
         expense.items.forEach(item => item.sharedBy.forEach(id => ids.add(id)));
     }
     return Array.from(ids);
-  }, [expense]);
+  }, [expense, celebrationContributionOpt]);
 
   const itemwiseBreakdownForDisplay = useMemo(() => {
     if (expense.split_method !== 'itemwise' || !Array.isArray(expense.items) || expense.items.length === 0) {
@@ -81,7 +83,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     const reductionFactor = (sumOfOriginalItemPrices > 0.001 && amountEffectivelySplit >= 0) 
         ? (amountEffectivelySplit / sumOfOriginalItemPrices) 
         : (sumOfOriginalItemPrices === 0 && amountEffectivelySplit === 0 ? 1 : 0);
-
 
     const aggregatedData: PersonAggregatedItemShares = {};
 
@@ -115,8 +116,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col p-0">
-        <DialogHeader className="pb-4 border-b px-6 pt-6">
+      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col"> {/* Default p-6 will apply */}
+        <DialogHeader className="pb-4 border-b"> {/* Sits within DialogContent's padding */}
           <DialogTitle className="text-2xl text-primary flex items-center">
             <Info className="mr-2.5 h-6 w-6" /> Expense Details
           </DialogTitle>
@@ -125,8 +126,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
-          <div className="py-4 space-y-6">
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar"> {/* Scrollable area, no-scrollbar class will hide it */}
+          <div className="pt-4 space-y-6"> {/* Content wrapper, pt-4 for space below header. Horizontal padding comes from DialogContent. */}
             
             <Card>
               <CardHeader className="pb-3 pt-4">
@@ -168,7 +169,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     <p className="pl-4 text-muted-foreground italic">No payers listed.</p>
                   )}
                 </div>
-                {expense.celebration_contribution && (
+                {celebrationContributionOpt && (
                   <>
                     <Separator className="my-2.5" />
                     <div className="flex items-center text-yellow-600 dark:text-yellow-400">
@@ -178,11 +179,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     <div className="pl-4 space-y-0.5">
                         <div className="flex justify-between">
                         <span>Contributed by:</span>
-                        <span className="font-medium text-right">{peopleMap[expense.celebration_contribution.personId] || 'Unknown'}</span>
+                        <span className="font-medium text-right">{peopleMap[celebrationContributionOpt.personId] || 'Unknown'}</span>
                         </div>
                         <div className="flex justify-between">
                         <span>Amount:</span>
-                        <span className="font-bold text-primary text-right">{formatCurrency(expense.celebration_contribution.amount)}</span>
+                        <span className="font-bold text-primary text-right">{formatCurrency(celebrationContributionOpt.amount)}</span>
                         </div>
                     </div>
                   </>
@@ -314,15 +315,19 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                   <ul className="space-y-2.5 text-sm">
                     {involvedPersonIdsOverall.map(personId => {
                       const personName = peopleMap[personId] || 'Unknown Person';
+                      
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
-                      const amountPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
+                      const amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
                       const shareOfSplitAmountForThisPerson = shareRecord ? Number(shareRecord.amount) : 0;
 
-                      const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
+                      const isCelebrationContributor = celebrationContributionOpt?.personId === personId;
+                      const celebrationAmountByThisPerson = isCelebrationContributor ? (celebrationContributionOpt?.amount || 0) : 0;
                                           
-                      const netEffectForThisPerson = amountPaidByThisPerson - shareOfSplitAmountForThisPerson;
+                      // Corrected net effect calculation:
+                      // What they actually paid MINUS their share of the bill to be split
+                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
 
                       return (
                         <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
@@ -342,13 +347,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                           
                           <div className="flex justify-between text-xs text-muted-foreground">
                               <span>Paid By:</span> 
-                              <span>{formatCurrency(amountPaidByThisPerson)}</span>
+                              <span>{formatCurrency(amountPhysicallyPaidByThisPerson)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
                           </div>
-                           {isCelebrationContributor && celebrationAmount > 0 && (
-                             <p className="text-xs text-yellow-700 dark:text-yellow-500 italic pl-1">*You contributed {formatCurrency(celebrationAmount)} towards this bill.*</p>
+                           {isCelebrationContributor && celebrationAmountByThisPerson > 0 && (
+                             <p className="text-xs text-yellow-700 dark:text-yellow-500 italic pl-1">*You contributed {formatCurrency(celebrationAmountByThisPerson)} towards this bill.*</p>
                            )}
                         </li>
                       );
@@ -367,4 +372,3 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
-
