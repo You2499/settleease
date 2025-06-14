@@ -474,7 +474,7 @@ export default function AddExpenseTab({
           {expenseToEdit ? 'Update the details of the expense.' : 'Enter the details of the expense, who paid, and how it should be split.'}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 space-y-6 min-h-0 overflow-y-auto">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto space-y-6">
         <div className="space-y-3">
           <div>
             <Label htmlFor="description">Description</Label>
@@ -551,7 +551,7 @@ export default function AddExpenseTab({
             handleItemChange={handleItemChange}
             handleItemSharedByChange={handleItemSharedByChange}
             removeItem={removeItem}
-            addItem={addItem}
+            addItem={handleAddItem}
           />
         )}
       </CardContent>
@@ -566,3 +566,5 @@ export default function AddExpenseTab({
     </Card>
   );
 }
+
+    
