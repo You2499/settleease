@@ -35,7 +35,7 @@ export default function ShareVsPaidChart({ shareVsPaidData }: ShareVsPaidChartPr
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis dataKey="name" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} interval={0} angle={shareVsPaidData.length > 4 ? -30 : 0} textAnchor={shareVsPaidData.length > 4 ? "end" : "middle"} height={shareVsPaidData.length > 4 ? 50: 30} />
               <RechartsTooltip
-                formatter={(value: number, name: string) => [formatCurrency(value), name === 'paid' ? 'Total Paid' : 'Total Share']}
+                formatter={(value: number, name: string) => [formatCurrency(value), name]}
                 contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                 itemStyle={{ color: 'hsl(var(--foreground))' }}
@@ -50,3 +50,4 @@ export default function ShareVsPaidChart({ shareVsPaidData }: ShareVsPaidChartPr
     </Card>
   );
 }
+
