@@ -7,14 +7,11 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as ShadDialogDescription, // Renamed to avoid conflict
-  DialogFooter,
-  DialogClose,
+  DialogDescription as ShadDialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Scroll } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare } from '@/lib/settleease/types';
 
@@ -127,9 +124,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             Detailed breakdown of the selected expense.
           </ShadDialogDescription>
         </DialogHeader>
-
+        
         <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
-          <div className="py-4 px-0 space-y-4"> 
+          <div className="py-4 space-y-6">
             
             <Card>
               <CardHeader className="pb-3 pt-4">
@@ -157,7 +154,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div>
-                  <span className="font-medium text-muted-foreground block mb-1">Physically Paid By:</span>
+                  <span className="font-medium text-muted-foreground block mb-1">Paid By:</span>
                   {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
                     <ul className="list-disc list-inside pl-4 space-y-0.5">
                       {expense.paid_by.map((p: PayerShare) => (
@@ -168,7 +165,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       ))}
                     </ul>
                   ) : (
-                    <p className="pl-4 text-muted-foreground italic">No physical payers listed.</p>
+                    <p className="pl-4 text-muted-foreground italic">No payers listed.</p>
                   )}
                 </div>
                 {expense.celebration_contribution && (
@@ -318,15 +315,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     {involvedPersonIdsOverall.map(personId => {
                       const personName = peopleMap[personId] || 'Unknown Person';
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
-                      const amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
+                      const amountPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
                       const shareOfSplitAmountForThisPerson = shareRecord ? Number(shareRecord.amount) : 0;
 
                       const isCelebrationContributor = expense.celebration_contribution?.personId === personId;
-                      const personCelebrationAmount = isCelebrationContributor ? Number(expense.celebration_contribution!.amount) : 0;
                                           
-                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
+                      const netEffectForThisPerson = amountPaidByThisPerson - shareOfSplitAmountForThisPerson;
 
                       return (
                         <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
@@ -345,14 +341,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                           </div>
                           
                           <div className="flex justify-between text-xs text-muted-foreground">
-                              <span>Physically Paid:</span> 
-                              <span>{formatCurrency(amountPhysicallyPaidByThisPerson)}</span>
+                              <span>Paid By:</span> 
+                              <span>{formatCurrency(amountPaidByThisPerson)}</span>
                           </div>
                           <div className="flex justify-between text-xs text-muted-foreground">
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
                           </div>
-                           {isCelebrationContributor && personCelebrationAmount > 0 && (
-                             <p className="text-xs text-muted-foreground/80 italic pl-1">*You contributed {formatCurrency(personCelebrationAmount)} towards this bill.*</p>
+                           {isCelebrationContributor && celebrationAmount > 0 && (
+                             <p className="text-xs text-yellow-700 dark:text-yellow-500 italic pl-1">*You contributed {formatCurrency(celebrationAmount)} towards this bill.*</p>
                            )}
                         </li>
                       );
@@ -367,11 +363,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </div>
         </div>
 
-        <DialogFooter className="pt-4 border-t px-6 pb-6">
-          <DialogClose asChild>
-            <Button type="button" variant="outline">Close</Button>
-          </DialogClose>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
