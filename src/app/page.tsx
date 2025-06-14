@@ -83,12 +83,6 @@ export default function SettleEasePage() {
     }
 
     let isMounted = true;
-    // The following block was removed as it was causing a loop:
-    // if (!currentUser && !isLoadingAuth) {
-    //   console.log("Auth effect: No currentUser and not loading. Setting isLoadingAuth=true to check session.");
-    //    setIsLoadingAuth(true);
-    // }
-
 
     console.log("Auth effect: Attempting to get session.");
     db.auth.getSession().then(({ data: { session } }) => {
@@ -102,7 +96,7 @@ export default function SettleEasePage() {
         }
         
         if (isLoadingAuth && !session && !currentUser) {
-            console.log("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false (fallback, onAuthStateChange preferred).");
+            console.warn("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false (fallback, onAuthStateChange preferred).");
             setIsLoadingAuth(false); 
         }
       }
@@ -673,9 +667,7 @@ export default function SettleEasePage() {
             {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
             {userRole === 'admin' && activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
           </main>
-          <footer className="text-center py-3 text-xs text-muted-foreground border-t bg-card">
-            <p>&copy; {new Date().getFullYear()} SettleEase. All rights reserved. Made by Gagan Gupta</p>
-          </footer>
+          {/* Footer removed from here */}
         </div>
       </SidebarInset>
     </SidebarProvider>
