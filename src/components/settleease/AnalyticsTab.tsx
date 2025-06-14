@@ -577,14 +577,12 @@ export default function AnalyticsTab({
     const sumOfTop5Amounts = top5Categories.reduce((acc, curr) => acc + curr.totalAmount, 0);
 
     if (sumOfTop5Amounts === 0) {
-      // If all top 5 have 0 amount, or sum is 0, effectively filter them all out
       return [];
     }
 
     return top5Categories.filter(entry => {
-      if (entry.totalAmount === 0) return false; // Explicitly filter out 0 amount entries
+      if (entry.totalAmount === 0) return false; 
       const percentage = (entry.totalAmount / sumOfTop5Amounts) * 100;
-      // Keep if the rounded percentage is not "0". This means percentage >= 0.5.
       return Math.round(percentage) !== 0;
     });
   }, [detailedCategoryAnalytics]);
@@ -836,15 +834,15 @@ export default function AnalyticsTab({
                 <CardContent>
                 <ScrollArea className="h-auto max-h-[400px]">
                     <Table>
-                    <TableHeader>{/*
-                      */}<TableRow>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Date</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Paid By</TableHead>{/*
-                      */}</TableRow>{/*
-                    */}</TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2 px-2 text-xs">Description</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>
+                        <TableHead className="py-2 px-2 text-xs">Category</TableHead>
+                        <TableHead className="py-2 px-2 text-xs">Date</TableHead>
+                        <TableHead className="py-2 px-2 text-xs">Paid By</TableHead>
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                         {topExpensesData.map(exp => (
                         <TableRow key={exp.id}>
@@ -874,17 +872,17 @@ export default function AnalyticsTab({
             <CardContent>
                 <ScrollArea className="h-auto max-h-[400px]">
                 <Table>
-                    <TableHeader>{/*
-                    */}<TableRow>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>{/*
-                        */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}{/*
-                        */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}{/*
-                    */}</TableRow>{/*
-                    */}</TableHeader>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="py-2 px-2 text-xs">Category</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>
+                        <TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>
+                        {analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}
+                        {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}
+                      </TableRow>
+                    </TableHeader>
                     <TableBody>
                     {detailedCategoryAnalytics.map(cat => (
                         <TableRow key={cat.name}>
@@ -917,18 +915,18 @@ export default function AnalyticsTab({
                 <CardContent>
                     <ScrollArea className="h-auto max-h-[400px]">
                         <Table>
-                            <TableHeader>{/*
-                            */}<TableRow>{/*
-                                */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>{/*
-                                */}<TableHead className="py-2 px-2 text-xs">Top Category (Shared)</TableHead>{/*
-                            */}</TableRow>{/*
-                            */}</TableHeader>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>
+                                <TableHead className="py-2 px-2 text-xs">Top Category (Shared)</TableHead>
+                              </TableRow>
+                            </TableHeader>
                             <TableBody>
                             {detailedParticipantAnalytics.map(p => (
                                 <TableRow key={p.name}>
