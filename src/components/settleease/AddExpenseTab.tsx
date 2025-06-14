@@ -715,7 +715,7 @@ export default function AddExpenseTab({
                     handleItemChange={handleItemChange}
                     handleItemSharedByChange={handleItemSharedByChange}
                     removeItem={removeItem}
-                    addItem={addItem}
+                    addItem={handleAddItem}
                     />
                 )}
             </div>
