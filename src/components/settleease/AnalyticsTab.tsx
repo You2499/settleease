@@ -122,7 +122,7 @@ export default function AnalyticsTab({
         const personShareAmount = Number(personShare?.amount || 0);
         totalAmount += personShareAmount;
 
-        if (personShareAmount > 0) {
+        if (personShareAmount > 0.001) {
             if (personShareAmount > maxPersonalShare) {
                 maxPersonalShare = personShareAmount;
                 largestSingleExpData = {
@@ -153,14 +153,14 @@ export default function AnalyticsTab({
                         const amountForThisCategory = proportionOfShare * personShareAmount;
                         personalCategorySpending[itemDetail.category] = (personalCategorySpending[itemDetail.category] || 0) + amountForThisCategory;
                     });
-                } else if (itemsSharedByPersonDetails.length > 0) { // If share exists but items have 0 price or not linked proportionally
+                } else if (itemsSharedByPersonDetails.length > 0) { 
                     const fallbackCat = exp.category || itemsSharedByPersonDetails[0]?.category || UNCATEGORIZED;
                     personalCategorySpending[fallbackCat] = (personalCategorySpending[fallbackCat] || 0) + personShareAmount;
-                } else { // Person has a share, but not tied to specific items (e.g. general share on itemized bill, rare)
+                } else { 
                     const mainCat = exp.category || UNCATEGORIZED;
                     personalCategorySpending[mainCat] = (personalCategorySpending[mainCat] || 0) + personShareAmount;
                 }
-            } else { // Not itemwise, or no items
+            } else { 
                 const cat = exp.category || UNCATEGORIZED;
                 personalCategorySpending[cat] = (personalCategorySpending[cat] || 0) + personShareAmount;
             }
@@ -208,10 +208,10 @@ export default function AnalyticsTab({
 
   const detailedCategoryAnalytics: CategoryAnalyticsData[] = useMemo(() => {
     const categoryDataMap: Record<string, {
-        totalAmount: number; // Total share for personal, total expense for group
-        expenseIds: Set<string>; // Unique expense IDs contributing
-        potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>; // amount is share for personal, price/total for group
-        personalPaymentsForCategory: number; // Only for personal view: how much selected person paid for items in this category
+        totalAmount: number; 
+        expenseIds: Set<string>; 
+        potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>; 
+        personalPaymentsForCategory: number; 
     }> = {};
 
     dynamicCategories.forEach(cat => {
@@ -225,11 +225,11 @@ export default function AnalyticsTab({
         const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
         const personShareForExpense = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
             ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
-            : Number(exp.total_amount); // Fallback for group or if no specific person share (shouldn't happen if displayedExpenses is right)
+            : Number(exp.total_amount); 
         
         const expenseTotalAmountNum = Number(exp.total_amount) || 0;
 
-        // Calculate how much the selected person paid for *this specific expense*
+        
         let selectedPersonPaymentForThisExpense = 0;
         if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
             selectedPersonPaymentForThisExpense = exp.paid_by
@@ -250,7 +250,7 @@ export default function AnalyticsTab({
 
             exp.items.forEach(item => {
                 const originalItemPrice = Number(item.price) || 0;
-                if (originalItemPrice <= 0.001 && analyticsViewMode === 'group') return; // Skip 0-price items in group view for category total
+                if (originalItemPrice <= 0.001 && analyticsViewMode === 'group') return; 
 
                 const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
                 if (!categoryDataMap[targetCategory]) {
@@ -262,11 +262,11 @@ export default function AnalyticsTab({
 
                 if (analyticsViewMode === 'group') {
                     amountToCreditToCategory = originalItemPrice;
-                    // Note: Payer contribution for group mode's category analytics is complex with item-wise, simplified for now
+                    
                 } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics)) {
                     const proportionOfShare = (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001 && personShareForExpense > 0.001)
                         ? (originalItemPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense)
-                        : (personShareForExpense > 0.001 && exp.items.filter(i => i.sharedBy.includes(selectedPersonIdForAnalytics!)).length === 1 ? 1 : 0); // If only one item shared by person, attribute full share
+                        : (personShareForExpense > 0.001 && exp.items.filter(i => i.sharedBy.includes(selectedPersonIdForAnalytics!)).length === 1 ? 1 : 0); 
                     
                     amountToCreditToCategory = proportionOfShare * personShareForExpense;
 
@@ -283,7 +283,7 @@ export default function AnalyticsTab({
                         type: 'item',
                         id: item.id,
                         description: item.name,
-                        amount: amountToCreditToCategory, // This is person's share portion for this item or item price for group
+                        amount: amountToCreditToCategory, 
                         date: expDate,
                         mainExpenseDescription: exp.description
                     });
@@ -292,8 +292,8 @@ export default function AnalyticsTab({
                     }
                 }
             });
-        } else { // Not itemwise or no items
-            if (personShareForExpense <= 0.001 && analyticsViewMode === 'personal') return; // Skip if person's share is 0 for this expense
+        } else { 
+            if (personShareForExpense <= 0.001 && analyticsViewMode === 'personal') return; 
             if (expenseTotalAmountNum <= 0.001 && analyticsViewMode === 'group') return;
 
 
@@ -311,7 +311,7 @@ export default function AnalyticsTab({
                     type: 'expense',
                     id: exp.id,
                     description: exp.description,
-                    amount: amountToCreditToCategory, // Person's share for this expense or total expense for group
+                    amount: amountToCreditToCategory, 
                     date: expDate
                 });
                 if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
@@ -336,15 +336,12 @@ export default function AnalyticsTab({
             };
         }
         
-        // For 'largestPayer', in group view, it's who paid most for this category's expenses.
-        // In personal view, it's how much the selected person paid towards their shares in this category.
+        
         let largestPayerData: { name: string; amount: number; } | null = null;
         if (analyticsViewMode === 'group') {
-            // This part is complex to do accurately here for group mode with item-wise and needs a dedicated sum-up.
-            // For simplicity, this might be slightly off for group mode if not derived from a full payer re-aggregation.
-            // Placeholder: use overall stats if available, or leave N/A.
+            
              const catFromOverall = enhancedOverallStats.mostExpensiveCategory.name === name ? enhancedOverallStats.mostExpensiveCategory : null;
-            // This is not ideal. True group-level largest payer per category is more involved.
+            
         } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
             if (personalPaymentsForCategory > 0.001) {
                  largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
@@ -556,18 +553,16 @@ export default function AnalyticsTab({
         .filter(exp => exp.personalShareAmount > 0.001)
         .sort((a,b) => b.personalShareAmount - a.personalShareAmount)
         .slice(0,10)
-        .map(({personalShareAmount, ...rest}) => ({...rest, total_amount: personalShareAmount })); // Use total_amount to display share for consistency
+        .map(({personalShareAmount, ...rest}) => ({...rest, total_amount: personalShareAmount })); 
     }
     return [];
   }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
 
   const actualMostExpensiveCategoryFromAnalytics = useMemo(() => {
-    // This uses detailedCategoryAnalytics which is already view-mode aware.
-    // For personal view, 'totalAmount' in detailedCategoryAnalytics is total share for that category.
-    // For group view, 'totalAmount' is total expense amount for that category.
+    
     if (detailedCategoryAnalytics.length > 0) {
-      // detailedCategoryAnalytics is already sorted by totalAmount descending
+      
       return { name: detailedCategoryAnalytics[0].name, totalAmount: detailedCategoryAnalytics[0].totalAmount };
     }
     return { name: 'N/A', totalAmount: 0 };
@@ -608,7 +603,7 @@ export default function AnalyticsTab({
           </TabsList>
           
           <TabsContent value="group">
-            {/* Content for Group Overview will be rendered below */}
+            
           </TabsContent>
           <TabsContent value="personal">
             <Card className="mb-6 p-4 shadow-sm">
@@ -821,19 +816,19 @@ export default function AnalyticsTab({
                 <ScrollArea className="h-auto max-h-[400px]">
                     <Table>
                     <TableHeader>
-                        <TableRow>
-                        <TableHead className="py-2 px-2 text-xs">Description</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Category</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Date</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Paid By</TableHead>
-                        </TableRow>
+                        <TableRow>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Date</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Paid By</TableHead>{/*
+                        */}</TableRow>
                     </TableHeader>
                     <TableBody>
                         {topExpensesData.map(exp => (
                         <TableRow key={exp.id}>
                             <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-xs" title={exp.description}>{exp.description}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell> {/* total_amount is repurposed to store personalShareAmount in personal view */}
+                            <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell> 
                             <TableCell className="py-1.5 px-2 text-xs">{exp.category}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs">{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs truncate max-w-[150px]" title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
@@ -859,15 +854,15 @@ export default function AnalyticsTab({
                 <ScrollArea className="h-auto max-h-[400px]">
                 <Table>
                     <TableHeader>
-                    <TableRow>
-                        <TableHead className="py-2 px-2 text-xs">Category</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>
-                        {analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}
-                        {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}
-                    </TableRow>
+                    <TableRow>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>{/*
+                        */}<TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>{/*
+                        */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}{/*
+                        */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}{/*
+                    */}</TableRow>
                     </TableHeader>
                     <TableBody>
                     {detailedCategoryAnalytics.map(cat => (
@@ -902,16 +897,16 @@ export default function AnalyticsTab({
                     <ScrollArea className="h-auto max-h-[400px]">
                         <Table>
                             <TableHeader>
-                            <TableRow>
-                                <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>
-                                <TableHead className="py-2 px-2 text-xs">Top Category (Shared)</TableHead>
-                            </TableRow>
+                            <TableRow>{/*
+                                */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>{/*
+                                */}<TableHead className="py-2 px-2 text-xs">Top Category (Shared)</TableHead>{/*
+                            */}</TableRow>
                             </TableHeader>
                             <TableBody>
                             {detailedParticipantAnalytics.map(p => (
