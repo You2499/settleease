@@ -256,7 +256,7 @@ export default function DashboardView({
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
-        allExpenses={allExpenses}
+        allExpenses={expenses} // Pass allExpenses here
         people={people}
         peopleMap={peopleMap}
         settlementPayments={settlementPayments}

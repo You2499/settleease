@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { ArrowRight, CheckCircle2, Undo2, FileText, ExternalLink, Landmark, Hourglass, ReceiptText } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Person, Expense, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
-import RelevantExpensesModal from './RelevantExpensesModal'; // New component
+import RelevantExpensesModal from './RelevantExpensesModal'; 
 
 interface PerPersonSettlementDetailsProps {
   selectedPerson: Person;
@@ -20,7 +20,7 @@ interface PerPersonSettlementDetailsProps {
   pairwiseTransactions: CalculatedTransaction[];
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
-  onViewExpenseDetails: (expense: Expense) => void; // To open the main expense detail modal
+  onViewExpenseDetails: (expense: Expense) => void; 
   isLoadingParent: boolean;
   setIsLoadingParent: (loading: boolean) => void;
   userRole: UserRole;
@@ -80,13 +80,11 @@ export default function PerPersonSettlementDetails({
     const creditorId = type === 'debt' ? transaction.to : transaction.from;
 
     if (transaction.contributingExpenseIds && transaction.contributingExpenseIds.length > 0) {
-      // If pairwise transaction with specific contributing IDs
       transaction.contributingExpenseIds.forEach(expId => {
         const expense = allExpenses.find(e => e.id === expId);
         if (expense) relevant.push(expense);
       });
     } else {
-      // Fallback for simplified or if no specific IDs: find all expenses involving these two
       allExpenses.forEach(exp => {
         const involvesDebtorAsSharer = exp.shares?.some(s => s.personId === debtorId && s.amount > 0);
         const involvesCreditorAsPayer = exp.paid_by?.some(p => p.personId === creditorId && p.amount > 0);
@@ -95,7 +93,7 @@ export default function PerPersonSettlementDetails({
         const involvesCreditorAsSharer = exp.shares?.some(s => s.personId === creditorId && s.amount > 0);
 
         if ((involvesDebtorAsSharer && involvesCreditorAsPayer) || (involvesDebtorAsPayer && involvesCreditorAsSharer)) {
-           if (!relevant.find(r => r.id === exp.id)) { // Avoid duplicates
+           if (!relevant.find(r => r.id === exp.id)) { 
              relevant.push(exp);
            }
         }
@@ -291,8 +289,8 @@ export default function PerPersonSettlementDetails({
         onOpenChange={setIsRelevantExpensesModalOpen}
         expensesToList={relevantExpenses}
         onExpenseClick={(expense) => {
-            setIsRelevantExpensesModalOpen(false); // Close small modal
-            onViewExpenseDetails(expense); // Open main detail modal
+            setIsRelevantExpensesModalOpen(false); 
+            onViewExpenseDetails(expense); 
         }}
         modalTitle={modalTitle}
         peopleMap={peopleMap}

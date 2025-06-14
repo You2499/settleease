@@ -23,7 +23,7 @@ interface SettlementSummaryProps {
   settlementPayments: SettlementPayment[];
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
-  onViewExpenseDetails: (expense: Expense) => void; // To open the main expense detail modal
+  onViewExpenseDetails: (expense: Expense) => void; 
   userRole: UserRole;
 }
 
@@ -144,7 +144,7 @@ export default function SettlementSummary({
               </div>
               {selectedPersonObject ? (
                   <PerPersonSettlementDetails
-                      key={selectedPersonId} // Ensures re-render when person changes
+                      key={selectedPersonId} 
                       selectedPerson={selectedPersonObject}
                       peopleMap={peopleMap}
                       allExpenses={allExpenses}
