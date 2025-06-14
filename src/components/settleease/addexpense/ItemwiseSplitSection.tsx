@@ -29,39 +29,63 @@ export default function ItemwiseSplitSection({
   addItem,
 }: ItemwiseSplitSectionProps) {
   return (
-    <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-3">
+    <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-4">
         {items.map((item, itemIndex) => (
-        <Card key={item.id} className="p-3 bg-background shadow-inner">
-            <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="flex-grow space-y-1.5">
-                <Input value={item.name} onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} placeholder={`Item ${itemIndex + 1} Name`} className="h-8 text-sm"/>
-                <Input type="number" value={item.price as string} onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} placeholder="Price" className="h-8 text-sm w-24"/>
+        <Card key={item.id} className="p-4 bg-background shadow-md rounded-lg">
+            <div className="flex items-center justify-between gap-3 mb-3">
+                <Input 
+                    value={item.name} 
+                    onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
+                    placeholder={`Item ${itemIndex + 1} Name`} 
+                    className="flex-grow h-10"
+                />
+                <Input 
+                    type="number" 
+                    value={item.price as string} 
+                    onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
+                    placeholder="Price" 
+                    className="w-32 h-10"
+                />
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeItem(itemIndex)} 
+                    className="text-destructive h-10 w-10" 
+                    disabled={items.length <=1}
+                    aria-label={`Remove item ${itemIndex + 1}`}
+                >
+                    <MinusCircle className="h-5 w-5" />
+                </Button>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => removeItem(itemIndex)} className="text-destructive h-7 w-7 shrink-0" disabled={items.length <=1}>
-                <MinusCircle className="h-4 w-4" />
-            </Button>
-            </div>
-            <Label className="text-xs block mb-1 text-muted-foreground">Shared by:</Label>
+            
+            <Label className="text-sm font-medium block mb-2 text-muted-foreground">Shared by:</Label>
             {people.length > 0 ? (
-              <ScrollArea className="max-h-28">
-              <div className="grid grid-cols-2 gap-x-3 gap-y-1 pr-1">
-                  {people.map(person => (
-                  <div key={person.id} className="flex items-center space-x-1.5">
-                      <Checkbox
-                      id={`item-${itemIndex}-person-${person.id}`}
-                      checked={item.sharedBy.includes(person.id)}
-                      onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
-                      className="h-3.5 w-3.5"
-                      />
-                      <Label htmlFor={`item-${itemIndex}-person-${person.id}`} className="text-xs font-normal cursor-pointer">{person.name}</Label>
-                  </div>
-                  ))}
-              </div>
+              <ScrollArea className="h-32 rounded-md border p-1 bg-card/30">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 p-2">
+                    {people.map(person => (
+                    <div key={person.id} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={`item-${itemIndex}-person-${person.id}`}
+                            checked={item.sharedBy.includes(person.id)}
+                            onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
+                            className="h-4 w-4"
+                        />
+                        <Label 
+                            htmlFor={`item-${itemIndex}-person-${person.id}`} 
+                            className="text-sm font-normal cursor-pointer hover:text-foreground transition-colors"
+                        >
+                            {person.name}
+                        </Label>
+                    </div>
+                    ))}
+                </div>
               </ScrollArea>
             ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
         </Card>
         ))}
-        <Button variant="outline" size="sm" onClick={addItem} className="text-xs mt-2"><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Item</Button>
+        <Button variant="outline" size="default" onClick={addItem} className="w-full sm:w-auto mt-3 py-2 px-4">
+            <PlusCircle className="mr-2 h-5 w-5" /> Add Item
+        </Button>
     </Card>
   );
 }
