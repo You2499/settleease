@@ -521,16 +521,15 @@ export default function AddExpenseTab({
     <Card className="shadow-xl rounded-lg h-full flex flex-col">
       <CardHeader className="pb-4 border-b">
         <CardTitle className="flex items-center text-2xl font-bold">
-          <CreditCard className="mr-3 h-6 w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Log New Expense'}
+          <CreditCard className="mr-3 h-6 w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
         </CardTitle>
         <CardDescription>
           {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
         </CardDescription>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0 overflow-y-auto p-6 space-y-8"> {/* Increased space-y */}
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-6 space-y-8">
         
-        {/* Section 1: Bill Information */}
         <div className="p-5 border rounded-lg shadow-sm bg-card/50">
           <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><FileText className="mr-2 h-5 w-5" />Bill Information</h3>
           <div className="space-y-4">
@@ -585,7 +584,6 @@ export default function AddExpenseTab({
           </div>
         </div>
         
-        {/* Section 2: Payment Details (Who Paid?) */}
         <div className="p-5 border rounded-lg shadow-sm bg-card/50">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><Users className="mr-2 h-5 w-5" />Who Paid?</h3>
             <PayerInputSection
@@ -601,7 +599,6 @@ export default function AddExpenseTab({
             />
         </div>
         
-        {/* Section 3: Special Contribution (Treat/Celebration) */}
         <div className="p-5 border rounded-lg shadow-sm bg-card/50">
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold flex items-center text-primary">
@@ -688,7 +685,6 @@ export default function AddExpenseTab({
             )}
         </div>
 
-        {/* Section 4: Splitting the Cost */}
         <div className="p-5 border rounded-lg shadow-sm bg-card/50">
             <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><Scale className="mr-2 h-5 w-5" />How to Split the Cost?</h3>
             <div className="space-y-4">
@@ -733,7 +729,3 @@ export default function AddExpenseTab({
     </Card>
   );
 }
-
-
-    
-
