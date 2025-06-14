@@ -84,3 +84,45 @@ export interface CalculatedTransaction {
 // Active view type for navigation
 export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics';
 
+// Analytics Specific Types
+export interface CategoryAnalyticsData {
+  name: string;
+  totalAmount: number;
+  expenseCount: number;
+  averageAmount: number;
+  Icon: React.FC<React.SVGProps<SVGSVGElement>>;
+  mostExpensiveItem: { description: string; amount: number; date: string; } | null;
+  largestPayer: { name: string; amount: number; } | null;
+}
+
+export interface ParticipantAnalyticsData {
+  name: string;
+  totalPaid: number;
+  totalShared: number;
+  netBalance: number;
+  expensesPaidCount: number;
+  expensesSharedCount: number;
+  mostFrequentCategoryShared: { name: string; amount: number; } | null;
+  averageShareAmount: number;
+}
+
+export interface ExpenseAmountDistributionData {
+  range: string;
+  count: number;
+}
+
+export interface SpendingByDayOfWeekData {
+  day: string;
+  totalAmount: number;
+}
+
+export interface SplitMethodDistributionData {
+  method: string;
+  count: number;
+}
+
+export interface TopExpenseData extends Expense {
+  // Potentially add formatted payer strings or other derived data if needed for display
+  // For now, just reusing Expense type is fine if all necessary fields are there
+}
+
