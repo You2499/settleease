@@ -7,7 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription as ShadDialogDescription, // Renamed to avoid conflict
+  DialogDescription as ShadDialogDescription, 
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -90,9 +90,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             itemName: item.name,
             originalItemPrice: originalItemPriceNum,
             adjustedItemPriceForSplit: adjustedItemPriceForSplit,
-            sharedByCount: item.sharedBy.length,
             shareForPerson: sharePerPersonForItem,
-            itemCategoryName: item.categoryName, // Pass item category name
+            sharedByCount: item.sharedBy.length,
+            itemCategoryName: item.categoryName, 
           });
           aggregatedData[personId].totalShareOfAdjustedItems += sharePerPersonForItem;
         });
@@ -102,20 +102,19 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   }, [expense.split_method, expense.items, amountEffectivelySplit]);
 
   const getItemCategoryIcon = (categoryName?: string) => {
-    if (!categoryName) return Settings2; // Default icon
+    if (!categoryName) return Settings2; 
     const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.label.toLowerCase().includes(categoryName.toLowerCase()) || icon.iconKey.toLowerCase() === categoryName.toLowerCase());
     if (iconDetail) return iconDetail.IconComponent;
-    // Fallback for dynamic categories if name matches
-    const dynamicCatIconKey = expense.category === categoryName ? CategoryIcon : Settings2; // Simplified, assumes getCategoryIconFromName works well for main
-    return dynamicCatIconKey; // This might need refinement if dynamicCategories is available here.
+    
+    return getCategoryIconFromName(categoryName) || Settings2;
   };
 
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col"> {/* Default p-6 will apply */}
-        <DialogHeader className="pb-4 border-b"> {/* Sits within DialogContent's padding */}
-          <DialogTitle className="text-2xl text-primary flex items-center">
+      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogHeader className="pb-3 border-b"> 
+          <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
             Expense Details
           </DialogTitle>
           <ShadDialogDescription className="sr-only">
@@ -123,36 +122,36 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           </ShadDialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar"> {/* Scrollable area, no-scrollbar class will hide it */}
-          <div className="pt-4 space-y-6"> {/* Content wrapper, pt-4 for space below header. Horizontal padding comes from DialogContent. */}
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar"> 
+          <div className="pt-3 sm:pt-4 space-y-4 sm:space-y-6"> 
             
             <Card>
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold flex items-center">
-                  <Info className="mr-2 h-5 w-5 text-muted-foreground"/>General Information
+              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                  <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>General Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Description:</span> 
-                  <span className="font-medium text-right truncate pl-2" title={expense.description}>{expense.description}</span>
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <span className="text-muted-foreground shrink-0 mr-2">Description:</span> 
+                  <span className="font-medium text-left sm:text-right truncate" title={expense.description}>{expense.description}</span>
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-muted-foreground">Total Bill Amount:</span> 
-                  <span className="font-bold text-xl text-primary text-right">{formatCurrency(totalOriginalBill)}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-baseline">
+                  <span className="text-muted-foreground shrink-0 mr-2">Total Bill Amount:</span> 
+                  <span className="font-bold text-lg sm:text-xl text-primary text-left sm:text-right">{formatCurrency(totalOriginalBill)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Main Category:</span> 
-                  <span className="font-medium flex items-center"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span>
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                  <span className="text-muted-foreground shrink-0 mr-2">Main Category:</span> 
+                  <span className="font-medium flex items-center self-start sm:self-auto"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold flex items-center"><CreditCard className="mr-2 h-5 w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+                <CardTitle className="text-md sm:text-lg font-semibold flex items-center"><CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-2">
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2">
                 <div>
                   <span className="font-medium text-muted-foreground block mb-1">Paid By:</span>
                   {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
@@ -170,7 +169,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 </div>
                 {celebrationContributionOpt && (
                   <>
-                    <Separator className="my-2.5" />
+                    <Separator className="my-2 sm:my-2.5" />
                     <div className="flex items-center text-yellow-600 dark:text-yellow-400">
                         <PartyPopper className="mr-2 h-4 w-4 flex-shrink-0"/>
                         <span className="font-medium">Celebration Contribution:</span>
@@ -187,7 +186,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     </div>
                   </>
                 )}
-                <Separator className="my-2.5" />
+                <Separator className="my-2 sm:my-2.5" />
                 <div className="flex justify-between font-semibold">
                   <span>Net Amount For Splitting:</span>
                   <span className="text-accent">{formatCurrency(amountEffectivelySplit)}</span>
@@ -196,15 +195,15 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold flex items-center">
-                  <SplitIcon className="mr-2 h-5 w-5 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
+              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                  <SplitIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm space-y-3">
+              <CardContent className="text-xs sm:text-sm space-y-2 sm:space-y-3">
                 {expense.split_method === 'equal' && Array.isArray(expense.shares) && expense.shares.length > 0 && (
                   <div>
-                    <CardDescription className="mb-1.5 text-xs">
+                    <CardDescription className="mb-1 sm:mb-1.5 text-xs">
                         Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"} based on the amount of <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong>.
                     </CardDescription>
                     <ul className="list-disc list-inside pl-4 text-muted-foreground space-y-0.5">
@@ -212,12 +211,12 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                         <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
                       ))}
                     </ul>
-                     <p className="mt-2 font-medium">Share per person: <span className="text-primary">{formatCurrency(expense.shares[0]?.amount || 0)}</span></p>
+                     <p className="mt-1.5 sm:mt-2 font-medium">Share per person: <span className="text-primary">{formatCurrency(expense.shares[0]?.amount || 0)}</span></p>
                   </div>
                 )}
                 {expense.split_method === 'unequal' && Array.isArray(expense.shares) && expense.shares.length > 0 && (
                    <div>
-                    <CardDescription className="mb-1.5 text-xs">Specific shares assigned based on the amount of <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong>.</CardDescription>
+                    <CardDescription className="mb-1 sm:mb-1.5 text-xs">Specific shares assigned based on the amount of <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong>.</CardDescription>
                     <ul className="space-y-1">
                       {expense.shares.map(share => (
                         <li key={share.personId} className="flex justify-between p-1.5 bg-secondary/20 rounded-sm">
@@ -229,16 +228,16 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                   </div>
                 )}
                 {expense.split_method === 'itemwise' && Array.isArray(expense.items) && expense.items.length > 0 && (
-                  <div className="space-y-4">
+                  <div className="space-y-3 sm:space-y-4">
                     <div>
-                        <h4 className="font-medium text-muted-foreground mb-1.5 flex items-center"><ShoppingBag className="mr-2 h-4 w-4"/>Original Items & Prices:</h4>
+                        <h4 className="font-medium text-muted-foreground mb-1 sm:mb-1.5 flex items-center"><ShoppingBag className="mr-2 h-4 w-4"/>Original Items & Prices:</h4>
                         <ul className="space-y-1 text-xs">
                         {expense.items.map(item => {
                             const ItemCatIcon = getItemCategoryIcon(item.categoryName);
                             return (
                                 <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
                                     <div className="flex justify-between items-center">
-                                        <span className="font-medium truncate flex items-center" title={item.name}>
+                                        <span className="font-medium truncate flex items-center mr-2" title={item.name}>
                                           <ItemCatIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                           {item.name}
                                           {item.categoryName && item.categoryName !== expense.category && (
@@ -247,28 +246,28 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                         </span>
                                         <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
                                     </div>
-                                    <div className="text-muted-foreground/80 pl-5">Shared by: {item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                    <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
                                 </li>
                             );
                         })}
                         </ul>
-                         <p className="text-xs text-muted-foreground mt-1.5">Total of original items: {formatCurrency(expense.items.reduce((sum, item) => sum + Number(item.price), 0))}</p>
+                         <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">Total of original items: {formatCurrency(expense.items.reduce((sum, item) => sum + Number(item.price), 0))}</p>
                     </div>
                     {itemwiseBreakdownForDisplay && amountEffectivelySplit > 0.001 && (
                         <div>
-                            <h4 className="font-medium text-muted-foreground mb-1.5 flex items-center"><ListTree className="mr-2 h-4 w-4"/>Individual Item Shares (Adjusted):</h4>
-                            <CardDescription className="text-xs mb-2">
+                            <h4 className="font-medium text-muted-foreground mb-1 sm:mb-1.5 flex items-center"><ListTree className="mr-2 h-4 w-4"/>Individual Item Shares (Adjusted):</h4>
+                            <CardDescription className="text-xs mb-1.5 sm:mb-2">
                                 Based on splitting {formatCurrency(amountEffectivelySplit)}. Original item prices are proportionally reduced before calculating individual shares.
                             </CardDescription>
-                            <div className="space-y-2.5">
+                            <div className="space-y-2 sm:space-y-2.5">
                             {Object.entries(itemwiseBreakdownForDisplay).filter(([_,details]) => details.totalShareOfAdjustedItems > 0.001 ).map(([personId, details]) => (
-                              <Card key={personId} className="p-2.5 bg-secondary/20 shadow-none">
-                                <div className="flex justify-between items-center mb-1.5">
+                              <Card key={personId} className="p-2 sm:p-2.5 bg-secondary/20 shadow-none">
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-1 sm:mb-1.5">
                                   <h5 className="font-semibold text-sm flex items-center">
                                     <User className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />
                                     {peopleMap[personId] || 'Unknown Person'}
                                   </h5>
-                                  <span className="text-xs font-semibold text-primary">
+                                  <span className="text-xs font-semibold text-primary mt-0.5 sm:mt-0">
                                     Total Share: {formatCurrency(details.totalShareOfAdjustedItems)}
                                   </span>
                                 </div>
@@ -277,14 +276,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                     {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).map((itemShare) => {
                                        const ItemShareCatIcon = getItemCategoryIcon(itemShare.itemCategoryName);
                                        return (
-                                        <li key={itemShare.itemId} className="flex justify-between pl-1.5">
+                                        <li key={itemShare.itemId} className="flex justify-between pl-1 sm:pl-1.5">
                                             <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
                                                 <ItemShareCatIcon className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
                                                 {itemShare.itemName}
                                             </span>
                                             <span className="text-muted-foreground whitespace-nowrap">
                                             {formatCurrency(itemShare.shareForPerson)}
-                                            <span className="ml-1 text-gray-400 text-[9px]" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
+                                            <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
                                                 (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
                                             </span>
                                             </span>
@@ -316,17 +315,17 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold flex items-center">
-                  <Users className="mr-2 h-5 w-5 text-muted-foreground"/> Individual Net Effect
+              <CardHeader className="pb-2 sm:pb-3 pt-3 sm:pt-4">
+                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                  <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Individual Net Effect
                 </CardTitle>
-                 <CardDescription>
+                 <CardDescription className="text-xs">
                   Each person's financial position for this expense, after considering their payments and share of the <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong> split amount.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="text-xs sm:text-sm">
                 {involvedPersonIdsOverall.length > 0 ? (
-                  <ul className="space-y-2.5 text-sm">
+                  <ul className="space-y-2 sm:space-y-2.5">
                     {involvedPersonIdsOverall.map(personId => {
                       const personName = peopleMap[personId] || 'Unknown Person';
                       
@@ -339,16 +338,14 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const isCelebrationContributor = celebrationContributionOpt?.personId === personId;
                       const celebrationAmountByThisPerson = isCelebrationContributor ? (celebrationContributionOpt?.amount || 0) : 0;
                                           
-                      // Corrected net effect calculation:
-                      // What they actually paid MINUS their share of the bill to be split
                       const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
 
                       return (
-                        <li key={personId} className="p-3 bg-secondary/30 rounded-md space-y-1">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold">{personName}</span>
+                        <li key={personId} className="p-2 sm:p-3 bg-secondary/30 rounded-md space-y-1">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center">
+                            <span className="font-semibold text-sm">{personName}</span>
                             <span
-                              className={`font-bold text-xs px-2 py-0.5 rounded-full
+                              className={`font-bold text-xs px-2 py-0.5 rounded-full mt-0.5 sm:mt-0 self-start sm:self-auto
                                     ${netEffectForThisPerson < -0.001 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' 
                                     : netEffectForThisPerson > 0.001 ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' 
                                     : 'bg-gray-100 text-gray-700 dark:bg-gray-700/50 dark:text-gray-300'}`}
@@ -374,7 +371,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     })}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground italic">No individuals involved in payments or shares for this expense.</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground italic">No individuals involved in payments or shares for this expense.</p>
                 )}
               </CardContent>
             </Card>
@@ -386,5 +383,3 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
-
-    

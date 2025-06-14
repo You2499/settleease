@@ -20,18 +20,18 @@ export default function SplitMethodSelector({ splitMethod, setSplitMethod }: Spl
   ];
 
   return (
-    <div className="space-y-3">
-      <Label className="text-lg font-medium">Split Method</Label>
+    <div className="space-y-2 sm:space-y-3">
+      <Label className="text-md sm:text-lg font-medium">Split Method</Label>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         {options.map(({ value, label, Icon }) => (
           <Button
             key={value}
             variant={splitMethod === value ? 'default' : 'outline'}
-            size="lg"
+            size="default" 
             onClick={() => setSplitMethod(value)}
-            className="w-full justify-center sm:justify-start"
+            className="w-full justify-center text-xs sm:text-sm py-2.5 sm:py-2 h-auto sm:h-11"
           >
-            <Icon className="mr-2 h-5 w-5" />
+            <Icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
             {label}
           </Button>
         ))}
@@ -39,4 +39,3 @@ export default function SplitMethodSelector({ splitMethod, setSplitMethod }: Spl
     </div>
   );
 }
-

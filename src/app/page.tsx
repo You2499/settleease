@@ -26,7 +26,7 @@ import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
-import AppLoadingScreen from '@/components/settleease/AppLoadingScreen'; // Added import
+import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
 
 import {
   EXPENSES_TABLE,
@@ -674,7 +674,7 @@ export default function SettleEasePage() {
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center h-10">
               <SidebarTrigger className="md:hidden mr-2" />
-              <h1 className="text-2xl font-headline font-bold text-primary">
+              <h1 className="text-xl sm:text-2xl font-headline font-bold text-primary truncate">
                 {getHeaderTitle()}
               </h1>
             </div>

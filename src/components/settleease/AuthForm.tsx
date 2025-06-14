@@ -106,36 +106,36 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden">
-      <div className="md:flex min-h-[580px]"> {/* Ensure minimum height for content visibility */}
+    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[580px]">
+      <div className="md:flex h-full"> {/* Ensure minimum height for content visibility */}
         {/* Left Pane: Branding & Features */}
-        <div className={`md:w-2/5 flex flex-col justify-center p-8 transition-colors duration-300 ease-in-out
-                         ${isLoginView ? 'bg-secondary/20 !text-primary' : 'bg-primary text-primary-foreground'}`}>
-          <div className="h-[480px] flex flex-col justify-center"> {/* Fixed height wrapper for left pane content */}
+        <div className={`md:w-2/5 flex flex-col justify-center p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-0
+                         ${isLoginView ? 'bg-secondary/20 text-primary' : 'bg-primary text-primary-foreground'}`}>
+          <div className="flex flex-col justify-center flex-1 min-h-0"> 
             {isLoginView ? (
               <div className="text-center">
-                <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
-                <h1 className="text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
-                <p className="mt-3 text-muted-foreground text-base">
+                <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
+                <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
+                <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
                   Sign in to continue simplifying your group expenses.
                 </p>
               </div>
             ) : (
               <>
-                <div className="mb-8 text-center md:text-left">
-                  <HandCoins className="h-16 w-16 mx-auto md:mx-0 mb-4 text-primary-foreground/90" />
-                  <h1 className="text-4xl font-bold font-headline">SettleEase</h1>
-                  <p className="mt-2 text-lg text-primary-foreground/90">
+                <div className="mb-6 sm:mb-8 text-center md:text-left">
+                  <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
+                  <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
+                  <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
                     Simplify your shared expenses. Effortlessly.
                   </p>
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-center md:text-left">Key Features:</h3>
-                <ul className="space-y-3 text-sm">
-                  <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
-                  <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-                  <li className="flex items-start"><PartyPopper className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
-                  <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                  <li className="flex items-start"><HandshakeIcon className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
+                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Key Features:</h3>
+                <ul className="space-y-2.5 text-xs sm:text-sm">
+                  <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
+                  <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+                  <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
+                  <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
+                  <li className="flex items-start"><HandshakeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
                 </ul>
               </>
             )}
@@ -143,24 +143,24 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         </div>
 
         {/* Right Pane: Form */}
-        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center">
-          <div className="h-[480px] flex flex-col justify-center"> {/* Fixed height wrapper for right pane content */}
+        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0">
+          <div className="flex flex-col justify-center flex-1 min-h-0"> 
             <CardHeader className="px-0 pt-0 pb-4 text-center">
               <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
                 {isLoginView ? 'Sign In' : 'Create your Account'}
               </CardTitle>
             </CardHeader>
 
-            <CardContent className="px-0 pb-0 space-y-5">
+            <CardContent className="px-0 pb-0 space-y-4 sm:space-y-5">
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
                   <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
                   <p>{error}</p>
                 </div>
               )}
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address</Label>
+              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="email" className="text-sm">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
@@ -170,11 +170,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     onChange={(e) => setEmail(e.target.value)}
                     disabled={isLoading || isGoogleLoading}
                     required
-                    className="h-11 text-base"
+                    className="h-10 text-sm sm:h-11 sm:text-base"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="password" className="text-sm">Password</Label>
                   <Input
                     id="password"
                     type="password"
@@ -185,15 +185,15 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     disabled={isLoading || isGoogleLoading}
                     required
                     minLength={6}
-                    className="h-11 text-base"
+                    className="h-10 text-sm sm:h-11 sm:text-base"
                   />
                 </div>
-                <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={isLoading || isGoogleLoading}>
-                  {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-5 w-5" /> Sign In</> : <><UserPlus className="mr-2 h-5 w-5" /> Create Account</>)}
+                <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
+                  {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
                 </Button>
               </form>
 
-              <div className="relative my-5">
+              <div className="relative my-4 sm:my-5">
                 <div className="absolute inset-0 flex items-center">
                   <Separator />
                 </div>
@@ -205,7 +205,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </div>
 
               <Button
-                className="w-full h-11 text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
+                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
               >
@@ -219,7 +219,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </Button>
             </CardContent>
 
-            <CardFooter className="px-0 pt-6 pb-0 flex-col items-center">
+            <CardFooter className="px-0 pt-4 sm:pt-6 pb-0 flex-col items-center">
               <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>

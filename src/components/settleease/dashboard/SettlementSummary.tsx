@@ -64,22 +64,22 @@ export default function SettlementSummary({
   return (
     <Card className="shadow-lg rounded-lg">
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'overview' | 'person')} className="w-full">
-        <CardHeader className="pb-3">
+        <CardHeader className="p-4 sm:p-6 pb-3">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <CardTitle className="flex items-center text-xl">
+              <CardTitle className="flex items-center text-lg sm:text-xl">
                   <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement Hub
               </CardTitle>
-              <TabsList className="grid w-full grid-cols-2 sm:w-auto">
+              <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="person">Per Person</TabsTrigger>
               </TabsList>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6 pt-0">
           <TabsContent value="overview" className="mt-0 space-y-4">
-              <div className="flex items-center justify-between bg-muted/50 p-3 rounded-md">
-                  <CardDescription className="text-sm flex-grow pr-2">{overviewDescription}</CardDescription>
-                  <div className="flex items-center space-x-2 shrink-0">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 p-3 rounded-md gap-2">
+                  <CardDescription className="text-xs sm:text-sm flex-grow pr-2">{overviewDescription}</CardDescription>
+                  <div className="flex items-center space-x-2 shrink-0 self-end sm:self-center">
                       <Switch
                           id="simplify-settlement-toggle"
                           checked={simplifySettlement}
@@ -87,7 +87,7 @@ export default function SettlementSummary({
                           aria-label="Toggle settlement simplification"
                           disabled={isLoading}
                       />
-                      <Label htmlFor="simplify-settlement-toggle" className="text-sm font-medium">
+                      <Label htmlFor="simplify-settlement-toggle" className="text-xs sm:text-sm font-medium">
                           Simplify
                       </Label>
                   </div>
@@ -99,11 +99,11 @@ export default function SettlementSummary({
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 p-2.5 shadow-sm">
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5">
-                            <div className="flex-grow text-sm">
+                            <div className="flex-grow text-xs sm:text-sm">
                               <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
                               <ArrowRight className="h-3.5 w-3.5 text-accent mx-1 inline-block" />
                               <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-xs sm:text-sm">{formatCurrency(txn.amount)}</span>
+                              <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-sm sm:text-base">{formatCurrency(txn.amount)}</span>
                             </div>
                             {userRole === 'admin' && (
                               <Button
@@ -111,7 +111,7 @@ export default function SettlementSummary({
                                 variant="outline"
                                 onClick={() => handleInternalMarkAsPaid(txn)}
                                 disabled={isLoading}
-                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto self-start sm:self-center mt-1 sm:mt-0"
                               >
                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
                               </Button>
@@ -131,10 +131,10 @@ export default function SettlementSummary({
           </TabsContent>
 
           <TabsContent value="person" className="mt-0 space-y-4">
-              <div className="grid sm:grid-cols-2 gap-4 items-center bg-muted/50 p-3 rounded-md">
-                  <Label htmlFor="person-select" className="text-sm font-medium">Select a person to view their settlement details:</Label>
+              <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 p-3 rounded-md">
+                  <Label htmlFor="person-select" className="text-xs sm:text-sm font-medium text-left sm:text-right">View settlement details for:</Label>
                   <Select value={selectedPersonId || ''} onValueChange={setSelectedPersonId} disabled={people.length === 0}>
-                      <SelectTrigger id="person-select">
+                      <SelectTrigger id="person-select" className="h-9 text-xs sm:text-sm">
                           <SelectValue placeholder="Select Person..." />
                       </SelectTrigger>
                       <SelectContent>

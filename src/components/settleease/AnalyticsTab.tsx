@@ -576,15 +576,14 @@ export default function AnalyticsTab({
 
     const sumOfTop5Amounts = top5Categories.reduce((acc, curr) => acc + curr.totalAmount, 0);
 
-    if (sumOfTop5Amounts < 0.001) { // Check if sum is effectively zero
+    if (sumOfTop5Amounts < 0.001) { 
       return [];
     }
 
     return top5Categories.filter(entry => {
-      if (entry.totalAmount < 0.001) return false; // Exclude zero/negligible amount categories
+      if (entry.totalAmount < 0.001) return false; 
       const percentage = (entry.totalAmount / sumOfTop5Amounts) * 100;
-      // Keep if percentage is >= 0.5 (so it rounds to at least 1%)
-      // or if it's the only category and has some amount (even if sumOfTop5 is small, making its own percentage 100%)
+      
       return percentage >= 0.5 || (top5Categories.length === 1 && entry.totalAmount > 0.001);
     });
   }, [detailedCategoryAnalytics]);
@@ -594,13 +593,13 @@ export default function AnalyticsTab({
     return (
       <Card className="shadow-lg rounded-lg text-center py-10">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold text-primary flex items-center justify-center">
-            <BarChart3 className="mr-3 h-7 w-7" /> Expense Analytics
+          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
+            <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-md text-muted-foreground">No expenses recorded yet to analyze.</p>
-          <p className="text-sm">Add some expenses to see detailed analytics here.</p>
+          <p className="text-sm sm:text-md text-muted-foreground">No expenses recorded yet to analyze.</p>
+          <p className="text-xs sm:text-sm">Add some expenses to see detailed analytics here.</p>
         </CardContent>
       </Card>
     );
@@ -608,27 +607,26 @@ export default function AnalyticsTab({
 
   return (
     <ScrollArea className="h-full p-0.5">
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm">
-            <TabsTrigger value="group" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-background/90 backdrop-blur-sm text-xs sm:text-sm">
+            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-2">
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
               <UserSquare className="h-4 w-4"/> Personal Insights
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="group">
-            {/* Content for group view, if any specific introductory text is needed */}
           </TabsContent>
           <TabsContent value="personal">
-            <Card className="mb-6 p-4 shadow-sm">
-              <Label htmlFor="person-analytics-select" className="block text-sm font-medium mb-2 text-primary">
+            <Card className="mb-4 sm:mb-6 p-3 sm:p-4 shadow-sm">
+              <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
                 Select Person for Detailed Insights:
               </Label>
               <Select
@@ -636,7 +634,7 @@ export default function AnalyticsTab({
                 onValueChange={setSelectedPersonIdForAnalytics}
                 disabled={people.length === 0}
               >
-                <SelectTrigger id="person-analytics-select">
+                <SelectTrigger id="person-analytics-select" className="h-9 text-xs sm:text-sm">
                   <SelectValue placeholder="Select a person..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -647,7 +645,7 @@ export default function AnalyticsTab({
              {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
               <Card className="shadow-md rounded-lg text-center py-6">
                 <CardContent>
-                  <p className="text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
+                  <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
                 </CardContent>
               </Card>
             )}
@@ -657,7 +655,7 @@ export default function AnalyticsTab({
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
             <Card className="shadow-md rounded-lg text-center py-6">
                 <CardContent>
-                <p className="text-md text-muted-foreground">
+                <p className="text-sm sm:text-md text-muted-foreground">
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 
                     `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :
                     "No expenses match the current filter."}
@@ -669,132 +667,132 @@ export default function AnalyticsTab({
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
           <>
             <Card className="shadow-md rounded-lg">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Sigma className="mr-2 h-5 w-5 text-primary"/>
+              <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center"><Sigma className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                   {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Snapshot` : 'Overall Snapshot'}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
+              <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 text-xs sm:text-sm p-4 sm:p-5 pt-0">
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
                   <p className="text-xs text-muted-foreground">Total Spent {analyticsViewMode === 'personal' ? '(Your Share)' : '(Group Total)'}</p>
-                  <p className="text-lg font-bold text-accent">{formatCurrency(enhancedOverallStats.totalAmount)}</p>
+                  <p className="text-md sm:text-lg font-bold text-accent">{formatCurrency(enhancedOverallStats.totalAmount)}</p>
                 </div>
-                <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
                   <p className="text-xs text-muted-foreground">Total Expenses {analyticsViewMode === 'personal' ? '(Involved In)' : ''}</p>
-                  <p className="text-lg font-bold">{enhancedOverallStats.expenseCount}</p>
+                  <p className="text-md sm:text-lg font-bold">{enhancedOverallStats.expenseCount}</p>
                 </div>
-                <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
                   <p className="text-xs text-muted-foreground">Avg. Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
-                  <p className="text-lg font-bold">{formatCurrency(enhancedOverallStats.averageAmount)}</p>
+                  <p className="text-md sm:text-lg font-bold">{formatCurrency(enhancedOverallStats.averageAmount)}</p>
                 </div>
                 {analyticsViewMode === 'group' && (
-                  <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
+                  <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
                     <p className="text-xs text-muted-foreground">Participants</p>
-                    <p className="text-lg font-bold">{enhancedOverallStats.distinctParticipantCount}</p>
+                    <p className="text-md sm:text-lg font-bold">{enhancedOverallStats.distinctParticipantCount}</p>
                   </div>
                 )}
-                <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
+                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
                   <p className="text-xs text-muted-foreground">Top Category {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
-                  <p className="text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
+                  <p className="text-sm sm:text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
                     {actualMostExpensiveCategoryFromAnalytics.name}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(actualMostExpensiveCategoryFromAnalytics.totalAmount)}</p>
                 </div>
-                <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
+                <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
                    <p className="text-xs text-muted-foreground">Largest Single Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
-                  <p className="text-base font-semibold truncate" title={enhancedOverallStats.largestSingleExpense.description}>
+                  <p className="text-sm sm:text-base font-semibold truncate" title={enhancedOverallStats.largestSingleExpense.description}>
                     {enhancedOverallStats.largestSingleExpense.description}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(enhancedOverallStats.largestSingleExpense.amount)} on {enhancedOverallStats.largestSingleExpense.date}</p>
                 </div>
-                <div className="p-3 bg-card/50 rounded-md shadow-sm col-span-2 md:col-span-3 space-y-0.5">
+                <div className="p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm col-span-2 md:col-span-3 space-y-0.5">
                   <p className="text-xs text-muted-foreground">Date Range (of these expenses)</p>
-                  <p className="text-sm font-semibold">
+                  <p className="text-xs sm:text-sm font-semibold">
                     {enhancedOverallStats.firstDate ? enhancedOverallStats.firstDate.toLocaleDateString() : 'N/A'} - {enhancedOverallStats.lastDate ? enhancedOverallStats.lastDate.toLocaleDateString() : 'N/A'}
                   </p>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="shadow-md rounded-lg">
-                <CardHeader>
-                    <CardTitle className="text-lg flex items-center">
-                        <TrendingUp className="mr-2 h-5 w-5 text-primary"/>
+                <CardHeader className="p-4 sm:p-5">
+                    <CardTitle className="text-md sm:text-lg flex items-center">
+                        <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                         {analyticsViewMode === 'personal' ? 'Your Spending Over Time (Monthly)' : 'Group Expenses Over Time (Monthly)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                     <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={monthlyExpenseData} margin={{ top: 10, right: 20, left: -5, bottom: 5 }}>
+                    <LineChart data={monthlyExpenseData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                        <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
-                        <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
-                        <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Line type="monotone" dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+                        <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
+                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+                        <Line type="monotone" dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
                     </LineChart>
                     </ResponsiveContainer>
                 </CardContent>
                 </Card>
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center">
-                        <BarChart3 className="mr-2 h-5 w-5 text-primary" />
-                        Share vs. Paid Comparison {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `(For ${peopleMap[selectedPersonIdForAnalytics]})` : ''}
+                    <CardHeader className="p-4 sm:p-5">
+                        <CardTitle className="text-md sm:text-lg flex items-center">
+                        <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                        Share vs. Paid {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `(For ${peopleMap[selectedPersonIdForAnalytics]})` : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                         {shareVsPaidData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart
                             data={shareVsPaidData}
-                            margin={{ top: 10, right: 20, left: 10, bottom: (shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? 25 : 5 }}
+                            margin={{ top: 5, right: 10, left: -5, bottom: (shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 20 : 0 }}
                             >
                             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                             <XAxis 
                                 dataKey="name" 
-                                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} 
+                                tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
                                 interval={0} 
-                                angle={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? -30 : 0} 
-                                textAnchor={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? "end" : "middle"} 
-                                height={(shareVsPaidData.length > 4 && analyticsViewMode === 'group') ? 50: 30} 
+                                angle={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? -25 : 0} 
+                                textAnchor={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? "end" : "middle"} 
+                                height={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 35 : 20} 
                             />
-                             <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
+                             <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
                             <Tooltip
                                 formatter={(value: number) => [formatCurrency(value), "Amount"]}
-                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px', padding: '4px 8px' }}
+                                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }}
                                 labelStyle={{ color: 'hsl(var(--foreground))' }}
                                 itemStyle={{ color: 'hsl(var(--foreground))' }}
                             />
-                            <Legend wrapperStyle={{ fontSize: "11px" }} />
-                            <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[3, 3, 0, 0]} barSize={Math.min(25, (shareVsPaidData.length > 0 ? (200 / shareVsPaidData.length / 2) : 25) * 0.8 )} />
-                            <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[3, 3, 0, 0]} barSize={Math.min(25, (shareVsPaidData.length > 0 ? (200 / shareVsPaidData.length / 2) : 25) * 0.8 )} />
+                            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+                            <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={Math.min(20, (shareVsPaidData.length > 0 ? (150 / shareVsPaidData.length / 2) : 20) * 0.8 )} />
+                            <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={Math.min(20, (shareVsPaidData.length > 0 ? (150 / shareVsPaidData.length / 2) : 20) * 0.8 )} />
                             </BarChart>
                         </ResponsiveContainer>
-                        ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-sm">No data for comparison chart.</p>)}
+                        ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-xs sm:text-sm">No data for comparison chart.</p>)}
                     </CardContent>
                 </Card>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
                 {spendingByDayOfWeekData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center">
-                            <CalendarClock className="mr-2 h-5 w-5 text-primary"/>
+                    <CardHeader className="p-4 sm:p-5">
+                        <CardTitle className="text-md sm:text-lg flex items-center">
+                            <CalendarClock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                             {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                     <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={spendingByDayOfWeekData} margin={{ top: 10, right: 20, left: -5, bottom: 5 }}>
+                        <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
-                        <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
-                        <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
-                        <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} barSize={25}/>
+                        <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}/>
+                        <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}/>
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
+                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+                        <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={20}/>
                         </BarChart>
                     </ResponsiveContainer>
                     </CardContent>
@@ -802,22 +800,22 @@ export default function AnalyticsTab({
                 )}
                 {splitMethodDistributionData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
-                    <CardHeader>
-                        <CardTitle className="text-lg flex items-center">
-                            <GitFork className="mr-2 h-5 w-5 text-primary"/>
+                    <CardHeader className="p-4 sm:p-5">
+                        <CardTitle className="text-md sm:text-lg flex items-center">
+                            <GitFork className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                             Split Method Distribution {analyticsViewMode === 'personal' ? '(For Your Expenses)' : ''}
                         </CardTitle>
                     </CardHeader>
-                    <CardContent className="h-[300px]">
+                    <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                     <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                        <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={80} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={10}>
+                        <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
+                        <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={9}>
                             {splitMethodDistributionData.map((entry, index) => (
                             <RechartsCell key={`cell-split-${index}`} fill={CHART_COLORS[(index + 2) % CHART_COLORS.length]} />
                             ))}
                         </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [value, "Expenses"]}/>
-                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }} formatter={(value:number) => [value, "Expenses"]}/>
+                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
                         </PieChart>
                     </ResponsiveContainer>
                     </CardContent>
@@ -827,184 +825,146 @@ export default function AnalyticsTab({
             
             {topExpensesData.length > 0 && (
             <Card className="shadow-md rounded-lg">
-                <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                    <Award className="mr-2 h-5 w-5 text-primary"/>
+                <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center">
+                    <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 sm:p-2">
                 <ScrollArea className="h-auto max-h-[400px]">
-                    <Table>{/*
-                    */}<TableHeader>{/*
-                      */}<TableRow>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Date</TableHead>{/*
-                        */}<TableHead className="py-2 px-2 text-xs">Paid By</TableHead>{/*
-                      */}</TableRow>{/*
-                    */}</TableHeader>{/*
-                    */}<TableBody>
+                    <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                         {topExpensesData.map(exp => (
                         <TableRow key={exp.id}>
-                            <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-xs" title={exp.description}>{exp.description}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[100px] sm:max-w-xs" title={exp.description}>{exp.description}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell> 
-                            <TableCell className="py-1.5 px-2 text-xs">{exp.category}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs">{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs truncate max-w-[150px]" title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
+                            <TableCell className="py-1.5 px-2 text-xs hidden sm:table-cell">{exp.category}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs hidden md:table-cell">{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs truncate max-w-[80px] sm:max-w-[150px] hidden sm:table-cell" title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
                             {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
                             </TableCell>
                         </TableRow>
                         ))}
-                    </TableBody>{/*
-                  */}</Table>
+                    </TableBody>{/* */}</Table>
                 </ScrollArea>
                 </CardContent>
             </Card>
             )}
 
             <Card className="shadow-md rounded-lg">
-            <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                    <SearchCheck className="mr-2 h-5 w-5 text-primary"/>
+            <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center">
+                    <SearchCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Category Deep Dive {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
                 </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0 sm:p-2">
                 <ScrollArea className="h-auto max-h-[400px]">
-                <Table>{/*
-                  */}<TableHeader>{/*
-                    */}<TableRow>{/*
-                      */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/*
-                      */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/*
-                      */}<TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>{/*
-                      */}<TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>{/*
-                      */}<TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>{/*
-                      */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}{/*
-                      */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}{/*
-                    */}</TableRow>{/*
-                  */}</TableHeader>{/*
-                  */}<TableBody>
+                <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>{/* */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}{/* */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                     {detailedCategoryAnalytics.map(cat => (
                         <TableRow key={cat.name}>
                         <TableCell className="py-1.5 px-2 text-xs font-medium flex items-center"><cat.Icon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground"/>{cat.name}</TableCell>
                         <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(cat.totalAmount)}</TableCell>
-                        <TableCell className="py-1.5 px-2 text-xs text-right">{cat.expenseCount}</TableCell>
-                        <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(cat.averageAmount)}</TableCell>
-                        <TableCell className="py-1.5 px-2 text-xs truncate max-w-[200px]" title={cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description} (${formatCurrency(cat.mostExpensiveItem.amount)}) on ${cat.mostExpensiveItem.date}` : 'N/A'}>
-                            {cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description} (${formatCurrency(cat.mostExpensiveItem.amount)})` : 'N/A'}
+                        <TableCell className="py-1.5 px-2 text-xs text-right hidden sm:table-cell">{cat.expenseCount}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-xs text-right hidden md:table-cell">{formatCurrency(cat.averageAmount)}</TableCell>
+                        <TableCell className="py-1.5 px-2 text-xs truncate max-w-[100px] sm:max-w-[200px] hidden sm:table-cell" title={cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description} (${formatCurrency(cat.mostExpensiveItem.amount)}) on ${cat.mostExpensiveItem.date}` : 'N/A'}>
+                            {cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description.substring(0,20)}... (${formatCurrency(cat.mostExpensiveItem.amount)})` : 'N/A'}
                         </TableCell>
-                        <TableCell className="py-1.5 px-2 text-xs truncate max-w-[150px]" title={cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}>
+                        <TableCell className="py-1.5 px-2 text-xs truncate max-w-[80px] sm:max-w-[150px] hidden md:table-cell" title={cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}>
                             {cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}
                         </TableCell>
                         </TableRow>
                     ))}
-                    </TableBody>{/*
-                */}</Table>
+                    </TableBody>{/* */}</Table>
                 </ScrollArea>
             </CardContent>
             </Card>
             
             <Card className="shadow-md rounded-lg">
-                <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                    <User className="mr-2 h-5 w-5 text-primary"/>
+                <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center">
+                    <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Financial Summary` : 'Participant Financial Summary'}
                 </CardTitle>
                 <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0 sm:p-2">
                     <ScrollArea className="h-auto max-h-[400px]">
-                        <Table>{/*
-                          */}<TableHeader>{/*
-                            */}<TableRow>{/*
-                              */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>{/*
-                              */}<TableHead className="py-2 px-2 text-xs">Top Category (Shared)</TableHead>{/*
-                            */}</TableRow>{/*
-                          */}</TableHeader>{/*
-                          */}<TableBody>
+                        <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
                             {detailedParticipantAnalytics.map(p => (
                                 <TableRow key={p.name}>
-                                <TableCell className="py-1.5 px-2 text-xs font-medium">{p.name}</TableCell>
+                                <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[80px] sm:max-w-xs">{p.name}</TableCell>
                                 <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(p.totalPaid)}</TableCell>
                                 <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(p.totalShared)}</TableCell>
-                                <TableCell className={`py-1.5 px-2 text-xs text-right font-semibold ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                <TableCell className={`py-1.5 px-2 text-xs text-right font-semibold hidden sm:table-cell ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
                                     {formatCurrency(p.netBalance)}
                                 </TableCell>
-                                <TableCell className="py-1.5 px-2 text-xs text-right">{p.expensesPaidCount}</TableCell>
-                                <TableCell className="py-1.5 px-2 text-xs text-right">{p.expensesSharedCount}</TableCell>
-                                <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(p.averageShareAmount)}</TableCell>
-                                <TableCell className="py-1.5 px-2 text-xs truncate max-w-[150px]" title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
+                                <TableCell className="py-1.5 px-2 text-xs text-right hidden md:table-cell">{p.expensesPaidCount}</TableCell>
+                                <TableCell className="py-1.5 px-2 text-xs text-right hidden md:table-cell">{p.expensesSharedCount}</TableCell>
+                                <TableCell className="py-1.5 px-2 text-xs text-right hidden lg:table-cell">{formatCurrency(p.averageShareAmount)}</TableCell>
+                                <TableCell className="py-1.5 px-2 text-xs truncate max-w-[100px] sm:max-w-[150px] hidden sm:table-cell" title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
                                     {p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name}` : 'N/A'}
                                 </TableCell>
                                 </TableRow>
                             ))}
-                            </TableBody>{/*
-                        */}</Table>
+                            </TableBody>{/* */}</Table>
                     </ScrollArea>
                 </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
             <Card className="shadow-md rounded-lg">
-                <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                    <PieChartIconLucide className="mr-2 h-5 w-5 text-primary"/>
+                <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center">
+                    <PieChartIconLucide className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Spending by Category (Top 5) {analyticsViewMode === 'personal' ? '(Your Shares)' : ''}
                 </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                 {pieChartData.length > 0 ? (
                     <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
+                        <PieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
                         <Pie 
                             data={pieChartData} 
                             dataKey="totalAmount" 
                             nameKey="name" 
                             cx="50%" 
                             cy="50%" 
-                            outerRadius={80} 
+                            outerRadius={60} 
                             labelLine={false} 
                             label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} 
-                            fontSize={10}
+                            fontSize={9}
                         >
                             {pieChartData.map((entry, index) => (
                             <RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
                             ))}
                         </Pie>
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), "Amount"]} />
-                        <Legend wrapperStyle={{ fontSize: "10px" }} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }} formatter={(value:number) => [formatCurrency(value), "Amount"]} />
+                        <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
                         </PieChart>
                     </ResponsiveContainer>
                 ) : (
-                    <p className="text-muted-foreground h-full flex items-center justify-center text-sm">No category data to display for this view.</p>
+                    <p className="text-muted-foreground h-full flex items-center justify-center text-xs sm:text-sm">No category data to display for this view.</p>
                 )}
                 </CardContent>
             </Card>
             {expenseAmountDistributionData.length > 0 && (
             <Card className="shadow-md rounded-lg">
-                <CardHeader>
-                <CardTitle className="text-lg flex items-center">
-                    <BarChart3 className="mr-2 h-5 w-5 text-primary"/>
+                <CardHeader className="p-4 sm:p-5">
+                <CardTitle className="text-md sm:text-lg flex items-center">
+                    <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary"/>
                     Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="h-[300px]">
+                <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4">
                 <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 10, right: 20, left: 5, bottom: 5 }}>
+                    <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
-                    <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-                    <YAxis type="category" dataKey="range" width={75} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
-                    <Legend wrapperStyle={{ fontSize: "11px" }} />
-                    <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 3, 3, 0]} barSize={20} />
+                    <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
+                    <YAxis type="category" dataKey="range" width={65} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }} formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
+                    <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+                    <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={15} />
                     </BarChart>
                 </ResponsiveContainer>
                 </CardContent>
@@ -1017,4 +977,3 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
-

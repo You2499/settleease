@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import AddExpenseTab from './AddExpenseTab'; // Re-use for editing
+import AddExpenseTab from './AddExpenseTab'; 
 import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 
@@ -26,7 +26,7 @@ interface EditExpensesTabProps {
   expenses: Expense[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
-  onActionComplete: () => void; // Callback to refresh data in parent
+  onActionComplete: () => void; 
   dynamicCategories: DynamicCategory[];
 }
 
@@ -84,14 +84,14 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="text-xl text-destructive flex items-center">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-6">
-          <p>Could not connect to the database. Editing expenses is currently unavailable.</p>
-          <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base">Could not connect to the database. Editing expenses is currently unavailable.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );
@@ -114,16 +114,16 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
   return (
     <>
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <FilePenLine className="mr-3 h-6 w-6 text-primary" /> Edit or Delete Expenses
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <FilePenLine className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Edit or Delete Expenses
           </CardTitle>
-          <CardDescription>Select an expense below to modify its details or remove it from the records.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 p-6">
+        <CardContent className="flex-1 min-h-0 p-4 sm:p-6">
           {expenses.length > 0 ? (
-            <ScrollArea className="flex-1 min-h-0 h-full -mx-2">
-              <ul className="space-y-3 px-2">
+            <ScrollArea className="flex-1 min-h-0 h-full -mx-1 sm:-mx-2">
+              <ul className="space-y-2.5 sm:space-y-3 px-1 sm:px-2">
                 {expenses.map(expense => {
                   const CategoryIcon = getCategoryIcon(expense.category);
                    const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
@@ -134,23 +134,23 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
                   return (
                     <li key={expense.id}>
-                      <div className="bg-card/80 p-4 rounded-lg border shadow-sm">
-                        <div className="flex justify-between items-start mb-2">
-                          <h4 className="text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
-                          <span className="text-lg font-bold text-primary whitespace-nowrap">{formatCurrency(Number(expense.total_amount))}</span>
+                      <div className="bg-card/80 p-3 sm:p-4 rounded-lg border shadow-sm">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1.5 sm:mb-2">
+                          <h4 className="text-sm sm:text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
+                          <span className="text-md sm:text-lg font-bold text-primary whitespace-nowrap self-end sm:self-center">{formatCurrency(Number(expense.total_amount))}</span>
                         </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-3 gap-1.5 sm:gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-2 sm:mb-3 gap-1 sm:gap-3">
                           <div className="flex items-center">
-                            <CategoryIcon className="mr-1.5 h-4 w-4 flex-shrink-0 text-muted-foreground" /> 
+                            <CategoryIcon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-muted-foreground" /> 
                             <span className="truncate" title={expense.category}>{expense.category}</span>
                           </div>
                           <span className="sm:ml-auto whitespace-nowrap">Paid by: <span className="font-medium text-foreground/90">{displayPayerText}</span></span>
                         </div>
-                        <div className="flex justify-end space-x-2.5">
-                          <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto">
+                        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:justify-end sm:space-x-2.5">
+                          <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
                             <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
                           </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto">
+                          <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
                             <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
                           </Button>
                         </div>
@@ -162,9 +162,9 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
             </ScrollArea>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6">
-                <FilePenLine className="h-16 w-16 mb-4 text-primary/30" />
-                <p className="text-lg font-medium">No Expenses Yet</p>
-                <p className="text-sm">There are no expenses recorded to edit or delete. Add some first!</p>
+                <FilePenLine className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+                <p className="text-md sm:text-lg font-medium">No Expenses Yet</p>
+                <p className="text-xs sm:text-sm">There are no expenses recorded to edit or delete. Add some first!</p>
             </div>
           )}
         </CardContent>

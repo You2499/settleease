@@ -124,7 +124,7 @@ export default function PerPersonSettlementDetails({
     emptyMessage: string
   ) => (
     <AccordionItem value={type}>
-      <AccordionTrigger className="text-base hover:no-underline">
+      <AccordionTrigger className="text-sm sm:text-base hover:no-underline py-3">
         {titlePrefix} ({transactions.length})
       </AccordionTrigger>
       <AccordionContent>
@@ -135,7 +135,7 @@ export default function PerPersonSettlementDetails({
                 <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}-${type}`}>
                   <Card className="bg-card/50 p-2.5 shadow-sm">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                      <div className="flex-grow text-sm">
+                      <div className="flex-grow text-xs sm:text-sm">
                         {type === 'debt' ? (
                           <>
                             Owes <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
@@ -147,7 +147,7 @@ export default function PerPersonSettlementDetails({
                         )}
                         <span className="ml-1.5 text-primary font-semibold text-sm">{formatCurrency(txn.amount)}</span>
                       </div>
-                      <div className="flex space-x-1.5 w-full sm:w-auto mt-1 sm:mt-0">
+                      <div className="flex space-x-1.5 w-full sm:w-auto mt-1 sm:mt-0 self-start sm:self-center">
                         <Button 
                             variant="outline" 
                             size="sm" 
@@ -182,8 +182,8 @@ export default function PerPersonSettlementDetails({
   );
 
   return (
-    <Card className="p-4 border-t pt-4">
-      <CardDescription className="text-sm mb-3 text-center">
+    <Card className="p-3 sm:p-4 border-t pt-4">
+      <CardDescription className="text-xs sm:text-sm mb-3 text-center">
         Summary for <strong className="text-primary">{selectedPerson.name}</strong>:
         {overallBalance === 0 && " All settled up!"}
         {overallBalance > 0.01 && ` Is owed a net total of ${formatCurrency(overallBalance)}.`}
@@ -195,15 +195,15 @@ export default function PerPersonSettlementDetails({
         {renderTransactionList(personCreditsSimplified, 'credit', 'Credits (Simplified)', 'No outstanding simplified credits.')}
         
         <AccordionItem value="debts-pairwise">
-            <AccordionTrigger className="text-base hover:no-underline">Pairwise Debts (You Owe) ({personDebtsPairwise.length})</AccordionTrigger>
+            <AccordionTrigger className="text-sm sm:text-base hover:no-underline py-3">Pairwise Debts (You Owe) ({personDebtsPairwise.length})</AccordionTrigger>
             <AccordionContent>
                 {personDebtsPairwise.length > 0 ? (
                     <ScrollArea className="h-auto max-h-60"><ul className="space-y-2 pr-2 py-1">
                         {personDebtsPairwise.map((txn, i) => (
                             <li key={`pairwise-debt-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
-                                <div className="flex items-center justify-between text-sm">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm gap-1.5">
                                     <span>Owes <strong className="text-foreground">{peopleMap[txn.to]}</strong>: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
-                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1" onClick={() => handleViewRelevantExpenses(txn, 'debt')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
+                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'debt')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
                                 </div>
                             </Card></li>
                         ))}
@@ -213,15 +213,15 @@ export default function PerPersonSettlementDetails({
         </AccordionItem>
 
         <AccordionItem value="credits-pairwise">
-            <AccordionTrigger className="text-base hover:no-underline">Pairwise Credits (Owed to You) ({personCreditsPairwise.length})</AccordionTrigger>
+            <AccordionTrigger className="text-sm sm:text-base hover:no-underline py-3">Pairwise Credits (Owed to You) ({personCreditsPairwise.length})</AccordionTrigger>
             <AccordionContent>
                 {personCreditsPairwise.length > 0 ? (
                      <ScrollArea className="h-auto max-h-60"><ul className="space-y-2 pr-2 py-1">
                         {personCreditsPairwise.map((txn, i) => (
                             <li key={`pairwise-credit-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
-                                <div className="flex items-center justify-between text-sm">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm gap-1.5">
                                     <span><strong className="text-foreground">{peopleMap[txn.from]}</strong> owes you: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
-                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1" onClick={() => handleViewRelevantExpenses(txn, 'credit')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
+                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'credit')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
                                 </div>
                             </Card></li>
                         ))}
@@ -232,7 +232,7 @@ export default function PerPersonSettlementDetails({
 
 
         <AccordionItem value="recorded-payments">
-          <AccordionTrigger className="text-base hover:no-underline">
+          <AccordionTrigger className="text-sm sm:text-base hover:no-underline py-3">
             <span className="flex items-center">
               <Landmark className="mr-2 h-4 w-4 text-muted-foreground"/> Recorded Payments ({personRecordedPayments.length})
             </span>
@@ -245,7 +245,7 @@ export default function PerPersonSettlementDetails({
                     <li key={payment.id}>
                       <Card className="bg-card/50 p-2.5 shadow-sm">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-sm">
+                          <div className="flex-grow text-xs sm:text-sm">
                             {payment.debtor_id === selectedPerson.id ? (
                               <>
                                 You paid <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
@@ -256,7 +256,7 @@ export default function PerPersonSettlementDetails({
                               </>
                             )}
                             <span className="ml-1.5 text-green-600 font-semibold text-sm">{formatCurrency(payment.amount_settled)}</span>
-                            <span className="block text-muted-foreground text-xs">
+                            <span className="block text-muted-foreground text-xs mt-0.5">
                                 On: {new Date(payment.settled_at).toLocaleDateString()}
                             </span>
                           </div>
@@ -266,7 +266,7 @@ export default function PerPersonSettlementDetails({
                               variant="destructive"
                               onClick={() => handleInternalUnmarkPayment(payment)}
                               disabled={isLoadingParent}
-                              className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                              className="text-xs px-2 py-1 h-auto w-full sm:w-auto self-start sm:self-center mt-1 sm:mt-0"
                             >
                               <Undo2 className="mr-1 h-3 w-3" /> Unmark
                             </Button>

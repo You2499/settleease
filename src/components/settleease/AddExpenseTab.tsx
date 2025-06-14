@@ -413,7 +413,7 @@ export default function AddExpenseTab({
         name: item.name,
         price: parseFloat(item.price as string), 
         sharedBy: item.sharedBy,
-        categoryName: item.categoryName || defaultItemCategory, // Ensure categoryName is included
+        categoryName: item.categoryName || defaultItemCategory, 
       }));
 
       const itemwiseSharesMap: Record<string, number> = {};
@@ -492,14 +492,14 @@ export default function AddExpenseTab({
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="text-xl text-destructive flex items-center">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-6">
-          <p>Could not connect to the database. Adding or editing expenses is currently unavailable.</p>
-          <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base">Could not connect to the database. Adding or editing expenses is currently unavailable.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );
@@ -507,15 +507,15 @@ export default function AddExpenseTab({
 
   if (people.length === 0 && !expenseToEdit) { 
     return (
-      <Card className="text-center py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center">
+      <Card className="text-center py-8 sm:py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center p-4">
         <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold text-primary flex items-center justify-center">
-            <Users className="mr-3 h-7 w-7" /> Add People First
+          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
+            <Users className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Add People First
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 p-6">
-          <p className="text-md text-muted-foreground">You need to add people to your group before you can add expenses.</p>
-          <p className="text-sm">Please go to the "Manage People" tab to add participants.</p>
+        <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6">
+          <p className="text-sm sm:text-md text-muted-foreground">You need to add people to your group before you can add expenses.</p>
+          <p className="text-xs sm:text-sm">Please go to the "Manage People" tab to add participants.</p>
         </CardContent>
       </Card>
     );
@@ -523,33 +523,33 @@ export default function AddExpenseTab({
 
   return (
     <Card className="shadow-xl rounded-lg h-full flex flex-col">
-      <CardHeader className="pb-4 border-b">
-        <CardTitle className="flex items-center text-2xl font-bold">
-          <CreditCard className="mr-3 h-6 w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+      <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+          <CreditCard className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
         </CardDescription>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0 overflow-y-auto p-6 space-y-8">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
         
-        <div className="p-5 border rounded-lg shadow-sm bg-card/50">
-          <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><FileText className="mr-2 h-5 w-5" />Bill Information</h3>
-          <div className="space-y-4">
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+          <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Bill Information</h3>
+          <div className="space-y-3 sm:space-y-4">
             <div>
-              <Label htmlFor="description" className="text-base">Description</Label>
-              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner at Joe's, Monthly Groceries" className="mt-1 text-base h-11" />
+              <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
+              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner, Groceries" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label htmlFor="totalAmount" className="text-base">Total Bill Amount</Label>
-                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-base h-11" />
+                <Label htmlFor="totalAmount" className="text-sm sm:text-base">Total Bill Amount</Label>
+                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
               </div>
               <div>
-                <Label htmlFor="category" className="text-base">Main Category</Label>
+                <Label htmlFor="category" className="text-sm sm:text-base">Main Category</Label>
                 <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
-                  <SelectTrigger id="category" className="mt-1 text-base h-11">
+                  <SelectTrigger id="category" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
                     <SelectValue placeholder="Select main category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -571,12 +571,12 @@ export default function AddExpenseTab({
             </div>
             {(parseFloat(totalAmount) || 0) > 0 && (
               <div className="p-3 bg-muted/50 border-dashed border-primary/50 rounded-md">
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                       <div className="flex items-center text-muted-foreground">
                           <Wallet className="mr-2 h-4 w-4"/>
                           <span>Amount to be Split:</span>
                       </div>
-                      <span className="font-bold text-lg text-primary">{formatCurrency(amountToSplit)}</span>
+                      <span className="font-bold text-md sm:text-lg text-primary">{formatCurrency(amountToSplit)}</span>
                   </div>
                   {isCelebrationMode && actualCelebrationAmount > 0 && (
                       <p className="text-xs text-muted-foreground mt-1 text-right">
@@ -588,8 +588,8 @@ export default function AddExpenseTab({
           </div>
         </div>
         
-        <div className="p-5 border rounded-lg shadow-sm bg-card/50">
-            <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><Users className="mr-2 h-5 w-5" />Who Paid?</h3>
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Who Paid?</h3>
             <PayerInputSection
                 isMultiplePayers={isMultiplePayers}
                 onToggleMultiplePayers={handleToggleMultiplePayers}
@@ -603,10 +603,10 @@ export default function AddExpenseTab({
             />
         </div>
         
-        <div className="p-5 border rounded-lg shadow-sm bg-card/50">
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center text-primary">
-                    <PartyPopper className="mr-2 h-5 w-5 text-yellow-500" />Special Contribution
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-md sm:text-lg font-semibold flex items-center text-primary">
+                    <PartyPopper className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />Special Contribution
                 </h3>
                 <Checkbox
                     id="celebrationMode"
@@ -626,29 +626,29 @@ export default function AddExpenseTab({
                 />
             </div>
             {isCelebrationMode && (
-                <div className="p-4 bg-accent/10 shadow-inner space-y-4 mt-2 border border-accent/30 rounded-md">
+                <div className="p-3 sm:p-4 bg-accent/10 shadow-inner space-y-3 sm:space-y-4 mt-2 border border-accent/30 rounded-md">
                 <div className="text-xs flex items-start text-muted-foreground">
                     <Info size={16} className="mr-2 mt-0.5 shrink-0 text-accent" />
                     <span>A celebration contribution means one person covers a part of the bill as a treat. This amount is subtracted *before* splitting the remaining cost.</span>
                 </div>
                 <div>
-                    <Label htmlFor="celebrationPayer" className="text-base">Who is treating?</Label>
+                    <Label htmlFor="celebrationPayer" className="text-sm sm:text-base">Who is treating?</Label>
                     <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
-                    <SelectTrigger id="celebrationPayer" className="mt-1 text-base h-11">
+                    <SelectTrigger id="celebrationPayer" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
                         <SelectValue placeholder="Select who is contributing" />
                     </SelectTrigger>
                     <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                     </Select>
                 </div>
                 <div>
-                    <Label htmlFor="celebrationAmount" className="text-base">Contribution Amount</Label>
+                    <Label htmlFor="celebrationAmount" className="text-sm sm:text-base">Contribution Amount</Label>
                     <Input
                     id="celebrationAmount"
                     type="number"
                     value={celebrationAmountInput}
                     onChange={e => setCelebrationAmountInput(e.target.value)}
                     placeholder="Amount they are covering"
-                    className="mt-1 text-base h-11"
+                    className="mt-1 text-sm sm:text-base h-10 sm:h-11"
                     />
                     <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
                     {[10, 25, 50, 100].map(perc => (
@@ -665,7 +665,7 @@ export default function AddExpenseTab({
                             setCelebrationAmountInput('0.00');
                             }
                         }}
-                        className="text-xs px-2.5 py-1.5 h-auto"
+                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
                         >
                         {perc}% of Bill
                         </Button>
@@ -675,7 +675,7 @@ export default function AddExpenseTab({
                         variant="outline"
                         size="sm"
                         onClick={() => setCelebrationAmountInput(totalAmount)}
-                        className="text-xs px-2.5 py-1.5 h-auto"
+                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
                         disabled={!totalAmount || parseFloat(totalAmount) <=0}
                         >
                         Full Bill Amount
@@ -685,13 +685,13 @@ export default function AddExpenseTab({
                 </div>
             )}
             {!isCelebrationMode && (
-                <p className="text-sm text-muted-foreground">Toggle the switch on the right if someone is treating for a portion of this bill.</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Toggle the switch on the right if someone is treating for a portion of this bill.</p>
             )}
         </div>
 
-        <div className="p-5 border rounded-lg shadow-sm bg-card/50">
-            <h3 className="text-lg font-semibold mb-4 flex items-center text-primary"><Scale className="mr-2 h-5 w-5" />How to Split the Cost?</h3>
-            <div className="space-y-4">
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Scale className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />How to Split the Cost?</h3>
+            <div className="space-y-3 sm:space-y-4">
                 <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
                 
                 {splitMethod === 'equal' && (
@@ -716,19 +716,19 @@ export default function AddExpenseTab({
                     handleItemChange={handleItemChange}
                     handleItemSharedByChange={handleItemSharedByChange}
                     removeItem={removeItem}
-                    addItem={handleAddItem}
+                    addItem={addItem}
                     />
                 )}
             </div>
         </div>
       </CardContent>
 
-      <CardFooter className="border-t pt-6 flex justify-end space-x-3">
+      <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-3">
         {expenseToEdit && onCancelEdit && (
-            <Button variant="outline" size="lg" onClick={onCancelEdit} disabled={isLoading}>Cancel</Button>
+            <Button variant="outline" size="default" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">Cancel</Button>
         )}
-        <Button onClick={handleSubmitExpense} size="lg" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) }>
-          {isLoading ? (expenseToEdit ? "Updating Expense..." : "Adding Expense...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
+        <Button onClick={handleSubmitExpense} size="default" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+          {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
         </Button>
       </CardFooter>
     </Card>

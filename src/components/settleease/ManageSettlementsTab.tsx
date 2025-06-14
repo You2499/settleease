@@ -150,13 +150,13 @@ export default function ManageSettlementsTab({
   if (!db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="text-xl text-destructive flex items-center">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-6">
-          <p>Could not connect to the database. Managing settlements is currently unavailable.</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base">Could not connect to the database. Managing settlements is currently unavailable.</p>
         </CardContent>
       </Card>
     );
@@ -165,40 +165,39 @@ export default function ManageSettlementsTab({
   return (
     <>
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <Handshake className="mr-3 h-6 w-6 text-primary" /> Manage Settlements
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <Handshake className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Settlements
           </CardTitle>
-          <CardDescription>View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 grid md:grid-cols-2 gap-6 min-h-0 p-6">
+        <CardContent className="flex-1 grid md:grid-cols-2 gap-4 sm:gap-6 min-h-0 p-4 sm:p-6">
           
-          {/* Outstanding Debts Section */}
-          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-5">
-            <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
-                <FileText className="mr-2 h-5 w-5" /> Outstanding Simplified Debts
+          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-3 sm:p-5">
+            <h3 className="text-md sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center text-primary">
+                <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Outstanding Simplified Debts
             </h3>
             {calculatedSimplifiedSettlements.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 -mx-1">
-                <ul className="space-y-3 px-1">
+                <ul className="space-y-2.5 sm:space-y-3 px-1">
                   {calculatedSimplifiedSettlements.map((settlement, index) => (
                     <li key={`${settlement.from}-${settlement.to}-${index}`}>
-                      <div className="bg-card/80 p-3.5 rounded-md border shadow-inner">
+                      <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-sm mb-2 sm:mb-0">
+                          <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
                             <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
-                            <ArrowRight className="h-4 w-4 text-accent mx-1.5 inline-block" />
+                            <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
                             <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
-                            <span className="block sm:inline sm:ml-2 text-primary font-semibold text-base">{formatCurrency(settlement.amount)}</span>
+                            <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
                           </div>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => setSettlementToConfirm(settlement)}
                             disabled={isLoading}
-                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-end sm:self-center"
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
                           >
-                            <CheckCircle2 className="mr-1.5 h-4 w-4" /> Mark as Paid
+                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
                           </Button>
                         </div>
                       </div>
@@ -208,31 +207,30 @@ export default function ManageSettlementsTab({
               </ScrollArea>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-4">
-                <Handshake className="h-12 w-12 mb-3 text-primary/30" />
-                <p className="font-medium">All Settled Up!</p>
+                <Handshake className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
+                <p className="font-medium text-sm sm:text-base">All Settled Up!</p>
                 <p className="text-xs">No outstanding debts based on current data.</p>
               </div>
             )}
           </div>
 
-          {/* Recorded Payments Section */}
-          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-5">
-            <h3 className="text-lg font-semibold mb-3 flex items-center text-primary">
-                <History className="mr-2 h-5 w-5" /> Recorded Settlement Payments
+          <div className="flex flex-col min-h-0 border rounded-lg shadow-sm bg-card/50 p-3 sm:p-5">
+            <h3 className="text-md sm:text-lg font-semibold mb-2 sm:mb-3 flex items-center text-primary">
+                <History className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Recorded Settlement Payments
             </h3>
             {settlementPayments.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 -mx-1">
-                <ul className="space-y-3 px-1">
+                <ul className="space-y-2.5 sm:space-y-3 px-1">
                   {settlementPayments.sort((a,b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()).map(payment => (
                     <li key={payment.id}>
-                      <div className="bg-card/80 p-3.5 rounded-md border shadow-inner">
+                      <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-sm mb-2 sm:mb-0">
+                          <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
                             <div>
                               <span className="font-medium text-foreground">{peopleMap[payment.debtor_id] || 'Unknown'}</span>
-                              <ArrowRight className="h-4 w-4 text-green-600 mx-1.5 inline-block" />
+                              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 mx-1 sm:mx-1.5 inline-block" />
                               <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-base">{formatCurrency(payment.amount_settled)}</span>
+                              <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                               Paid on: {new Date(payment.settled_at).toLocaleDateString()}
@@ -244,9 +242,9 @@ export default function ManageSettlementsTab({
                             variant="destructive"
                             onClick={() => setPaymentToUnmark(payment)}
                             disabled={isLoading}
-                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-end sm:self-center"
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
                           >
-                            <Undo2 className="mr-1.5 h-4 w-4" /> Unmark
+                            <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
                           </Button>
                         </div>
                       </div>
@@ -256,8 +254,8 @@ export default function ManageSettlementsTab({
               </ScrollArea>
             ) : (
                <div className="flex-1 flex flex-col items-center justify-center text-center text-muted-foreground p-4">
-                <History className="h-12 w-12 mb-3 text-primary/30" />
-                <p className="font-medium">No Payments Recorded</p>
+                <History className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
+                <p className="font-medium text-sm sm:text-base">No Payments Recorded</p>
                 <p className="text-xs">Manually mark debts as paid to see them here.</p>
               </div>
             )}

@@ -20,7 +20,7 @@ interface PayerInputSectionProps {
   handlePayerChange: (index: number, field: keyof PayerInputRow, value: string) => void;
   addPayer: () => void;
   removePayer: (index: number) => void;
-  expenseToEdit?: any; // Simplified for brevity, can be typed more strictly
+  expenseToEdit?: any; 
 }
 
 export default function PayerInputSection({
@@ -37,9 +37,9 @@ export default function PayerInputSection({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label className="text-lg font-medium">Paid By</Label>
+        <Label className="text-md sm:text-lg font-medium">Paid By</Label>
         <div className="flex items-center space-x-2">
-          <Label htmlFor="multiplePayersSwitch" className="text-sm text-muted-foreground">Multiple Payers?</Label>
+          <Label htmlFor="multiplePayersSwitch" className="text-xs sm:text-sm text-muted-foreground">Multiple Payers?</Label>
           <Checkbox id="multiplePayersSwitch" checked={isMultiplePayers} onCheckedChange={onToggleMultiplePayers} />
         </div>
       </div>
@@ -47,17 +47,17 @@ export default function PayerInputSection({
         <div className="space-y-2.5">
           {payers.map((payer, index) => (
             <Card key={payer.id} className="p-3 bg-card/50 shadow-sm">
-              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-center">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
                 <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)} disabled={people.length === 0}>
-                  <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
+                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select payer" /></SelectTrigger>
                   <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
-                <Input type="number" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-28" />
+                <Input type="number" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-full sm:w-28 h-10 text-sm" />
                 <Button 
                   variant="ghost" 
                   size="icon" 
                   onClick={() => removePayer(index)} 
-                  className="text-destructive h-8 w-8"
+                  className="text-destructive h-8 w-8 self-end sm:self-center"
                   disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -69,7 +69,7 @@ export default function PayerInputSection({
         </div>
       ) : (
         <Select value={payers[0]?.personId || ''} onValueChange={val => handlePayerChange(0, 'personId', val)} disabled={people.length === 0}>
-          <SelectTrigger><SelectValue placeholder="Select payer" /></SelectTrigger>
+          <SelectTrigger className="h-10 sm:h-11 text-sm sm:text-base"><SelectValue placeholder="Select payer" /></SelectTrigger>
           <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
         </Select>
       )}

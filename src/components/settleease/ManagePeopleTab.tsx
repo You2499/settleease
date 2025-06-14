@@ -181,14 +181,14 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader>
-          <CardTitle className="text-xl text-destructive flex items-center">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-6">
-          <p>Could not connect to the database. Managing people is currently unavailable.</p>
-          <p className="text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base">Could not connect to the database. Managing people is currently unavailable.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );
@@ -197,18 +197,18 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
   return (
     <>
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="pb-4 border-b">
-          <CardTitle className="flex items-center text-2xl font-bold">
-            <Users className="mr-3 h-6 w-6 text-primary" /> Manage People
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <Users className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage People
           </CardTitle>
-          <CardDescription>Add new participants to your group or edit existing ones.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Add new participants to your group or edit existing ones.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 p-6 space-y-6">
+        <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
           
-          <div className="p-5 border rounded-lg shadow-sm bg-card/50">
-            <Label className="text-lg font-semibold block mb-3 text-primary">Add New Person</Label>
-            <div className="flex space-x-3 items-end">
-              <div className="flex-grow">
+          <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <Label className="text-md sm:text-lg font-semibold block mb-2 sm:mb-3 text-primary">Add New Person</Label>
+            <div className="flex flex-col gap-2 sm:flex-row sm:space-x-3 sm:items-end">
+              <div className="flex-grow w-full sm:w-auto">
                 <Label htmlFor="newPersonName" className="text-xs">Person's Name</Label>
                 <Input
                   id="newPersonName"
@@ -216,50 +216,50 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                   value={newPersonName}
                   onChange={(e) => setNewPersonName(e.target.value)}
                   placeholder="e.g., Jane Doe"
-                  className="mt-1 h-11 text-base"
+                  className="mt-1 h-10 sm:h-11 text-sm sm:text-base w-full"
                   disabled={isLoading}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
                 />
               </div>
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || isLoading} className="h-11">
-                <PlusCircle className="mr-2 h-5 w-5" /> {isLoading && !editingPersonId ? 'Adding...' : 'Add Person'}
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || isLoading} className="h-10 sm:h-11 w-full sm:w-auto text-sm sm:text-base">
+                <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {isLoading && !editingPersonId ? 'Adding...' : 'Add Person'}
               </Button>
             </div>
           </div>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <h4 className="text-lg font-semibold mb-3 text-primary">Current People in Group</h4>
+            <h4 className="text-md sm:text-lg font-semibold mb-2 sm:mb-3 text-primary">Current People in Group</h4>
             {people.length > 0 ? (
-              <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1">
-                <ul className="space-y-2 p-2">
+              <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
+                <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
                   {people.map(person => (
-                    <li key={person.id} className="flex items-center justify-between p-3 bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group">
+                    <li key={person.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group">
                       {editingPersonId === person.id ? (
                         <>
                           <Input
                             type="text"
                             value={editingPersonNewName}
                             onChange={(e) => setEditingPersonNewName(e.target.value)}
-                            className="flex-grow mr-2 h-9 text-sm"
+                            className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
                             autoFocus
                             disabled={isLoading}
                             onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
                           />
-                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-8 w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                             <Save className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
                             <Ban className="h-4 w-4" />
                           </Button>
                         </>
                       ) : (
                         <>
                           <span className="truncate flex-grow text-sm font-medium" title={person.name}>{person.name}</span>
-                          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit name" disabled={isLoading || !!editingPersonId}>
+                          <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit name" disabled={isLoading || !!editingPersonId}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-8 w-8 text-red-600 hover:text-red-700" title="Remove person" disabled={isLoading || !!editingPersonId}>
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Remove person" disabled={isLoading || !!editingPersonId}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -271,9 +271,9 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
               </ScrollArea>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
-                  <Users className="h-16 w-16 mb-4 text-primary/30" />
-                  <p className="text-lg font-medium">No People Yet</p>
-                  <p className="text-sm">Add people to your group using the form above.</p>
+                  <Users className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+                  <p className="text-md sm:text-lg font-medium">No People Yet</p>
+                  <p className="text-xs sm:text-sm">Add people to your group using the form above.</p>
               </div>
             )}
           </div>
