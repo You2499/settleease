@@ -64,9 +64,10 @@ const Toast = React.forwardRef<
   }, []);
 
   const startAnimationAndTimer = React.useCallback((currentDuration: number) => {
-    clearExistingAnimationAndTimer(); 
+    clearExistingAnimationAndTimer();
 
     if (progressBarRef.current) {
+      progressBarRef.current.style.transformOrigin = 'left'; // Ensure transform origin is set
       progressBarRef.current.style.animation = `toast-progress ${currentDuration}ms linear forwards`;
       progressBarRef.current.style.animationPlayState = 'running';
     }

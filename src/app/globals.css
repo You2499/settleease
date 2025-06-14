@@ -90,10 +90,10 @@
 @layer components {
   @keyframes toast-progress {
     from {
-      width: 100%;
+      transform: scaleX(1);
     }
     to {
-      width: 0%;
+      transform: scaleX(0);
     }
   }
 
@@ -101,9 +101,10 @@
     position: absolute;
     bottom: 0;
     left: 0;
-    height: 4px; 
-    background-color: hsl(var(--primary)); 
-    width: 100%; /* Initial width, animation will take over */
+    right: 0; /* Use left and right for full width */
+    height: 4px;
+    background-color: hsl(var(--primary));
+    transform-origin: left; /* Important for scaleX animation */
     /* animation property will be set via inline style in JS */
   }
 }
