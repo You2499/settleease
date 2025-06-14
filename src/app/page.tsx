@@ -23,7 +23,7 @@ import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
-import AnalyticsTab from '@/components/settleease/AnalyticsTab'; // Added import
+import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 
@@ -98,20 +98,18 @@ export default function SettleEasePage() {
         setCurrentUser(prevLocalUser => { 
           if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
               console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
+              if (!newAuthUser) { // If user is changing to null (logout)
+                setUserRole(null); // Reset role immediately
+                setIsDataFetchedAtLeastOnce(false); // Reset data fetch flag
+              }
               return newAuthUser;
           }
           return prevLocalUser; 
         });
 
         if (!newAuthUser) { 
-          console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data, setting role to null.");
-          setPeople([]);
-          setExpenses([]);
-          setCategories([]);
-          setSettlementPayments([]);
-          setUserRole(null);
-          setActiveView('dashboard');
-          setIsDataFetchedAtLeastOnce(false);
+          console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data (will be handled by User Role & Data Effect).");
+          // Resetting data and role is now primarily handled by the User Role & Data Effect when currentUser becomes null.
           if (_event === "SIGNED_OUT") {
             toast({ title: "Logged Out", description: "You have been successfully logged out." });
           }
@@ -146,7 +144,7 @@ export default function SettleEasePage() {
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
     if (!db || !userId) return 'user';
-    setIsLoadingRole(true);
+    // setIsLoadingRole(true) is handled by the caller effect
     try {
       const { data, error } = await db
         .from(USER_PROFILES_TABLE)
@@ -188,14 +186,14 @@ export default function SettleEasePage() {
       );
       return 'user';
     } finally {
-      setIsLoadingRole(false);
+      // setIsLoadingRole(false) is handled by the caller effect
     }
   }, [db]);
 
 
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
     if (!db || supabaseInitializationError || !currentUser) {
-      setIsLoadingData(false);
+      if (showLoadingIndicator) setIsLoadingData(false); // Ensure loader is turned off if prerequisites fail
       return;
     }
     if (showLoadingIndicator) setIsLoadingData(true);
@@ -269,6 +267,7 @@ export default function SettleEasePage() {
     if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred) {
         setIsDataFetchedAtLeastOnce(true);
     }
+    // Always turn off loading indicator if it was turned on, or if all fetches succeeded
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred)) {
      setIsLoadingData(false);
     }
@@ -325,61 +324,72 @@ export default function SettleEasePage() {
     }
   }, [currentUser, userRole, supabaseInitializationError, db]);
 
-
+  // Effect for fetching user role and initial data load
   useEffect(() => {
     let isMounted = true;
-    console.log("User/Role/Data effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser);
-
+    console.log("User Role & Data Effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser, "userRole:", userRole, "isDataFetchedOnce:", isDataFetchedAtLeastOnce);
+  
     if (isLoadingAuth) {
-      console.log("User/Role/Data effect: Still loading auth, skipping.");
+      console.log("User Role & Data Effect: Still loading auth, skipping.");
       return;
     }
-
+  
     if (currentUser) {
-      console.log("User/Role/Data effect: currentUser exists. Fetching role.");
-      setIsLoadingRole(true);
-      fetchUserRole(currentUser.id).then(role => {
-        if (!isMounted) {
-          console.log("User/Role/Data effect: fetchUserRole - Component unmounted.");
-          return;
-        }
-        console.log("User/Role/Data effect: fetchUserRole - Role fetched:", role);
-        setUserRole(role);
-        setIsLoadingRole(false);
-
-        if (role === 'user' && !['dashboard', 'analytics'].includes(activeView)) {
-          console.log("User/Role/Data effect: User role is 'user' but not on dashboard or analytics. Resetting to dashboard.");
-          setActiveView('dashboard');
-        }
-
-
-        console.log("User/Role/Data effect: Adding default people and fetching all data.");
-        setIsLoadingData(true); 
-        addDefaultPeople().then(() => {
+      if (!userRole) { // Fetch role only if not already set for the current user session
+        console.log("User Role & Data Effect: currentUser exists, userRole not set. Fetching role.");
+        setIsLoadingRole(true);
+        fetchUserRole(currentUser.id).then(fetchedRole => {
           if (!isMounted) {
-            console.log("User/Role/Data effect: addDefaultPeople - Component unmounted.");
+            console.log("User Role & Data Effect: fetchUserRole - Component unmounted.");
+            setIsLoadingRole(false);
             return;
           }
-          fetchAllData(true); 
+          console.log("User Role & Data Effect: fetchUserRole - Role fetched:", fetchedRole);
+          setUserRole(fetchedRole);
+          setIsLoadingRole(false);
+  
+          // Proceed with role-dependent setup and initial data fetch
+          addDefaultPeople().then(() => {
+            if (!isMounted) return;
+            fetchAllData(true); // This will set isLoadingData and isDataFetchedAtLeastOnce
+          });
         });
-      });
+      } else {
+        // User and role are already known. Fetch data if it hasn't been fetched yet.
+        if (!isDataFetchedAtLeastOnce) {
+          console.log("User Role & Data Effect: Role known, but data not fetched. Fetching data.");
+          fetchAllData(true);
+        } else {
+          console.log("User Role & Data Effect: Role and data already loaded.");
+        }
+      }
     } else { 
-      console.log("User/Role/Data effect: No currentUser and not loading auth. Resetting app state.");
+      // No currentUser and not loading auth: Reset app state
+      console.log("User Role & Data Effect: No currentUser. Resetting app state.");
       setPeople([]);
       setExpenses([]);
       setCategories([]);
       setSettlementPayments([]);
       setUserRole(null);
-      setIsLoadingRole(false);
+      setIsLoadingRole(false); // Ensure cleared
       setIsDataFetchedAtLeastOnce(false);
-      setIsLoadingData(false); 
       setActiveView('dashboard');
     }
     return () => {
-      console.log("User/Role/Data effect: Cleanup. isMounted=false.");
+      console.log("User Role & Data Effect: Cleanup. isMounted=false.");
       isMounted = false;
     };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]); 
+  }, [currentUser, isLoadingAuth, userRole, fetchUserRole, addDefaultPeople, fetchAllData, isDataFetchedAtLeastOnce]);
+  
+  // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
+  useEffect(() => {
+    if (userRole === 'user' && !['dashboard', 'analytics'].includes(activeView)) {
+      console.log("Role-View Sync Effect: User role is 'user' and current view is restricted. Resetting to dashboard.");
+      setActiveView('dashboard');
+      // Optionally, show a toast if the change was due to role restriction
+      // toast({ title: "Access Denied", description: "Redirected to Dashboard.", variant: "destructive" });
+    }
+  }, [userRole, activeView]);
 
 
   useEffect(() => {
@@ -568,11 +578,14 @@ export default function SettleEasePage() {
     if (error) {
       if (error.message === "Auth session missing!") {
         console.warn("Logout attempt: Auth session was already missing or token was invalid. Forcing local currentUser to null.");
-        setCurrentUser(null); 
+        setCurrentUser(null); // This will trigger the User Role & Data Effect to reset state.
       } else {
         toast({ title: "Logout Error", description: error.message, variant: "destructive" });
       }
     }
+    // No need to manually reset currentUser here if onAuthStateChange handles it,
+    // but if onAuthStateChange is slow or fails, setting it directly can be a fallback.
+    // The current setCurrentUser(null) inside onAuthStateChange should be sufficient.
   };
 
 
@@ -581,7 +594,7 @@ export default function SettleEasePage() {
   const handleSetActiveView = (view: ActiveView) => {
     if (userRole === 'user' && !['dashboard', 'analytics'].includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard');
+      setActiveView('dashboard'); // This triggers the Role-View Sync effect if needed
     } else {
       setActiveView(view);
     }
