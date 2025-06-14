@@ -116,7 +116,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       <DialogContent className="sm:max-w-xl md:max-w-3xl max-h-[90vh] flex flex-col"> {/* Default p-6 will apply */}
         <DialogHeader className="pb-4 border-b"> {/* Sits within DialogContent's padding */}
           <DialogTitle className="text-2xl text-primary flex items-center">
-            <Info className="mr-2.5 h-6 w-6" /> Expense Details
+            Expense Details
           </DialogTitle>
           <ShadDialogDescription className="sr-only">
             Detailed breakdown of the selected expense.
@@ -128,7 +128,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             
             <Card>
               <CardHeader className="pb-3 pt-4">
-                <CardTitle className="text-lg font-semibold">General Information</CardTitle>
+                <CardTitle className="text-lg font-semibold flex items-center">
+                  <Info className="mr-2 h-5 w-5 text-muted-foreground"/>General Information
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div className="flex justify-between">
@@ -384,3 +386,5 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     </Dialog>
   );
 }
+
+    
