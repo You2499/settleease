@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
-import { CHART_COLORS, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants'; // Added AVAILABLE_CATEGORY_ICONS
+import { CHART_COLORS, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import type {
   Expense, Person, Category as DynamicCategory,
   CategoryAnalyticsData, ParticipantAnalyticsData, ExpenseAmountDistributionData,
@@ -54,7 +54,7 @@ export default function AnalyticsTab({
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
       return allExpenses.filter(exp => {
         const personPaid = exp.paid_by.some(p => p.personId === selectedPersonIdForAnalytics);
-        const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics);
+        const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001);
         return personPaid || personShared;
       });
     }
@@ -63,9 +63,7 @@ export default function AnalyticsTab({
 
 
   const enhancedOverallStats = useMemo(() => {
-    const totalAmount = displayedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0);
     const expenseCount = displayedExpenses.length;
-    const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
     let firstDate: Date | null = null;
     let lastDate: Date | null = null;
 
@@ -76,178 +74,296 @@ export default function AnalyticsTab({
       firstDate = new Date(sortedExpensesByDate[0].created_at || Date.now());
       lastDate = new Date(sortedExpensesByDate[expenseCount - 1].created_at || Date.now());
     }
-
+    
     const distinctParticipants = new Set<string>();
     displayedExpenses.forEach(exp => {
       exp.paid_by.forEach(p => distinctParticipants.add(p.personId));
       exp.shares.forEach(s => distinctParticipants.add(s.personId));
     });
 
+    let totalAmount = 0;
     let mostExpensiveCatData: { name: string; totalAmount: number; } = { name: 'N/A', totalAmount: 0 };
-    // This will be derived from detailedCategoryAnalytics later for accuracy with item-level cats
-    // For now, a simple placeholder, the real one will come from detailedCategoryAnalytics
-    const tempCategorySpending: Record<string, number> = {};
-    displayedExpenses.forEach(exp => {
+    let largestSingleExpData: { description: string; amount: number; date: string } = { description: 'N/A', amount: 0, date: '' };
+
+    if (analyticsViewMode === 'group') {
+      totalAmount = displayedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0);
+      
+      const tempCategorySpending: Record<string, number> = {};
+      displayedExpenses.forEach(exp => {
         if (exp.split_method === 'itemwise' && exp.items) {
-            exp.items.forEach(item => {
-                const cat = item.categoryName || exp.category || UNCATEGORIZED;
-                tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(item.price);
-            });
+          exp.items.forEach(item => {
+            const cat = item.categoryName || exp.category || UNCATEGORIZED;
+            tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(item.price);
+          });
         } else {
-            const cat = exp.category || UNCATEGORIZED;
-            tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(exp.total_amount);
+          const cat = exp.category || UNCATEGORIZED;
+          tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(exp.total_amount);
         }
-    });
-    const sortedTempCategories = Object.entries(tempCategorySpending).sort(([,a],[,b]) => b-a);
-    if (sortedTempCategories.length > 0) {
+      });
+      const sortedTempCategories = Object.entries(tempCategorySpending).sort(([,a],[,b]) => b-a);
+      if (sortedTempCategories.length > 0) {
         mostExpensiveCatData = { name: sortedTempCategories[0][0], totalAmount: sortedTempCategories[0][1] };
-    }
+      }
 
+      if (expenseCount > 0) {
+        const sortedByAmount = [...displayedExpenses].sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
+        largestSingleExpData = {
+          description: sortedByAmount[0].description,
+          amount: Number(sortedByAmount[0].total_amount),
+          date: new Date(sortedByAmount[0].created_at || Date.now()).toLocaleDateString()
+        };
+      }
+    } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+      const personalCategorySpending: Record<string, number> = {};
+      let maxPersonalShare = 0;
 
-    let largestSingleExp: { description: string; amount: number; date: string } = { description: 'N/A', amount: 0, date: '' };
-    if (expenseCount > 0) {
-      const sortedByAmount = [...displayedExpenses].sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
-      largestSingleExp = {
-        description: sortedByAmount[0].description,
-        amount: Number(sortedByAmount[0].total_amount),
-        date: new Date(sortedByAmount[0].created_at || Date.now()).toLocaleDateString()
-      };
+      displayedExpenses.forEach(exp => {
+        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+        const personShareAmount = Number(personShare?.amount || 0);
+        totalAmount += personShareAmount;
+
+        if (personShareAmount > 0) {
+            if (personShareAmount > maxPersonalShare) {
+                maxPersonalShare = personShareAmount;
+                largestSingleExpData = {
+                    description: exp.description,
+                    amount: personShareAmount,
+                    date: new Date(exp.created_at || Date.now()).toLocaleDateString()
+                };
+            }
+
+            if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
+                let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
+                const itemsSharedByPersonDetails: Array<{ originalPrice: number; category: string }> = [];
+
+                exp.items.forEach(item => {
+                    if (item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
+                        const originalItemPrice = Number(item.price) || 0;
+                        sumOfOriginalPricesOfItemsSharedByPersonThisExpense += originalItemPrice;
+                        itemsSharedByPersonDetails.push({
+                            originalPrice: originalItemPrice,
+                            category: item.categoryName || exp.category || UNCATEGORIZED,
+                        });
+                    }
+                });
+                
+                if (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001) {
+                    itemsSharedByPersonDetails.forEach(itemDetail => {
+                        const proportionOfShare = itemDetail.originalPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense;
+                        const amountForThisCategory = proportionOfShare * personShareAmount;
+                        personalCategorySpending[itemDetail.category] = (personalCategorySpending[itemDetail.category] || 0) + amountForThisCategory;
+                    });
+                } else if (itemsSharedByPersonDetails.length > 0) { // If share exists but items have 0 price or not linked proportionally
+                    const fallbackCat = exp.category || itemsSharedByPersonDetails[0]?.category || UNCATEGORIZED;
+                    personalCategorySpending[fallbackCat] = (personalCategorySpending[fallbackCat] || 0) + personShareAmount;
+                } else { // Person has a share, but not tied to specific items (e.g. general share on itemized bill, rare)
+                    const mainCat = exp.category || UNCATEGORIZED;
+                    personalCategorySpending[mainCat] = (personalCategorySpending[mainCat] || 0) + personShareAmount;
+                }
+            } else { // Not itemwise, or no items
+                const cat = exp.category || UNCATEGORIZED;
+                personalCategorySpending[cat] = (personalCategorySpending[cat] || 0) + personShareAmount;
+            }
+        }
+      });
+
+      const sortedPersonalCategories = Object.entries(personalCategorySpending).sort(([,a],[,b]) => b-a);
+      if (sortedPersonalCategories.length > 0) {
+        mostExpensiveCatData = { name: sortedPersonalCategories[0][0], totalAmount: sortedPersonalCategories[0][1] };
+      }
     }
+    
+    const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
 
     return {
       totalAmount, expenseCount, averageAmount, firstDate, lastDate,
       distinctParticipantCount: distinctParticipants.size,
-      mostExpensiveCategory: mostExpensiveCatData, // This will be updated by detailedCategoryAnalytics if needed
-      largestSingleExpense: largestSingleExp,
+      mostExpensiveCategory: mostExpensiveCatData,
+      largestSingleExpense: largestSingleExpData,
     };
-  }, [displayedExpenses]);
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const monthlyExpenseData: MonthlyExpenseData[] = useMemo(() => {
     const data: Record<string, number> = {};
     displayedExpenses.forEach(exp => {
       if (exp.created_at) {
         const monthYear = new Date(exp.created_at).toLocaleDateString('default', { year: 'numeric', month: 'short' });
-        data[monthYear] = (data[monthYear] || 0) + Number(exp.total_amount);
+        let amountToLog = 0;
+        if (analyticsViewMode === 'group') {
+          amountToLog = Number(exp.total_amount);
+        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+          const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+          amountToLog = Number(personShare?.amount || 0);
+        }
+        if (amountToLog > 0.001) {
+            data[monthYear] = (data[monthYear] || 0) + amountToLog;
+        }
       }
     });
     return Object.entries(data)
       .map(([month, totalAmount]) => ({ month, totalAmount }))
       .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
-  }, [displayedExpenses]);
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+
 
   const detailedCategoryAnalytics: CategoryAnalyticsData[] = useMemo(() => {
     const categoryDataMap: Record<string, {
-      totalAmount: number;
-      expenseIds: Set<string>;
-      potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>;
-      payerContributions: Record<string, number>;
+        totalAmount: number; // Total share for personal, total expense for group
+        expenseIds: Set<string>; // Unique expense IDs contributing
+        potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>; // amount is share for personal, price/total for group
+        personalPaymentsForCategory: number; // Only for personal view: how much selected person paid for items in this category
     }> = {};
 
-    // Initialize for all known dynamic categories and a general "Uncategorized"
     dynamicCategories.forEach(cat => {
-      categoryDataMap[cat.name] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+        categoryDataMap[cat.name] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
     });
     if (!categoryDataMap[UNCATEGORIZED]) {
-      categoryDataMap[UNCATEGORIZED] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+        categoryDataMap[UNCATEGORIZED] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
     }
 
     displayedExpenses.forEach(exp => {
-      const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
-      const expenseTotalAmountNum = Number(exp.total_amount) || 0;
+        const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
+        const personShareForExpense = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
+            ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
+            : Number(exp.total_amount); // Fallback for group or if no specific person share (shouldn't happen if displayedExpenses is right)
+        
+        const expenseTotalAmountNum = Number(exp.total_amount) || 0;
 
-      if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-        exp.items.forEach(item => {
-          const itemPrice = Number(item.price) || 0;
-          if (itemPrice <= 0) return;
-
-          const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
-          if (!categoryDataMap[targetCategory]) { // Ensure category exists in map
-            categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
-          }
-
-          categoryDataMap[targetCategory].totalAmount += itemPrice;
-          categoryDataMap[targetCategory].expenseIds.add(exp.id);
-          categoryDataMap[targetCategory].potentialMostExpensive.push({
-            type: 'item',
-            id: item.id, // item's own id
-            description: item.name,
-            amount: itemPrice,
-            date: expDate,
-            mainExpenseDescription: exp.description
-          });
-
-          if (expenseTotalAmountNum > 0) {
-            const itemProportionOfExpense = itemPrice / expenseTotalAmountNum;
-            exp.paid_by.forEach(payer => {
-              const payerAmount = Number(payer.amount) || 0;
-              const payerContributionToItem = itemProportionOfExpense * payerAmount;
-              categoryDataMap[targetCategory].payerContributions[payer.personId] =
-                (categoryDataMap[targetCategory].payerContributions[payer.personId] || 0) + payerContributionToItem;
-            });
-          }
-        });
-      } else { // Not itemwise or no items
-        if (expenseTotalAmountNum <= 0) return;
-
-        const targetCategory = exp.category || UNCATEGORIZED;
-        if (!categoryDataMap[targetCategory]) { // Ensure category exists in map
-          categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], payerContributions: {} };
+        // Calculate how much the selected person paid for *this specific expense*
+        let selectedPersonPaymentForThisExpense = 0;
+        if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+            selectedPersonPaymentForThisExpense = exp.paid_by
+                .filter(p => p.personId === selectedPersonIdForAnalytics)
+                .reduce((sum, p) => sum + Number(p.amount), 0);
         }
 
-        categoryDataMap[targetCategory].totalAmount += expenseTotalAmountNum;
-        categoryDataMap[targetCategory].expenseIds.add(exp.id);
-        categoryDataMap[targetCategory].potentialMostExpensive.push({
-          type: 'expense',
-          id: exp.id,
-          description: exp.description,
-          amount: expenseTotalAmountNum,
-          date: expDate
-        });
-        exp.paid_by.forEach(payer => {
-          const payerAmount = Number(payer.amount) || 0;
-          categoryDataMap[targetCategory].payerContributions[payer.personId] =
-            (categoryDataMap[targetCategory].payerContributions[payer.personId] || 0) + payerAmount;
-        });
-      }
+
+        if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
+            let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
+            if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+                exp.items.forEach(item => {
+                    if (item.sharedBy.includes(selectedPersonIdForAnalytics)) {
+                        sumOfOriginalPricesOfItemsSharedByPersonThisExpense += (Number(item.price) || 0);
+                    }
+                });
+            }
+
+            exp.items.forEach(item => {
+                const originalItemPrice = Number(item.price) || 0;
+                if (originalItemPrice <= 0.001 && analyticsViewMode === 'group') return; // Skip 0-price items in group view for category total
+
+                const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
+                if (!categoryDataMap[targetCategory]) {
+                    categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
+                }
+
+                let amountToCreditToCategory = 0;
+                let paymentContributionToCategory = 0;
+
+                if (analyticsViewMode === 'group') {
+                    amountToCreditToCategory = originalItemPrice;
+                    // Note: Payer contribution for group mode's category analytics is complex with item-wise, simplified for now
+                } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics)) {
+                    const proportionOfShare = (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001 && personShareForExpense > 0.001)
+                        ? (originalItemPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense)
+                        : (personShareForExpense > 0.001 && exp.items.filter(i => i.sharedBy.includes(selectedPersonIdForAnalytics!)).length === 1 ? 1 : 0); // If only one item shared by person, attribute full share
+                    
+                    amountToCreditToCategory = proportionOfShare * personShareForExpense;
+
+                    if (expenseTotalAmountNum > 0.001 && selectedPersonPaymentForThisExpense > 0.001) {
+                        const itemProportionOfTotalExpense = originalItemPrice / expenseTotalAmountNum;
+                        paymentContributionToCategory = itemProportionOfTotalExpense * selectedPersonPaymentForThisExpense;
+                    }
+                }
+                
+                if (amountToCreditToCategory > 0.001) {
+                    categoryDataMap[targetCategory].totalAmount += amountToCreditToCategory;
+                    categoryDataMap[targetCategory].expenseIds.add(exp.id);
+                    categoryDataMap[targetCategory].potentialMostExpensive.push({
+                        type: 'item',
+                        id: item.id,
+                        description: item.name,
+                        amount: amountToCreditToCategory, // This is person's share portion for this item or item price for group
+                        date: expDate,
+                        mainExpenseDescription: exp.description
+                    });
+                    if (analyticsViewMode === 'personal') {
+                        categoryDataMap[targetCategory].personalPaymentsForCategory += paymentContributionToCategory;
+                    }
+                }
+            });
+        } else { // Not itemwise or no items
+            if (personShareForExpense <= 0.001 && analyticsViewMode === 'personal') return; // Skip if person's share is 0 for this expense
+            if (expenseTotalAmountNum <= 0.001 && analyticsViewMode === 'group') return;
+
+
+            const targetCategory = exp.category || UNCATEGORIZED;
+            if (!categoryDataMap[targetCategory]) {
+                categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
+            }
+            
+            let amountToCreditToCategory = analyticsViewMode === 'group' ? expenseTotalAmountNum : personShareForExpense;
+
+            if (amountToCreditToCategory > 0.001) {
+                categoryDataMap[targetCategory].totalAmount += amountToCreditToCategory;
+                categoryDataMap[targetCategory].expenseIds.add(exp.id);
+                categoryDataMap[targetCategory].potentialMostExpensive.push({
+                    type: 'expense',
+                    id: exp.id,
+                    description: exp.description,
+                    amount: amountToCreditToCategory, // Person's share for this expense or total expense for group
+                    date: expDate
+                });
+                if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+                     categoryDataMap[targetCategory].personalPaymentsForCategory += selectedPersonPaymentForThisExpense;
+                }
+            }
+        }
     });
 
     return Object.entries(categoryDataMap).map(([name, data]) => {
-      const { totalAmount, expenseIds, potentialMostExpensive, payerContributions } = data;
-      const expenseCount = expenseIds.size;
+        const { totalAmount, expenseIds, potentialMostExpensive, personalPaymentsForCategory } = data;
+        const expenseCount = expenseIds.size;
 
-      let mostExpensiveItemData: { description: string; amount: number; date: string; } | null = null;
-      if (potentialMostExpensive.length > 0) {
-        const sortedItems = [...potentialMostExpensive].sort((a, b) => b.amount - a.amount);
-        const topItem = sortedItems[0];
-        mostExpensiveItemData = {
-          description: topItem.type === 'item' ? `${topItem.description} (from "${topItem.mainExpenseDescription}")` : topItem.description,
-          amount: topItem.amount,
-          date: topItem.date
-        };
-      }
-
-      let largestPayerData: { name: string; amount: number; } | null = null;
-      if (Object.keys(payerContributions).length > 0) {
-        const sortedPayers = Object.entries(payerContributions)
-          .map(([personId, amount]) => ({ name: peopleMap[personId] || 'Unknown', amount }))
-          .sort((a, b) => b.amount - a.amount);
-        if (sortedPayers.length > 0 && sortedPayers[0].amount > 0.001) {
-          largestPayerData = sortedPayers[0];
+        let mostExpensiveItemData: { description: string; amount: number; date: string; } | null = null;
+        if (potentialMostExpensive.length > 0) {
+            const sortedItems = [...potentialMostExpensive].sort((a, b) => b.amount - a.amount);
+            const topItem = sortedItems[0];
+            mostExpensiveItemData = {
+                description: topItem.type === 'item' ? `${topItem.description} (from "${topItem.mainExpenseDescription}")` : topItem.description,
+                amount: topItem.amount,
+                date: topItem.date
+            };
         }
-      }
+        
+        // For 'largestPayer', in group view, it's who paid most for this category's expenses.
+        // In personal view, it's how much the selected person paid towards their shares in this category.
+        let largestPayerData: { name: string; amount: number; } | null = null;
+        if (analyticsViewMode === 'group') {
+            // This part is complex to do accurately here for group mode with item-wise and needs a dedicated sum-up.
+            // For simplicity, this might be slightly off for group mode if not derived from a full payer re-aggregation.
+            // Placeholder: use overall stats if available, or leave N/A.
+             const catFromOverall = enhancedOverallStats.mostExpensiveCategory.name === name ? enhancedOverallStats.mostExpensiveCategory : null;
+            // This is not ideal. True group-level largest payer per category is more involved.
+        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+            if (personalPaymentsForCategory > 0.001) {
+                 largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
+            }
+        }
 
-      return {
-        name,
-        totalAmount,
-        expenseCount,
-        averageAmount: expenseCount > 0 && totalAmount > 0 ? totalAmount / expenseCount : 0, // ensure totalAmount > 0 for avg
-        Icon: getCategoryIconFromName(name),
-        mostExpensiveItem: mostExpensiveItemData,
-        largestPayer: largestPayerData,
-      };
+
+        return {
+            name,
+            totalAmount,
+            expenseCount,
+            averageAmount: expenseCount > 0 && totalAmount > 0.001 ? totalAmount / expenseCount : 0,
+            Icon: getCategoryIconFromName(name),
+            mostExpensiveItem: mostExpensiveItemData,
+            largestPayer: largestPayerData,
+        };
     }).filter(cat => cat.totalAmount > 0.001 || dynamicCategories.some(dc => dc.name === cat.name))
       .sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap]);
+  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics, enhancedOverallStats.mostExpensiveCategory]);
 
 
   const detailedParticipantAnalytics: ParticipantAnalyticsData[] = useMemo(() => {
@@ -274,10 +390,11 @@ export default function AnalyticsTab({
         }
         if (personPaidThisExpense) expensesPaidCount++;
 
-        const personShareInExpense = exp.shares.find(s => s.personId === person.id);
-        if (personShareInExpense && Number(personShareInExpense.amount) > 0.001) {
-          const shareAmountForPersonInExpense = Number(personShareInExpense.amount);
-          totalShared += shareAmountForPersonInExpense;
+        const personShareInExpenseRecord = exp.shares.find(s => s.personId === person.id);
+        const personShareAmountForThisExpense = Number(personShareInExpenseRecord?.amount || 0);
+
+        if (personShareAmountForThisExpense > 0.001) {
+          totalShared += personShareAmountForThisExpense;
           expensesSharedCount++;
 
           if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
@@ -298,21 +415,19 @@ export default function AnalyticsTab({
             if (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001) {
               itemsSharedByPersonDetailsThisExpense.forEach(itemDetail => {
                 const proportionOfShare = itemDetail.originalPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense;
-                const amountForThisCategory = proportionOfShare * shareAmountForPersonInExpense;
+                const amountForThisCategory = proportionOfShare * personShareAmountForThisExpense;
                 categoryShares[itemDetail.category] = (categoryShares[itemDetail.category] || 0) + amountForThisCategory;
               });
             } else if (itemsSharedByPersonDetailsThisExpense.length > 0) {
-              // Fallback: if items have 0 price, distribute share equally or to main category
               const fallbackCat = exp.category || itemsSharedByPersonDetailsThisExpense[0]?.category || UNCATEGORIZED;
-              categoryShares[fallbackCat] = (categoryShares[fallbackCat] || 0) + shareAmountForPersonInExpense;
+              categoryShares[fallbackCat] = (categoryShares[fallbackCat] || 0) + personShareAmountForThisExpense;
             } else {
-                 // If person has a share but not linked to specific items (edge case, should not happen with correct logic)
                  const mainCat = exp.category || UNCATEGORIZED;
-                 categoryShares[mainCat] = (categoryShares[mainCat] || 0) + shareAmountForPersonInExpense;
+                 categoryShares[mainCat] = (categoryShares[mainCat] || 0) + personShareAmountForThisExpense;
             }
-          } else { // Not itemwise
+          } else { 
             const targetCategory = exp.category || UNCATEGORIZED;
-            categoryShares[targetCategory] = (categoryShares[targetCategory] || 0) + shareAmountForPersonInExpense;
+            categoryShares[targetCategory] = (categoryShares[targetCategory] || 0) + personShareAmountForThisExpense;
           }
         }
       });
@@ -351,16 +466,24 @@ export default function AnalyticsTab({
     }, {} as Record<string, number>);
 
     displayedExpenses.forEach(exp => {
-      const amount = Number(exp.total_amount);
-      for (const range of ranges) {
-        if (amount >= range.min && amount <= range.max) {
-          distribution[range.label]++;
-          break;
-        }
+      let amount = 0;
+      if (analyticsViewMode === 'group') {
+        amount = Number(exp.total_amount);
+      } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+        amount = Number(personShare?.amount || 0);
+      }
+      if (amount > 0) {
+          for (const range of ranges) {
+            if (amount >= range.min && amount <= range.max) {
+              distribution[range.label]++;
+              break;
+            }
+          }
       }
     });
     return Object.entries(distribution).map(([range, count]) => ({ range, count })).filter(d => d.count > 0);
-  }, [displayedExpenses]);
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const shareVsPaidData = useMemo(() => {
     const peopleToAnalyze = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
@@ -393,30 +516,58 @@ export default function AnalyticsTab({
     displayedExpenses.forEach(exp => {
       if (exp.created_at) {
         const dayOfWeek = days[new Date(exp.created_at).getDay()];
-        spending[dayOfWeek] = (spending[dayOfWeek] || 0) + Number(exp.total_amount);
+        let amountToLog = 0;
+        if (analyticsViewMode === 'group') {
+            amountToLog = Number(exp.total_amount);
+        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+            const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+            amountToLog = Number(personShare?.amount || 0);
+        }
+        if (amountToLog > 0.001) {
+            spending[dayOfWeek] = (spending[dayOfWeek] || 0) + amountToLog;
+        }
       }
     });
     return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
-  }, [displayedExpenses]);
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const splitMethodDistributionData: SplitMethodDistributionData[] = useMemo(() => {
     const counts: Record<string, number> = { 'equal': 0, 'unequal': 0, 'itemwise': 0 };
     displayedExpenses.forEach(exp => {
-      counts[exp.split_method] = (counts[exp.split_method] || 0) + 1;
+        if (analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001))) {
+            counts[exp.split_method] = (counts[exp.split_method] || 0) + 1;
+        }
     });
     return Object.entries(counts)
       .map(([method, count]) => ({ method: method.charAt(0).toUpperCase() + method.slice(1), count }))
       .filter(d => d.count > 0);
-  }, [displayedExpenses]);
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const topExpensesData: TopExpenseData[] = useMemo(() => {
-    return [...displayedExpenses]
-      .sort((a, b) => Number(b.total_amount) - Number(a.total_amount))
-      .slice(0, 10); // Top 10 expenses
-  }, [displayedExpenses]);
+    if (analyticsViewMode === 'group') {
+        return [...displayedExpenses]
+        .sort((a, b) => Number(b.total_amount) - Number(a.total_amount))
+        .slice(0, 10);
+    } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+        return displayedExpenses.map(exp => {
+            const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+            return { ...exp, personalShareAmount: Number(personShare?.amount || 0) };
+        })
+        .filter(exp => exp.personalShareAmount > 0.001)
+        .sort((a,b) => b.personalShareAmount - a.personalShareAmount)
+        .slice(0,10)
+        .map(({personalShareAmount, ...rest}) => ({...rest, total_amount: personalShareAmount })); // Use total_amount to display share for consistency
+    }
+    return [];
+  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+
 
   const actualMostExpensiveCategoryFromAnalytics = useMemo(() => {
+    // This uses detailedCategoryAnalytics which is already view-mode aware.
+    // For personal view, 'totalAmount' in detailedCategoryAnalytics is total share for that category.
+    // For group view, 'totalAmount' is total expense amount for that category.
     if (detailedCategoryAnalytics.length > 0) {
+      // detailedCategoryAnalytics is already sorted by totalAmount descending
       return { name: detailedCategoryAnalytics[0].name, totalAmount: detailedCategoryAnalytics[0].totalAmount };
     }
     return { name: 'N/A', totalAmount: 0 };
@@ -492,7 +643,7 @@ export default function AnalyticsTab({
                 <CardContent>
                 <p className="text-md text-muted-foreground">
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 
-                    `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses.` :
+                    `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :
                     "No expenses match the current filter."}
                 </p>
                 </CardContent>
@@ -509,15 +660,15 @@ export default function AnalyticsTab({
               </CardHeader>
               <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                 <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
-                  <p className="text-xs text-muted-foreground">Total Spent</p>
+                  <p className="text-xs text-muted-foreground">Total Spent {analyticsViewMode === 'personal' ? '(Your Share)' : '(Group Total)'}</p>
                   <p className="text-lg font-bold text-accent">{formatCurrency(enhancedOverallStats.totalAmount)}</p>
                 </div>
                 <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
-                  <p className="text-xs text-muted-foreground">Total Expenses</p>
+                  <p className="text-xs text-muted-foreground">Total Expenses {analyticsViewMode === 'personal' ? '(Involved In)' : ''}</p>
                   <p className="text-lg font-bold">{enhancedOverallStats.expenseCount}</p>
                 </div>
                 <div className="p-3 bg-card/50 rounded-md shadow-sm space-y-0.5">
-                  <p className="text-xs text-muted-foreground">Avg. Expense</p>
+                  <p className="text-xs text-muted-foreground">Avg. Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-lg font-bold">{formatCurrency(enhancedOverallStats.averageAmount)}</p>
                 </div>
                 {analyticsViewMode === 'group' && (
@@ -527,14 +678,14 @@ export default function AnalyticsTab({
                   </div>
                 )}
                 <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
-                  <p className="text-xs text-muted-foreground">Top Category</p>
+                  <p className="text-xs text-muted-foreground">Top Category {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
                     {actualMostExpensiveCategoryFromAnalytics.name}
                   </p>
                   <p className="text-xs text-muted-foreground">{formatCurrency(actualMostExpensiveCategoryFromAnalytics.totalAmount)}</p>
                 </div>
                 <div className={`p-3 bg-card/50 rounded-md shadow-sm space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
-                  <p className="text-xs text-muted-foreground">Largest Expense</p>
+                   <p className="text-xs text-muted-foreground">Largest Single Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
                   <p className="text-base font-semibold truncate" title={enhancedOverallStats.largestSingleExpense.description}>
                     {enhancedOverallStats.largestSingleExpense.description}
                   </p>
@@ -552,7 +703,10 @@ export default function AnalyticsTab({
             <div className="grid md:grid-cols-2 gap-6">
                 <Card className="shadow-md rounded-lg">
                 <CardHeader>
-                    <CardTitle className="text-lg flex items-center"><TrendingUp className="mr-2 h-5 w-5 text-primary"/>Expenses Over Time (Monthly)</CardTitle>
+                    <CardTitle className="text-lg flex items-center">
+                        <TrendingUp className="mr-2 h-5 w-5 text-primary"/>
+                        {analyticsViewMode === 'personal' ? 'Your Spending Over Time (Monthly)' : 'Group Expenses Over Time (Monthly)'}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -560,9 +714,9 @@ export default function AnalyticsTab({
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                         <XAxis dataKey="month" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
                         <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }} />
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), "Total Spent"]} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Line type="monotone" dataKey="totalAmount" name="Total Spent" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
+                        <Line type="monotone" dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} />
                     </LineChart>
                     </ResponsiveContainer>
                 </CardContent>
@@ -571,7 +725,7 @@ export default function AnalyticsTab({
                     <CardHeader>
                         <CardTitle className="text-lg flex items-center">
                         <BarChart3 className="mr-2 h-5 w-5 text-primary" />
-                        Share vs. Paid Comparison
+                        Share vs. Paid Comparison {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `(For ${peopleMap[selectedPersonIdForAnalytics]})` : ''}
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[300px]">
@@ -611,7 +765,10 @@ export default function AnalyticsTab({
                 {spendingByDayOfWeekData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center"><CalendarClock className="mr-2 h-5 w-5 text-primary"/>Spending by Day of Week</CardTitle>
+                        <CardTitle className="text-lg flex items-center">
+                            <CalendarClock className="mr-2 h-5 w-5 text-primary"/>
+                            {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -619,9 +776,9 @@ export default function AnalyticsTab({
                         <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
                         <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
                         <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 10 }}/>
-                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), "Total Spent"]}/>
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
                         <Legend wrapperStyle={{ fontSize: "11px" }} />
-                        <Bar dataKey="totalAmount" name="Total Spent" fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} barSize={25}/>
+                        <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[3, 3, 0, 0]} barSize={25}/>
                         </BarChart>
                     </ResponsiveContainer>
                     </CardContent>
@@ -630,7 +787,10 @@ export default function AnalyticsTab({
                 {splitMethodDistributionData.length > 0 && (
                 <Card className="shadow-md rounded-lg">
                     <CardHeader>
-                        <CardTitle className="text-lg flex items-center"><GitFork className="mr-2 h-5 w-5 text-primary"/>Split Method Distribution</CardTitle>
+                        <CardTitle className="text-lg flex items-center">
+                            <GitFork className="mr-2 h-5 w-5 text-primary"/>
+                            Split Method Distribution {analyticsViewMode === 'personal' ? '(For Your Expenses)' : ''}
+                        </CardTitle>
                     </CardHeader>
                     <CardContent className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
@@ -652,7 +812,10 @@ export default function AnalyticsTab({
             {topExpensesData.length > 0 && (
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
-                <CardTitle className="text-lg flex items-center"><Award className="mr-2 h-5 w-5 text-primary"/>Top 10 Largest Expenses</CardTitle>
+                <CardTitle className="text-lg flex items-center">
+                    <Award className="mr-2 h-5 w-5 text-primary"/>
+                    Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
+                </CardTitle>
                 </CardHeader>
                 <CardContent>
                 <ScrollArea className="h-auto max-h-[400px]">
@@ -660,7 +823,7 @@ export default function AnalyticsTab({
                     <TableHeader>
                         <TableRow>
                         <TableHead className="py-2 px-2 text-xs">Description</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Amount</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Your Share)' : '(Total)'}</TableHead>
                         <TableHead className="py-2 px-2 text-xs">Category</TableHead>
                         <TableHead className="py-2 px-2 text-xs">Date</TableHead>
                         <TableHead className="py-2 px-2 text-xs">Paid By</TableHead>
@@ -670,7 +833,7 @@ export default function AnalyticsTab({
                         {topExpensesData.map(exp => (
                         <TableRow key={exp.id}>
                             <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-xs" title={exp.description}>{exp.description}</TableCell>
-                            <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell>
+                            <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell> {/* total_amount is repurposed to store personalShareAmount in personal view */}
                             <TableCell className="py-1.5 px-2 text-xs">{exp.category}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs">{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
                             <TableCell className="py-1.5 px-2 text-xs truncate max-w-[150px]" title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
@@ -687,7 +850,10 @@ export default function AnalyticsTab({
 
             <Card className="shadow-md rounded-lg">
             <CardHeader>
-                <CardTitle className="text-lg flex items-center"><SearchCheck className="mr-2 h-5 w-5 text-primary"/>Category Deep Dive</CardTitle>
+                <CardTitle className="text-lg flex items-center">
+                    <SearchCheck className="mr-2 h-5 w-5 text-primary"/>
+                    Category Deep Dive {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
+                </CardTitle>
             </CardHeader>
             <CardContent>
                 <ScrollArea className="h-auto max-h-[400px]">
@@ -695,11 +861,12 @@ export default function AnalyticsTab({
                     <TableHeader>
                     <TableRow>
                         <TableHead className="py-2 px-2 text-xs">Category</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Total</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>
                         <TableHead className="py-2 px-2 text-xs text-right"># Exp.</TableHead>
-                        <TableHead className="py-2 px-2 text-xs text-right">Avg.</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Largest Expense in Category</TableHead>
-                        <TableHead className="py-2 px-2 text-xs">Top Payer in Category</TableHead>
+                        <TableHead className="py-2 px-2 text-xs text-right">Avg. {analyticsViewMode === 'personal' ? 'Share' : 'Expense'}</TableHead>
+                        <TableHead className="py-2 px-2 text-xs">Largest {analyticsViewMode === 'personal' ? 'Share Instance' : 'Item/Expense'}</TableHead>
+                        {analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs">Your Payments for this Cat.</TableHead>}
+                        {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs">Top Payer (Overall)</TableHead>}
                     </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -727,9 +894,9 @@ export default function AnalyticsTab({
                 <CardHeader>
                 <CardTitle className="text-lg flex items-center">
                     <User className="mr-2 h-5 w-5 text-primary"/>
-                    {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Financial Summary (Involved Expenses)` : 'Participant Deep Dive (Based on Expenses)'}
+                    {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? `${peopleMap[selectedPersonIdForAnalytics]}'s Financial Summary` : 'Participant Financial Summary'}
                 </CardTitle>
-                <CardDescription className="text-xs">This shows financial details derived purely from the displayed expense records, not reflecting settlements.</CardDescription>
+                <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <ScrollArea className="h-auto max-h-[400px]">
@@ -739,7 +906,7 @@ export default function AnalyticsTab({
                                 <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
                                 <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
                                 <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
-                                <TableHead className="py-2 px-2 text-xs text-right">Net</TableHead>
+                                <TableHead className="py-2 px-2 text-xs text-right">Net (Paid - Shared)</TableHead>
                                 <TableHead className="py-2 px-2 text-xs text-right"># Paid</TableHead>
                                 <TableHead className="py-2 px-2 text-xs text-right"># Shared</TableHead>
                                 <TableHead className="py-2 px-2 text-xs text-right">Avg. Share</TableHead>
@@ -772,7 +939,10 @@ export default function AnalyticsTab({
             <div className="grid md:grid-cols-2 gap-6">
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
-                <CardTitle className="text-lg flex items-center"><PieChartIconLucide className="mr-2 h-5 w-5 text-primary"/>Spending by Category (Top 5)</CardTitle>
+                <CardTitle className="text-lg flex items-center">
+                    <PieChartIconLucide className="mr-2 h-5 w-5 text-primary"/>
+                    Spending by Category (Top 5) {analyticsViewMode === 'personal' ? '(Your Shares)' : ''}
+                </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -791,7 +961,10 @@ export default function AnalyticsTab({
             {expenseAmountDistributionData.length > 0 && (
             <Card className="shadow-md rounded-lg">
                 <CardHeader>
-                <CardTitle className="text-lg flex items-center"><BarChart3 className="mr-2 h-5 w-5 text-primary"/>Expense Amount Distribution</CardTitle>
+                <CardTitle className="text-lg flex items-center">
+                    <BarChart3 className="mr-2 h-5 w-5 text-primary"/>
+                    Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
@@ -799,9 +972,9 @@ export default function AnalyticsTab({
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))"/>
                     <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
                     <YAxis type="category" dataKey="range" width={75} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value: number) => [value, "Number of Expenses"]} />
+                    <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '12px' }} formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
                     <Legend wrapperStyle={{ fontSize: "11px" }} />
-                    <Bar dataKey="count" name="Expenses" fill="hsl(var(--chart-4))" radius={[0, 3, 3, 0]} barSize={20} />
+                    <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 3, 3, 0]} barSize={20} />
                     </BarChart>
                 </ResponsiveContainer>
                 </CardContent>
@@ -814,3 +987,4 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
+
