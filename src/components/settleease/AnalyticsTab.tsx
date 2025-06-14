@@ -12,6 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease/types';
+import ShareVsPaidChart from './dashboard/ShareVsPaidChart'; // Added import
 
 interface AnalyticsTabProps {
   expenses: Expense[];
@@ -156,6 +157,27 @@ export default function AnalyticsTab({
     return Object.entries(distribution).map(([range, count]) => ({ range, count })).filter(d => d.count > 0);
   }, [expenses]);
 
+  const shareVsPaidData = useMemo(() => {
+    if (!people.length) return [];
+    return people.map(person => {
+      let totalPaidByPerson = 0;
+      let totalShareForPerson = 0;
+      expenses.forEach(expense => {
+        if (Array.isArray(expense.paid_by)) {
+          expense.paid_by.forEach(payment => {
+            if (payment.personId === person.id) totalPaidByPerson += Number(payment.amount);
+          });
+        }
+        if (Array.isArray(expense.shares)) {
+          expense.shares.forEach(share => {
+            if (share.personId === person.id) totalShareForPerson += Number(share.amount);
+          });
+        }
+      });
+      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalShareForPerson };
+    }).filter(d => d.paid > 0.01 || d.share > 0.01);
+  }, [expenses, people, peopleMap]);
+
 
   if (expenses.length === 0) {
     return (
@@ -174,7 +196,7 @@ export default function AnalyticsTab({
   }
 
   return (
-    <ScrollArea className="h-full p-0.5"> {/* Added p-0.5 for slight padding if scrollbars appear near edge */}
+    <ScrollArea className="h-full p-0.5">
       <div className="space-y-6">
         {/* Overall Stats */}
         <Card className="shadow-md rounded-lg">
@@ -225,6 +247,9 @@ export default function AnalyticsTab({
             </ResponsiveContainer>
           </CardContent>
         </Card>
+        
+        {/* Share vs. Paid Comparison Chart - Moved from Dashboard */}
+        <ShareVsPaidChart shareVsPaidData={shareVsPaidData} />
 
         {/* Detailed Category Breakdown */}
         <div className="grid md:grid-cols-2 gap-6">
@@ -336,6 +361,3 @@ export default function AnalyticsTab({
     </ScrollArea>
   );
 }
-
-
-    

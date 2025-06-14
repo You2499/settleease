@@ -3,14 +3,14 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { FileText, PieChart as PieChartIcon, BarChart3 } from 'lucide-react';
+import { FileText } from 'lucide-react'; // Removed PieChartIcon, BarChart3
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
-import ShareVsPaidChart from './dashboard/ShareVsPaidChart';
-import ExpensesByCategoryChart from './dashboard/ExpensesByCategoryChart';
+// Removed ShareVsPaidChart import
+// Removed ExpensesByCategoryChart import
 import ExpenseLog from './dashboard/ExpenseLog';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
@@ -221,42 +221,14 @@ export default function DashboardView({
     );
   }
 
-  const shareVsPaidData = useMemo(() => {
-    if (!people.length) return [];
-    return people.map(person => {
-      let totalPaidByPerson = 0;
-      let totalShareForPerson = 0;
-      expenses.forEach(expense => {
-        if (Array.isArray(expense.paid_by)) {
-          expense.paid_by.forEach(payment => {
-            if (payment.personId === person.id) totalPaidByPerson += Number(payment.amount);
-          });
-        }
-        if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            if (share.personId === person.id) totalShareForPerson += Number(share.amount);
-          });
-        }
-      });
-      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalShareForPerson };
-    }).filter(d => d.paid > 0.01 || d.share > 0.01);
-  }, [expenses, people, peopleMap]);
-
-  const expensesByCategoryData = useMemo(() => {
-    const data: Record<string, number> = {};
-    expenses.forEach(exp => {
-      const categoryName = exp.category || "Uncategorized";
-      data[categoryName] = (data[categoryName] || 0) + Number(exp.total_amount);
-    });
-    return Object.entries(data).map(([name, amount]) => ({ name, amount: Number(amount) })).filter(d => d.amount > 0.01);
-  }, [expenses]);
+  // Removed shareVsPaidData and expensesByCategoryData calculations
 
   return (
     <div className="space-y-6">
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
-        allExpenses={expenses} // Pass allExpenses here
+        allExpenses={expenses} 
         people={people}
         peopleMap={peopleMap}
         settlementPayments={settlementPayments}
@@ -266,11 +238,10 @@ export default function DashboardView({
         userRole={userRole} 
       />
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <ShareVsPaidChart shareVsPaidData={shareVsPaidData} />
-        <ExpensesByCategoryChart expensesByCategory={expensesByCategoryData} />
-      </div>
-
+      {/* Removed the grid div that contained the charts */}
+      {/* <ShareVsPaidChart shareVsPaidData={shareVsPaidData} /> */}
+      {/* <ExpensesByCategoryChart expensesByCategory={expensesByCategoryData} /> */}
+      
       <ExpenseLog
         expenses={expenses}
         peopleMap={peopleMap}
