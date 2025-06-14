@@ -111,7 +111,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         {/* Left Pane: Branding & Features - Fixed width, content vertically centered */}
         <div className={`md:w-2/5 flex flex-col justify-center p-8 transition-colors duration-300 ease-in-out
                          ${isLoginView ? 'bg-secondary/20' : 'bg-primary text-primary-foreground'}`}>
-          <div className="min-h-[440px] flex flex-col justify-center"> {/* Wrapper to stabilize left pane content height */}
+          <div className="min-h-[480px] flex flex-col justify-center"> {/* Wrapper to stabilize left pane content height, matching right pane's content wrapper */}
             {isLoginView ? (
               <div className="text-center">
                 <HandCoins className="h-20 w-20 mx-auto mb-6 text-primary" />
