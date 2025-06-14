@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ import UnequalSplitSection from './addexpense/UnequalSplitSection';
 import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 
 import { EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
-import { formatCurrency } from '@/lib/settleease';
+import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
 
 interface AddExpenseTabProps {
@@ -60,6 +60,8 @@ export default function AddExpenseTab({
   const [isLoading, setIsLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   
+  const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
+
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
       const currentUserAsPerson = people.find(p => p.name.toLowerCase() === 'you' || p.name.toLowerCase() === 'me');
@@ -69,7 +71,18 @@ export default function AddExpenseTab({
   }, [people]);
 
   useEffect(() => {
+    if (!expenseToEdit) {
+      // Reset the ref when the form is conceptually for a "new" expense.
+      // This ensures that the main effect's logic for new expenses
+      // correctly identifies the initial setup vs. subsequent people prop changes.
+      initialPeopleSetForFormInstance.current = new Set();
+    }
+  }, [expenseToEdit]);
+
+  useEffect(() => {
     if (expenseToEdit) {
+      initialPeopleSetForFormInstance.current = new Set(); // Clear ref when editing
+
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
       setCategory(expenseToEdit.category);
@@ -82,15 +95,13 @@ export default function AddExpenseTab({
             amount: p.amount.toString() 
           })));
       } else if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length === 0) {
-        // Case: paid_by is an empty array
-        setIsMultiplePayers(false); // Default to single payer UI
+        setIsMultiplePayers(false);
         setPayers([{ 
           id: Date.now().toString(), 
           personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), 
-          amount: expenseToEdit.total_amount.toString() // Or potentially '' if totalAmount itself isn't reliable for this case
+          amount: expenseToEdit.total_amount.toString()
         }]);
       } else { 
-        // Fallback for non-array paid_by (legacy or unexpected format)
         setIsMultiplePayers(false);
         setPayers([{ 
           id: Date.now().toString(), 
@@ -99,14 +110,16 @@ export default function AddExpenseTab({
         }]);
       }
 
-
       setSplitMethod(expenseToEdit.split_method);
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
         setSelectedPeopleEqual(expenseToEdit.shares.map(s => s.personId));
-      } else { 
+      } else if (!expenseToEdit.shares && expenseToEdit.split_method === 'equal') { // Default for existing expense if shares are missing
         setSelectedPeopleEqual(people.map(p => p.id));
+      } else {
+         setSelectedPeopleEqual(people.map(p => p.id)); // Default for other split methods or if changing to equal
       }
+
 
       if (expenseToEdit.split_method === 'unequal' && Array.isArray(expenseToEdit.shares)) {
         const initialUnequalShares: Record<string, string> = {};
@@ -133,13 +146,46 @@ export default function AddExpenseTab({
       setTotalAmount('');
       setCategory(dynamicCategories[0]?.name || '');
       setIsMultiplePayers(false);
-      setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
+      
       setSplitMethod('equal'); 
-      setSelectedPeopleEqual(people.map(p => p.id)); 
+      
+      setSelectedPeopleEqual(prevSelected => {
+        const currentPeopleIds = people.map(p => p.id);
+        const currentPeopleSet = new Set(currentPeopleIds);
+
+        if (initialPeopleSetForFormInstance.current.size === 0 && people.length > 0) {
+          // This is the first meaningful initialization for this new expense form instance
+          initialPeopleSetForFormInstance.current = new Set(currentPeopleIds);
+          return currentPeopleIds; // Select all current people
+        }
+        
+        // Preserve existing selections and add new people
+        const newSelected = new Set(prevSelected);
+        people.forEach(person => {
+          // If person is new to the group (wasn't in our initial baseline for this form)
+          // and they are not already selected, select them.
+          if (!initialPeopleSetForFormInstance.current.has(person.id) && !prevSelected.includes(person.id)) {
+            newSelected.add(person.id);
+          }
+        });
+
+        // Ensure the selection only contains people currently in the group
+        const finalSelected = Array.from(newSelected).filter(id => currentPeopleSet.has(id));
+        
+        // Update the baseline if the people list has actually changed
+        if (new Set(currentPeopleIds).size !== initialPeopleSetForFormInstance.current.size || 
+            !currentPeopleIds.every(id => initialPeopleSetForFormInstance.current.has(id))) {
+            initialPeopleSetForFormInstance.current = new Set(currentPeopleIds);
+        }
+        return finalSelected;
+      });
+      
+      const firstPayer = people[0]?.id || defaultPayerId || '';
+      setPayers([{ id: Date.now().toString(), personId: firstPayer, amount: totalAmount && !isMultiplePayers ? totalAmount : '' }]);
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, totalAmount, isMultiplePayers]);
 
 
   useEffect(() => {
@@ -346,14 +392,14 @@ export default function AddExpenseTab({
 
     try {
       if (expenseToEdit && expenseToEdit.id) {
-        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = { // Ensure items is typed to allow null
+        const updatePayload: Partial<Omit<Expense, 'id' | 'created_at' | 'updated_at'>> & { items: ExpenseItemDetail[] | null } = {
           description,
           total_amount: parseFloat(totalAmount),
           category,
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === 'itemwise' ? expenseItems : null, // Explicitly set to null if not itemwise
+          items: splitMethod === 'itemwise' ? expenseItems : null,
         };
         
         const { error: updateError } = await db
@@ -384,10 +430,13 @@ export default function AddExpenseTab({
       if (!expenseToEdit) { 
         setDescription(''); setTotalAmount(''); 
         setCategory(dynamicCategories[0]?.name || '');
-        setPayers([{ id: Date.now().toString(), personId: people[0]?.id || defaultPayerId || '', amount: '' }]);
+        const firstPayer = people[0]?.id || defaultPayerId || '';
+        setPayers([{ id: Date.now().toString(), personId: firstPayer, amount: '' }]);
         setIsMultiplePayers(false);
         setSplitMethod('equal'); 
-        setSelectedPeopleEqual(people.map(p => p.id));
+        // For new expense, selectedPeopleEqual is handled by the main useEffect
+        // initialPeopleSetForFormInstance.current will be reset by its own effect if needed
+        // setSelectedPeopleEqual(people.map(p => p.id)); // This will be set by the main useEffect correctly
         setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id) }]);
       }
@@ -559,3 +608,6 @@ export default function AddExpenseTab({
     </div>
   );
 }
+
+
+    
