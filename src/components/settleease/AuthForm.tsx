@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart } from 'lucide-react';
+import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // Simple Google Icon SVG as a React component
