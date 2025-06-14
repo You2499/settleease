@@ -573,8 +573,21 @@ export default function SettleEasePage() {
     if (!db) return;
     const { error } = await db.auth.signOut();
     if (error) {
-      toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+      // Do not show a toast if the error is "Auth session missing!"
+      // as this means the user is already effectively logged out or session was invalid.
+      // The onAuthStateChange listener will handle UI updates.
+      if (error.message !== "Auth session missing!") {
+        toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+      } else {
+        console.warn("Logout attempt: Auth session was already missing. Client state will sync via onAuthStateChange.");
+        // Ensure local state reflects logged out status if onAuthStateChange might not cover a specific edge case here.
+        // However, setCurrentUser(null) would trigger effects and might be redundant if onAuthStateChange is comprehensive.
+        // For now, relying on onAuthStateChange to clear state when it detects no session.
+      }
     }
+    // If there's no error, or if the error was "Auth session missing!",
+    // the onAuthStateChange listener is responsible for showing the "Logged Out" toast
+    // when it receives the "SIGNED_OUT" event and a null session.
   };
 
 
@@ -677,7 +690,7 @@ export default function SettleEasePage() {
     <SidebarProvider defaultOpen={true}>
       <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
-        <div className="flex flex-col h-full"> {/* Changed h-screen to h-full */}
+        <div className="flex flex-col h-full">
           <header className="p-4 border-b bg-card flex items-center justify-between">
             <div className="flex items-center h-10">
               <SidebarTrigger className="md:hidden mr-2" />
