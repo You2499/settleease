@@ -119,9 +119,6 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
           <LogOut className="mr-2 h-4 w-4" /> Logout
         </Button>
         <p className="text-center text-xs text-sidebar-foreground/60 mt-3">
-          &copy; {new Date().getFullYear()} SettleEase.
-        </p>
-        <p className="text-center text-xs text-sidebar-foreground/60">
           Made by Gagan Gupta.
         </p>
       </SidebarFooter>
