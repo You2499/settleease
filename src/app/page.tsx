@@ -79,7 +79,7 @@ export default function SettleEasePage() {
   const settlementPaymentsChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
-    console.log("Auth effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser);
+    console.log("Auth effect: Starts. Supabase Client:", !!db, "Supabase Init Error:", !!supabaseInitializationError);
     if (supabaseInitializationError || !db) {
       console.log("Auth effect: Supabase init error or no DB. Setting isLoadingAuth=false.");
       setIsLoadingAuth(false);
@@ -88,42 +88,22 @@ export default function SettleEasePage() {
 
     let isMounted = true;
 
-    console.log("Auth effect: Attempting to get session.");
-    db.auth.getSession().then(({ data: { session } }) => {
-      console.log("Auth effect: getSession returned. Session:", !!session, "Mounted:", isMounted);
-      if (isMounted) {
-        if (!session && currentUser) {
-          console.log("Auth effect: getSession returned no session, but currentUser exists. This might be due to a recent logout or token issue. Relying on onAuthStateChange.");
-        } else if (session && !currentUser) {
-           console.log("Auth effect: getSession found session, but no currentUser locally. Setting currentUser.");
-           setCurrentUser(session.user);
-        }
-        
-        if (isLoadingAuth && !session && !currentUser) {
-            console.warn("Auth effect: getSession - isLoadingAuth true, no session, no currentUser. Setting isLoadingAuth=false (fallback, onAuthStateChange preferred).");
-            setIsLoadingAuth(false); 
-        }
-      }
-    }).catch(err => {
-        if(isMounted) {
-            console.warn("Auth effect: Error in getSession:", err.message, "Setting isLoadingAuth=false."); 
-            setIsLoadingAuth(false);
-        }
-    });
-
+    // Setup the listener first, as it's the primary source of truth for auth state.
     console.log("Auth effect: Setting up onAuthStateChange listener.");
     const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
       console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
       if (isMounted) {
         const newAuthUser = session?.user ?? null;
-        console.log("Auth effect: onAuthStateChange - newAuthUser:", !!newAuthUser, "current local currentUser:", !!currentUser);
         
-        if (newAuthUser?.id !== currentUser?.id || (newAuthUser === null && currentUser !== null)) {
-            console.log("Auth effect: onAuthStateChange - User state changed. Updating currentUser.");
-            setCurrentUser(newAuthUser);
-        }
+        setCurrentUser(prevLocalUser => { 
+          if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
+              console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
+              return newAuthUser;
+          }
+          return prevLocalUser; 
+        });
 
-        if (!newAuthUser) {
+        if (!newAuthUser) { 
           console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data, setting role to null.");
           setPeople([]);
           setExpenses([]);
@@ -137,11 +117,32 @@ export default function SettleEasePage() {
           }
         }
         
-        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false (primary point).");
-        setIsLoadingAuth(false);
+        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false.");
+        setIsLoadingAuth(false); 
       } else {
         console.log("Auth effect: onAuthStateChange - Component unmounted, ignoring event.");
       }
+    });
+    
+    // Then, attempt to get the current session. This can sometimes provide the session faster
+    // than the listener fires on initial load, or confirm state if listener doesn't fire (e.g. already authenticated).
+    // The listener above will still be the ultimate source of truth and will set isLoadingAuth=false.
+    console.log("Auth effect: Attempting to get session as a secondary check/optimization.");
+    db.auth.getSession().then(({ data: { session } }) => {
+      console.log("Auth effect: getSession returned. Session:", !!session, "Mounted:", isMounted);
+      if (isMounted) {
+        // onAuthStateChange listener is responsible for setting currentUser and isLoadingAuth.
+        // This getSession call mainly helps if the listener for some reason is delayed or doesn't fire
+        // for an existing session on initial load. The listener will ensure consistency.
+        // If session exists here, and onAuthStateChange hasn't fired, it soon will.
+        // If session is null, onAuthStateChange will also report null.
+      }
+    }).catch(err => {
+        if(isMounted) {
+            console.warn("Auth effect: Error in getSession:", err.message);
+            // If getSession fails, onAuthStateChange should still provide the state (likely no session)
+            // and set isLoadingAuth=false.
+        }
     });
 
     return () => {
@@ -149,7 +150,7 @@ export default function SettleEasePage() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [currentUser, isLoadingAuth]);
+  }, [db, supabaseInitializationError]); // Stable dependencies for auth setup
 
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
@@ -198,7 +199,7 @@ export default function SettleEasePage() {
     } finally {
       setIsLoadingRole(false);
     }
-  }, []);
+  }, [db]);
 
 
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
@@ -280,7 +281,7 @@ export default function SettleEasePage() {
     if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred)) {
      setIsLoadingData(false);
     }
-  }, [currentUser, supabaseInitializationError]);
+  }, [currentUser, supabaseInitializationError, db]);
 
 
   const addDefaultPeople = useCallback(async () => {
@@ -331,7 +332,7 @@ export default function SettleEasePage() {
       toast({ title: "Setup Error", description: "An unexpected error occurred while setting up default people.", variant: "destructive" });
       initialDefaultPeopleSetupAttemptedOrCompleted = false;
     }
-  }, [currentUser, userRole, supabaseInitializationError]);
+  }, [currentUser, userRole, supabaseInitializationError, db]);
 
 
   useEffect(() => {
@@ -361,7 +362,7 @@ export default function SettleEasePage() {
         }
 
         console.log("User/Role/Data effect: Adding default people and fetching all data.");
-        setIsLoadingData(true);
+        setIsLoadingData(true); // Set true before async operations
         addDefaultPeople().then(() => {
           if (!isMounted) {
             console.log("User/Role/Data effect: addDefaultPeople - Component unmounted.");
@@ -370,7 +371,7 @@ export default function SettleEasePage() {
           fetchAllData(true); // This sets isLoadingData to false eventually
         });
       });
-    } else { // No currentUser and not isLoadingAuth
+    } else { 
       console.log("User/Role/Data effect: No currentUser and not loading auth. Resetting app state.");
       setPeople([]);
       setExpenses([]);
@@ -379,14 +380,14 @@ export default function SettleEasePage() {
       setUserRole(null);
       setIsLoadingRole(false);
       setIsDataFetchedAtLeastOnce(false);
-      setIsLoadingData(false); // Ensure this is false if no user
+      setIsLoadingData(false); 
       setActiveView('dashboard');
     }
     return () => {
       console.log("User/Role/Data effect: Cleanup. isMounted=false.");
       isMounted = false;
     };
-  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData]); 
+  }, [currentUser, isLoadingAuth, fetchUserRole, addDefaultPeople, fetchAllData, activeView]); 
 
 
   useEffect(() => {
@@ -504,13 +505,13 @@ export default function SettleEasePage() {
               console.log(`Realtime: Subscription status for ${tableName}: ${status}`, err ? `Error: ${err.message}` : '');
               if (status === 'SUBSCRIBED') {
                 console.log(`Realtime: Subscribed successfully to ${tableName}`);
-              } else if ((err && status !== 'CHANNEL_ERROR') || status === 'TIMED_OUT' || status === 'CLOSED') { // Only toast for actual errors or unrecoverable states
+              } else if ((err && status !== 'CHANNEL_ERROR') || status === 'TIMED_OUT' || status === 'CLOSED') { 
                 handleSubscriptionError(tableName, status, err);
                 if(channelRef.current === channel) {
                     console.log(`Realtime: Nullifying channelRef for ${tableName} due to error/closed status.`);
                     channelRef.current = null;
                 }
-              } else if (status === 'CHANNEL_ERROR') { // Don't toast for channel errors, but log them
+              } else if (status === 'CHANNEL_ERROR') { 
                   console.warn(`Subscription error on ${tableName}: Status was ${status}. Error details:`, err);
                   if(channelRef.current === channel) {
                     console.log(`Realtime: Nullifying channelRef for ${tableName} due to CHANNEL_ERROR.`);
@@ -573,21 +574,18 @@ export default function SettleEasePage() {
     if (!db) return;
     const { error } = await db.auth.signOut();
     if (error) {
-      // Do not show a toast if the error is "Auth session missing!"
-      // as this means the user is already effectively logged out or session was invalid.
-      // The onAuthStateChange listener will handle UI updates.
-      if (error.message !== "Auth session missing!") {
-        toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+      if (error.message === "Auth session missing!") {
+        console.warn("Logout attempt: Auth session was already missing or token was invalid. Forcing local currentUser to null.");
+        // Explicitly set currentUser to null to ensure immediate UI reaction,
+        // especially if the tab was inactive and missed previous auth state changes.
+        // The onAuthStateChange listener will also handle full cleanup and the "Logged Out" toast.
+        setCurrentUser(null); 
       } else {
-        console.warn("Logout attempt: Auth session was already missing. Client state will sync via onAuthStateChange.");
-        // Ensure local state reflects logged out status if onAuthStateChange might not cover a specific edge case here.
-        // However, setCurrentUser(null) would trigger effects and might be redundant if onAuthStateChange is comprehensive.
-        // For now, relying on onAuthStateChange to clear state when it detects no session.
+        toast({ title: "Logout Error", description: error.message, variant: "destructive" });
       }
     }
-    // If there's no error, or if the error was "Auth session missing!",
-    // the onAuthStateChange listener is responsible for showing the "Logged Out" toast
-    // when it receives the "SIGNED_OUT" event and a null session.
+    // If no error OR "Auth session missing!", onAuthStateChange handles the "Logged Out" toast
+    // and full state cleanup when it detects newAuthUser is null.
   };
 
 
