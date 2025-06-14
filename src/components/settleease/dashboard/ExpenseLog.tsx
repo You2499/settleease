@@ -29,7 +29,7 @@ export default function ExpenseLog({
       </CardHeader>
       <CardContent>
         {expenses.length > 0 ? (
-          <ScrollArea className="max-h-[350px] pr-2">
+          <ScrollArea className="h-[350px] pr-2"> {/* Changed from max-h-[350px] */}
             <ul className="space-y-2.5">
               {expenses.map(expense => {
                 const CategoryIcon = getCategoryIconFromName(expense.category);
@@ -65,3 +65,4 @@ export default function ExpenseLog({
     </Card>
   );
 }
+
