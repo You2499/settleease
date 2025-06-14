@@ -126,11 +126,11 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             )}
           </div>
         )}
-        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full">
+        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full my-2">
           <LogOut className="mr-2 h-4 w-4" /> Logout
         </Button>
-        <p className="text-center text-xs text-sidebar-foreground/60 mt-3">
-          Made by Gagan Gupta.
+        <p className="text-center text-xs text-sidebar-foreground/60">
+          Made by Gagan Gupta
         </p>
       </SidebarFooter>
     </Sidebar>
