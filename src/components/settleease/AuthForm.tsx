@@ -107,7 +107,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-md shadow-xl rounded-lg">
+    <Card className="w-full max-w-lg shadow-xl rounded-lg">
       <CardHeader className="text-center pb-4 pt-8">
         <div className="flex justify-center mb-4">
           <HandCoins className="h-16 w-16 text-primary" />
