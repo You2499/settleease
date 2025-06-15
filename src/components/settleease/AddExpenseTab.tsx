@@ -203,7 +203,7 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]); // Removed defaultItemCategory from dependencies
 
   useEffect(() => {
     if (!isMultiplePayers) {
@@ -497,7 +497,7 @@ export default function AddExpenseTab({
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6">
+        <CardContent className="flex-1 p-4 sm:p-6 pt-0">
           <p className="text-sm sm:text-base">Could not connect to the database. Adding or editing expenses is currently unavailable.</p>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
@@ -513,7 +513,7 @@ export default function AddExpenseTab({
             <Users className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Add People First
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6">
+        <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
           <p className="text-sm sm:text-md text-muted-foreground">You need to add people to your group before you can add expenses.</p>
           <p className="text-xs sm:text-sm">Please go to the "Manage People" tab to add participants.</p>
         </CardContent>
@@ -532,7 +532,7 @@ export default function AddExpenseTab({
         </CardDescription>
       </CardHeader>
       
-      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 pt-4 sm:pt-6">
         
         <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
           <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Bill Information</h3>
