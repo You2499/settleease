@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient, type SupabaseClient, type User as SupabaseUser, type RealtimeChannel } from '@supabase/supabase-js';
 
 import {
-  Settings2, AlertTriangle, HandCoins // Added HandCoins
+  Settings2, AlertTriangle, HandCoins
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,7 +23,6 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
-import SettingsTab from '@/components/settleease/SettingsTab'; // Added SettingsTab import
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
@@ -384,7 +383,7 @@ export default function SettleEasePage() {
   
   // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'settings'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements'];
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
       console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
       setActiveView('dashboard');
@@ -593,7 +592,7 @@ export default function SettleEasePage() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = (view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'settings'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements'];
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
       setActiveView('dashboard'); // This triggers the Role-View Sync effect if needed
@@ -708,12 +707,6 @@ export default function SettleEasePage() {
                 db={db}
                 currentUserId={currentUser.id}
                 onActionComplete={() => fetchAllData(false)}
-              />
-            )}
-             {userRole === 'admin' && activeView === 'settings' && (
-              <SettingsTab
-                currentUserEmail={currentUser.email || undefined}
-                userRole={userRole}
               />
             )}
           </main>

@@ -24,7 +24,7 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  useSidebar, // Make sure useSidebar is imported
+  useSidebar,
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
 
@@ -72,15 +72,14 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
 
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
-      <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
-        {!isMobile && (
-          <div className="flex items-center gap-2 h-10">
-            <HandCoins className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
-            <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
-          </div>
-        )}
-         {/* Mobile header is intentionally kept minimal or empty as per new design */}
-      </SidebarHeader>
+      {!isMobile && (
+         <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
+            <div className="flex items-center gap-2 h-10">
+              <HandCoins className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
+              <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
+            </div>
+        </SidebarHeader>
+      )}
       <SidebarContent className="p-2">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -160,17 +159,6 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                 >
                   <Handshake />
                   <span className="group-data-[state=collapsed]:hidden">Manage Settlements</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-               <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('settings')}
-                  isActive={activeView === 'settings'}
-                  tooltip={{ content: "Application Settings", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start"
-                >
-                  <Settings /> {/* Using the main settings icon */}
-                  <span className="group-data-[state=collapsed]:hidden">Settings</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </>
