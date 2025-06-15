@@ -3,14 +3,12 @@
 
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { FileText } from 'lucide-react'; // Removed PieChartIcon, BarChart3
+import { FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
-// Removed ShareVsPaidChart import
-// Removed ExpensesByCategoryChart import
 import ExpenseLog from './dashboard/ExpenseLog';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
@@ -221,10 +219,8 @@ export default function DashboardView({
     );
   }
 
-  // Removed shareVsPaidData and expensesByCategoryData calculations
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
@@ -237,10 +233,6 @@ export default function DashboardView({
         onViewExpenseDetails={handleExpenseCardClick}
         userRole={userRole} 
       />
-
-      {/* Removed the grid div that contained the charts */}
-      {/* <ShareVsPaidChart shareVsPaidData={shareVsPaidData} /> */}
-      {/* <ExpensesByCategoryChart expensesByCategory={expensesByCategoryData} /> */}
       
       <ExpenseLog
         expenses={expenses}
