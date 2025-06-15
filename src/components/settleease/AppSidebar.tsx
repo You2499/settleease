@@ -3,7 +3,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings // Added Settings icon
 } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
@@ -154,29 +154,38 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
           )}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-         {currentUserEmail && (
-          <div className="mb-2 space-y-0.5">
-            <p className="text-xs text-sidebar-foreground/70 truncate" title={currentUserEmail}>
-              Logged in as: {currentUserEmail}
+      <SidebarFooter className="flex flex-col p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
+        {currentUserEmail && (
+          <div className="mb-3 space-y-1">
+            <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
+              {currentUserEmail}
             </p>
             {userRole && (
-              <p className="text-xs text-sidebar-foreground/70 flex items-center" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
-                Role: <RoleIcon className="ml-1 mr-0.5 h-3.5 w-3.5" /> {userRole.charAt(0).toUpperCase() + userRole.slice(1)}
-              </p>
+              <div className="flex items-center gap-1 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
+                <RoleIcon className="h-3.5 w-3.5" />
+                <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
+              </div>
             )}
           </div>
         )}
-        <div className="flex items-center justify-between my-2">
+
+        <div className="flex items-center justify-between my-3">
+          <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground h-8 w-8" title="Settings" onClick={() => { /* Add settings functionality later */ }}>
+            <Settings className="h-4 w-4" />
+            <span className="sr-only">Settings</span>
+          </Button>
           <ThemeToggleButton />
-          <Button variant="outline" size="sm" onClick={handleLogout} className="w-auto">
-            <LogOut className="mr-2 h-4 w-4" /> Logout
+          <Button variant="ghost" onClick={handleLogout} className="text-xs h-8 px-2 py-1.5 flex items-center gap-1.5 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
+            <LogOut className="h-4 w-4" /> Logout
           </Button>
         </div>
-        <p className="text-center text-xs text-sidebar-foreground/60 flex items-center justify-center gap-1">
-          <span>Made by Gagan Gupta with</span>
-          <GeminiIcon />
-        </p>
+
+        <div className="mt-auto pt-3 border-t border-sidebar-border/50">
+          <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1">
+            <span>Made by Gagan Gupta with</span>
+            <GeminiIcon />
+          </p>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
