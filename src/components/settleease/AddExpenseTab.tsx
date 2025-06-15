@@ -94,6 +94,7 @@ export default function AddExpenseTab({
     }
   }, [expenseToEdit]);
 
+  // Main effect to populate form when expenseToEdit changes or for a new expense
   useEffect(() => {
     if (expenseToEdit) {
       initialPeopleSetForFormInstance.current = new Set(); 
@@ -103,16 +104,19 @@ export default function AddExpenseTab({
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
           setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
+          // This correctly handles single payer (paid_by.length === 1) and multiple payers
           setPayers(expenseToEdit.paid_by.map(p => ({ 
-            id: p.personId + Date.now().toString() + Math.random().toString(),
+            id: p.personId + Date.now().toString() + Math.random().toString(), // unique ID for React key
             personId: p.personId, 
             amount: p.amount.toString() 
           })));
       } else { 
+        // This case means expenseToEdit.paid_by is empty or not an array.
+        // For an existing expense, this is unusual but we'll default to single payer view.
         setIsMultiplePayers(false);
         setPayers([{ 
           id: Date.now().toString(), 
-          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), 
+          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), // Fallback if paid_by is missing
           amount: expenseToEdit.total_amount.toString() 
         }]);
       }
@@ -156,9 +160,10 @@ export default function AddExpenseTab({
       }
 
     } else { 
+      // Resetting form for a new expense
       setDescription('');
       setTotalAmount(''); 
-      setCategory(dynamicCategories[0]?.name || '');
+      setCategory(dynamicCategories[0]?.name || ''); // Set to first available dynamic category or empty
       setIsMultiplePayers(false);
       setSplitMethod('equal');
 
@@ -167,11 +172,12 @@ export default function AddExpenseTab({
       setCelebrationAmountInput('');
 
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]); // Amount is initially empty for new expense
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
       
+      // Logic for setting default selected people for equal split
       const currentPeopleIds = people.map(p => p.id);
       const previousPeopleSnapshot = initialPeopleSetForFormInstance.current;
 
@@ -196,35 +202,49 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]); // Removed defaultItemCategory
 
 
+  // Effect to manage payer amount(s) based on totalAmount and isMultiplePayers
   useEffect(() => {
     if (!isMultiplePayers) {
-      const currentPayerRow = payers[0];
-      const newPayerAmountString = totalAmount;
-      
-      let intendedPersonId = currentPayerRow?.personId;
+      const currentPayer = payers[0];
+      const expectedAmount = totalAmount; // For single payer, amount is totalAmount
 
-      if (expenseToEdit && currentPayerRow?.personId) {
-        intendedPersonId = currentPayerRow.personId;
+      if (expenseToEdit) {
+        // We are editing an expense.
+        // The personId should ideally be stable, taken from currentPayer.personId
+        // (which was set by the main useEffect from expenseToEdit or user interaction).
+        // We primarily sync the amount.
+        const personIdToUse = currentPayer?.personId || 
+                              (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
+
+        if (!currentPayer || currentPayer.personId !== personIdToUse || currentPayer.amount !== expectedAmount) {
+          setPayers([{
+            id: currentPayer?.id || Date.now().toString(),
+            personId: personIdToUse!, // Assert personIdToUse is not undefined here
+            amount: expectedAmount
+          }]);
+        }
       } else {
-        intendedPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-      }
-
-      if (!currentPayerRow || currentPayerRow.personId !== intendedPersonId || currentPayerRow.amount !== newPayerAmountString) {
-        setPayers([{
-          id: currentPayerRow?.id || Date.now().toString(),
-          personId: intendedPersonId!, 
-          amount: newPayerAmountString
-        }]);
+        // This is a new expense.
+        const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
+        if (!currentPayer || currentPayer.personId !== defaultPersonIdForNewExpense || currentPayer.amount !== expectedAmount) {
+          setPayers([{
+            id: currentPayer?.id || Date.now().toString(),
+            personId: defaultPersonIdForNewExpense!,
+            amount: expectedAmount
+          }]);
+        }
       }
     } else {
+      // Logic for multiple payers (e.g., ensure a default row if payers array is empty)
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       if (payers.length === 0 && firstPayerPersonId) {
            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
       } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
-          if (payers[0].personId !== firstPayerPersonId) {
+          // If there's one payer row but no person ID selected yet, set it to default.
+          if (payers[0].personId !== firstPayerPersonId) { // Check to prevent potential loop if default is also empty
               setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
           }
       }
@@ -282,9 +302,11 @@ export default function AddExpenseTab({
     const firstPayerPersonId = payers[0]?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
     if (goingToMultiple) {
+      // When switching to multiple, if there was a single payer with amount, use that amount for the first row.
       const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: firstPayerAmount }]);
     } else {
+      // When switching to single, set amount to totalAmount. Retain selected person if possible.
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
     }
   };
@@ -739,5 +761,7 @@ export default function AddExpenseTab({
     </Card>
   );
 }
+
+    
 
     
