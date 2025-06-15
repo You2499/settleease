@@ -84,26 +84,23 @@ export default function AnalyticsTab({
     let totalAmount = 0;
     let mostExpensiveCatData: { name: string; totalAmount: number; } = { name: 'N/A', totalAmount: 0 };
     let largestSingleExpData: { description: string; amount: number; date: string } = { description: 'N/A', amount: 0, date: '' };
+    const categorySpending: Record<string, number> = {};
+
 
     if (analyticsViewMode === 'group') {
       totalAmount = displayedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0);
       
-      const tempCategorySpending: Record<string, number> = {};
       displayedExpenses.forEach(exp => {
         if (exp.split_method === 'itemwise' && exp.items) {
           exp.items.forEach(item => {
             const cat = item.categoryName || exp.category || UNCATEGORIZED;
-            tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(item.price);
+            categorySpending[cat] = (categorySpending[cat] || 0) + Number(item.price);
           });
         } else {
           const cat = exp.category || UNCATEGORIZED;
-          tempCategorySpending[cat] = (tempCategorySpending[cat] || 0) + Number(exp.total_amount);
+          categorySpending[cat] = (categorySpending[cat] || 0) + Number(exp.total_amount);
         }
       });
-      const sortedTempCategories = Object.entries(tempCategorySpending).sort(([,a],[,b]) => b-a);
-      if (sortedTempCategories.length > 0) {
-        mostExpensiveCatData = { name: sortedTempCategories[0][0], totalAmount: sortedTempCategories[0][1] };
-      }
 
       if (expenseCount > 0) {
         const sortedByAmount = [...displayedExpenses].sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
@@ -114,65 +111,56 @@ export default function AnalyticsTab({
         };
       }
     } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      const personalCategorySpending: Record<string, number> = {};
-      let maxPersonalShare = 0;
+      let maxPersonalShareOverall = 0;
 
       displayedExpenses.forEach(exp => {
-        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
-        const personShareAmount = Number(personShare?.amount || 0);
-        totalAmount += personShareAmount;
+        const personShareForEntireExpense = Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0);
+        totalAmount += personShareForEntireExpense;
 
-        if (personShareAmount > 0.001) {
-            if (personShareAmount > maxPersonalShare) {
-                maxPersonalShare = personShareAmount;
+        if (personShareForEntireExpense > 0.001) {
+            if (personShareForEntireExpense > maxPersonalShareOverall) {
+                maxPersonalShareOverall = personShareForEntireExpense;
                 largestSingleExpData = {
                     description: exp.description,
-                    amount: personShareAmount,
+                    amount: personShareForEntireExpense,
                     date: new Date(exp.created_at || Date.now()).toLocaleDateString()
                 };
             }
 
             if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-                let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
-                const itemsSharedByPersonDetails: Array<{ originalPrice: number; category: string }> = [];
+                const originalTotalBillForExpense = Number(exp.total_amount) || 0;
+                const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
+                const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
+                const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                
+                const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
+                    ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
+                    : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
 
                 exp.items.forEach(item => {
                     if (item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
                         const originalItemPrice = Number(item.price) || 0;
-                        sumOfOriginalPricesOfItemsSharedByPersonThisExpense += originalItemPrice;
-                        itemsSharedByPersonDetails.push({
-                            originalPrice: originalItemPrice,
-                            category: item.categoryName || exp.category || UNCATEGORIZED,
-                        });
+                        const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
+                        const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
+                        
+                        if (personShareOfThisItem > 0.001) {
+                            const cat = item.categoryName || exp.category || UNCATEGORIZED;
+                            categorySpending[cat] = (categorySpending[cat] || 0) + personShareOfThisItem;
+                        }
                     }
                 });
-                
-                if (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001) {
-                    itemsSharedByPersonDetails.forEach(itemDetail => {
-                        const proportionOfShare = itemDetail.originalPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense;
-                        const amountForThisCategory = proportionOfShare * personShareAmount;
-                        personalCategorySpending[itemDetail.category] = (personalCategorySpending[itemDetail.category] || 0) + amountForThisCategory;
-                    });
-                } else if (itemsSharedByPersonDetails.length > 0) { 
-                    const fallbackCat = exp.category || itemsSharedByPersonDetails[0]?.category || UNCATEGORIZED;
-                    personalCategorySpending[fallbackCat] = (personalCategorySpending[fallbackCat] || 0) + personShareAmount;
-                } else { 
-                    const mainCat = exp.category || UNCATEGORIZED;
-                    personalCategorySpending[mainCat] = (personalCategorySpending[mainCat] || 0) + personShareAmount;
-                }
             } else { 
                 const cat = exp.category || UNCATEGORIZED;
-                personalCategorySpending[cat] = (personalCategorySpending[cat] || 0) + personShareAmount;
+                categorySpending[cat] = (categorySpending[cat] || 0) + personShareForEntireExpense;
             }
         }
       });
-
-      const sortedPersonalCategories = Object.entries(personalCategorySpending).sort(([,a],[,b]) => b-a);
-      if (sortedPersonalCategories.length > 0) {
-        mostExpensiveCatData = { name: sortedPersonalCategories[0][0], totalAmount: sortedPersonalCategories[0][1] };
-      }
     }
     
+    const sortedCategories = Object.entries(categorySpending).sort(([,a],[,b]) => b-a);
+    if (sortedCategories.length > 0) {
+      mostExpensiveCatData = { name: sortedCategories[0][0], totalAmount: sortedCategories[0][1] };
+    }
     const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
 
     return {
@@ -223,34 +211,29 @@ export default function AnalyticsTab({
 
     displayedExpenses.forEach(exp => {
         const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
-        const personShareForExpense = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
+        const originalTotalBillForExpense = Number(exp.total_amount) || 0;
+        const personShareForEntireExpense = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
             ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
-            : Number(exp.total_amount); 
+            : originalTotalBillForExpense; 
         
-        const expenseTotalAmountNum = Number(exp.total_amount) || 0;
-
-        
-        let selectedPersonPaymentForThisExpense = 0;
-        if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-            selectedPersonPaymentForThisExpense = exp.paid_by
+        const selectedPersonPaymentForThisWholeExpense = (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)
+            ? exp.paid_by
                 .filter(p => p.personId === selectedPersonIdForAnalytics)
-                .reduce((sum, p) => sum + Number(p.amount), 0);
-        }
-
+                .reduce((sum, p) => sum + Number(p.amount), 0)
+            : 0;
 
         if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-            let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
-            if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-                exp.items.forEach(item => {
-                    if (item.sharedBy.includes(selectedPersonIdForAnalytics)) {
-                        sumOfOriginalPricesOfItemsSharedByPersonThisExpense += (Number(item.price) || 0);
-                    }
-                });
-            }
+            const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
+            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
+            const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+            
+            const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
+                ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
+                : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
 
             exp.items.forEach(item => {
                 const originalItemPrice = Number(item.price) || 0;
-                if (originalItemPrice <= 0.001 && analyticsViewMode === 'group') return; 
+                if (originalItemPrice <= 0.001) return;
 
                 const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
                 if (!categoryDataMap[targetCategory]) {
@@ -258,21 +241,18 @@ export default function AnalyticsTab({
                 }
 
                 let amountToCreditToCategory = 0;
-                let paymentContributionToCategory = 0;
+                let paymentContributionToCategoryForItem = 0;
 
                 if (analyticsViewMode === 'group') {
-                    amountToCreditToCategory = originalItemPrice;
-                    
-                } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics)) {
-                    const proportionOfShare = (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001 && personShareForExpense > 0.001)
-                        ? (originalItemPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense)
-                        : (personShareForExpense > 0.001 && exp.items.filter(i => i.sharedBy.includes(selectedPersonIdForAnalytics!)).length === 1 ? 1 : 0); 
-                    
-                    amountToCreditToCategory = proportionOfShare * personShareForExpense;
+                    amountToCreditToCategory = originalItemPrice; // Group view uses original item price for category total
+                } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
+                    const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
+                    const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
+                    amountToCreditToCategory = personShareOfThisItem;
 
-                    if (expenseTotalAmountNum > 0.001 && selectedPersonPaymentForThisExpense > 0.001) {
-                        const itemProportionOfTotalExpense = originalItemPrice / expenseTotalAmountNum;
-                        paymentContributionToCategory = itemProportionOfTotalExpense * selectedPersonPaymentForThisExpense;
+                    if (selectedPersonPaymentForThisWholeExpense > 0.001 && originalTotalBillForExpense > 0.001) {
+                        const itemProportionOfOriginalBill = originalItemPrice / originalTotalBillForExpense;
+                        paymentContributionToCategoryForItem = itemProportionOfOriginalBill * selectedPersonPaymentForThisWholeExpense;
                     }
                 }
                 
@@ -281,42 +261,38 @@ export default function AnalyticsTab({
                     categoryDataMap[targetCategory].expenseIds.add(exp.id);
                     categoryDataMap[targetCategory].potentialMostExpensive.push({
                         type: 'item',
-                        id: item.id,
+                        id: item.id || `item-${exp.id}-${item.name}`,
                         description: item.name,
                         amount: amountToCreditToCategory, 
                         date: expDate,
                         mainExpenseDescription: exp.description
                     });
-                    if (analyticsViewMode === 'personal') {
-                        categoryDataMap[targetCategory].personalPaymentsForCategory += paymentContributionToCategory;
+                    if (analyticsViewMode === 'personal' && paymentContributionToCategoryForItem > 0.001) {
+                        categoryDataMap[targetCategory].personalPaymentsForCategory += paymentContributionToCategoryForItem;
                     }
                 }
             });
         } else { 
-            if (personShareForExpense <= 0.001 && analyticsViewMode === 'personal') return; 
-            if (expenseTotalAmountNum <= 0.001 && analyticsViewMode === 'group') return;
-
+            // Non-itemwise expense
+            const amountForCategory = (analyticsViewMode === 'group') ? originalTotalBillForExpense : personShareForEntireExpense;
+            if (amountForCategory <= 0.001) return;
 
             const targetCategory = exp.category || UNCATEGORIZED;
             if (!categoryDataMap[targetCategory]) {
                 categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
             }
             
-            let amountToCreditToCategory = analyticsViewMode === 'group' ? expenseTotalAmountNum : personShareForExpense;
-
-            if (amountToCreditToCategory > 0.001) {
-                categoryDataMap[targetCategory].totalAmount += amountToCreditToCategory;
-                categoryDataMap[targetCategory].expenseIds.add(exp.id);
-                categoryDataMap[targetCategory].potentialMostExpensive.push({
-                    type: 'expense',
-                    id: exp.id,
-                    description: exp.description,
-                    amount: amountToCreditToCategory, 
-                    date: expDate
-                });
-                if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-                     categoryDataMap[targetCategory].personalPaymentsForCategory += selectedPersonPaymentForThisExpense;
-                }
+            categoryDataMap[targetCategory].totalAmount += amountForCategory;
+            categoryDataMap[targetCategory].expenseIds.add(exp.id);
+            categoryDataMap[targetCategory].potentialMostExpensive.push({
+                type: 'expense',
+                id: exp.id,
+                description: exp.description,
+                amount: amountForCategory, 
+                date: expDate
+            });
+            if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && selectedPersonPaymentForThisWholeExpense > 0.001) {
+                 categoryDataMap[targetCategory].personalPaymentsForCategory += selectedPersonPaymentForThisWholeExpense;
             }
         }
     });
@@ -336,18 +312,41 @@ export default function AnalyticsTab({
             };
         }
         
-        
         let largestPayerData: { name: string; amount: number; } | null = null;
         if (analyticsViewMode === 'group') {
-            
-             const catFromOverall = enhancedOverallStats.mostExpensiveCategory.name === name ? enhancedOverallStats.mostExpensiveCategory : null;
-            
+            const categoryExpenses = displayedExpenses.filter(exp => expenseIds.has(exp.id));
+            const payerTotals: Record<string, number> = {};
+            categoryExpenses.forEach(catExp => {
+                if (catExp.split_method === 'itemwise' && catExp.items) {
+                    catExp.items.forEach(item => {
+                        const itemCat = item.categoryName || catExp.category || UNCATEGORIZED;
+                        if (itemCat === name) {
+                            catExp.paid_by.forEach(p => {
+                                // Approximate: attribute payment based on item's proportion of total bill
+                                if (originalTotalBillForExpense > 0.001) {
+                                     const itemProportion = Number(item.price) / originalTotalBillForExpense;
+                                     payerTotals[p.personId] = (payerTotals[p.personId] || 0) + (Number(p.amount) * itemProportion);
+                                }
+                            });
+                        }
+                    });
+                } else {
+                    if ((catExp.category || UNCATEGORIZED) === name) {
+                        catExp.paid_by.forEach(p => {
+                             payerTotals[p.personId] = (payerTotals[p.personId] || 0) + Number(p.amount);
+                        });
+                    }
+                }
+            });
+            const sortedPayers = Object.entries(payerTotals).sort(([,a], [,b]) => b-a);
+            if(sortedPayers.length > 0 && sortedPayers[0][1] > 0.001) {
+                largestPayerData = { name: peopleMap[sortedPayers[0][0]] || 'Unknown', amount: sortedPayers[0][1] };
+            }
         } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
             if (personalPaymentsForCategory > 0.001) {
                  largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
             }
         }
-
 
         return {
             name,
@@ -360,7 +359,7 @@ export default function AnalyticsTab({
         };
     }).filter(cat => cat.totalAmount > 0.001 || dynamicCategories.some(dc => dc.name === cat.name))
       .sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics, enhancedOverallStats.mostExpensiveCategory]);
+  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics]);
 
 
   const detailedParticipantAnalytics: ParticipantAnalyticsData[] = useMemo(() => {
@@ -387,41 +386,34 @@ export default function AnalyticsTab({
         }
         if (personPaidThisExpense) expensesPaidCount++;
 
-        const personShareInExpenseRecord = exp.shares.find(s => s.personId === person.id);
-        const personShareAmountForThisExpense = Number(personShareInExpenseRecord?.amount || 0);
+        const personShareAmountForThisExpense = Number(exp.shares.find(s => s.personId === person.id)?.amount || 0);
 
         if (personShareAmountForThisExpense > 0.001) {
           totalShared += personShareAmountForThisExpense;
           expensesSharedCount++;
 
           if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-            let sumOfOriginalPricesOfItemsSharedByPersonThisExpense = 0;
-            const itemsSharedByPersonDetailsThisExpense: Array<{ originalPrice: number; category: string }> = [];
+            const originalTotalBillForExpense = Number(exp.total_amount) || 0;
+            const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
+            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
+            const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+            
+            const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
+                ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
+                : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
 
             exp.items.forEach(item => {
               if (item.sharedBy.includes(person.id)) {
                 const originalItemPrice = Number(item.price) || 0;
-                sumOfOriginalPricesOfItemsSharedByPersonThisExpense += originalItemPrice;
-                itemsSharedByPersonDetailsThisExpense.push({
-                  originalPrice: originalItemPrice,
-                  category: item.categoryName || exp.category || UNCATEGORIZED,
-                });
+                const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
+                const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
+                
+                if (personShareOfThisItem > 0.001) {
+                    const cat = item.categoryName || exp.category || UNCATEGORIZED;
+                    categoryShares[cat] = (categoryShares[cat] || 0) + personShareOfThisItem;
+                }
               }
             });
-
-            if (sumOfOriginalPricesOfItemsSharedByPersonThisExpense > 0.001) {
-              itemsSharedByPersonDetailsThisExpense.forEach(itemDetail => {
-                const proportionOfShare = itemDetail.originalPrice / sumOfOriginalPricesOfItemsSharedByPersonThisExpense;
-                const amountForThisCategory = proportionOfShare * personShareAmountForThisExpense;
-                categoryShares[itemDetail.category] = (categoryShares[itemDetail.category] || 0) + amountForThisCategory;
-              });
-            } else if (itemsSharedByPersonDetailsThisExpense.length > 0) {
-              const fallbackCat = exp.category || itemsSharedByPersonDetailsThisExpense[0]?.category || UNCATEGORIZED;
-              categoryShares[fallbackCat] = (categoryShares[fallbackCat] || 0) + personShareAmountForThisExpense;
-            } else {
-                 const mainCat = exp.category || UNCATEGORIZED;
-                 categoryShares[mainCat] = (categoryShares[mainCat] || 0) + personShareAmountForThisExpense;
-            }
           } else { 
             const targetCategory = exp.category || UNCATEGORIZED;
             categoryShares[targetCategory] = (categoryShares[targetCategory] || 0) + personShareAmountForThisExpense;
@@ -560,9 +552,7 @@ export default function AnalyticsTab({
 
 
   const actualMostExpensiveCategoryFromAnalytics = useMemo(() => {
-    
     if (detailedCategoryAnalytics.length > 0) {
-      
       return { name: detailedCategoryAnalytics[0].name, totalAmount: detailedCategoryAnalytics[0].totalAmount };
     }
     return { name: 'N/A', totalAmount: 0 };
@@ -614,10 +604,10 @@ export default function AnalyticsTab({
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
-            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
+            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2 border">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2 border">
               <UserSquare className="h-4 w-4"/> Personal Insights
             </TabsTrigger>
           </TabsList>
@@ -693,10 +683,10 @@ export default function AnalyticsTab({
                 )}
                 <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-1'}`}>
                   <p className="text-xs text-muted-foreground">Top Category {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
-                  <p className="text-sm sm:text-base font-semibold truncate" title={actualMostExpensiveCategoryFromAnalytics.name}>
-                    {actualMostExpensiveCategoryFromAnalytics.name}
+                  <p className="text-sm sm:text-base font-semibold truncate" title={enhancedOverallStats.mostExpensiveCategory.name}>
+                    {enhancedOverallStats.mostExpensiveCategory.name}
                   </p>
-                  <p className="text-xs text-muted-foreground">{formatCurrency(actualMostExpensiveCategoryFromAnalytics.totalAmount)}</p>
+                  <p className="text-xs text-muted-foreground">{formatCurrency(enhancedOverallStats.mostExpensiveCategory.totalAmount)}</p>
                 </div>
                 <div className={`p-2.5 sm:p-3 bg-card/50 rounded-md shadow-sm border border-border/40 space-y-0.5 ${analyticsViewMode === 'group' ? 'col-span-2 md:col-span-1' : 'col-span-2'}`}>
                    <p className="text-xs text-muted-foreground">Largest Single Expense {analyticsViewMode === 'personal' ? '(Your Share)' : ''}</p>
@@ -833,7 +823,7 @@ export default function AnalyticsTab({
                 </CardHeader>
                 <CardContent className="px-0 sm:px-2 pb-0 pt-1">
                 <ScrollArea className="h-auto max-h-[400px]">
-                    <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Description</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
+                    <Table><TableHeader><TableRow><TableHead className="py-2 px-2 text-xs">Description</TableHead><TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead><TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead><TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead><TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead></TableRow></TableHeader><TableBody>
                         {topExpensesData.map(exp => (
                         <TableRow key={exp.id}>
                             <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[100px] sm:max-w-xs" title={exp.description}>{exp.description}</TableCell>
@@ -845,7 +835,7 @@ export default function AnalyticsTab({
                             </TableCell>
                         </TableRow>
                         ))}
-                    </TableBody>{/* */}</Table>
+                    </TableBody></Table>
                 </ScrollArea>
                 </CardContent>
             </Card>
@@ -860,7 +850,7 @@ export default function AnalyticsTab({
             </CardHeader>
             <CardContent className="px-0 sm:px-2 pb-0 pt-1">
                 <ScrollArea className="h-auto max-h-[400px]">
-                <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Category</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>{/* */}{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}{/* */}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
+                <Table><TableHeader><TableRow><TableHead className="py-2 px-2 text-xs">Category</TableHead><TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead><TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>{analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}{analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}</TableRow></TableHeader><TableBody>
                     {detailedCategoryAnalytics.map(cat => (
                         <TableRow key={cat.name}>
                         <TableCell className="py-1.5 px-2 text-xs font-medium flex items-center"><cat.Icon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground"/>{cat.name}</TableCell>
@@ -875,7 +865,7 @@ export default function AnalyticsTab({
                         </TableCell>
                         </TableRow>
                     ))}
-                    </TableBody>{/* */}</Table>
+                    </TableBody></Table>
                 </ScrollArea>
             </CardContent>
             </Card>
@@ -890,7 +880,7 @@ export default function AnalyticsTab({
                 </CardHeader>
                 <CardContent className="px-0 sm:px-2 pb-0 pt-1">
                     <ScrollArea className="h-auto max-h-[400px]">
-                        <Table>{/* */}<TableHeader>{/* */}<TableRow>{/* */}<TableHead className="py-2 px-2 text-xs">Participant</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>{/* */}<TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>{/* */}</TableRow>{/* */}</TableHeader>{/* */}<TableBody>
+                        <Table><TableHeader><TableRow><TableHead className="py-2 px-2 text-xs">Participant</TableHead><TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead><TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead><TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead><TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead></TableRow></TableHeader><TableBody>
                             {detailedParticipantAnalytics.map(p => (
                                 <TableRow key={p.name}>
                                 <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[80px] sm:max-w-xs">{p.name}</TableCell>
@@ -907,7 +897,7 @@ export default function AnalyticsTab({
                                 </TableCell>
                                 </TableRow>
                             ))}
-                            </TableBody>{/* */}</Table>
+                            </TableBody></Table>
                     </ScrollArea>
                 </CardContent>
             </Card>
