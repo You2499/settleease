@@ -3,7 +3,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, PanelLeftClose
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon
 } from 'lucide-react';
 import { useTheme } from "next-themes"; 
 
@@ -166,7 +166,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <div className="flex items-center justify-between p-2 mb-1.5">
+        <div className="flex items-center justify-between mb-1.5">
             {currentUserEmail && (
             <div className="space-y-0.5 flex-grow overflow-hidden">
                 <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
@@ -206,8 +206,8 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             </DropdownMenu>
         </div>
 
-        <div className="mt-auto px-3 py-2 border-t border-sidebar-border/50">
-          <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1">
+        <div className="mt-auto border-t border-sidebar-border/50">
+          <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1 pt-2">
             <span>Made by Gagan Gupta with</span>
             <GeminiIcon />
           </p>
