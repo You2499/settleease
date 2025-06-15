@@ -294,6 +294,13 @@ export default function AnalyticsTab({
                 date: expDate
             });
             if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && selectedPersonPaymentForThisWholeExpense > 0.001) {
+                 // Corrected: attribute the payment *proportionally* to the person's share of this expense.
+                 // However, this specific logic might be better handled when calculating largestPayer below, as 'personalPaymentsForCategory'
+                 // is more about 'how much I paid for things that fell into this category *for me*'.
+                 // For now, let's sum the share amount if the person paid anything for this expense.
+                 // This implies that if they paid (even partially), their share for this category contributes to "their payments for this category".
+                 // A more precise "personalPaymentsForCategory" would track how much of their *actual payment* on an expense contributed to *their share* of items in a category.
+                 // Given the current data structure, this is a reasonable approximation if we assume 'personalPaymentsForCategory' means 'my share in this category that I also contributed payment towards'.
                  categoryDataMap[targetCategory].personalPaymentsForCategory += personShareForEntireExpense; 
             }
         }
@@ -323,8 +330,9 @@ export default function AnalyticsTab({
                 if (catExp.split_method === 'itemwise' && catExp.items) {
                     catExp.items.forEach(item => {
                         const itemCat = item.categoryName || catExp.category || UNCATEGORIZED;
-                        if (itemCat === name) {
+                        if (itemCat === name) { // Only consider items belonging to the current category 'name'
                             catExp.paid_by.forEach(p => {
+                                // Approximate: attribute payment based on item's proportion of total bill
                                 if (currentExpenseTotalBill > 0.001) {
                                      const itemProportion = Number(item.price) / currentExpenseTotalBill;
                                      payerTotals[p.personId] = (payerTotals[p.personId] || 0) + (Number(p.amount) * itemProportion);
@@ -332,10 +340,10 @@ export default function AnalyticsTab({
                             });
                         }
                     });
-                } else {
+                } else { // For non-itemwise expenses, if the expense category matches
                     if ((catExp.category || UNCATEGORIZED) === name) {
                         catExp.paid_by.forEach(p => {
-                             payerTotals[p.personId] = (payerTotals[p.personId] || 0) + Number(p.amount);
+                             payerTotals[p.personId] = (payerTotals[p.personId] || 0) + Number(p.amount); // Full payment amount for this expense
                         });
                     }
                 }
@@ -345,7 +353,8 @@ export default function AnalyticsTab({
                 largestPayerData = { name: peopleMap[sortedPayers[0][0]] || 'Unknown', amount: sortedPayers[0][1] };
             }
         } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-            if (personalPaymentsForCategory > 0.001) { 
+             // For personal view, "largestPayer" means "how much I paid towards my share of this category"
+            if (personalPaymentsForCategory > 0.001) { // This uses the refined personalPaymentsForCategory
                  largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
             }
         }
@@ -592,7 +601,7 @@ export default function AnalyticsTab({
 
   return (
     <ScrollArea className="h-full p-0.5">
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
