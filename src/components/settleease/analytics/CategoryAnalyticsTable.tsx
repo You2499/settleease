@@ -26,17 +26,15 @@ export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, anal
       <CardContent className="px-0 sm:px-2 pb-0 pt-1">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="py-2 px-2 text-xs">Category</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>
-                <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>
-                {analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}
-                {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow>
+              <TableHead className="py-2 px-2 text-xs">Category</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right">Total {analyticsViewMode === 'personal' ? 'Share' : 'Spent'}</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell"># Exp.</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell">Avg.</TableHead>
+              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Largest Item/Exp.</TableHead>
+              {analyticsViewMode === 'personal' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Your Payments</TableHead>}
+              {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}
+            </TableRow></TableHeader>
             <TableBody>
               {detailedCategoryAnalytics.map(cat => (
                 <TableRow key={cat.name}>

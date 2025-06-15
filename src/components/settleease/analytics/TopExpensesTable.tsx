@@ -27,15 +27,13 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
       <CardContent className="px-0 sm:px-2 pb-0 pt-1">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="py-2 px-2 text-xs">Description</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>
-                <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>
-                <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>
-                <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow>
+              <TableHead className="py-2 px-2 text-xs">Description</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>
+              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>
+              <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>
+              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>
+            </TableRow></TableHeader>
             <TableBody>
               {topExpensesData.map(exp => (
                 <TableRow key={exp.id}>

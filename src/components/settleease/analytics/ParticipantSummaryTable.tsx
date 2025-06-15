@@ -35,18 +35,16 @@ export default function ParticipantSummaryTable({
       <CardContent className="px-0 sm:px-2 pb-0 pt-1">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>
-                <TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>
-                <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>
-              </TableRow>
-            </TableHeader>
+            <TableHeader><TableRow>
+              <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>
+              <TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>
+              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>
+            </TableRow></TableHeader>
             <TableBody>
               {detailedParticipantAnalytics.map(p => (
                 <TableRow key={p.name}>
