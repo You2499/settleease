@@ -18,7 +18,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-import { ThemeToggleButton } from '@/components/ThemeToggleButton'; // Added import
+import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -167,12 +167,12 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             )}
           </div>
         )}
-        <div className="my-2 flex justify-center">
+        <div className="flex items-center justify-between my-2">
           <ThemeToggleButton />
+          <Button variant="outline" size="sm" onClick={handleLogout} className="w-auto">
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={handleLogout} className="w-full my-2">
-          <LogOut className="mr-2 h-4 w-4" /> Logout
-        </Button>
         <p className="text-center text-xs text-sidebar-foreground/60 flex items-center justify-center gap-1">
           <span>Made by Gagan Gupta with</span>
           <GeminiIcon />
@@ -181,4 +181,3 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
     </Sidebar>
   );
 }
-
