@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient, type SupabaseClient, type User as SupabaseUser, type RealtimeChannel } from '@supabase/supabase-js';
 
 import {
-  Settings2, AlertTriangle
+  Settings2, AlertTriangle, HandCoins // Added HandCoins
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
+import SettingsTab from '@/components/settleease/SettingsTab'; // Added SettingsTab import
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
@@ -383,11 +384,11 @@ export default function SettleEasePage() {
   
   // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
   useEffect(() => {
-    if (userRole === 'user' && !['dashboard', 'analytics'].includes(activeView)) {
-      console.log("Role-View Sync Effect: User role is 'user' and current view is restricted. Resetting to dashboard.");
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'settings'];
+    if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
+      console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
       setActiveView('dashboard');
-      // Optionally, show a toast if the change was due to role restriction
-      // toast({ title: "Access Denied", description: "Redirected to Dashboard.", variant: "destructive" });
+      toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
     }
   }, [userRole, activeView]);
 
@@ -592,7 +593,8 @@ export default function SettleEasePage() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = (view: ActiveView) => {
-    if (userRole === 'user' && !['dashboard', 'analytics'].includes(view)) {
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'settings'];
+    if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
       setActiveView('dashboard'); // This triggers the Role-View Sync effect if needed
     } else {
@@ -656,8 +658,15 @@ export default function SettleEasePage() {
       <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
         <div className="flex flex-col h-full">
-          <header className="p-4 md:hidden"> {/* Only shown on mobile */}
-            <SidebarTrigger />
+          <header className="p-4 md:hidden flex items-center sticky top-0 bg-background z-20 border-b shadow-sm">
+            <div className="w-10"> {/* Left part for trigger */}
+              <SidebarTrigger />
+            </div>
+            <div className="flex-grow flex items-center justify-center"> {/* Center part for logo */}
+              <HandCoins className="h-7 w-7 text-primary mr-2" />
+              <span className="text-xl font-bold text-primary">SettleEase</span>
+            </div>
+            <div className="w-10" /> {/* Right part, spacer for symmetry */}
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar">
             {isLoadingData && isDataFetchedAtLeastOnce && (
@@ -699,6 +708,12 @@ export default function SettleEasePage() {
                 db={db}
                 currentUserId={currentUser.id}
                 onActionComplete={() => fetchAllData(false)}
+              />
+            )}
+             {userRole === 'admin' && activeView === 'settings' && (
+              <SettingsTab
+                currentUserEmail={currentUser.email || undefined}
+                userRole={userRole}
               />
             )}
           </main>

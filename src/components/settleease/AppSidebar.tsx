@@ -3,9 +3,9 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon // Added Settings, Sun, Moon icons
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, PanelLeftClose
 } from 'lucide-react';
-import { useTheme } from "next-themes"; // Added useTheme import
+import { useTheme } from "next-themes"; 
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,7 +15,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // Added DropdownMenu imports
+} from "@/components/ui/dropdown-menu"; 
 import {
   Sidebar,
   SidebarHeader,
@@ -24,10 +24,9 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-  useSidebar,
+  useSidebar, // Make sure useSidebar is imported
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-// Removed ThemeToggleButton import as it's no longer used
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -74,10 +73,13 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2 h-10">
-          <HandCoins className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
-          <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
-        </div>
+        {!isMobile && (
+          <div className="flex items-center gap-2 h-10">
+            <HandCoins className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
+            <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
+          </div>
+        )}
+         {/* Mobile header is intentionally kept minimal or empty as per new design */}
       </SidebarHeader>
       <SidebarContent className="p-2">
         <SidebarMenu>
@@ -160,6 +162,17 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                   <span className="group-data-[state=collapsed]:hidden">Manage Settlements</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+               <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNavigation('settings')}
+                  isActive={activeView === 'settings'}
+                  tooltip={{ content: "Application Settings", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <Settings /> {/* Using the main settings icon */}
+                  <span className="group-data-[state=collapsed]:hidden">Settings</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </>
           )}
         </SidebarMenu>
@@ -183,7 +196,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground h-8 w-8 ml-2 shrink-0">
                         <Settings className="h-4 w-4" />
-                        <span className="sr-only">Settings</span>
+                        <span className="sr-only">Settings & Actions</span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
