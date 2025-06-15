@@ -3,10 +3,19 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings // Added Settings icon
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon // Added Settings, Sun, Moon icons
 } from 'lucide-react';
+import { useTheme } from "next-themes"; // Added useTheme import
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Added DropdownMenu imports
 import {
   Sidebar,
   SidebarHeader,
@@ -18,7 +27,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-import { ThemeToggleButton } from '@/components/ThemeToggleButton';
+// Removed ThemeToggleButton import as it's no longer used
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -52,6 +61,7 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
+  const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
 
   const handleNavigation = (view: ActiveView) => {
@@ -155,29 +165,44 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex flex-col p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        {currentUserEmail && (
-          <div className="mb-3 space-y-1">
-            <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
-              {currentUserEmail}
-            </p>
-            {userRole && (
-              <div className="flex items-center gap-1 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
-                <RoleIcon className="h-3.5 w-3.5" />
-                <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
-              </div>
+        <div className="flex items-center justify-between mb-3">
+            {currentUserEmail && (
+            <div className="space-y-0.5 flex-grow overflow-hidden">
+                <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
+                {currentUserEmail}
+                </p>
+                {userRole && (
+                <div className="flex items-center gap-1 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
+                    <RoleIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
+                </div>
+                )}
+            </div>
             )}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between my-3">
-          <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground h-8 w-8" title="Settings" onClick={() => { /* Add settings functionality later */ }}>
-            <Settings className="h-4 w-4" />
-            <span className="sr-only">Settings</span>
-          </Button>
-          <ThemeToggleButton />
-          <Button variant="ghost" onClick={handleLogout} className="text-xs h-8 px-2 py-1.5 flex items-center gap-1.5 text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent">
-            <LogOut className="h-4 w-4" /> Logout
-          </Button>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground h-8 w-8 ml-2 shrink-0">
+                        <Settings className="h-4 w-4" />
+                        <span className="sr-only">Settings</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                        <Sun className="mr-2 h-4 w-4" /> Light
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                        <Moon className="mr-2 h-4 w-4" /> Dark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                        <Settings className="mr-2 h-4 w-4" /> System
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                        <LogOut className="mr-2 h-4 w-4" /> Logout
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
         </div>
 
         <div className="mt-auto pt-3 border-t border-sidebar-border/50">
