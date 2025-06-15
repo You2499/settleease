@@ -1,4 +1,5 @@
 
+
 export interface PayerShare {
   personId: string;
   amount: number;
@@ -85,7 +86,37 @@ export interface CalculatedTransaction {
 // Active view type for navigation
 export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics';
 
+
 // Analytics Specific Types
+
+export interface EnhancedOverallStats {
+  totalAmount: number;
+  expenseCount: number;
+  averageAmount: number;
+  firstDate: Date | null;
+  lastDate: Date | null;
+  distinctParticipantCount: number;
+  mostExpensiveCategory: { name: string; totalAmount: number };
+  largestSingleExpense: { description: string; amount: number; date: string };
+}
+
+export interface MonthlyExpenseData {
+  month: string;
+  totalAmount: number;
+}
+
+export interface ShareVsPaidDataPoint {
+  name: string;
+  paid: number;
+  share: number;
+}
+
+export interface CategorySpendingPieChartDataPoint {
+  name: string;
+  totalAmount: number; // Renamed from 'amount' for clarity if used elsewhere
+}
+
+
 export interface CategoryAnalyticsData {
   name: string;
   totalAmount: number;
@@ -144,3 +175,4 @@ export interface PersonAggregatedItemShares {
     totalShareOfAdjustedItems: number;
   };
 }
+
