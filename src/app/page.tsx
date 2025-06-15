@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient, type SupabaseClient, type User as SupabaseUser, type RealtimeChannel } from '@supabase/supabase-js';
 
 import {
-  Settings2, AlertTriangle, FileText
+  Settings2, AlertTriangle
 } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,7 +15,6 @@ import {
   SidebarInset,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ThemeToggleButton } from '@/components/ThemeToggleButton';
 
 import AuthForm from '@/components/settleease/AuthForm';
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
@@ -601,20 +600,6 @@ export default function SettleEasePage() {
     }
   };
 
-
-  const getHeaderTitle = () => {
-    switch (activeView) {
-      case 'dashboard': return 'Dashboard';
-      case 'analytics': return 'Analytics';
-      case 'addExpense': return userRole === 'admin' ? 'Add New Expense' : 'Dashboard';
-      case 'editExpenses': return userRole === 'admin' ? 'Edit Expenses' : 'Dashboard';
-      case 'managePeople': return userRole === 'admin' ? 'Manage People' : 'Dashboard';
-      case 'manageCategories': return userRole === 'admin' ? 'Manage Categories' : 'Dashboard';
-      case 'manageSettlements': return userRole === 'admin' ? 'Manage Settlements' : 'Dashboard';
-      default: return 'SettleEase';
-    }
-  };
-
  const getCategoryIconFromName = useCallback((categoryName: string): React.FC<React.SVGProps<SVGSVGElement>> => {
     if (categories && categories.length > 0) {
       const dynamicCat = categories.find(c => c.name === categoryName);
@@ -671,14 +656,8 @@ export default function SettleEasePage() {
       <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
       <SidebarInset>
         <div className="flex flex-col h-full">
-          <header className="p-4 border-b bg-card flex items-center justify-between">
-            <div className="flex items-center h-10">
-              <SidebarTrigger className="md:hidden mr-2" />
-              <h1 className="text-xl sm:text-2xl font-headline font-bold text-primary truncate">
-                {getHeaderTitle()}
-              </h1>
-            </div>
-            <ThemeToggleButton />
+          <header className="p-4 md:hidden"> {/* Only shown on mobile */}
+            <SidebarTrigger />
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar">
             {isLoadingData && isDataFetchedAtLeastOnce && (
