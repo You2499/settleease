@@ -166,7 +166,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <div className="flex items-center justify-between p-3 mb-1.5">
+        <div className="flex items-center justify-between p-2 mb-1.5">
             {currentUserEmail && (
             <div className="space-y-0.5 flex-grow overflow-hidden">
                 <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
