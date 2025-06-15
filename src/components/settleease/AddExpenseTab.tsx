@@ -108,13 +108,6 @@ export default function AddExpenseTab({
             personId: p.personId, 
             amount: p.amount.toString() 
           })));
-      } else if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length === 0) {
-        setIsMultiplePayers(false);
-        setPayers([{ 
-          id: Date.now().toString(), 
-          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), 
-          amount: expenseToEdit.total_amount.toString()
-        }]);
       } else { 
         setIsMultiplePayers(false);
         setPayers([{ 
@@ -203,28 +196,40 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]); // Removed defaultItemCategory from dependencies
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
+
 
   useEffect(() => {
     if (!isMultiplePayers) {
-      const currentPayer = payers[0];
-      const newPayerAmount = totalAmount; 
-      const newPayerPersonId = currentPayer?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
+      const currentPayerRow = payers[0];
+      const newPayerAmountString = totalAmount;
+      
+      let intendedPersonId = currentPayerRow?.personId;
 
-      if (!currentPayer || currentPayer.personId !== newPayerPersonId || currentPayer.amount !== newPayerAmount) {
-        setPayers([{ id: currentPayer?.id || Date.now().toString(), personId: newPayerPersonId, amount: newPayerAmount }]);
+      if (expenseToEdit && currentPayerRow?.personId) {
+        intendedPersonId = currentPayerRow.personId;
+      } else {
+        intendedPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       }
-    } else { 
-        const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-        if (payers.length === 0 && firstPayerPersonId) { 
-             setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
-        } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
-            if (payers[0].personId !== firstPayerPersonId) { 
-                setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
-            }
-        }
+
+      if (!currentPayerRow || currentPayerRow.personId !== intendedPersonId || currentPayerRow.amount !== newPayerAmountString) {
+        setPayers([{
+          id: currentPayerRow?.id || Date.now().toString(),
+          personId: intendedPersonId!, 
+          amount: newPayerAmountString
+        }]);
+      }
+    } else {
+      const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+      if (payers.length === 0 && firstPayerPersonId) {
+           setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+      } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
+          if (payers[0].personId !== firstPayerPersonId) {
+              setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
+          }
+      }
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, people, payers]); 
+  }, [totalAmount, isMultiplePayers, defaultPayerId, people, payers, expenseToEdit]);
 
 
   useEffect(() => {
