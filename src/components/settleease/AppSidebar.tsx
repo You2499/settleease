@@ -59,7 +59,7 @@ interface AppSidebarProps {
 }
 
 export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppSidebarProps) {
-  const { isMobile, setOpenMobile, state } = useSidebar(); // Added state
+  const { isMobile, setOpenMobile } = useSidebar(); 
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
 
@@ -206,7 +206,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             </DropdownMenu>
         </div>
 
-        <div className="mt-auto px-3 py-1.5 border-t border-sidebar-border/50">
+        <div className="mt-auto px-3 py-2 border-t border-sidebar-border/50">
           <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1">
             <span>Made by Gagan Gupta with</span>
             <GeminiIcon />
