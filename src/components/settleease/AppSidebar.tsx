@@ -73,7 +73,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
   return (
     <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
       {!isMobile && (
-         <SidebarHeader className="flex flex-row items-center justify-start p-4 border-b border-sidebar-border">
+         <SidebarHeader className="flex flex-row items-center justify-center p-4 border-b border-sidebar-border">
             <div className="flex items-center gap-2 h-10">
               <HandCoins className="h-8 w-8 text-sidebar-primary flex-shrink-0" />
               <h2 className="text-2xl font-bold text-sidebar-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
@@ -166,7 +166,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <div className="mb-2 flex items-center justify-between"> {/* Changed mb-1.5 to mb-2 */}
+        <div className="mb-2 flex items-center justify-between"> 
             {currentUserEmail && (
             <div className="space-y-0.5 flex-grow overflow-hidden">
                 <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
