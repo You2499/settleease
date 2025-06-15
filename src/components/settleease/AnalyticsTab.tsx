@@ -128,9 +128,9 @@ export default function AnalyticsTab({
             }
 
             if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-                const originalTotalBillForExpense = Number(exp.total_amount) || 0;
+                const originalTotalBillForThisExpense = Number(exp.total_amount) || 0;
                 const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
-                const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
+                const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForThisExpense - celebrationContributionForExpense);
                 const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
                 
                 const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
@@ -212,9 +212,6 @@ export default function AnalyticsTab({
     displayedExpenses.forEach(exp => {
         const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
         const originalTotalBillForExpense = Number(exp.total_amount) || 0;
-        const personShareForEntireExpense = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
-            ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
-            : originalTotalBillForExpense; 
         
         const selectedPersonPaymentForThisWholeExpense = (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)
             ? exp.paid_by
@@ -244,7 +241,7 @@ export default function AnalyticsTab({
                 let paymentContributionToCategoryForItem = 0;
 
                 if (analyticsViewMode === 'group') {
-                    amountToCreditToCategory = originalItemPrice; // Group view uses original item price for category total
+                    amountToCreditToCategory = originalItemPrice; 
                 } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
                     const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
                     const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
@@ -273,7 +270,10 @@ export default function AnalyticsTab({
                 }
             });
         } else { 
-            // Non-itemwise expense
+            const personShareForEntireExpense = (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)
+                ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
+                : originalTotalBillForExpense;
+            
             const amountForCategory = (analyticsViewMode === 'group') ? originalTotalBillForExpense : personShareForEntireExpense;
             if (amountForCategory <= 0.001) return;
 
@@ -292,7 +292,7 @@ export default function AnalyticsTab({
                 date: expDate
             });
             if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && selectedPersonPaymentForThisWholeExpense > 0.001) {
-                 categoryDataMap[targetCategory].personalPaymentsForCategory += selectedPersonPaymentForThisWholeExpense;
+                 categoryDataMap[targetCategory].personalPaymentsForCategory += personShareForEntireExpense; // Attribute the share to personal payments for this category
             }
         }
     });
@@ -317,14 +317,14 @@ export default function AnalyticsTab({
             const categoryExpenses = displayedExpenses.filter(exp => expenseIds.has(exp.id));
             const payerTotals: Record<string, number> = {};
             categoryExpenses.forEach(catExp => {
+                const currentExpenseTotalBill = Number(catExp.total_amount) || 0;
                 if (catExp.split_method === 'itemwise' && catExp.items) {
                     catExp.items.forEach(item => {
                         const itemCat = item.categoryName || catExp.category || UNCATEGORIZED;
                         if (itemCat === name) {
                             catExp.paid_by.forEach(p => {
-                                // Approximate: attribute payment based on item's proportion of total bill
-                                if (originalTotalBillForExpense > 0.001) {
-                                     const itemProportion = Number(item.price) / originalTotalBillForExpense;
+                                if (currentExpenseTotalBill > 0.001) {
+                                     const itemProportion = Number(item.price) / currentExpenseTotalBill;
                                      payerTotals[p.personId] = (payerTotals[p.personId] || 0) + (Number(p.amount) * itemProportion);
                                 }
                             });
@@ -343,7 +343,7 @@ export default function AnalyticsTab({
                 largestPayerData = { name: peopleMap[sortedPayers[0][0]] || 'Unknown', amount: sortedPayers[0][1] };
             }
         } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-            if (personalPaymentsForCategory > 0.001) {
+            if (personalPaymentsForCategory > 0.001) { // This represents the selected person's total payment towards expenses in this category
                  largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
             }
         }
@@ -604,10 +604,10 @@ export default function AnalyticsTab({
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
         }} className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
-            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2 border">
+            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
             </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2 border">
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
               <UserSquare className="h-4 w-4"/> Personal Insights
             </TabsTrigger>
           </TabsList>
