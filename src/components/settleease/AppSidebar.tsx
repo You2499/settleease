@@ -165,8 +165,8 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
           )}
         </SidebarMenu>
       </SidebarContent>
-      <SidebarFooter className="flex flex-col p-3 border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <div className="flex items-center justify-between mb-3">
+      <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
+        <div className="flex items-center justify-between p-3 mb-3">
             {currentUserEmail && (
             <div className="space-y-0.5 flex-grow overflow-hidden">
                 <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
@@ -206,7 +206,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
             </DropdownMenu>
         </div>
 
-        <div className="mt-auto pt-3 border-t border-sidebar-border/50">
+        <div className="mt-auto p-3 border-t border-sidebar-border/50">
           <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1">
             <span>Made by Gagan Gupta with</span>
             <GeminiIcon />
