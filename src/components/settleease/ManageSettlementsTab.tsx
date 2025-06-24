@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -20,7 +21,6 @@ import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
-import type { UserRole } from '@/lib/settleease/types';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -30,7 +30,6 @@ interface ManageSettlementsTabProps {
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
-  userRole: UserRole;
 }
 
 interface CalculatedSettlement {
@@ -47,7 +46,6 @@ export default function ManageSettlementsTab({
   db,
   currentUserId,
   onActionComplete,
-  userRole,
 }: ManageSettlementsTabProps) {
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
@@ -72,8 +70,7 @@ export default function ManageSettlementsTab({
       }
     });
     
-    // Only use approved settlements to update balances
-    settlementPayments.filter(payment => payment.status === 'approved').forEach(payment => {
+    settlementPayments.forEach(payment => {
         if (balances[payment.debtor_id] !== undefined) {
             balances[payment.debtor_id] += Number(payment.amount_settled);
         }
@@ -108,7 +105,6 @@ export default function ManageSettlementsTab({
     }
     setIsLoading(true);
     try {
-      const status = userRole === 'admin' ? 'approved' : 'pending';
       const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
         {
           debtor_id: settlementToConfirm.from,
@@ -116,11 +112,10 @@ export default function ManageSettlementsTab({
           amount_settled: settlementToConfirm.amount,
           marked_by_user_id: currentUserId,
           settled_at: new Date().toISOString(),
-          status,
         },
       ]);
       if (error) throw error;
-      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[settlementToConfirm.from]} to ${peopleMap[settlementToConfirm.to]} marked as complete${status === 'pending' ? ' and is pending admin approval.' : '.'}` });
+      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[settlementToConfirm.from]} to ${peopleMap[settlementToConfirm.to]} marked as complete.` });
       setSettlementToConfirm(null);
       onActionComplete();
     } catch (error: any) {
@@ -151,24 +146,6 @@ export default function ManageSettlementsTab({
     }
   };
 
-  const handleApprovePayment = async (payment: SettlementPayment) => {
-    if (!db) {
-      toast({ title: "Error", description: "Cannot approve payment. DB missing.", variant: "destructive" });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).update({ status: 'approved' }).eq('id', payment.id);
-      if (error) throw error;
-      toast({ title: "Payment Approved", description: `Payment from ${peopleMap[payment.debtor_id]} to ${peopleMap[payment.creditor_id]} has been approved.` });
-      onActionComplete();
-    } catch (error: any) {
-      console.error("Error approving payment:", error);
-      toast({ title: "Error Approving Payment", description: error.message || "Could not approve payment.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   if (!db) {
     return (
@@ -203,70 +180,29 @@ export default function ManageSettlementsTab({
             {calculatedSimplifiedSettlements.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 -mx-1">
                 <ul className="space-y-2.5 sm:space-y-3 px-1">
-                  {calculatedSimplifiedSettlements.map((settlement, index) => {
-                    // Find if there is a payment for this transaction (ignore amount for pending/approved)
-                    const approvedPayment = settlementPayments.find(
-                      p => p.debtor_id === settlement.from && p.creditor_id === settlement.to && p.status === 'approved'
-                    );
-                    const pendingPayment = settlementPayments.find(
-                      p => p.debtor_id === settlement.from && p.creditor_id === settlement.to && p.status === 'pending'
-                    );
-                    // Only hide if approved
-                    if (approvedPayment) {
-                      return null;
-                    }
-                    return (
-                      <li key={`${settlement.from}-${settlement.to}-${index}`}>
-                        <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                            <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
-                              <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
-                              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
-                              <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
-                            </div>
-                            {pendingPayment ? (
-                              userRole === 'admin' ? (
-                                <div className="flex gap-2 items-center">
-                                  <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1">Awaiting Admin Approval</span>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleApprovePayment(pendingPayment)}
-                                    disabled={isLoading}
-                                    className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                                  >
-                                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => setPaymentToUnmark(pendingPayment)}
-                                    disabled={isLoading}
-                                    className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                                  >
-                                    Reject
-                                  </Button>
-                                </div>
-                              ) : (
-                                <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1">Awaiting Admin Approval</span>
-                              )
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setSettlementToConfirm(settlement)}
-                                disabled={isLoading}
-                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                              >
-                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
-                              </Button>
-                            )}
+                  {calculatedSimplifiedSettlements.map((settlement, index) => (
+                    <li key={`${settlement.from}-${settlement.to}-${index}`}>
+                      <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                          <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
+                            <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
+                            <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
+                            <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
+                            <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
                           </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSettlementToConfirm(settlement)}
+                            disabled={isLoading}
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                          >
+                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
+                          </Button>
                         </div>
-                      </li>
-                    );
-                  })}
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </ScrollArea>
             ) : (
@@ -295,54 +231,21 @@ export default function ManageSettlementsTab({
                               <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 mx-1 sm:mx-1.5 inline-block" />
                               <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
                               <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
-                              {/* Status badge */}
-                              {payment.status === 'pending' && (
-                                <span className="ml-2 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold border border-yellow-300">Pending</span>
-                              )}
-                              {payment.status === 'approved' && (
-                                <span className="ml-2 px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold border border-green-300">Approved</span>
-                              )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                               Paid on: {new Date(payment.settled_at).toLocaleDateString()}
                               {payment.notes && <span className="ml-2 italic">({payment.notes})</span>}
                             </div>
                           </div>
-                          {/* Approval Workflow */}
-                          {payment.status === 'pending' && userRole === 'admin' && (
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleApprovePayment(payment)}
-                                disabled={isLoading}
-                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                              >
-                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setPaymentToUnmark(payment)}
-                                disabled={isLoading}
-                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                              >
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                          {/* Unmark button for approved settlements for admins */}
-                          {payment.status === 'approved' && userRole === 'admin' && (
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setPaymentToUnmark(payment)}
-                              disabled={isLoading}
-                              className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                            >
-                              <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
-                            </Button>
-                          )}
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => setPaymentToUnmark(payment)}
+                            disabled={isLoading}
+                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                          >
+                            <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
+                          </Button>
                         </div>
                       </div>
                     </li>

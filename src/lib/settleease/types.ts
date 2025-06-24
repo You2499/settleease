@@ -1,3 +1,5 @@
+
+
 export interface PayerShare {
   personId: string;
   amount: number;
@@ -70,7 +72,6 @@ export interface SettlementPayment {
   settled_at: string; // ISO date string
   marked_by_user_id: string; // FK to auth.users.id
   notes?: string;
-  status: 'pending' | 'approved'; // New field for approval workflow
 }
 
 // Used for displaying calculated settlements

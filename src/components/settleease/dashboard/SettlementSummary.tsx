@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -94,21 +95,9 @@ export default function SettlementSummary({
             {transactionsToDisplay.length > 0 ? (
               <ScrollArea className="h-[200px] border rounded-md p-1 mt-2"> {/* Reduced margin */}
                 <ul className="space-y-2 p-2">
-                  {transactionsToDisplay.map((txn, i) => {
-                    // Find if there is a payment for this transaction (ignore amount for pending/approved)
-                    const approvedPayment = settlementPayments.find(
-                      p => p.debtor_id === txn.from && p.creditor_id === txn.to && p.status === 'approved'
-                    );
-                    const pendingPayment = settlementPayments.find(
-                      p => p.debtor_id === txn.from && p.creditor_id === txn.to && p.status === 'pending'
-                    );
-                    // Only hide if approved
-                    if (approvedPayment) {
-                      return null;
-                    }
-                    return (
-                      <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
-                        <Card className="bg-card/70 p-2.5 shadow-sm">
+                  {transactionsToDisplay.map((txn, i) => (
+                    <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
+                      <Card className="bg-card/70 p-2.5 shadow-sm">
                           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5">
                             <div className="flex-grow text-xs sm:text-sm">
                               <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
@@ -116,12 +105,7 @@ export default function SettlementSummary({
                               <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
                               <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-sm sm:text-base">{formatCurrency(txn.amount)}</span>
                             </div>
-                            {pendingPayment ? (
-                              <div className="flex items-center gap-2 text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
-                                Awaiting Admin Approval
-                                <span className='ml-2 px-2 py-0.5 rounded bg-yellow-200 text-yellow-800 text-xs font-semibold border border-yellow-300'>Pending</span>
-                              </div>
-                            ) : (
+                            {userRole === 'admin' && (
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -133,10 +117,9 @@ export default function SettlementSummary({
                               </Button>
                             )}
                           </div>
-                        </Card>
-                      </li>
-                    );
-                  })}
+                      </Card>
+                    </li>
+                  ))}
                 </ul>
               </ScrollArea>
             ) : (

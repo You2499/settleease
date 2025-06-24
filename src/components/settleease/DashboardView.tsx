@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -63,7 +64,7 @@ export default function DashboardView({
 
     // 2. Calculate balances after recorded settlement payments (for simplified view)
     const balancesAfterPayments = { ...initialBalances };
-    settlementPayments.filter(payment => payment.status === 'approved').forEach(payment => {
+    settlementPayments.forEach(payment => {
       if (balancesAfterPayments[payment.debtor_id] !== undefined) {
         balancesAfterPayments[payment.debtor_id] += Number(payment.amount_settled);
       }
@@ -120,9 +121,8 @@ export default function DashboardView({
       });
     });
 
-    // Only use approved settlements to update balances
     const settledAmountsMap: Record<string, Record<string, number>> = {};
-    settlementPayments.filter(sp => sp.status === 'approved').forEach(sp => {
+    settlementPayments.forEach(sp => {
       if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
       settledAmountsMap[sp.debtor_id][sp.creditor_id] = (settledAmountsMap[sp.debtor_id][sp.creditor_id] || 0) + Number(sp.amount_settled);
     });
@@ -156,7 +156,6 @@ export default function DashboardView({
       return;
     }
     try {
-      const status = userRole === 'admin' ? 'approved' : 'pending';
       const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
         {
           debtor_id: transaction.from,
@@ -164,17 +163,10 @@ export default function DashboardView({
           amount_settled: transaction.amount,
           marked_by_user_id: currentUserId,
           settled_at: new Date().toISOString(),
-          status,
         },
       ]);
       if (error) throw error;
-      toast({
-        title: "Settlement Recorded",
-        description:
-          status === 'approved'
-            ? `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete.`
-            : `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete and is pending admin approval.`,
-      });
+      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete.` });
       onActionComplete();
     } catch (error: any) {
       console.error("Error marking settlement as paid:", error);

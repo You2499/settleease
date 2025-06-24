@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -259,7 +260,7 @@ export default function PerPersonSettlementDetails({
                                 On: {new Date(payment.settled_at).toLocaleDateString()}
                             </span>
                           </div>
-                          {userRole === 'admin' && payment.status === 'approved' && (
+                          {userRole === 'admin' && (
                             <Button
                               size="sm"
                               variant="destructive"
@@ -269,9 +270,6 @@ export default function PerPersonSettlementDetails({
                             >
                               <Undo2 className="mr-1 h-3 w-3" /> Unmark
                             </Button>
-                          )}
-                          {payment.status === 'pending' && (
-                            <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">Awaiting Admin Approval</span>
                           )}
                         </div>
                       </Card>
