@@ -155,6 +155,7 @@ export default function DashboardView({
       return;
     }
     try {
+      const status = userRole === 'admin' ? 'approved' : 'pending';
       const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
         {
           debtor_id: transaction.from,
@@ -162,11 +163,17 @@ export default function DashboardView({
           amount_settled: transaction.amount,
           marked_by_user_id: currentUserId,
           settled_at: new Date().toISOString(),
-          status: 'pending',
+          status,
         },
       ]);
       if (error) throw error;
-      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete and is pending admin approval.` });
+      toast({
+        title: "Settlement Recorded",
+        description:
+          status === 'approved'
+            ? `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete.`
+            : `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete and is pending admin approval.`,
+      });
       onActionComplete();
     } catch (error: any) {
       console.error("Error marking settlement as paid:", error);
