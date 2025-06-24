@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -48,7 +47,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     setIsLoading(true);
     setError(null);
 
-    const productionSiteUrl = "https://studio--settleease-hseuo.us-central1.hosted.app/";
+    const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
       if (isLoginView) {
@@ -86,7 +85,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     setIsGoogleLoading(true);
     setError(null);
     
-    const productionSiteUrl = "https://studio--settleease-hseuo.us-central1.hosted.app/";
+    const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
       const { error: googleError } = await db.auth.signInWithOAuth({
