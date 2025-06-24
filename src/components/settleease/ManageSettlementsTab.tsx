@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -21,6 +20,7 @@ import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
+import type { UserRole } from '@/lib/settleease/types';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -30,6 +30,7 @@ interface ManageSettlementsTabProps {
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
+  userRole: UserRole;
 }
 
 interface CalculatedSettlement {
@@ -46,6 +47,7 @@ export default function ManageSettlementsTab({
   db,
   currentUserId,
   onActionComplete,
+  userRole,
 }: ManageSettlementsTabProps) {
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
@@ -146,6 +148,24 @@ export default function ManageSettlementsTab({
     }
   };
 
+  const handleApprovePayment = async (payment: SettlementPayment) => {
+    if (!db) {
+      toast({ title: "Error", description: "Cannot approve payment. DB missing.", variant: "destructive" });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).update({ status: 'approved' }).eq('id', payment.id);
+      if (error) throw error;
+      toast({ title: "Payment Approved", description: `Payment from ${peopleMap[payment.debtor_id]} to ${peopleMap[payment.creditor_id]} has been approved.` });
+      onActionComplete();
+    } catch (error: any) {
+      console.error("Error approving payment:", error);
+      toast({ title: "Error Approving Payment", description: error.message || "Could not approve payment.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!db) {
     return (
@@ -237,15 +257,36 @@ export default function ManageSettlementsTab({
                               {payment.notes && <span className="ml-2 italic">({payment.notes})</span>}
                             </div>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setPaymentToUnmark(payment)}
-                            disabled={isLoading}
-                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                          >
-                            <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
-                          </Button>
+                          {/* Approval Workflow */}
+                          {payment.status === 'pending' ? (
+                            userRole === 'admin' ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApprovePayment(payment)}
+                                disabled={isLoading}
+                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                              >
+                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
+                              </Button>
+                            ) : (
+                              <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
+                                Awaiting Admin Approval
+                              </div>
+                            )
+                          ) : null}
+                          {/* Unmark button for admins */}
+                          {userRole === 'admin' && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => setPaymentToUnmark(payment)}
+                              disabled={isLoading}
+                              className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                            >
+                              <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </li>
