@@ -135,11 +135,20 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     lines.push('');
     lines.push(`*Net Amount For Splitting:* ${formatCurrency(Math.max(0, Number(expense.total_amount) - (expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0)))}`);
     lines.push(`*Split Method:* _${expense.split_method}_`);
-    if (expense.split_method === 'itemwise' && Array.isArray(expense.items) && expense.items.length > 0) {
+    if (expense.split_method === 'itemwise' && Array.isArray(expense.items) && expense.items.length > 0 && itemwiseBreakdownForDisplay) {
       lines.push('');
-      lines.push(`*Item-wise Breakdown:*`);
-      expense.items.forEach((item: any, idx: number) => {
-        lines.push(`- ${item.name} (${formatCurrency(item.price)}) shared by: ${item.sharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')}`);
+      lines.push(`*Item-wise Breakdown (by Person):*`);
+      Object.entries(itemwiseBreakdownForDisplay).forEach(([personId, data]: any) => {
+        lines.push(`\n*${peopleMap[personId] || 'Unknown'}*`);
+        data.items.forEach((item: any) => {
+          lines.push(`  - _${item.itemName}_: Original: ${formatCurrency(item.originalItemPrice)}, Their Share: ${formatCurrency(item.shareForPerson)} (shared by ${item.sharedByCount})`);
+        });
+        lines.push(`  _Total item share:_ *${formatCurrency(data.totalShareOfAdjustedItems)}*`);
+      });
+      lines.push('');
+      lines.push(`*Original Items & Pricing:*`);
+      expense.items.forEach((item: any) => {
+        lines.push(`- _${item.name}_: ${formatCurrency(item.price)} (shared by: ${item.sharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')})`);
       });
     }
     lines.push('');
