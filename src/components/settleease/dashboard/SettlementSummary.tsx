@@ -95,12 +95,15 @@ export default function SettlementSummary({
               <ScrollArea className="h-[200px] border rounded-md p-1 mt-2"> {/* Reduced margin */}
                 <ul className="space-y-2 p-2">
                   {transactionsToDisplay.map((txn, i) => {
-                    // Find if there is a payment for this transaction
-                    const payment = settlementPayments.find(
-                      p => p.debtor_id === txn.from && p.creditor_id === txn.to && Math.abs(p.amount_settled - txn.amount) < 0.01
+                    // Find if there is a payment for this transaction (ignore amount for pending/approved)
+                    const approvedPayment = settlementPayments.find(
+                      p => p.debtor_id === txn.from && p.creditor_id === txn.to && p.status === 'approved'
+                    );
+                    const pendingPayment = settlementPayments.find(
+                      p => p.debtor_id === txn.from && p.creditor_id === txn.to && p.status === 'pending'
                     );
                     // Only hide if approved
-                    if (payment?.status === 'approved') {
+                    if (approvedPayment) {
                       return null;
                     }
                     return (
@@ -113,7 +116,7 @@ export default function SettlementSummary({
                               <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
                               <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-sm sm:text-base">{formatCurrency(txn.amount)}</span>
                             </div>
-                            {payment?.status === 'pending' ? (
+                            {pendingPayment ? (
                               <div className="flex items-center gap-2 text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
                                 Awaiting Admin Approval
                                 <span className='ml-2 px-2 py-0.5 rounded bg-yellow-200 text-yellow-800 text-xs font-semibold border border-yellow-300'>Pending</span>
