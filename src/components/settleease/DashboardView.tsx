@@ -120,8 +120,9 @@ export default function DashboardView({
       });
     });
 
+    // Only use approved settlements to update balances
     const settledAmountsMap: Record<string, Record<string, number>> = {};
-    settlementPayments.forEach(sp => {
+    settlementPayments.filter(sp => sp.status === 'approved').forEach(sp => {
       if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
       settledAmountsMap[sp.debtor_id][sp.creditor_id] = (settledAmountsMap[sp.debtor_id][sp.creditor_id] || 0) + Number(sp.amount_settled);
     });

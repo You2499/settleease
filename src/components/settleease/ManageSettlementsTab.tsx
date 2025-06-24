@@ -72,7 +72,8 @@ export default function ManageSettlementsTab({
       }
     });
     
-    settlementPayments.forEach(payment => {
+    // Only use approved settlements to update balances
+    settlementPayments.filter(payment => payment.status === 'approved').forEach(payment => {
         if (balances[payment.debtor_id] !== undefined) {
             balances[payment.debtor_id] += Number(payment.amount_settled);
         }
@@ -107,6 +108,7 @@ export default function ManageSettlementsTab({
     }
     setIsLoading(true);
     try {
+      const status = userRole === 'admin' ? 'approved' : 'pending';
       const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
         {
           debtor_id: settlementToConfirm.from,
@@ -114,10 +116,11 @@ export default function ManageSettlementsTab({
           amount_settled: settlementToConfirm.amount,
           marked_by_user_id: currentUserId,
           settled_at: new Date().toISOString(),
+          status,
         },
       ]);
       if (error) throw error;
-      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[settlementToConfirm.from]} to ${peopleMap[settlementToConfirm.to]} marked as complete.` });
+      toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[settlementToConfirm.from]} to ${peopleMap[settlementToConfirm.to]} marked as complete${status === 'pending' ? ' and is pending admin approval.' : '.'}` });
       setSettlementToConfirm(null);
       onActionComplete();
     } catch (error: any) {
