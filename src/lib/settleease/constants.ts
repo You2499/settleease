@@ -1,4 +1,3 @@
-
 import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins, Handshake } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -8,8 +7,8 @@ export const CATEGORIES_TABLE = 'categories';
 export const USER_PROFILES_TABLE = 'user_profiles';
 export const SETTLEMENT_PAYMENTS_TABLE = 'settlement_payments';
 
-export const supabaseUrl = "https://pzednvgbxgixonpvbdsx.supabase.co";
-export const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB6ZWRudmdieGdpeG9ucHZiZHN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjMwNTgsImV4cCI6MjA2NTMzOTA1OH0.O1t0484ROMUbVNPWmuEvOLU1Z6IO4svK65Q0d-3h_Og";
+export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 
 export interface AvailableCategoryIcon {
