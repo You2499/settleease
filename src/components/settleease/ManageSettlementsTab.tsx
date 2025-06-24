@@ -203,29 +203,70 @@ export default function ManageSettlementsTab({
             {calculatedSimplifiedSettlements.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 -mx-1">
                 <ul className="space-y-2.5 sm:space-y-3 px-1">
-                  {calculatedSimplifiedSettlements.map((settlement, index) => (
-                    <li key={`${settlement.from}-${settlement.to}-${index}`}>
-                      <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
-                            <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
-                            <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
-                            <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
-                            <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
+                  {calculatedSimplifiedSettlements.map((settlement, index) => {
+                    // Find if there is a payment for this transaction (ignore amount for pending/approved)
+                    const approvedPayment = settlementPayments.find(
+                      p => p.debtor_id === settlement.from && p.creditor_id === settlement.to && p.status === 'approved'
+                    );
+                    const pendingPayment = settlementPayments.find(
+                      p => p.debtor_id === settlement.from && p.creditor_id === settlement.to && p.status === 'pending'
+                    );
+                    // Only hide if approved
+                    if (approvedPayment) {
+                      return null;
+                    }
+                    return (
+                      <li key={`${settlement.from}-${settlement.to}-${index}`}>
+                        <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                            <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
+                              <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
+                              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
+                              <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
+                              <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
+                            </div>
+                            {pendingPayment ? (
+                              userRole === 'admin' ? (
+                                <div className="flex gap-2 items-center">
+                                  <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1">Awaiting Admin Approval</span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleApprovePayment(pendingPayment)}
+                                    disabled={isLoading}
+                                    className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                                  >
+                                    <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => setPaymentToUnmark(pendingPayment)}
+                                    disabled={isLoading}
+                                    className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                                  >
+                                    Reject
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1">Awaiting Admin Approval</span>
+                              )
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSettlementToConfirm(settlement)}
+                                disabled={isLoading}
+                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                              >
+                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
+                              </Button>
+                            )}
                           </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSettlementToConfirm(settlement)}
-                            disabled={isLoading}
-                            className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                          >
-                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
-                          </Button>
                         </div>
-                      </div>
-                    </li>
-                  ))}
+                      </li>
+                    );
+                  })}
                 </ul>
               </ScrollArea>
             ) : (
