@@ -174,16 +174,22 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+      <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-4 right-12 z-10"
+          title="Copy for WhatsApp"
+          onClick={handleCopy}
+        >
+          <Copy className="h-5 w-5" />
+        </Button>
         <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
           <div className="flex items-center">
             <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
               Expense Details
             </DialogTitle>
           </div>
-          <Button variant="ghost" size="icon" className="ml-2" title="Copy for WhatsApp" onClick={handleCopy}>
-            <Copy className="h-5 w-5" />
-          </Button>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0"> {/* Adjusted pt-0 here */}
