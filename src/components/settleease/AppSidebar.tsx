@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -208,8 +207,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
 
         <div className="mt-auto border-t border-sidebar-border/50">
           <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1 pt-2">
-            <span>Made by Gagan Gupta with</span>
-            <GeminiIcon />
+            <span>Made by Gagan Gupta</span>
           </p>
         </div>
       </SidebarFooter>
