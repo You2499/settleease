@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -36,7 +35,7 @@ export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, anal
               {analyticsViewMode === 'group' && <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Top Payer</TableHead>}
             </TableRow></TableHeader>
             <TableBody>
-              {detailedCategoryAnalytics.map(cat => (
+              {detailedCategoryAnalytics.filter(cat => cat.totalAmount > 0).map(cat => (
                 <TableRow key={cat.name}>
                   <TableCell className="py-1.5 px-2 text-xs font-medium flex items-center"><cat.Icon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground" />{cat.name}</TableCell>
                   <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(cat.totalAmount)}</TableCell>
