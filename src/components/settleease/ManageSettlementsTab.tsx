@@ -260,15 +260,26 @@ export default function ManageSettlementsTab({
                           {/* Approval Workflow */}
                           {payment.status === 'pending' ? (
                             userRole === 'admin' ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleApprovePayment(payment)}
-                                disabled={isLoading}
-                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                              >
-                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleApprovePayment(payment)}
+                                  disabled={isLoading}
+                                  className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                                >
+                                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => setPaymentToUnmark(payment)}
+                                  disabled={isLoading}
+                                  className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                                >
+                                  Reject
+                                </Button>
+                              </div>
                             ) : (
                               <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
                                 Awaiting Admin Approval

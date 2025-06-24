@@ -99,8 +99,8 @@ export default function SettlementSummary({
                     const payment = settlementPayments.find(
                       p => p.debtor_id === txn.from && p.creditor_id === txn.to && Math.abs(p.amount_settled - txn.amount) < 0.01
                     );
+                    // Only hide if approved
                     if (payment?.status === 'approved') {
-                      // Already settled, skip rendering this transaction
                       return null;
                     }
                     return (
@@ -115,7 +115,7 @@ export default function SettlementSummary({
                             </div>
                             {payment?.status === 'pending' ? (
                               <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
-                                Settlement Paid to be Confirmed
+                                Awaiting Admin Approval
                               </div>
                             ) : (
                               <Button
