@@ -63,7 +63,7 @@ export default function DashboardView({
 
     // 2. Calculate balances after recorded settlement payments (for simplified view)
     const balancesAfterPayments = { ...initialBalances };
-    settlementPayments.forEach(payment => {
+    settlementPayments.filter(payment => payment.status === 'approved').forEach(payment => {
       if (balancesAfterPayments[payment.debtor_id] !== undefined) {
         balancesAfterPayments[payment.debtor_id] += Number(payment.amount_settled);
       }
