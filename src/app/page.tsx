@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
@@ -90,36 +89,38 @@ export default function SettleEasePage() {
     let isMounted = true;
 
     console.log("Auth effect: Setting up onAuthStateChange listener.");
-    const { data: authListener } = db.auth.onAuthStateChange(async (_event, session) => {
-      console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
-      if (isMounted) {
-        const newAuthUser = session?.user ?? null;
-        
-        setCurrentUser(prevLocalUser => { 
-          if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
-              console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
-              if (!newAuthUser) { // If user is changing to null (logout)
-                setUserRole(null); // Reset role immediately
-                setIsDataFetchedAtLeastOnce(false); // Reset data fetch flag
-              }
-              return newAuthUser;
-          }
-          return prevLocalUser; 
-        });
+    const { data: authListener } = db.auth.onAuthStateChange((_event, session) => {
+      setTimeout(() => {
+        console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
+        if (isMounted) {
+          const newAuthUser = session?.user ?? null;
+          
+          setCurrentUser(prevLocalUser => { 
+            if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
+                console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
+                if (!newAuthUser) { // If user is changing to null (logout)
+                  setUserRole(null); // Reset role immediately
+                  setIsDataFetchedAtLeastOnce(false); // Reset data fetch flag
+                }
+                return newAuthUser;
+            }
+            return prevLocalUser; 
+          });
 
-        if (!newAuthUser) { 
-          console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data (will be handled by User Role & Data Effect).");
-          // Resetting data and role is now primarily handled by the User Role & Data Effect when currentUser becomes null.
-          if (_event === "SIGNED_OUT") {
-            toast({ title: "Logged Out", description: "You have been successfully logged out." });
+          if (!newAuthUser) { 
+            console.log("Auth effect: onAuthStateChange - No newAuthUser. Clearing data (will be handled by User Role & Data Effect).");
+            // Resetting data and role is now primarily handled by the User Role & Data Effect when currentUser becomes null.
+            if (_event === "SIGNED_OUT") {
+              toast({ title: "Logged Out", description: "You have been successfully logged out." });
+            }
           }
+          
+          console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false.");
+          setIsLoadingAuth(false); 
+        } else {
+          console.log("Auth effect: onAuthStateChange - Component unmounted, ignoring event.");
         }
-        
-        console.log("Auth effect: onAuthStateChange - Setting isLoadingAuth=false.");
-        setIsLoadingAuth(false); 
-      } else {
-        console.log("Auth effect: onAuthStateChange - Component unmounted, ignoring event.");
-      }
+      }, 0);
     });
     
     console.log("Auth effect: Attempting to get session as a secondary check/optimization.");
@@ -544,7 +545,7 @@ export default function SettleEasePage() {
         db.removeAllChannels()
           .then(statuses => {
             console.log("Realtime: removeAllChannels() completed. Statuses:", statuses);
-            if (statuses.some(s => s !== 'ok' && s !== 'closed' && s !== 'timed out')) { 
+            if (statuses.some(s => s === 'error')) { 
               console.warn("Realtime: Some channels might not have closed cleanly during removeAllChannels:", statuses);
             }
           })
