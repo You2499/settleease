@@ -114,8 +114,9 @@ export default function SettlementSummary({
                               <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-sm sm:text-base">{formatCurrency(txn.amount)}</span>
                             </div>
                             {payment?.status === 'pending' ? (
-                              <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
+                              <div className="flex items-center gap-2 text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
                                 Awaiting Admin Approval
+                                <span className='ml-2 px-2 py-0.5 rounded bg-yellow-200 text-yellow-800 text-xs font-semibold border border-yellow-300'>Pending</span>
                               </div>
                             ) : (
                               <Button

@@ -251,6 +251,13 @@ export default function ManageSettlementsTab({
                               <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 mx-1 sm:mx-1.5 inline-block" />
                               <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
                               <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
+                              {/* Status badge */}
+                              {payment.status === 'pending' && (
+                                <span className="ml-2 px-2 py-0.5 rounded bg-yellow-100 text-yellow-800 text-xs font-semibold border border-yellow-300">Pending</span>
+                              )}
+                              {payment.status === 'approved' && (
+                                <span className="ml-2 px-2 py-0.5 rounded bg-green-100 text-green-800 text-xs font-semibold border border-green-300">Approved</span>
+                              )}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">
                               Paid on: {new Date(payment.settled_at).toLocaleDateString()}
@@ -258,36 +265,30 @@ export default function ManageSettlementsTab({
                             </div>
                           </div>
                           {/* Approval Workflow */}
-                          {payment.status === 'pending' ? (
-                            userRole === 'admin' ? (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleApprovePayment(payment)}
-                                  disabled={isLoading}
-                                  className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                                >
-                                  <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => setPaymentToUnmark(payment)}
-                                  disabled={isLoading}
-                                  className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                                >
-                                  Reject
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="text-xs text-yellow-700 bg-yellow-100 border border-yellow-300 rounded px-2 py-1 mt-1 sm:mt-0">
-                                Awaiting Admin Approval
-                              </div>
-                            )
-                          ) : null}
-                          {/* Unmark button for admins */}
-                          {userRole === 'admin' && (
+                          {payment.status === 'pending' && userRole === 'admin' && (
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleApprovePayment(payment)}
+                                disabled={isLoading}
+                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                              >
+                                <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setPaymentToUnmark(payment)}
+                                disabled={isLoading}
+                                className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          )}
+                          {/* Unmark button for approved settlements for admins */}
+                          {payment.status === 'approved' && userRole === 'admin' && (
                             <Button
                               size="sm"
                               variant="destructive"
