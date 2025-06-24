@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo } from 'react';
@@ -11,10 +10,12 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2 } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares } from '@/lib/settleease/types';
 import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
 
 
 interface ExpenseDetailModalProps {
@@ -109,17 +110,71 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     return getCategoryIconFromName(categoryName) || Settings2;
   };
 
+  // WhatsApp-formatted string generator
+  function getWhatsAppExpenseDetails() {
+    let lines = [];
+    lines.push(`*Expense Details*`);
+    lines.push(`*Description:* _${expense.description}_`);
+    lines.push(`*Total Bill Amount:* ${formatCurrency(Number(expense.total_amount))}`);
+    lines.push(`*Main Category:* _${expense.category}_`);
+    lines.push('');
+    lines.push(`*Paid By:*`);
+    if (Array.isArray(expense.paid_by) && expense.paid_by.length > 0) {
+      expense.paid_by.forEach((p: any) => {
+        lines.push(`- ${peopleMap[p.personId] || 'Unknown'}: ${formatCurrency(Number(p.amount))}`);
+      });
+    } else {
+      lines.push('_No payers listed._');
+    }
+    if (expense.celebration_contribution) {
+      lines.push('');
+      lines.push(`*Celebration Contribution:*`);
+      lines.push(`- Contributed by: ${peopleMap[expense.celebration_contribution.personId] || 'Unknown'}`);
+      lines.push(`- Amount: ${formatCurrency(expense.celebration_contribution.amount)}`);
+    }
+    lines.push('');
+    lines.push(`*Net Amount For Splitting:* ${formatCurrency(Math.max(0, Number(expense.total_amount) - (expense.celebration_contribution ? Number(expense.celebration_contribution.amount) : 0)))}`);
+    lines.push(`*Split Method:* _${expense.split_method}_`);
+    if (expense.split_method === 'itemwise' && Array.isArray(expense.items) && expense.items.length > 0) {
+      lines.push('');
+      lines.push(`*Item-wise Breakdown:*`);
+      expense.items.forEach((item: any, idx: number) => {
+        lines.push(`- ${item.name} (${formatCurrency(item.price)}) shared by: ${item.sharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')}`);
+      });
+    }
+    lines.push('');
+    lines.push(`*Shares:*`);
+    if (Array.isArray(expense.shares) && expense.shares.length > 0) {
+      expense.shares.forEach((s: any) => {
+        lines.push(`- ${peopleMap[s.personId] || 'Unknown'}: ${formatCurrency(Number(s.amount))}`);
+      });
+    } else {
+      lines.push('_No shares listed._');
+    }
+    return lines.join('\n');
+  }
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(getWhatsAppExpenseDetails());
+      toast({ title: "Copied!", description: "Expense details copied for WhatsApp.", variant: "default" });
+    } catch (e) {
+      toast({ title: "Copy failed", description: "Could not copy to clipboard.", variant: "destructive" });
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg md:max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6">
-        <DialogHeader className="pb-3 border-b"> 
-          <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-            Expense Details
-          </DialogTitle>
-          <ShadDialogDescription className="sr-only">
-            Detailed breakdown of the selected expense.
-          </ShadDialogDescription>
+        <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
+          <div className="flex items-center">
+            <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
+              Expense Details
+            </DialogTitle>
+          </div>
+          <Button variant="ghost" size="icon" className="ml-2" title="Copy for WhatsApp" onClick={handleCopy}>
+            <Copy className="h-5 w-5" />
+          </Button>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0"> {/* Adjusted pt-0 here */}
