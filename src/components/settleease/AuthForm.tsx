@@ -69,7 +69,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       }
     } catch (err: any) {
       console.error("Auth error (email/password):", err);
-      const errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred.");
+      let errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred.");
+      // Check for Supabase duplicate email error codes
+      if (err.code === "user_already_exists" || err.code === "email_exists") {
+        errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
+      }
       setError(errorMessage);
       toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
     } finally {
