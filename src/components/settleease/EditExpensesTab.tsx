@@ -126,7 +126,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     <>
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <CardTitle className="flex items-center text-lg sm:text-xl"><FilePenLine className="mr-2 h-5 w-5 text-primary" /> Edit or Delete Expenses</CardTitle>
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><FilePenLine className="mr-2 h-5 w-5 text-primary" /> Edit or Delete Expenses</CardTitle>
           <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">

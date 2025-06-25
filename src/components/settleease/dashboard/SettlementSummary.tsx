@@ -66,7 +66,7 @@ export default function SettlementSummary({
       <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'overview' | 'person')} className="w-full">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2"> {/* Reduced bottom padding */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <CardTitle className="flex items-center text-lg sm:text-xl">
+              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                   <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement Hub
               </CardTitle>
               <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
