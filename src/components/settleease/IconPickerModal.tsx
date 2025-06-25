@@ -73,11 +73,13 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
               className="mb-6 text-base px-4 py-3 rounded-lg border border-border bg-muted"
             />
             <div
-              className="grid gap-4"
+              className="grid gap-4 pb-4 pt-2"
               style={{
                 gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
                 maxHeight: 500,
                 overflowY: 'auto',
+                paddingLeft: 4,
+                paddingRight: 4,
               }}
             >
               {filteredIconNames.map((iconName) => {
@@ -88,10 +90,10 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                     onClick={() => onSelect(iconName)}
                     onMouseEnter={() => setPreviewIcon(iconName)}
                     onFocus={() => setPreviewIcon(iconName)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-lg transition border border-transparent hover:border-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none group
-                      ${previewIcon === iconName ? 'ring-2 ring-primary border-primary' : ''}
+                    className={`flex flex-col items-center justify-center p-3 rounded-lg transition outline-none border border-transparent hover:bg-accent focus-visible:bg-accent group
+                      ${previewIcon === iconName ? 'outline outline-2 outline-primary' : ''}
                     `}
-                    style={{ minHeight: 90 }}
+                    style={{ minHeight: 90, marginTop: 2, marginBottom: 2 }}
                     title={iconName}
                     type="button"
                   >
@@ -108,33 +110,35 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             )}
           </div>
           {/* Right: Preview panel */}
-          <div className="w-full md:w-80 flex flex-col items-center gap-4 border rounded-lg bg-muted/50 p-6 min-h-[320px]">
-            {SelectedIconComp && (
-              <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
-                <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
-              </Suspense>
-            )}
-            <div className="w-full text-center">
-              <div className="text-lg font-bold mb-1">{selectedIcon}</div>
-              {selectedMeta ? (
-                <>
-                  <div className="flex flex-wrap justify-center gap-1 mb-2">
-                    {selectedMeta.tags?.map((tag: string) => (
-                      <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5">{tag}</span>
-                    ))}
-                  </div>
-                  <div className="flex flex-wrap justify-center gap-1 mb-2">
-                    {selectedMeta.categories?.map((cat: string) => (
-                      <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border">{cat}</span>
-                    ))}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Contributors: {selectedMeta.contributors?.join(', ') || 'Unknown'}
-                  </div>
-                </>
-              ) : (
-                <div className="text-xs text-muted-foreground mt-2">No metadata available for this icon.</div>
+          <div className="w-full md:w-80 flex flex-col items-center gap-4 border rounded-lg bg-muted/50 p-6 min-h-[320px] max-h-[420px]" style={{ minWidth: 320, maxWidth: 340, overflow: 'hidden' }}>
+            <div className="flex flex-col items-center w-full h-full overflow-y-auto" style={{ minHeight: 0 }}>
+              {SelectedIconComp && (
+                <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
+                  <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
+                </Suspense>
               )}
+              <div className="w-full text-center mt-2 flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+                <div className="text-lg font-bold mb-1">{selectedIcon}</div>
+                {selectedMeta ? (
+                  <>
+                    <div className="flex flex-wrap justify-center gap-1 mb-2 max-h-32 overflow-y-auto">
+                      {selectedMeta.tags?.map((tag: string) => (
+                        <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5">{tag}</span>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap justify-center gap-1 mb-2">
+                      {selectedMeta.categories?.map((cat: string) => (
+                        <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border">{cat}</span>
+                      ))}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Contributors: {selectedMeta.contributors?.join(', ') || 'Unknown'}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-xs text-muted-foreground mt-2">No metadata available for this icon.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
