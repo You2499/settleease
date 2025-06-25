@@ -130,7 +130,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 p-4 sm:p-6">
+        <CardContent className="flex-1 min-h-0 p-4 sm:p-6 pt-2 sm:pt-4">
           {expenses.length > 0 ? (
             <ScrollArea className="flex-1 min-h-0 h-full -mx-1 sm:-mx-2">
               <div className="space-y-4 px-1 sm:px-2">
