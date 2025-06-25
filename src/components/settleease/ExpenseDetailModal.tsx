@@ -79,6 +79,26 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     return Array.from(ids);
   }, [expense, celebrationContributionOpt]);
 
+  // Sort helper for person IDs by name
+  const sortPersonIdsByName = (ids: string[]) =>
+    ids.slice().sort((a, b) => (peopleMap[a] || '').localeCompare(peopleMap[b] || ''));
+
+  // Sorted involved person IDs for all sections
+  const sortedInvolvedPersonIdsOverall = useMemo(() => sortPersonIdsByName(involvedPersonIdsOverall), [involvedPersonIdsOverall, peopleMap]);
+
+  // Sorted paid_by and shares for each section
+  const sortedPaidBy = useMemo(() =>
+    Array.isArray(expense.paid_by)
+      ? expense.paid_by.slice().sort((a, b) => (peopleMap[a.personId] || '').localeCompare(peopleMap[b.personId] || ''))
+      : []
+  , [expense.paid_by, peopleMap]);
+
+  const sortedShares = useMemo(() =>
+    Array.isArray(expense.shares)
+      ? expense.shares.slice().sort((a, b) => (peopleMap[a.personId] || '').localeCompare(peopleMap[b.personId] || ''))
+      : []
+  , [expense.shares, peopleMap]);
+
   const itemwiseBreakdownForDisplay = useMemo(() => {
     if (expense.split_method !== 'itemwise' || !Array.isArray(expense.items) || expense.items.length === 0) {
       return null;
@@ -137,6 +157,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
     return aggregatedData;
   }, [expense.split_method, expense.items, amountEffectivelySplit]);
+
+  // For itemwise breakdown, sort person IDs by name (must be after itemwiseBreakdownForDisplay is defined)
+  const sortedItemwiseBreakdownEntries = useMemo(() => {
+    if (!itemwiseBreakdownForDisplay) return [];
+    return Object.entries(itemwiseBreakdownForDisplay)
+      .sort(([idA], [idB]) => (peopleMap[idA] || '').localeCompare(peopleMap[idB] || ''));
+  }, [itemwiseBreakdownForDisplay, peopleMap]);
 
   const getItemCategoryIcon = (categoryName?: string) => {
     if (!categoryName) return Settings2; 
@@ -267,9 +294,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
               <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0"> {/* pt-0 for card content */}
                 <div>
                   <span className="font-medium text-muted-foreground block mb-1">Paid By:</span>
-                  {Array.isArray(expense.paid_by) && expense.paid_by.length > 0 ? (
+                  {sortedPaidBy.length > 0 ? (
                     <ul className="list-disc list-inside pl-4 space-y-0.5">
-                      {expense.paid_by.map((p: PayerShare) => (
+                      {sortedPaidBy.map((p: PayerShare) => (
                         <li key={p.personId} className="flex justify-between">
                           <span>{peopleMap[p.personId] || 'Unknown'}</span>
                           <span className="font-medium">{formatCurrency(Number(p.amount))}</span>
@@ -319,7 +346,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                         Split equally among {expense.shares.length} {expense.shares.length === 1 ? "person" : "people"} based on the amount of <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong>.
                     </CardDescription>
                     <ul className="list-disc list-inside pl-4 text-muted-foreground space-y-0.5">
-                      {expense.shares.map(share => (
+                      {sortedShares.map(share => (
                         <li key={share.personId}>{peopleMap[share.personId] || 'Unknown Person'}</li>
                       ))}
                     </ul>
@@ -330,7 +357,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                    <div>
                     <CardDescription className="mb-1 sm:mb-1.5 text-xs">Specific shares assigned based on the amount of <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong>.</CardDescription>
                     <ul className="space-y-1">
-                      {expense.shares.map(share => (
+                      {sortedShares.map(share => (
                         <li key={share.personId} className="flex justify-between p-1.5 bg-secondary/20 rounded-sm">
                           <span>{peopleMap[share.personId] || 'Unknown Person'}</span>
                           <span className="font-medium text-primary">{formatCurrency(Number(share.amount))}</span>
@@ -372,7 +399,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                 Based on splitting {formatCurrency(amountEffectivelySplit)}. Original item prices are proportionally reduced before calculating individual shares.
                             </CardDescription>
                             <div className="space-y-2 sm:space-y-2.5">
-                            {Object.entries(itemwiseBreakdownForDisplay).filter(([_,details]) => details.totalShareOfAdjustedItems > 0.001 ).map(([personId, details]) => (
+                            {sortedItemwiseBreakdownEntries.filter(([_,details]) => details.totalShareOfAdjustedItems > 0.001 ).map(([personId, details]) => (
                               <Card key={personId} className="p-2 sm:p-2.5 bg-secondary/20 shadow-none">
                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-1 sm:mb-1.5">
                                   <h5 className="font-semibold text-sm flex items-center">
@@ -436,9 +463,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 </CardDescription>
               </CardHeader>
               <CardContent className="text-xs sm:text-sm pt-0"> {/* pt-0 for card content */}
-                {involvedPersonIdsOverall.length > 0 ? (
+                {sortedInvolvedPersonIdsOverall.length > 0 ? (
                   <ul className="space-y-2 sm:space-y-2.5">
-                    {involvedPersonIdsOverall.map(personId => {
+                    {sortedInvolvedPersonIdsOverall.map(personId => {
                       const personName = peopleMap[personId] || 'Unknown Person';
                       
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
