@@ -138,8 +138,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
                   <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
                   <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                  <li className="flex items-start"><HandshakeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
-                  <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from hundreds of Lucide icons for categories and app personalization.</li>
+                  {/* <li className="flex items-start"><HandshakeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li> */}
+                  <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from hundreds of Lucide icons for categories.</li>
                 </ul>
               </>
             )}
