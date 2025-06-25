@@ -16,13 +16,13 @@ interface CategoryAnalyticsTableProps {
 export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, analyticsViewMode }: CategoryAnalyticsTableProps) {
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="p-0 pb-1">
+      <CardHeader className="px-4 py-3">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <SearchCheck className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Category Deep Dive {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0 pt-0">
+      <CardContent className="p-4 pt-0">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
             <TableHeader><TableRow>

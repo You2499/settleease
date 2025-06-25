@@ -14,13 +14,13 @@ interface ExpenseDistributionChartProps {
 export default function ExpenseDistributionChart({ expenseAmountDistributionData, analyticsViewMode }: ExpenseDistributionChartProps) {
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
+      <CardHeader className="px-4 py-3">
         <CardTitle className="text-md sm:text-lg flex items-center">
           <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 10, left: -5, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

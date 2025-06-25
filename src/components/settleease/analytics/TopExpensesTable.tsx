@@ -17,13 +17,13 @@ interface TopExpensesTableProps {
 export default function TopExpensesTable({ topExpensesData, analyticsViewMode, peopleMap }: TopExpensesTableProps) {
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="p-0 pb-1">
+      <CardHeader className="px-4 py-3">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-0 pt-0">
+      <CardContent className="p-4 pt-0">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
             <TableHeader><TableRow>
