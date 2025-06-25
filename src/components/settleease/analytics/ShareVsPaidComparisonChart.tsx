@@ -23,18 +23,18 @@ export default function ShareVsPaidComparisonChart({
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
+      <CardHeader className="p-0 pb-1">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Share vs. Paid {analyticsViewMode === 'personal' && personName ? `(For ${personName})` : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
+      <CardContent className="h-[250px] sm:h-[300px] p-0 pt-0">
         {shareVsPaidData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsBarChart
               data={shareVsPaidData}
-              margin={{ top: 5, right: 10, left: -5, bottom: (shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 20 : 0 }}
+              margin={{ top: 0, right: 0, left: 0, bottom: (shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 20 : 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis

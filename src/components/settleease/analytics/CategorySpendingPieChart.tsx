@@ -17,16 +17,16 @@ interface CategorySpendingPieChartProps {
 export default function CategorySpendingPieChart({ pieChartData, analyticsViewMode }: CategorySpendingPieChartProps) {
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
+      <CardHeader className="p-0 pb-1">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <PieChartIconLucide className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Category Spending Breakdown {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">
+      <CardContent className="h-[250px] sm:h-[300px] p-0 pt-0">
         {pieChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart margin={{ top: 0, right: 0, bottom: 10, left: 0 }}>
+            <RechartsPieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
               <Pie
                 data={pieChartData}
                 dataKey="totalAmount"

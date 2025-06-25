@@ -24,14 +24,14 @@ export default function ParticipantSummaryTable({
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
   return (
     <Card className="shadow-md rounded-lg">
-      <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
+      <CardHeader className="p-0 pb-1">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           {analyticsViewMode === 'personal' && personName ? `${personName}'s Financial Summary` : 'Participant Financial Summary'}
         </CardTitle>
         <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
       </CardHeader>
-      <CardContent className="px-0 sm:px-2 pb-0 pt-1">
+      <CardContent className="p-0 pt-0">
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
             <TableHeader><TableRow>
