@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -38,7 +39,7 @@ export default function DashboardView({
   onActionComplete,
   userRole,
 }: DashboardViewProps) {
-  const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null | 'loading'>(null);
+  const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
@@ -189,31 +190,9 @@ export default function DashboardView({
     }
   };
 
-  const handleExpenseCardClick = async (expense: Expense) => {
-    if (!db) {
-      toast({ title: "Error", description: "Database not available.", variant: "destructive" });
-      return;
-    }
-    setSelectedExpenseForModal('loading');
+  const handleExpenseCardClick = (expense: Expense) => {
+    setSelectedExpenseForModal(expense);
     setIsExpenseModalOpen(true);
-    try {
-      const { data, error } = await db
-        .from('expenses')
-        .select('*')
-        .eq('id', expense.id)
-        .single();
-      if (error || !data) {
-        toast({ title: "Error", description: "Could not fetch latest expense details.", variant: "destructive" });
-        setSelectedExpenseForModal(null);
-        setIsExpenseModalOpen(false);
-        return;
-      }
-      setSelectedExpenseForModal(data as Expense);
-    } catch (err) {
-      toast({ title: "Error", description: "Could not fetch latest expense details.", variant: "destructive" });
-      setSelectedExpenseForModal(null);
-      setIsExpenseModalOpen(false);
-    }
   };
   
   if (people.length === 0 && expenses.length === 0) {
@@ -262,7 +241,7 @@ export default function DashboardView({
         getCategoryIconFromName={getCategoryIconFromName}
       />
 
-      {isExpenseModalOpen && (
+      {selectedExpenseForModal && (
         <ExpenseDetailModal
           expense={selectedExpenseForModal}
           isOpen={isExpenseModalOpen}
