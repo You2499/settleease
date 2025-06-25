@@ -12,7 +12,11 @@ const ICON_PADDING = 12;
 
 // Get all Lucide icon names (filter out non-icon exports)
 const iconNames = Object.keys(LucideIcons).filter(
-  (name) => typeof (LucideIcons as any)[name] === 'function'
+  (name) => {
+    const Component = (LucideIcons as any)[name];
+    // Lucide icons are memoized components (objects) and have a displayName.
+    return typeof Component === 'object' && Component !== null && !!Component.displayName;
+  }
 );
 
 function getLucideIconComponent(iconName: string) {
