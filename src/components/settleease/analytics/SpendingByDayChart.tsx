@@ -26,7 +26,7 @@ export default function SpendingByDayChart({ spendingByDayOfWeekData, analyticsV
           <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
             <Tooltip 
                 contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px', color: 'hsl(var(--popover-foreground))' }} 
                 labelStyle={{ color: 'hsl(var(--popover-foreground))' }}

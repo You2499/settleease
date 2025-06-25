@@ -34,7 +34,7 @@ export default function ShareVsPaidComparisonChart({
           <ResponsiveContainer width="100%" height="100%">
             <RechartsBarChart
               data={shareVsPaidData}
-              margin={{ top: 0, right: 0, left: 0, bottom: (shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 20 : 0 }}
+              margin={{ top: 5, right: 10, left: -15, bottom: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
               <XAxis
@@ -45,7 +45,7 @@ export default function ShareVsPaidComparisonChart({
                 textAnchor={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? "end" : "middle"}
                 height={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 35 : 20}
               />
-              <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+              <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
               <RechartsTooltip
                 formatter={(value: number) => [formatCurrency(value), "Amount"]}
                 contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px' }}
