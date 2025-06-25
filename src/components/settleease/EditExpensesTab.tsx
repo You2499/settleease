@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -20,6 +19,7 @@ import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; 
 import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
+import { Separator } from '../ui/separator';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -49,6 +49,16 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     return defaultIcon ? defaultIcon.IconComponent : Settings2;
   };
 
+  const groupedExpenses = expenses.reduce((acc, expense) => {
+    const date = new Date(expense.created_at || new Date()).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
+    if (!acc[date]) {
+      acc[date] = [];
+    }
+    acc[date].push(expense);
+    return acc;
+  }, {} as Record<string, Expense[]>);
+
+  const expenseDates = Object.keys(groupedExpenses);
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
@@ -123,42 +133,58 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         <CardContent className="flex-1 min-h-0 p-4 sm:p-6">
           {expenses.length > 0 ? (
             <ScrollArea className="flex-1 min-h-0 h-full -mx-1 sm:-mx-2">
-              <ul className="space-y-2.5 sm:space-y-3 px-1 sm:px-2">
-                {expenses.map(expense => {
-                  const CategoryIcon = getCategoryIcon(expense.category);
-                   const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
-                    ? "Multiple Payers"
-                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
-                      ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
-                      : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
+              <div className="space-y-4 px-1 sm:px-2">
+                {expenseDates.map((date) => (
+                    <div key={date}>
+                        <div className="relative my-3">
+                            <div className="absolute inset-0 flex items-center">
+                                <Separator />
+                            </div>
+                            <div className="relative flex justify-center text-xs">
+                                <span className="bg-card px-2 text-muted-foreground font-semibold">
+                                    {date}
+                                </span>
+                            </div>
+                        </div>
+                        <ul className="space-y-2.5 sm:space-y-3">
+                            {groupedExpenses[date].map(expense => {
+                                const CategoryIcon = getCategoryIcon(expense.category);
+                                const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
+                                    ? "Multiple Payers"
+                                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
+                                    ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
+                                    : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
 
-                  return (
-                    <li key={expense.id}>
-                      <div className="bg-card/80 p-3 sm:p-4 rounded-lg border shadow-sm">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1.5 sm:mb-2">
-                          <h4 className="text-sm sm:text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
-                          <span className="text-md sm:text-lg font-bold text-primary whitespace-nowrap self-end sm:self-center">{formatCurrency(Number(expense.total_amount))}</span>
-                        </div>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-2 sm:mb-3 gap-1 sm:gap-3">
-                          <div className="flex items-center">
-                            <CategoryIcon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-muted-foreground" /> 
-                            <span className="truncate" title={expense.category}>{expense.category}</span>
-                          </div>
-                          <span className="sm:ml-auto whitespace-nowrap">Paid by: <span className="font-medium text-foreground/90">{displayPayerText}</span></span>
-                        </div>
-                        <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:justify-end sm:space-x-2.5">
-                          <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                            <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
-                          </Button>
-                          <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-                          </Button>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                                return (
+                                    <li key={expense.id}>
+                                        <div className="bg-card/80 p-3 sm:p-4 rounded-lg border shadow-sm">
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1.5 sm:mb-2">
+                                                <h4 className="text-sm sm:text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
+                                                <span className="text-md sm:text-lg font-bold text-primary whitespace-nowrap self-end sm:self-center">{formatCurrency(Number(expense.total_amount))}</span>
+                                            </div>
+                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-2 sm:mb-3 gap-1 sm:gap-3">
+                                                <div className="flex items-center">
+                                                    <CategoryIcon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-muted-foreground" /> 
+                                                    <span className="truncate" title={expense.category}>{expense.category}</span>
+                                                </div>
+                                                <span className="sm:ml-auto whitespace-nowrap">Paid by: <span className="font-medium text-foreground/90">{displayPayerText}</span></span>
+                                            </div>
+                                            <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:justify-end sm:space-x-2.5">
+                                                <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
+                                                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                                                </Button>
+                                                <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
+                                                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                ))}
+              </div>
             </ScrollArea>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6">
