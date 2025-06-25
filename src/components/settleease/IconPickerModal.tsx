@@ -6,18 +6,18 @@ import { FixedSizeGrid as Grid } from 'react-window';
 // Lucide icon names are PascalCase, and all are exported from lucide-react
 import * as LucideIcons from 'lucide-react';
 
-const ICON_SIZE = 32;
-const COLUMN_COUNT = 6;
-const ICON_PADDING = 12;
+const ICON_SIZE = 28;
+const COLUMN_COUNT = 12;
+const ICON_PADDING = 16;
 
-// Get all Lucide icon names (filter out non-icon exports)
-const iconNames = Object.keys(LucideIcons).filter(
+// Get all Lucide icon names (filter out non-icon exports and deduplicate)
+const iconNames = [...new Set(Object.keys(LucideIcons).filter(
   (name) => {
     const Component = (LucideIcons as any)[name];
     // Lucide icons are memoized components (objects) and have a displayName.
     return typeof Component === 'object' && Component !== null && !!Component.displayName;
   }
-);
+))];
 
 function getLucideIconComponent(iconName: string) {
   return React.lazy(() =>
@@ -74,7 +74,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
               const Icon = getLucideIconComponent(iconName) as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
               return (
                 <div
-                  style={{ ...style, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                  style={{ ...style, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', cursor: 'pointer', paddingTop: 8 }}
                   key={iconName}
                   onClick={() => onSelect(iconName)}
                   title={iconName}
@@ -82,7 +82,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                   <Suspense fallback={<div style={{ width: ICON_SIZE, height: ICON_SIZE }} />}> 
                     <Icon width={ICON_SIZE} height={ICON_SIZE} />
                   </Suspense>
-                  <span style={{ fontSize: 10, marginTop: 4, textAlign: 'center', width: ICON_SIZE + 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{iconName}</span>
+                  <span style={{ fontSize: 10, marginTop: 6, textAlign: 'center', width: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0 2px' }}>{iconName}</span>
                 </div>
               );
             }}
