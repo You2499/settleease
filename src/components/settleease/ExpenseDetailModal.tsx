@@ -435,7 +435,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const personName = peopleMap[personId] || 'Unknown Person';
                       
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
-                      let amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
+                      const amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
                       const shareOfSplitAmountForThisPerson = shareRecord ? Number(shareRecord.amount) : 0;
@@ -443,19 +443,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const isCelebrationContributor = celebrationContributionOpt?.personId === personId;
                       const celebrationAmountByThisPerson = isCelebrationContributor ? (celebrationContributionOpt?.amount || 0) : 0;
                       
-                      // NEW LOGIC: If this person is a payer and not the celebration contributor, reduce their paid amount by the celebration amount
-                      if (!isCelebrationContributor && Array.isArray(expense.paid_by) && expense.paid_by.length > 0 && celebrationContributionOpt && celebrationContributionOpt.amount > 0.001) {
-                        // If multiple payers, distribute the celebration reduction proportionally to their paid amounts
-                        const totalPaid = expense.paid_by.reduce((sum, p) => sum + Number(p.amount), 0);
-                        if (totalPaid > 0.001) {
-                          const thisPayerPaid = paymentRecord ? Number(paymentRecord.amount) : 0;
-                          const proportionalReduction = (thisPayerPaid / totalPaid) * Number(celebrationContributionOpt.amount);
-                          amountPhysicallyPaidByThisPerson = Math.max(0, amountPhysicallyPaidByThisPerson - proportionalReduction);
-                        }
-                      }
-                      // The celebration contributor is not reimbursed for their treat; their paid amount is not reduced.
-                      
-                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
+                      const totalObligationForThisPerson = shareOfSplitAmountForThisPerson + celebrationAmountByThisPerson;
+                      const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - totalObligationForThisPerson;
 
                       return (
                         <li key={personId} className="p-2 sm:p-3 bg-secondary/30 rounded-md space-y-1">
@@ -481,7 +470,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                             <span>Share of Split Amount:</span> <span>{formatCurrency(shareOfSplitAmountForThisPerson)}</span>
                           </div>
                            {isCelebrationContributor && celebrationAmountByThisPerson > 0 && (
-                             <p className="text-xs text-yellow-700 dark:text-yellow-500 italic pl-1">*You contributed {formatCurrency(celebrationAmountByThisPerson)} towards this bill.*</p>
+                             <p className="text-xs text-yellow-700 dark:text-yellow-500 italic pl-1">*You contributed {formatCurrency(celebrationAmountByThisPerson)} as a treat.*</p>
                            )}
                         </li>
                       );

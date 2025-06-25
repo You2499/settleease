@@ -394,33 +394,35 @@ export default function AnalyticsTab({
 
     return peopleToAnalyze.map(person => {
       let totalPaid = 0;
-      let totalShared = 0;
+      let totalShared = 0; // This is now Total Obligation (share + celebration)
       let expensesPaidCount = 0;
       let expensesSharedCount = 0;
       const categoryShares: Record<string, number> = {};
 
       displayedExpenses.forEach(exp => {
         let personPaidThisExpense = false;
-        if (Array.isArray(exp.paid_by)) {
-          // Use adjusted paid amount
-          const paid = getAdjustedPaidAmountForPerson(exp, person.id);
-          if (paid > 0.001) {
-            totalPaid += paid;
+        const paidAmount = exp.paid_by.find(p => p.personId === person.id)?.amount || 0;
+        if (paidAmount > 0.001) {
+            totalPaid += Number(paidAmount);
             personPaidThisExpense = true;
-          }
         }
         if (personPaidThisExpense) expensesPaidCount++;
 
         const personShareAmountForThisExpense = Number(exp.shares.find(s => s.personId === person.id)?.amount || 0);
+        let personCelebrationAmount = 0;
+        if (exp.celebration_contribution?.personId === person.id) {
+          personCelebrationAmount = Number(exp.celebration_contribution.amount);
+        }
+
+        totalShared += personShareAmountForThisExpense + personCelebrationAmount;
 
         if (personShareAmountForThisExpense > 0.001) {
-          totalShared += personShareAmountForThisExpense;
           expensesSharedCount++;
 
           if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-            const originalTotalBillForExpense = Number(exp.total_amount) || 0;
+            const originalTotalBillForThisExpense = Number(exp.total_amount) || 0;
             const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
-            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
+            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForThisExpense - celebrationContributionForExpense);
             const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
             
             const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
@@ -507,18 +509,19 @@ export default function AnalyticsTab({
 
     return peopleToAnalyze.map(person => {
       let totalPaidByPerson = 0;
-      let totalShareForPerson = 0;
+      let totalObligationForPerson = 0;
       displayedExpenses.forEach(expense => {
-        // Use adjusted paid amount
-        const paid = getAdjustedPaidAmountForPerson(expense, person.id);
-        if (paid > 0.001) totalPaidByPerson += paid;
-        if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            if (share.personId === person.id) totalShareForPerson += Number(share.amount);
-          });
+        const paidAmount = expense.paid_by.find(p => p.personId === person.id)?.amount || 0;
+        if (paidAmount > 0.001) totalPaidByPerson += Number(paidAmount);
+
+        const shareAmount = expense.shares.find(s => s.personId === person.id)?.amount || 0;
+        let celebrationAmount = 0;
+        if (expense.celebration_contribution?.personId === person.id) {
+          celebrationAmount = Number(expense.celebration_contribution.amount);
         }
+        totalObligationForPerson += Number(shareAmount) + celebrationAmount;
       });
-      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalShareForPerson };
+      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalObligationForPerson };
     }).filter(d => d.paid > 0.01 || d.share > 0.01);
   }, [displayedExpenses, people, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics]);
 

@@ -49,15 +49,23 @@ export default function DashboardView({
     people.forEach(p => initialBalances[p.id] = 0);
 
     expenses.forEach(expense => {
+      // Credit payers
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach(payment => {
           initialBalances[payment.personId] = (initialBalances[payment.personId] || 0) + Number(payment.amount);
         });
       }
+      // Debit for consumption shares
       if (Array.isArray(expense.shares)) {
         expense.shares.forEach(share => {
           initialBalances[share.personId] = (initialBalances[share.personId] || 0) - Number(share.amount);
         });
+      }
+      // Debit for celebration contribution
+      if (expense.celebration_contribution && expense.celebration_contribution.amount > 0) {
+        const contributorId = expense.celebration_contribution.personId;
+        const contributionAmount = Number(expense.celebration_contribution.amount);
+        initialBalances[contributorId] = (initialBalances[contributorId] || 0) - contributionAmount;
       }
     });
 
@@ -92,50 +100,46 @@ export default function DashboardView({
     // 4. Calculate pairwise transactions (raw debts adjusted by specific pairwise payments)
     const rawPairwiseDebtsFromExpenses: Record<string, Record<string, { amount: number, expenseIds: Set<string> }>> = {};
     expenses.forEach(expense => {
-      if (expense.total_amount <= 0.001 || !expense.shares || !expense.paid_by) return;
+      if (expense.total_amount <= 0.001 || !Array.isArray(expense.paid_by) || expense.paid_by.length === 0) return;
 
-      // NEW LOGIC: Adjust paid_by for celebration contribution
-      let adjustedPaidBy = expense.paid_by;
-      if (expense.celebration_contribution && Number(expense.celebration_contribution?.amount || 0) > 0.001) {
-        const totalPaid = expense.paid_by.reduce((sum, p) => sum + Number(p.amount), 0);
-        if (totalPaid > 0.001) {
-          adjustedPaidBy = expense.paid_by.map(p => {
-            if (p.personId === expense.celebration_contribution?.personId) {
-              // Celebration contributor: no reduction
-              return { ...p };
-            } else {
-              // Other payers: reduce their paid amount proportionally
-              const proportionalReduction = (Number(p.amount) / totalPaid) * Number(expense.celebration_contribution?.amount || 0);
-              return { ...p, amount: Math.max(0, Number(p.amount) - proportionalReduction) };
-            }
-          });
-        }
+      const obligations: Record<string, number> = {};
+
+      // Aggregate all obligations (shares + celebrations)
+      if (Array.isArray(expense.shares)) {
+        expense.shares.forEach(share => {
+          obligations[share.personId] = (obligations[share.personId] || 0) + Number(share.amount);
+        });
+      }
+      if (expense.celebration_contribution && expense.celebration_contribution.amount > 0.001) {
+        const contributorId = expense.celebration_contribution.personId;
+        const contributionAmount = Number(expense.celebration_contribution.amount);
+        obligations[contributorId] = (obligations[contributorId] || 0) + contributionAmount;
       }
 
-      expense.shares.forEach(share => {
-        const sharerId = share.personId;
-        const sharerTotalOwedForThisExpense = Number(share.amount);
-        if (sharerTotalOwedForThisExpense <= 0.001) return;
+      const totalPaidInExpense = expense.paid_by.reduce((sum, p) => sum + Number(p.amount), 0);
+      if (totalPaidInExpense <= 0.001) return; // Avoid division by zero if total paid is zero
 
-        adjustedPaidBy.forEach(payment => {
+      // Distribute obligations as debts to payers
+      for (const debtorId in obligations) {
+        const totalOwedByDebtor = obligations[debtorId];
+        if (totalOwedByDebtor <= 0.001) continue;
+
+        expense.paid_by.forEach(payment => {
           const payerId = payment.personId;
-          const payerAmountForThisExpense = Number(payment.amount);
-          if (payerAmountForThisExpense <= 0.001 || expense.total_amount <= 0.001) return; // Avoid division by zero
+          if (debtorId === payerId) return;
 
-          if (sharerId !== payerId) {
-            const proportionPaidByThisPayer = payerAmountForThisExpense / expense.total_amount;
-            const amountOwedBySharerToThisPayer = sharerTotalOwedForThisExpense * proportionPaidByThisPayer;
+          const proportionPaidByThisPayer = Number(payment.amount) / totalPaidInExpense;
+          const amountOwedToThisPayer = totalOwedByDebtor * proportionPaidByThisPayer;
 
-            if (amountOwedBySharerToThisPayer > 0.001) {
-              if (!rawPairwiseDebtsFromExpenses[sharerId]) rawPairwiseDebtsFromExpenses[sharerId] = {};
-              if (!rawPairwiseDebtsFromExpenses[sharerId][payerId]) rawPairwiseDebtsFromExpenses[sharerId][payerId] = { amount: 0, expenseIds: new Set() };
-              
-              rawPairwiseDebtsFromExpenses[sharerId][payerId].amount += amountOwedBySharerToThisPayer;
-              rawPairwiseDebtsFromExpenses[sharerId][payerId].expenseIds.add(expense.id);
-            }
+          if (amountOwedToThisPayer > 0.001) {
+            if (!rawPairwiseDebtsFromExpenses[debtorId]) rawPairwiseDebtsFromExpenses[debtorId] = {};
+            if (!rawPairwiseDebtsFromExpenses[debtorId][payerId]) rawPairwiseDebtsFromExpenses[debtorId][payerId] = { amount: 0, expenseIds: new Set() };
+            
+            rawPairwiseDebtsFromExpenses[debtorId][payerId].amount += amountOwedToThisPayer;
+            rawPairwiseDebtsFromExpenses[debtorId][payerId].expenseIds.add(expense.id);
           }
         });
-      });
+      }
     });
 
     const settledAmountsMap: Record<string, Record<string, number>> = {};
