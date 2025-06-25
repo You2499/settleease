@@ -32,17 +32,21 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
   const [search, setSearch] = useState(initialSearch);
   const [previewIcon, setPreviewIcon] = useState<string | null>(null);
 
-  // Search by name or tags
+  // Hybrid search: if metadata exists, search by name/tags/categories; else, search by name only
   const filteredIconNames = useMemo(
     () =>
       iconNames.filter((name) => {
         const meta = (lucideMetadata as any)[name];
         const searchLower = search.toLowerCase();
-        return (
-          name.toLowerCase().includes(searchLower) ||
-          (meta?.tags?.some((tag: string) => tag.toLowerCase().includes(searchLower))) ||
-          (meta?.categories?.some((cat: string) => cat.toLowerCase().includes(searchLower)))
-        );
+        if (meta) {
+          return (
+            name.toLowerCase().includes(searchLower) ||
+            (meta?.tags?.some((tag: string) => tag.toLowerCase().includes(searchLower))) ||
+            (meta?.categories?.some((cat: string) => cat.toLowerCase().includes(searchLower)))
+          );
+        } else {
+          return name.toLowerCase().includes(searchLower);
+        }
       }),
     [search]
   );
@@ -112,7 +116,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             )}
             <div className="w-full text-center">
               <div className="text-lg font-bold mb-1">{selectedIcon}</div>
-              {selectedMeta && (
+              {selectedMeta ? (
                 <>
                   <div className="flex flex-wrap justify-center gap-1 mb-2">
                     {selectedMeta.tags?.map((tag: string) => (
@@ -128,6 +132,8 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                     Contributors: {selectedMeta.contributors?.join(', ') || 'Unknown'}
                   </div>
                 </>
+              ) : (
+                <div className="text-xs text-muted-foreground mt-2">No metadata available for this icon.</div>
               )}
             </div>
           </div>
