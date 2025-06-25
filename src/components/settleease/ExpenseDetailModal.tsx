@@ -460,25 +460,45 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                   </span>
                                 </div>
                                 {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).length > 0 ? (
-                                  <ul className="space-y-0.5 text-xs pl-1.5 border-l-2 border-primary/30">
-                                    {details.items.filter(itemShare => itemShare.shareForPerson > 0.001).map((itemShare) => {
-                                       const ItemShareCatIcon = getItemCategoryIcon(itemShare.itemCategoryName);
-                                       return (
-                                        <li key={itemShare.itemId} className="flex justify-between pl-1 sm:pl-1.5">
-                                            <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
-                                                <ItemShareCatIcon className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                                {itemShare.itemName}
-                                            </span>
-                                            <span className="text-muted-foreground whitespace-nowrap">
-                                            {formatCurrency(itemShare.shareForPerson)}
-                                            <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
-                                                (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
-                                            </span>
-                                            </span>
-                                        </li>
-                                       );
-                                    })}
-                                  </ul>
+                                  (() => {
+                                    // Group this person's items by category
+                                    const itemsByCategory: Record<string, typeof details.items> = {};
+                                    details.items.filter(itemShare => itemShare.shareForPerson > 0.001).forEach(itemShare => {
+                                      const cat = itemShare.itemCategoryName || '';
+                                      if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
+                                      itemsByCategory[cat].push(itemShare);
+                                    });
+                                    const sortedCategoryNames = Object.keys(itemsByCategory).sort((a, b) => getCategoryRank(a) - getCategoryRank(b));
+                                    return (
+                                      <ul className="space-y-0.5 text-xs pl-1.5 border-l-2 border-primary/30">
+                                        {sortedCategoryNames.flatMap(catName => [
+                                          catName ? (
+                                            <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center">
+                                              {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
+                                              {catName}
+                                            </li>
+                                          ) : null,
+                                          ...itemsByCategory[catName].map(itemShare => {
+                                            const ItemShareCatIcon = getItemCategoryIcon(itemShare.itemCategoryName);
+                                            return (
+                                              <li key={itemShare.itemId} className="flex justify-between pl-1 sm:pl-1.5">
+                                                <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
+                                                  <ItemShareCatIcon className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                                  {itemShare.itemName}
+                                                </span>
+                                                <span className="text-muted-foreground whitespace-nowrap">
+                                                  {formatCurrency(itemShare.shareForPerson)}
+                                                  <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
+                                                    (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
+                                                  </span>
+                                                </span>
+                                              </li>
+                                            );
+                                          })
+                                        ])}
+                                      </ul>
+                                    );
+                                  })()
                                 ) : (
                                   <p className="text-xs text-muted-foreground pl-1.5">Not involved in sharing any items contributing to the split amount.</p>
                                 )}
