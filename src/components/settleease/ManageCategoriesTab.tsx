@@ -333,38 +333,42 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                       <li key={category.id} className={`flex items-center justify-between bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group ${rankingMode ? 'min-h-[60px] sm:min-h-[68px] py-2 sm:py-3' : 'p-2.5 sm:p-3'}`}>
                         {editingCategory?.id === category.id ? (
                           <>
-                            <Input
-                              type="text"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                              className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
-                              autoFocus
-                              disabled={isLoading}
-                            />
-                            <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                <SelectTrigger className="w-full sm:w-[180px] md:w-[220px] h-8 sm:h-9 text-xs sm:text-sm mr-2">
-                                    <SelectValue placeholder="Select icon" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                      const IconComp = icon.IconComponent;
-                                      return (
-                                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                                          <div className="flex items-center">
-                                            <IconComp className="mr-2 h-4 w-4" />
-                                            {icon.label}
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                </SelectContent>
-                            </Select>
-                            <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
-                              <Save className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
-                              <Ban className="h-4 w-4" />
-                            </Button>
+                            <div className="flex-grow flex items-center gap-2 mr-2 min-w-0">
+                              <Input
+                                type="text"
+                                value={editingName}
+                                onChange={(e) => setEditingName(e.target.value)}
+                                className="flex-1 min-w-0 h-8 sm:h-9 text-xs sm:text-sm"
+                                autoFocus
+                                disabled={isLoading}
+                              />
+                              <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
+                                  <SelectTrigger className="w-[220px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
+                                      <SelectValue placeholder="Select icon" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                      {AVAILABLE_CATEGORY_ICONS.map(icon => {
+                                        const IconComp = icon.IconComponent;
+                                        return (
+                                          <SelectItem key={icon.iconKey} value={icon.iconKey}>
+                                            <div className="flex items-center">
+                                              <IconComp className="mr-2 h-4 w-4" />
+                                              {icon.label}
+                                            </div>
+                                          </SelectItem>
+                                        );
+                                      })}
+                                  </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="flex items-center flex-shrink-0">
+                              <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
+                                <Save className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
+                                <Ban className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </>
                         ) : (
                           <>
