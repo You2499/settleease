@@ -308,12 +308,12 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-2 sm:mb-3">
               <h4 className="text-md sm:text-lg font-semibold text-primary">Current Categories</h4>
-              {isAdmin && !rankingMode && (
+              {!rankingMode && (
                 <Button size="sm" variant="outline" className="ml-auto" onClick={() => setRankingMode(true)}>
                   Rank
                 </Button>
               )}
-              {isAdmin && rankingMode && (
+              {rankingMode && (
                 <div className="flex gap-2">
                   <Button size="sm" variant="default" onClick={saveCategoryOrder} disabled={isLoading}>
                     <Check className="h-4 w-4 mr-1" /> Save Order
@@ -330,7 +330,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                   {orderedCategories.map((category, idx) => {
                     const IconComponent = getIconComponent(category.icon_name);
                     return (
-                      <li key={category.id} className={`flex items-center justify-between bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group ${isAdmin && rankingMode ? 'min-h-[60px] sm:min-h-[68px] py-2 sm:py-3' : 'p-2.5 sm:p-3'}`}>
+                      <li key={category.id} className={`flex items-center justify-between bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group ${rankingMode ? 'min-h-[60px] sm:min-h-[68px] py-2 sm:py-3' : 'p-2.5 sm:p-3'}`}>
                         {editingCategory?.id === category.id ? (
                           <>
                             <Input
@@ -368,7 +368,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                           </>
                         ) : (
                           <>
-                            {isAdmin && rankingMode && (
+                            {rankingMode && (
                               <RedditRankButtons
                                 idx={idx}
                                 disabledUp={idx === 0}
@@ -381,7 +381,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                             <div className="flex items-center flex-grow truncate mr-2">
                                 <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
                                 <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
-                                <span className="ml-2 text-xs text-muted-foreground">(Rank {idx + 1})</span>
                             </div>
                             <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                               <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
