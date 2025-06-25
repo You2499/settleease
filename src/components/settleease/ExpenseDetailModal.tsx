@@ -425,7 +425,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                       {(() => {
                                         const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
                                         return (
-                                          <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                          <div className="text-muted-foreground/80 pl-1.5 text-[10px] sm:text-xs truncate" title={`Shared by: ${sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
                                         );
                                       })()}
                                     </li>
@@ -467,17 +467,17 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                     });
                                     const sortedCategoryNames = Object.keys(itemsByCategory).sort((a, b) => getCategoryRank(a) - getCategoryRank(b));
                                     return (
-                                      <ul className="space-y-0.5 text-xs pl-1.5 border-l-2 border-primary/30">
+                                      <ul className="space-y-0.5 text-xs">
                                         {sortedCategoryNames.flatMap(catName => [
                                           catName ? (
-                                            <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center">
+                                            <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center border-l-2 border-primary/30 pl-1.5">
                                               {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
                                               {catName}
                                             </li>
                                           ) : null,
                                           ...itemsByCategory[catName].map(itemShare => {
                                             return (
-                                              <li key={itemShare.itemId} className="flex justify-between pl-1 sm:pl-1.5">
+                                              <li key={itemShare.itemId} className="flex justify-between pl-3">
                                                 <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
                                                   {itemShare.itemName}
                                                 </span>
