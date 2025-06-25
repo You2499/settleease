@@ -165,7 +165,7 @@ export default function ManageSettlementsTab({
     <>
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
             <Handshake className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Settlements
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
