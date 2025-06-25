@@ -416,9 +416,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                       <div className="flex justify-between items-center">
                                         <span className="font-medium truncate flex items-center mr-2" title={item.name}>
                                           {item.name}
-                                          {item.categoryName && item.categoryName !== expense.category && (
-                                            <span className="ml-1.5 text-gray-500 text-[10px] italic">({item.categoryName})</span>
-                                          )}
                                         </span>
                                         <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
                                       </div>
