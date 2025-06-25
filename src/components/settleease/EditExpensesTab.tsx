@@ -20,6 +20,7 @@ import AddExpenseTab from './AddExpenseTab';
 import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 import { Separator } from '../ui/separator';
+import ExpenseListItem from './ExpenseListItem';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -147,40 +148,24 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                             </div>
                         </div>
                         <ul className="space-y-2.5 sm:space-y-3">
-                            {groupedExpenses[date].map(expense => {
-                                const CategoryIcon = getCategoryIcon(expense.category);
-                                const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
-                                    ? "Multiple Payers"
-                                    : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
-                                    ? (peopleMap[expense.paid_by[0].personId] || 'Unknown')
-                                    : (expense.paid_by && (expense.paid_by as any).length === 0 ? 'None' : 'Error'));
-
-                                return (
-                                    <li key={expense.id}>
-                                        <div className="bg-card/80 p-3 sm:p-4 rounded-lg border shadow-sm">
-                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-1.5 sm:mb-2">
-                                                <h4 className="text-sm sm:text-md font-semibold leading-tight flex-grow mr-3 truncate" title={expense.description}>{expense.description}</h4>
-                                                <span className="text-md sm:text-lg font-bold text-primary whitespace-nowrap self-end sm:self-center">{formatCurrency(Number(expense.total_amount))}</span>
-                                            </div>
-                                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-xs text-muted-foreground mb-2 sm:mb-3 gap-1 sm:gap-3">
-                                                <div className="flex items-center">
-                                                    <CategoryIcon className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-muted-foreground" /> 
-                                                    <span className="truncate" title={expense.category}>{expense.category}</span>
-                                                </div>
-                                                <span className="sm:ml-auto whitespace-nowrap">Paid by: <span className="font-medium text-foreground/90">{displayPayerText}</span></span>
-                                            </div>
-                                            <div className="flex flex-col space-y-2 sm:flex-row sm:space-y-0 sm:justify-end sm:space-x-2.5">
-                                                <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                                                    <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
-                                                </Button>
-                                                <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                                                    <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </li>
-                                );
-                            })}
+                            {groupedExpenses[date].map(expense => (
+                                <ExpenseListItem
+                                  key={expense.id}
+                                  expense={expense}
+                                  peopleMap={peopleMap}
+                                  getCategoryIconFromName={getCategoryIcon}
+                                  actions={
+                                    <>
+                                      <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
+                                          <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                                      </Button>
+                                      <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
+                                          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                                      </Button>
+                                    </>
+                                  }
+                                />
+                            ))}
                         </ul>
                     </div>
                 ))}
