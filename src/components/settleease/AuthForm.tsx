@@ -32,20 +32,18 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [isLoginView, setIsLoginView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!db) {
-      setError("Database client is not available. Please try again later.");
+      toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
       return;
     }
     if (!email || !password) {
-      setError("Email and password are required.");
+      toast({ title: "Authentication Error", description: "Email and password are required.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
-    setError(null);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
 
@@ -67,7 +65,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         // If user exists but no session, likely already registered (via Google or email)
         if (data.user && !data.session) {
           const errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
-          setError(errorMessage);
           toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
           return;
         }
@@ -81,7 +78,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       if (err.code === "user_already_exists" || err.code === "email_exists") {
         errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
       }
-      setError(errorMessage);
       toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -90,12 +86,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   const handleGoogleSignIn = async () => {
     if (!db) {
-      setError("Database client is not available. Please try again later.");
+      toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
       return;
     }
     setIsGoogleLoading(true);
-    setError(null);
-    
+
     const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
@@ -109,7 +104,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     } catch (err: any) {
       console.error("Auth error (Google):", err);
       const errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred with Google Sign-In.");
-      setError(errorMessage);
       toast({ title: "Google Sign-In Error", description: errorMessage, variant: "destructive" });
       setIsGoogleLoading(false);
     }
@@ -162,12 +156,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardHeader>
 
             <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
-              {error && (
-                <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
-                  <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
-                  <p>{error}</p>
-                </div>
-              )}
               <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                 <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="email" className="text-sm">Email Address</Label>
@@ -230,7 +218,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
+              <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
             </CardFooter>
