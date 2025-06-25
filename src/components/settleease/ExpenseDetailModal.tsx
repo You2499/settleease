@@ -211,7 +211,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       lines.push('');
       lines.push(`*Original Items & Pricing:*`);
       expense.items.forEach((item: any) => {
-        lines.push(`- _${item.name}_: ${formatCurrency(item.price)} (shared by: ${item.sharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')})`);
+        const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
+        lines.push(`- _${item.name}_: ${formatCurrency(item.price)} (shared by: ${sortedSharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')})`);
       });
     }
     lines.push('');
@@ -385,7 +386,12 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                         </span>
                                         <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
                                     </div>
-                                    <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {item.sharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                    {(() => {
+                                      const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
+                                      return (
+                                        <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                      );
+                                    })()}
                                 </li>
                             );
                         })}
