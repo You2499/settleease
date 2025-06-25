@@ -41,14 +41,6 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     return acc;
   }, {} as Record<string, string>), [people]);
 
-  const getCategoryIcon = (categoryName: string) => {
-    const category = dynamicCategories.find(c => c.name === categoryName);
-    if (category && category.icon_name) {
-      return (LucideIcons as any)[category.icon_name] || Settings2;
-    }
-    return Settings2;
-  };
-
   const groupedExpenses = expenses.reduce((acc, expense) => {
     const date = new Date(expense.created_at || new Date()).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
     if (!acc[date]) {
@@ -150,7 +142,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                                   key={expense.id}
                                   expense={expense}
                                   peopleMap={peopleMap}
-                                  getCategoryIconFromName={getCategoryIcon}
+                                  getCategoryIconFromName={(iconName: string) => (LucideIcons as any)[iconName] || Settings2}
                                   categories={dynamicCategories}
                                   actions={
                                     <>

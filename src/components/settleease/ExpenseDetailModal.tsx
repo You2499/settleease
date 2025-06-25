@@ -411,12 +411,10 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                   </li>
                                 ) : null,
                                 ...itemsByCategory[catName].map(item => {
-                                  const ItemCatIcon = getItemCategoryIcon(item.categoryName);
                                   return (
                                     <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
                                       <div className="flex justify-between items-center">
                                         <span className="font-medium truncate flex items-center mr-2" title={item.name}>
-                                          <ItemCatIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                           {item.name}
                                           {item.categoryName && item.categoryName !== expense.category && (
                                             <span className="ml-1.5 text-gray-500 text-[10px] italic">({item.categoryName})</span>
@@ -478,11 +476,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                             </li>
                                           ) : null,
                                           ...itemsByCategory[catName].map(itemShare => {
-                                            const ItemShareCatIcon = getItemCategoryIcon(itemShare.itemCategoryName);
                                             return (
                                               <li key={itemShare.itemId} className="flex justify-between pl-1 sm:pl-1.5">
                                                 <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
-                                                  <ItemShareCatIcon className="mr-1 h-3 w-3 text-muted-foreground flex-shrink-0" />
                                                   {itemShare.itemName}
                                                 </span>
                                                 <span className="text-muted-foreground whitespace-nowrap">
