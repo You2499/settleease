@@ -58,13 +58,13 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-5xl w-full bg-background p-6">
+      <DialogContent className="max-w-5xl w-full max-h-[90vh] overflow-y-auto no-scrollbar bg-background p-6">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold mb-2">Pick an Icon</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full w-full" style={{ minHeight: 400 }}>
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full w-full min-h-0">
           {/* Left: Search and grid */}
-          <div className="flex-1 min-w-0 flex flex-col h-full w-full">
+          <div className="flex-1 min-w-0 flex flex-col h-full w-full min-h-0">
             <Input
               autoFocus
               placeholder={`Search ${iconNames.length} icons ...`}
@@ -73,7 +73,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
               className="mb-4 md:mb-6 text-base px-4 py-3 rounded-lg border border-border bg-muted w-full"
             />
             <div
-              className="grid gap-3 md:gap-4 pb-4 pt-2 flex-1 w-full"
+              className="grid gap-3 md:gap-4 pb-4 pt-2 flex-1 w-full min-h-0"
               style={{
                 gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
                 overflowY: 'auto',
@@ -112,14 +112,14 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             )}
           </div>
           {/* Right: Preview panel */}
-          <div className="w-full md:w-80 flex flex-col items-center gap-3 md:gap-4 border rounded-lg bg-muted/50 p-4 md:p-6 min-h-[220px] h-full mt-2 md:mt-0" style={{ minWidth: 0, maxWidth: '100%', overflow: 'hidden', height: '100%' }}>
-            <div className="flex flex-col items-center w-full h-full overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+          <div className="w-full md:w-80 flex flex-col items-center gap-3 md:gap-4 border rounded-lg bg-muted/50 p-4 md:p-6 min-h-[220px] h-full mt-2 md:mt-0 min-h-0 max-w-full overflow-hidden">
+            <div className="flex flex-col items-center w-full h-full overflow-y-auto flex-1 min-h-0">
               {SelectedIconComp && (
                 <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
                   <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
                 </Suspense>
               )}
-              <div className="w-full text-center mt-2 flex-1 overflow-y-auto" style={{ minHeight: 0 }}>
+              <div className="w-full text-center mt-2 flex-1 overflow-y-auto min-h-0">
                 <div className="text-lg font-bold mb-1">{selectedIcon}</div>
                 {selectedMeta ? (
                   <>
