@@ -94,7 +94,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-3xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900">
+      <DialogContent className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900">
         {/* Search Bar */}
         <div className="p-4 border-b border-border dark:border-neutral-800">
           <Input
@@ -105,68 +105,69 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             className="w-full text-base px-4 py-3 rounded-lg border border-border bg-muted dark:bg-neutral-800 dark:border-neutral-700"
           />
         </div>
-        {/* Icon Row */}
-        <div className="flex-0 w-full overflow-x-auto px-4 py-3 bg-background dark:bg-neutral-900 border-b border-border dark:border-neutral-800">
-          <div className="flex gap-2 min-w-fit">
-            {filteredIconNames.map((iconName) => {
-              const Icon = getLucideIconComponent(iconName);
-              return (
-                <button
-                  key={iconName}
-                  onClick={() => onSelect(iconName)}
-                  onMouseEnter={() => setPreviewIcon(iconName)}
-                  onFocus={() => setPreviewIcon(iconName)}
-                  onMouseLeave={() => setPreviewIcon(null)}
-                  className={`group relative flex items-center justify-center w-14 h-14 rounded-lg transition bg-transparent hover:bg-accent focus-visible:bg-accent outline-none border-2 border-transparent hover:border-primary focus-visible:border-primary ${previewIcon === iconName ? 'border-primary' : ''}`}
-                  title={iconName}
-                  type="button"
-                >
-                  <Suspense fallback={<div style={{ width: ICON_SIZE, height: ICON_SIZE }} />}>
-                    <Icon width={ICON_SIZE} height={ICON_SIZE} className="text-foreground group-hover:text-primary transition-colors" />
-                  </Suspense>
-                  {/* Tooltip */}
-                  <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 rounded bg-neutral-800 text-xs text-white opacity-0 group-hover:opacity-100 pointer-events-none z-20 whitespace-nowrap dark:bg-neutral-700">
-                    {iconName}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {/* Preview Panel */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 gap-4 bg-background dark:bg-neutral-900 min-h-[260px]">
-          {SelectedIconComp && (
-            <div className="flex flex-col items-center gap-2">
-              <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
-                <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
-              </Suspense>
-              <div className="text-lg font-bold mt-2 text-foreground dark:text-white">{toKebabCase(selectedIcon)}</div>
-              {selectedMeta && (
-                <div className="flex flex-wrap justify-center gap-2 mb-2">
-                  {selectedMeta.tags?.map((tag: string) => (
-                    <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5 dark:bg-neutral-800 dark:text-white">{tag}</span>
-                  ))}
-                </div>
-              )}
-              {selectedMeta && (
-                <div className="flex flex-wrap justify-center gap-2 mb-2">
-                  {selectedMeta.categories?.map((cat: string) => (
-                    <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border dark:bg-neutral-800 dark:text-white dark:border-neutral-700">{cat}</span>
-                  ))}
-                </div>
-              )}
-              {selectedMeta && (
-                <div className="text-xs text-muted-foreground dark:text-neutral-400 mb-2">
-                  Contributors: {selectedMeta.contributors?.join(', ') || 'Unknown'}
-                </div>
-              )}
-              <div className="flex gap-2 mt-2">
-                <button onClick={handleCopySvg} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy SVG</button>
-                <button onClick={handleCopyJsx} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy JSX</button>
-                <a href={`https://lucide.dev/icon/${toKebabCase(selectedIcon)}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded bg-accent text-xs text-foreground hover:bg-accent/80 transition dark:bg-neutral-800 dark:text-white">See in action</a>
-              </div>
+        {/* Main Content: Icon Grid + Details Panel */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+          {/* Icon Grid */}
+          <div className="flex-1 overflow-y-auto p-4 bg-background dark:bg-neutral-900">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+              {filteredIconNames.map((iconName) => {
+                const Icon = getLucideIconComponent(iconName);
+                return (
+                  <button
+                    key={iconName}
+                    onClick={() => onSelect(iconName)}
+                    onMouseEnter={() => setPreviewIcon(iconName)}
+                    onFocus={() => setPreviewIcon(iconName)}
+                    onMouseLeave={() => setPreviewIcon(null)}
+                    className={`group flex flex-col items-center justify-center p-2 rounded-lg transition bg-transparent hover:bg-accent focus-visible:bg-accent outline-none border-2 border-transparent hover:border-primary focus-visible:border-primary ${previewIcon === iconName ? 'border-primary' : ''}`}
+                    title={iconName}
+                    type="button"
+                  >
+                    <Suspense fallback={<div style={{ width: ICON_SIZE, height: ICON_SIZE }} />}> 
+                      <Icon width={ICON_SIZE} height={ICON_SIZE} className="text-foreground group-hover:text-primary transition-colors" />
+                    </Suspense>
+                    <span className="mt-1 text-xs text-muted-foreground truncate w-full text-center">{iconName}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
+          </div>
+          {/* Details/Preview Panel */}
+          <div className="w-full md:w-[320px] flex-shrink-0 border-t md:border-t-0 md:border-l border-border dark:border-neutral-800 bg-muted/40 dark:bg-neutral-900/80 p-4 flex flex-col items-center justify-start min-h-[220px] max-h-full overflow-y-auto">
+            {SelectedIconComp && (
+              <div className="flex flex-col items-center gap-2 w-full">
+                <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}> 
+                  <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
+                </Suspense>
+                <div className="text-base font-bold mt-1 text-foreground dark:text-white text-center w-full truncate">{toKebabCase(selectedIcon)}</div>
+                {selectedMeta && selectedMeta.tags && selectedMeta.tags.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mb-1 w-full">
+                    {selectedMeta.tags.map((tag: string) => (
+                      <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5 dark:bg-neutral-800 dark:text-white">{tag}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2 mt-2 w-full justify-center">
+                  <button onClick={handleCopySvg} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy SVG</button>
+                  <button onClick={handleCopyJsx} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy JSX</button>
+                  <a href={`https://lucide.dev/icon/${toKebabCase(selectedIcon)}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded bg-accent text-xs text-foreground hover:bg-accent/80 transition dark:bg-neutral-800 dark:text-white">See in action</a>
+                </div>
+                {/* Optionally show categories/contributors in a collapsible/less prominent way */}
+                {selectedMeta && selectedMeta.categories && selectedMeta.categories.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1 mt-2 w-full">
+                    {selectedMeta.categories.map((cat: string) => (
+                      <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border dark:bg-neutral-800 dark:text-white dark:border-neutral-700">{cat}</span>
+                    ))}
+                  </div>
+                )}
+                {selectedMeta && selectedMeta.contributors && selectedMeta.contributors.length > 0 && (
+                  <div className="text-xs text-muted-foreground dark:text-neutral-400 mt-2 w-full text-center truncate">
+                    Contributors: {selectedMeta.contributors.join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
