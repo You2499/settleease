@@ -35,9 +35,15 @@ interface ManageCategoriesTabProps {
 function LucideIconPicker({ value, onChange, disabled }: { value: string, onChange: (iconKey: string) => void, disabled?: boolean }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
-  const iconKeys = Object.keys(LucideIcons).filter(key => key[0] === key[0].toUpperCase());
-  const filtered = search.trim() ? iconKeys.filter(key => key.toLowerCase().includes(search.toLowerCase())) : iconKeys;
-  const SelectedIcon = (LucideIcons[value as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>) || Settings2;
+  const iconKeys = (LucideIcons && typeof LucideIcons === 'object')
+    ? Object.keys(LucideIcons).filter(key => key[0] === key[0].toUpperCase())
+    : [];
+  const filtered = Array.isArray(iconKeys)
+    ? (search.trim() ? iconKeys.filter(key => key.toLowerCase().includes(search.toLowerCase())) : iconKeys)
+    : [];
+  const SelectedIcon = (LucideIcons && value && (value in LucideIcons))
+    ? (LucideIcons[value as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>)
+    : Settings2;
   return (
     <>
       <Button type="button" variant="outline" className="flex items-center gap-2 w-full" onClick={() => setOpen(true)} disabled={disabled}>
@@ -50,8 +56,10 @@ function LucideIconPicker({ value, onChange, disabled }: { value: string, onChan
             <Input autoFocus placeholder="Search icons..." value={search} onChange={e => setSearch(e.target.value)} className="mb-2" />
           </div>
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-96 overflow-y-auto">
-            {filtered.map(key => {
-              const Icon = LucideIcons[key as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
+            {Array.isArray(filtered) && filtered.length > 0 ? filtered.map(key => {
+              const Icon = (LucideIcons && (key in LucideIcons))
+                ? (LucideIcons[key as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>)
+                : Settings2;
               return (
                 <button
                   key={key}
@@ -64,7 +72,7 @@ function LucideIconPicker({ value, onChange, disabled }: { value: string, onChan
                   <span className="text-[10px] truncate w-12">{key}</span>
                 </button>
               );
-            })}
+            }) : <div className="col-span-full text-center text-muted-foreground py-8">No icons found.</div>}
           </div>
         </DialogContent>
       </Dialog>
