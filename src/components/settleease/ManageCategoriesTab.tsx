@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,7 @@ import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Setti
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
-import * as LucideIcons from 'lucide-react';
+import iconNames from '@/lib/settleease/lucide-icon-names.json';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface ManageCategoriesTabProps {
@@ -32,22 +32,25 @@ interface ManageCategoriesTabProps {
   onCategoriesUpdate: () => void;
 }
 
+function DynamicLucideIcon({ iconName, ...props }: { iconName: string } & React.SVGProps<SVGSVGElement>) {
+  const Icon = React.useMemo(() =>
+    React.lazy(() => import(`lucide-react/lib/esm/icons/${iconName.toLowerCase().replace(/([A-Z])/g, '-$1').replace(/^-/, '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}.js`).then(mod => ({ default: mod.default || Settings2 })))
+  , [iconName]);
+  return (
+    <Suspense fallback={<span className={props.className || ''}>...</span>}>
+      <Icon {...props} />
+    </Suspense>
+  );
+}
+
 function LucideIconPicker({ value, onChange, disabled }: { value: string, onChange: (iconKey: string) => void, disabled?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const iconKeys = (LucideIcons && typeof LucideIcons === 'object')
-    ? Object.keys(LucideIcons).filter(key => key[0] === key[0].toUpperCase())
-    : [];
-  const filtered = Array.isArray(iconKeys)
-    ? (search.trim() ? iconKeys.filter(key => key.toLowerCase().includes(search.toLowerCase())) : iconKeys)
-    : [];
-  const SelectedIcon = (LucideIcons && value && (value in LucideIcons))
-    ? (LucideIcons[value as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>)
-    : Settings2;
+  const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState('');
+  const filtered = search.trim() ? iconNames.filter(key => key.toLowerCase().includes(search.toLowerCase())) : iconNames;
   return (
     <>
       <Button type="button" variant="outline" className="flex items-center gap-2 w-full" onClick={() => setOpen(true)} disabled={disabled}>
-        <SelectedIcon className="h-5 w-5" />
+        {value ? <DynamicLucideIcon iconName={value} className="h-5 w-5" /> : <Settings2 className="h-5 w-5" />}
         <span className="truncate">{value || 'Pick an icon'}</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
@@ -56,23 +59,18 @@ function LucideIconPicker({ value, onChange, disabled }: { value: string, onChan
             <Input autoFocus placeholder="Search icons..." value={search} onChange={e => setSearch(e.target.value)} className="mb-2" />
           </div>
           <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-96 overflow-y-auto">
-            {Array.isArray(filtered) && filtered.length > 0 ? filtered.map(key => {
-              const Icon = (LucideIcons && (key in LucideIcons))
-                ? (LucideIcons[key as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>)
-                : Settings2;
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  className={`flex flex-col items-center p-2 rounded border hover:bg-accent focus:bg-accent ${value === key ? 'border-primary' : 'border-transparent'}`}
-                  onClick={() => { onChange(key); setOpen(false); }}
-                  title={key}
-                >
-                  <Icon className="h-6 w-6 mb-1" />
-                  <span className="text-[10px] truncate w-12">{key}</span>
-                </button>
-              );
-            }) : <div className="col-span-full text-center text-muted-foreground py-8">No icons found.</div>}
+            {filtered.length > 0 ? filtered.map(key => (
+              <button
+                key={key}
+                type="button"
+                className={`flex flex-col items-center p-2 rounded border hover:bg-accent focus:bg-accent ${value === key ? 'border-primary' : 'border-transparent'}`}
+                onClick={() => { onChange(key); setOpen(false); }}
+                title={key}
+              >
+                <DynamicLucideIcon iconName={key} className="h-6 w-6 mb-1" />
+                <span className="text-[10px] truncate w-12">{key}</span>
+              </button>
+            )) : <div className="col-span-full text-center text-muted-foreground py-8">No icons found.</div>}
           </div>
         </DialogContent>
       </Dialog>
@@ -92,9 +90,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const [isLoading, setIsLoading] = useState(false);
 
   const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
-    if (iconKey && (iconKey in LucideIcons)) return LucideIcons[iconKey as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
-    const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
-    return found ? found.IconComponent : Settings2;
+    return (props: React.SVGProps<SVGSVGElement>) => <DynamicLucideIcon iconName={iconKey} {...props} />;
   };
 
   const handleAddCategory = async () => {
