@@ -45,7 +45,7 @@ export default function ExpenseLog({
             <div className="space-y-4">
               {expenseDates.map((date, index) => (
                 <div key={date}>
-                  <div className="relative my-3">
+                  <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
                     <div className="absolute inset-0 flex items-center">
                       <Separator />
                     </div>

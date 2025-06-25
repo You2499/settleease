@@ -134,9 +134,9 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
           {expenses.length > 0 ? (
             <ScrollArea className="flex-1 min-h-0 h-full -mx-1 sm:-mx-2">
               <div className="space-y-4 px-1 sm:px-2">
-                {expenseDates.map((date) => (
+                {expenseDates.map((date, index) => (
                     <div key={date}>
-                        <div className="relative my-3">
+                        <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
                             <div className="absolute inset-0 flex items-center">
                                 <Separator />
                             </div>
