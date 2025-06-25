@@ -16,7 +16,7 @@ export default function SpendingByDayChart({ spendingByDayOfWeekData, analyticsV
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">
-        <CardTitle className="text-md sm:text-lg flex items-center">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <CalendarClock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
         </CardTitle>

@@ -15,7 +15,7 @@ export default function ExpenseDistributionChart({ expenseAmountDistributionData
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">
-        <CardTitle className="text-md sm:text-lg flex items-center">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
         </CardTitle>

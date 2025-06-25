@@ -602,7 +602,7 @@ export default function AnalyticsTab({
     return (
       <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
         <CardHeader className="pb-2 pt-4">
-          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">
             <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>

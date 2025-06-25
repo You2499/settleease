@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -182,7 +181,7 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
           </CardTitle>
         </CardHeader>
