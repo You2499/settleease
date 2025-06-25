@@ -26,6 +26,7 @@ import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 import { EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory, CelebrationContribution } from '@/lib/settleease/types';
+import * as LucideIcons from 'lucide-react';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -583,8 +584,7 @@ export default function AddExpenseTab({
                   </SelectTrigger>
                   <SelectContent>
                     {dynamicCategories.map(cat => {
-                        const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
-                        const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                        const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
                         return (
                         <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">

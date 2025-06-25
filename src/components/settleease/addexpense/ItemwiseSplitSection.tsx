@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -10,8 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, MinusCircle, Settings2 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import type { Person, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
-import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 
 
 interface ItemwiseSplitSectionProps {
@@ -61,8 +60,7 @@ export default function ItemwiseSplitSection({
                   </SelectTrigger>
                   <SelectContent>
                     {dynamicCategories.map(cat => {
-                      const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
-                      const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                      const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
                       return (
                         <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">

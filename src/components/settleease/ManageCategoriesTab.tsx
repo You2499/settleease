@@ -23,6 +23,7 @@ import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE } from '@/lib/settleease/constants';
 import IconPickerModal from './IconPickerModal';
+import * as LucideIcons from 'lucide-react';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -50,11 +51,6 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   useEffect(() => {
     setOrderedCategories([...categories].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)));
   }, [categories]);
-
-  const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
-    const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
-    return found ? found.IconComponent : Settings2;
-  };
 
   // Dynamic icon rendering
   const DynamicIcon = React.useMemo(() => {
@@ -344,7 +340,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
                 <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
                   {orderedCategories.map((category, idx) => {
-                    const IconComponent = getIconComponent(category.icon_name);
+                    const IconComponent = (LucideIcons as any)[category.icon_name] || Settings2;
                     return (
                       <li key={category.id} className={`flex items-center justify-between bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group ${rankingMode ? 'min-h-[60px] sm:min-h-[68px] py-2 sm:py-3' : 'p-2.5 sm:p-3'}`}>
                         {editingCategory?.id === category.id ? (
