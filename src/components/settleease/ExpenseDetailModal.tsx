@@ -270,29 +270,29 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         </Button>
         <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
           <div className="flex items-center">
-            <DialogTitle className="text-2xl sm:text-3xl text-primary flex items-center">
+            <DialogTitle className="text-xl sm:text-2xl md:text-3xl text-primary flex items-center">
               Expense Details
             </DialogTitle>
           </div>
         </DialogHeader>
         
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-          <div className="space-y-6 sm:space-y-8 pt-2"> 
+          <div className="space-y-5 sm:space-y-6 md:space-y-8 pt-2"> 
             
             <Card>
-              <CardHeader className="pt-4 sm:pt-6 pb-2">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <CardHeader className="pt-3 sm:pt-4 md:pt-6 pb-2">
+                <CardTitle className="flex items-center text-lg sm:text-xl md:text-2xl font-bold">
                   <Info className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground"/>General Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm sm:text-base space-y-2 sm:space-y-3 pt-0">
+              <CardContent className="text-sm sm:text-base md:text-lg space-y-2 sm:space-y-3 pt-0">
                 <div className="flex flex-col sm:flex-row sm:justify-between">
                   <span className="text-muted-foreground shrink-0 mr-2">Description:</span> 
                   <span className="font-medium text-left sm:text-right truncate" title={expense.description}>{expense.description}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-baseline">
                   <span className="text-muted-foreground shrink-0 mr-2">Total Bill Amount:</span> 
-                  <span className="font-bold text-xl sm:text-2xl text-primary text-left sm:text-right">{formatCurrency(totalOriginalBill)}</span>
+                  <span className="font-bold text-lg sm:text-xl md:text-2xl text-primary text-left sm:text-right">{formatCurrency(totalOriginalBill)}</span>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:justify-between">
                   <span className="text-muted-foreground shrink-0 mr-2">Main Category:</span> 
@@ -309,10 +309,10 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
             
             <Card>
-              <CardHeader className="pt-4 sm:pt-6 pb-2">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><CreditCard className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground"/>Payment & Contribution</CardTitle>
+              <CardHeader className="pt-3 sm:pt-4 md:pt-6 pb-2">
+                <CardTitle className="flex items-center text-lg sm:text-xl md:text-2xl font-bold"><CreditCard className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground"/>Payment & Contribution</CardTitle>
               </CardHeader>
-              <CardContent className="text-sm sm:text-base space-y-2 sm:space-y-3 pt-0">
+              <CardContent className="text-sm sm:text-base md:text-lg space-y-2 sm:space-y-3 pt-0">
                 <div>
                   <span className="font-medium text-muted-foreground block mb-1">Paid By:</span>
                   {sortedPaidBy.length > 0 ? (
@@ -355,12 +355,12 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pt-4 sm:pt-6 pb-2">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <CardHeader className="pt-3 sm:pt-4 md:pt-6 pb-2">
+                <CardTitle className="flex items-center text-lg sm:text-xl md:text-2xl font-bold">
                   <SplitIcon className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-sm sm:text-base space-y-3 sm:space-y-4 pt-0">
+              <CardContent className="text-sm sm:text-base md:text-lg space-y-3 sm:space-y-4 pt-0">
                 {expense.split_method === 'equal' && Array.isArray(expense.shares) && expense.shares.length > 0 && (
                   <div>
                     <CardDescription className="mb-1 sm:mb-1.5 text-xs">
@@ -526,15 +526,15 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             </Card>
 
             <Card>
-              <CardHeader className="pt-4 sm:pt-6 pb-2">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <CardHeader className="pt-3 sm:pt-4 md:pt-6 pb-2">
+                <CardTitle className="flex items-center text-lg sm:text-xl md:text-2xl font-bold">
                   <Users className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground"/> Individual Net Effect
                 </CardTitle>
                  <CardDescription className="text-xs">
                   Each person's financial position for this expense, after considering their payments and share of the <strong className="text-accent">{formatCurrency(amountEffectivelySplit)}</strong> split amount.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="text-sm sm:text-base pt-0">
+              <CardContent className="text-sm sm:text-base md:text-lg pt-0">
                 {sortedInvolvedPersonIdsOverall.length > 0 ? (
                   ((() => {
                     // Compute net effect for each person and sort accordingly
