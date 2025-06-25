@@ -62,9 +62,9 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold mb-2">Pick an Icon</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full w-full min-h-0">
+        <div className="flex flex-col md:flex-row gap-4 md:gap-6 h-full min-h-0 min-h-full w-full">
           {/* Left: Search and grid */}
-          <div className="flex-1 min-w-0 flex flex-col h-full w-full min-h-0">
+          <div className="flex-1 min-w-0 flex flex-col h-full min-h-0 min-h-full w-full">
             <Input
               autoFocus
               placeholder={`Search ${filteredIconNames.length} icons ...`}
@@ -73,7 +73,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
               className="mb-4 md:mb-6 text-base px-4 py-3 rounded-lg border border-border bg-muted w-full"
             />
             <div
-              className="flex-1 min-h-0 overflow-y-auto grid gap-y-3 gap-x-2 md:gap-y-4 md:gap-x-3 pb-4 pt-2 w-full"
+              className="flex-1 min-h-full overflow-y-auto no-scrollbar grid gap-y-3 gap-x-2 md:gap-y-4 md:gap-x-3 pb-4 pt-2 w-full"
               style={{
                 gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))',
                 paddingLeft: 2,
@@ -109,8 +109,8 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             )}
           </div>
           {/* Right: Preview panel */}
-          <div className="w-full md:w-80 flex flex-col items-center gap-3 md:gap-4 border rounded-lg bg-muted/50 p-4 md:p-6 min-h-[220px] h-full max-h-full md:sticky md:top-0 self-start box-border" style={{ minWidth: 0, maxWidth: '100%' }}>
-            <div className="flex flex-col items-center w-full h-full flex-1 min-h-0">
+          <div className="w-full md:w-80 flex flex-col items-center gap-3 md:gap-4 border rounded-lg bg-muted/50 p-4 md:p-6 min-h-[220px] h-full min-h-full max-h-full md:sticky md:top-0 self-start box-border" style={{ minWidth: 0, maxWidth: '100%' }}>
+            <div className="flex flex-col items-center w-full h-full flex-1 min-h-0 min-h-full">
               {SelectedIconComp && (
                 <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
                   <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
