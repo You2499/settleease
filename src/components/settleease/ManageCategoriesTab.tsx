@@ -70,7 +70,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   };
 
   function SortableCategory({ category, children }: { category: Category, children: React.ReactNode }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: category.id });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(category.id) });
     const style = {
       transform: CSS.Transform.toString(transform),
       transition,
@@ -78,7 +78,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       cursor: isAdmin ? 'grab' : undefined,
     };
     return (
-      <li ref={setNodeRef} style={style} {...attributes} {...(isAdmin ? listeners : {})}>
+      <li ref={setNodeRef} style={style} {...attributes}>
         {isAdmin && <span {...listeners} className="inline-block mr-2 cursor-grab text-muted-foreground" title="Drag to reorder">☰</span>}
         {children}
       </li>
@@ -97,6 +97,10 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     }
     if (!newCategoryIconKey) {
       toast({ title: "Validation Error", description: "Please select an icon.", variant: "destructive" });
+      return;
+    }
+    if (categories.some(cat => cat.name.trim().toLowerCase() === newCategoryName.trim().toLowerCase())) {
+      toast({ title: "Duplicate Category", description: `A category named "${newCategoryName.trim()}" already exists.`, variant: "destructive" });
       return;
     }
     if (!db || supabaseInitializationError) {
