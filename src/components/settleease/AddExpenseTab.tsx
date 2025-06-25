@@ -469,7 +469,7 @@ export default function AddExpenseTab({
         split_method: splitMethod,
         shares: calculatedShares, 
         items: splitMethod === 'itemwise' ? expenseItemsPayload : null,
-        ...(celebrationContributionPayload && { celebration_contribution: celebrationContributionPayload }),
+        celebration_contribution: celebrationContributionPayload,
       };
 
       let errorPayload: any = null;
