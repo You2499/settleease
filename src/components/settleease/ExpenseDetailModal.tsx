@@ -476,7 +476,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                             </li>,
                                             <ul key={catName + '-items'} className="border-l-2 border-primary/30 pl-2 mb-2">
                                               {itemsByCategory[catName].map(itemShare => (
-                                                <li key={itemShare.itemId} className="flex justify-between pl-0">
+                                                <li key={itemShare.itemId} className="flex justify-between pl-0 m-0">
                                                   <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
                                                     {itemShare.itemName}
                                                   </span>
