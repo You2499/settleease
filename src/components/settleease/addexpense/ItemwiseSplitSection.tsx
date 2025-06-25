@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -11,8 +10,9 @@ import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlusCircle, MinusCircle, Settings2 } from 'lucide-react';
 import type { Person, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
-import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import * as LucideIconsImport from 'lucide-react';
 
+const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 interface ItemwiseSplitSectionProps {
   items: ExpenseItemDetail[];
@@ -61,8 +61,7 @@ export default function ItemwiseSplitSection({
                   </SelectTrigger>
                   <SelectContent>
                     {dynamicCategories.map(cat => {
-                      const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
-                      const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                      const IconComponent = LucideIcons[cat.icon_name] || LucideIcons['Settings2'];
                       return (
                         <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">
@@ -93,27 +92,4 @@ export default function ItemwiseSplitSection({
                     {people.map(person => (
                     <div key={person.id} className="flex items-center space-x-2">
                         <Checkbox
-                            id={`item-${itemIndex}-person-${person.id}`}
-                            checked={item.sharedBy.includes(person.id)}
-                            onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
-                            className="h-4 w-4"
-                        />
-                        <Label 
-                            htmlFor={`item-${itemIndex}-person-${person.id}`} 
-                            className="text-xs sm:text-sm font-normal cursor-pointer hover:text-foreground transition-colors"
-                        >
-                            {person.name}
-                        </Label>
-                    </div>
-                    ))}
-                </div>
-              </ScrollArea>
-            ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
-        </Card>
-        ))}
-        <Button variant="outline" size="default" onClick={addItem} className="w-full sm:w-auto mt-3 py-2 px-4 text-sm">
-            <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Add Item
-        </Button>
-    </Card>
-  );
-}
+                            id={`item-${itemIndex}-person-${person.id}`

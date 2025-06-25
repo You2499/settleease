@@ -1,4 +1,3 @@
-
 "use client";
 import React, { useState, useMemo } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -20,6 +19,8 @@ import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; 
 import { EXPENSES_TABLE, formatCurrency, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
+import * as LucideIconsImport from 'lucide-react';
+const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -42,11 +43,10 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
   const getCategoryIcon = (categoryName: string) => {
     const category = dynamicCategories.find(c => c.name === categoryName);
     if (category) {
-        const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === category.icon_name);
-        if (iconDetail) return iconDetail.IconComponent;
+      const iconName = category.icon_name;
+      if (iconName && LucideIcons[iconName]) return LucideIcons[iconName];
     }
-    const defaultIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return defaultIcon ? defaultIcon.IconComponent : Settings2;
+    return LucideIcons['Settings2'];
   };
 
 

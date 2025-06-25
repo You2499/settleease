@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -22,7 +21,10 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
-import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import { CATEGORIES_TABLE, EXPENSES_TABLE } from '@/lib/settleease/constants';
+import * as LucideIconsImport from 'lucide-react';
+
+const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -33,7 +35,7 @@ interface ManageCategoriesTabProps {
 
 export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate }: ManageCategoriesTabProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>(AVAILABLE_CATEGORY_ICONS[0]?.iconKey || '');
+  const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>('Settings2');
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -43,8 +45,8 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const [isLoading, setIsLoading] = useState(false);
 
   const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
-    const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
-    return found ? found.IconComponent : Settings2;
+    const found = Object.keys(LucideIcons).find(key => key === iconKey);
+    return found ? LucideIcons[found] : Settings2;
   };
 
   const handleAddCategory = async () => {
@@ -66,7 +68,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       if (error) throw error;
       toast({ title: "Category Added", description: `${newCategoryName.trim()} has been added.` });
       setNewCategoryName('');
-      setNewCategoryIconKey(AVAILABLE_CATEGORY_ICONS[0]?.iconKey || '');
+      setNewCategoryIconKey('Settings2');
       onCategoriesUpdate();
     } catch (error: any) {
       toast({ title: "Error Adding Category", description: error.message || "Could not add category.", variant: "destructive" });
@@ -214,13 +216,13 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                     <SelectValue placeholder="Select icon" />
                   </SelectTrigger>
                   <SelectContent>
-                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                      const IconComp = icon.IconComponent;
+                    {Object.keys(LucideIcons).sort().map(iconKey => {
+                      const IconComp = LucideIcons[iconKey] || LucideIcons['Settings2'];
                       return (
-                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
+                        <SelectItem key={iconKey} value={iconKey}>
                           <div className="flex items-center">
                             <IconComp className="mr-2 h-4 w-4" />
-                            {icon.label}
+                            {iconKey}
                           </div>
                         </SelectItem>
                       );
@@ -258,13 +260,13 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                     <SelectValue placeholder="Select icon" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                      const IconComp = icon.IconComponent;
+                                    {Object.keys(LucideIcons).sort().map(iconKey => {
+                                      const IconComp = LucideIcons[iconKey] || LucideIcons['Settings2'];
                                       return (
-                                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
+                                        <SelectItem key={iconKey} value={iconKey}>
                                           <div className="flex items-center">
                                             <IconComp className="mr-2 h-4 w-4" />
-                                            {icon.label}
+                                            {iconKey}
                                           </div>
                                         </SelectItem>
                                       );
