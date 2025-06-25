@@ -50,7 +50,8 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName, categories }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
-  const CategoryIcon = getCategoryIconFromName(expense.category);
+  const categoryObj = categories.find(cat => cat.name === expense.category);
+  const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
   const SplitIcon = useMemo(() => {
     if (expense.split_method === 'equal') return Scale;
     if (expense.split_method === 'unequal') return SlidersHorizontal;

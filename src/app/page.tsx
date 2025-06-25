@@ -602,15 +602,9 @@ export default function SettleEasePage() {
     }
   };
 
- const getCategoryIconFromName = useCallback((categoryName: string): React.FC<React.SVGProps<SVGSVGElement>> => {
-    if (categories && categories.length > 0) {
-      const dynamicCat = categories.find(c => c.name === categoryName);
-      if (dynamicCat && dynamicCat.icon_name) {
-        return (LucideIcons as any)[dynamicCat.icon_name] || Settings2;
-      }
-    }
-    return Settings2;
-  }, [categories]);
+ const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
+    return (LucideIcons as any)[iconName] || Settings2;
+  }, []);
 
 
   if (isLoadingAuth || (currentUser && isLoadingRole)) {
