@@ -474,19 +474,19 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                               {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
                                               {catName}
                                             </li>,
-                                            <ul key={catName + '-items'} className="border-l-2 border-primary/30 pl-2 mb-2">
-                                              {itemsByCategory[catName].map(itemShare => (
-                                                <li key={itemShare.itemId} className="flex justify-between pl-0 m-0">
-                                                  <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
-                                                    {itemShare.itemName}
+                                            <ul key={catName + '-items'} className="border-l-2 border-primary/30 mb-2">
+                                            {itemsByCategory[catName].map(itemShare => (
+                                              <li key={itemShare.itemId} className="flex justify-between pl-2 m-0">
+                                                <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
+                                                  {itemShare.itemName}
+                                                </span>
+                                                <span className="text-muted-foreground whitespace-nowrap">
+                                                  {formatCurrency(itemShare.shareForPerson)}
+                                                  <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
+                                                    (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
                                                   </span>
-                                                  <span className="text-muted-foreground whitespace-nowrap">
-                                                    {formatCurrency(itemShare.shareForPerson)}
-                                                    <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
-                                                      (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
-                                                    </span>
-                                                  </span>
-                                                </li>
+                                                </span>
+                                              </li>
                                               ))}
                                             </ul>
                                           ] : null
