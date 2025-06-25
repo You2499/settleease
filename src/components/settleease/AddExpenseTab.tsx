@@ -10,7 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale } from 'lucide-react';
-import * as LucideIconsImport from 'lucide-react';
 
 import { toast } from "@/hooks/use-toast";
 
@@ -33,8 +32,6 @@ interface AddExpenseTabProps {
   expenseToEdit?: Expense | null;
   onCancelEdit?: () => void;
 }
-
-const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 export default function AddExpenseTab({
   people,
@@ -579,7 +576,8 @@ export default function AddExpenseTab({
                   </SelectTrigger>
                   <SelectContent>
                     {dynamicCategories.map(cat => {
-                        const IconComponent = LucideIcons[cat.icon_name] || LucideIcons['Settings2'];
+                        const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                        const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
                         return (
                         <SelectItem key={cat.id} value={cat.name}>
                           <div className="flex items-center">

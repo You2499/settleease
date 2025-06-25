@@ -13,11 +13,10 @@ import { Separator } from "@/components/ui/separator";
 import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares } from '@/lib/settleease/types';
+import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import * as LucideIconsImport from 'lucide-react';
 
-const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -140,8 +139,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   }, [expense.split_method, expense.items, amountEffectivelySplit]);
 
   const getItemCategoryIcon = (categoryName?: string) => {
-    if (!categoryName) return LucideIcons['Settings2'];
-    return LucideIcons[categoryName] || LucideIcons['Settings2'];
+    if (!categoryName) return Settings2; 
+    const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.label.toLowerCase().includes(categoryName.toLowerCase()) || icon.iconKey.toLowerCase() === categoryName.toLowerCase());
+    if (iconDetail) return iconDetail.IconComponent;
+    
+    return getCategoryIconFromName(categoryName) || Settings2;
   };
 
   // WhatsApp-formatted string generator

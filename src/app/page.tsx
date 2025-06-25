@@ -39,8 +39,6 @@ import {
 
 import type { Person, Expense, Category, UserRole, ActiveView, SettlementPayment } from '@/lib/settleease';
 
-import * as LucideIconsImport from 'lucide-react';
-const LucideIcons = LucideIconsImport as Record<string, React.FC<React.SVGProps<SVGSVGElement>>>;
 
 let db: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
@@ -608,11 +606,12 @@ export default function SettleEasePage() {
     if (categories && categories.length > 0) {
       const dynamicCat = categories.find(c => c.name === categoryName);
       if (dynamicCat) {
-        const iconName = dynamicCat.icon_name;
-        if (iconName && LucideIcons[iconName]) return LucideIcons[iconName];
+        const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
+        if (iconDetail) return iconDetail.IconComponent;
       }
     }
-    return LucideIcons['Settings2'];
+    const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
+    return settingsIcon ? settingsIcon.IconComponent : Settings2;
   }, [categories]);
 
 
