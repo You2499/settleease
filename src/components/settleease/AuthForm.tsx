@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon, PartyPopper } from 'lucide-react';
+import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon, PartyPopper, Settings2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // Google Icon SVG as a React component
@@ -110,14 +110,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[580px]">
-      <div className="md:flex h-full md:min-h-[580px]"> {/* Added md:min-h-[580px] here */}
+    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[620px]">
+      <div className="md:flex h-full md:min-h-[620px]"> {/* Increased min-h for modal and flex container */}
         {/* Left Pane: Branding & Features */}
-        <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out
-                         min-h-[400px] md:min-h-[580px] ${isLoginView ? 'bg-secondary/20 text-primary' : 'bg-primary text-primary-foreground'}`}>
-          <div className="flex flex-col flex-1 justify-center min-h-0"> 
+        <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[620px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
+          <div className="flex flex-col flex-1 justify-center min-h-0 h-full"> 
             {isLoginView ? (
-              <div className="flex flex-col flex-1 items-center justify-center text-center">
+              <div className="flex flex-col flex-1 items-center justify-center text-center h-full">
                 <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
                 <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
                 <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
@@ -140,6 +139,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
                   <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
                   <li className="flex items-start"><HandshakeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
+                  <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from <span className="font-semibold mx-1">hundreds of Lucide icons</span> for categories and personalization.</li>
                 </ul>
               </>
             )}
@@ -147,8 +147,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         </div>
 
         {/* Right Pane: Form */}
-        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0">
-          <div className="flex flex-col justify-center flex-1 min-h-0"> 
+        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0 h-full">
+          <div className="flex flex-col justify-center flex-1 min-h-0 h-full"> 
             <CardHeader className="px-0 pt-0 pb-4 text-center">
               <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                 {isLoginView ? 'Sign In' : 'Create your Account'}
