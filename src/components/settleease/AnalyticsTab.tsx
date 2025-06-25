@@ -355,7 +355,7 @@ export default function AnalyticsTab({
             totalAmount,
             expenseCount,
             averageAmount: expenseCount > 0 && totalAmount > 0.001 ? totalAmount / expenseCount : 0,
-            Icon: getCategoryIconFromName(name),
+            Icon: getCategoryIconFromName((dynamicCategories.find(c => c.name === name)?.icon_name) || ""),
             mostExpensiveItem: mostExpensiveItemData,
             largestPayer: largestPayerData,
         };

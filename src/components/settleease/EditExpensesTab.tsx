@@ -151,6 +151,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                                   expense={expense}
                                   peopleMap={peopleMap}
                                   getCategoryIconFromName={getCategoryIcon}
+                                  categories={dynamicCategories}
                                   actions={
                                     <>
                                       <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">

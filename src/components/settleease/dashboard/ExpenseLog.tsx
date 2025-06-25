@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense } from '@/lib/settleease/types';
+import type { Category } from '@/lib/settleease/types';
 import { Separator } from '@/components/ui/separator';
 import ExpenseListItem from '../ExpenseListItem';
 
@@ -14,6 +15,7 @@ interface ExpenseLogProps {
   peopleMap: Record<string, string>;
   handleExpenseCardClick: (expense: Expense) => void;
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  categories: Category[];
 }
 
 export default function ExpenseLog({
@@ -21,6 +23,7 @@ export default function ExpenseLog({
   peopleMap,
   handleExpenseCardClick,
   getCategoryIconFromName,
+  categories,
 }: ExpenseLogProps) {
 
   const groupedExpenses = expenses.reduce((acc, expense) => {
@@ -64,6 +67,7 @@ export default function ExpenseLog({
                           expense={expense}
                           peopleMap={peopleMap}
                           getCategoryIconFromName={getCategoryIconFromName}
+                          categories={categories}
                           onClick={handleExpenseCardClick}
                         />
                       )

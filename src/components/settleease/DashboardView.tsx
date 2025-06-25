@@ -260,6 +260,7 @@ export default function DashboardView({
         peopleMap={peopleMap}
         handleExpenseCardClick={handleExpenseCardClick}
         getCategoryIconFromName={getCategoryIconFromName}
+        categories={dynamicCategories}
       />
 
       {selectedExpenseForModal && (

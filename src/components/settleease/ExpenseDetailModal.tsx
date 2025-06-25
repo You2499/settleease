@@ -169,7 +169,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   const getItemCategoryIcon = (categoryName?: string) => {
     if (!categoryName) return Settings2;
-    return (LucideIcons as any)[categoryName] || Settings2;
+    const cat = categories.find((c: Category) => c.name === categoryName);
+    return getCategoryIconFromName(cat?.icon_name || "");
   };
 
   // Helper: get category rank (fallback to a large number if not found)

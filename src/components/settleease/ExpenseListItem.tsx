@@ -6,7 +6,8 @@ import type { Expense } from '@/lib/settleease/types';
 interface ExpenseListItemProps {
   expense: Expense;
   peopleMap: Record<string, string>;
-  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  getCategoryIconFromName: (iconName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  categories: { name: string; icon_name: string }[];
   onClick?: (expense: Expense) => void;
   actions?: React.ReactNode;
 }
@@ -15,10 +16,12 @@ export default function ExpenseListItem({
   expense,
   peopleMap,
   getCategoryIconFromName,
+  categories,
   onClick,
   actions,
 }: ExpenseListItemProps) {
-  const CategoryIcon = getCategoryIconFromName(expense.category);
+  const categoryObj = categories.find(cat => cat.name === expense.category);
+  const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
   const displayPayerText = Array.isArray(expense.paid_by) && expense.paid_by.length > 1
     ? "Multiple Payers"
     : (Array.isArray(expense.paid_by) && expense.paid_by.length === 1
