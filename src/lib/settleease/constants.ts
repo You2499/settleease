@@ -1,4 +1,4 @@
-import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins, Handshake } from 'lucide-react';
+import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins, Handshake, Cigarette } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 export const PEOPLE_TABLE = 'people';
@@ -46,6 +46,7 @@ export const AVAILABLE_CATEGORY_ICONS: AvailableCategoryIcon[] = [
   { iconKey: 'Smile', IconComponent: Smile, label: 'Personal Care/Wellbeing)' },
   { iconKey: 'Coins', IconComponent: Coins, label: 'Coins (Savings/Investments)' },
   { iconKey: 'Handshake', IconComponent: Handshake, label: 'Handshake (Settlements)'},
+  { iconKey: 'Cigarette', IconComponent: Cigarette, label: 'Cigarette (Smoking)' },
   { iconKey: 'Settings2', IconComponent: Settings2, label: 'Settings (Miscellaneous/Other)' },
 ];
 
