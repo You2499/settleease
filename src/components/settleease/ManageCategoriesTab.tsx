@@ -22,6 +22,7 @@ import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Setti
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import IconPickerModal from './IconPickerModal';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -33,11 +34,13 @@ interface ManageCategoriesTabProps {
 
 export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate, isAdmin }: ManageCategoriesTabProps) {
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>(AVAILABLE_CATEGORY_ICONS[0]?.iconKey || '');
+  const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>('Utensils');
+  const [showAddIconModal, setShowAddIconModal] = useState(false);
 
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editingName, setEditingName] = useState('');
   const [editingIconKey, setEditingIconKey] = useState('');
+  const [showEditIconModal, setShowEditIconModal] = useState(false);
 
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -52,6 +55,17 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
     return found ? found.IconComponent : Settings2;
   };
+
+  // Dynamic icon rendering
+  const DynamicIcon = React.useMemo(() => {
+    if (!newCategoryIconKey) return null;
+    return React.lazy(() => import(`lucide-react/lib/esm/icons/${newCategoryIconKey.toLowerCase()}.js`).catch(() => import('lucide-react').then(mod => ({ default: (mod as any)[newCategoryIconKey] }))));
+  }, [newCategoryIconKey]);
+
+  const DynamicEditIcon = React.useMemo(() => {
+    if (!editingIconKey) return null;
+    return React.lazy(() => import(`lucide-react/lib/esm/icons/${editingIconKey.toLowerCase()}.js`).catch(() => import('lucide-react').then(mod => ({ default: (mod as any)[editingIconKey] }))));
+  }, [editingIconKey]);
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) {
@@ -79,7 +93,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       if (error) throw error;
       toast({ title: "Category Added", description: `${newCategoryName.trim()} has been added.` });
       setNewCategoryName('');
-      setNewCategoryIconKey(AVAILABLE_CATEGORY_ICONS[0]?.iconKey || '');
+      setNewCategoryIconKey('Utensils');
       onCategoriesUpdate();
     } catch (error: any) {
       toast({ title: "Error Adding Category", description: error.message || "Could not add category.", variant: "destructive" });
@@ -280,24 +294,26 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               </div>
               <div className="md:col-span-1">
                 <Label htmlFor="newCategoryIcon" className="text-xs">Icon</Label>
-                <Select value={newCategoryIconKey} onValueChange={setNewCategoryIconKey} disabled={isLoading}>
-                  <SelectTrigger id="newCategoryIcon" className="mt-1 h-10 sm:h-11 text-sm sm:text-base">
-                    <SelectValue placeholder="Select icon" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                      const IconComp = icon.IconComponent;
-                      return (
-                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                          <div className="flex items-center">
-                            <IconComp className="mr-2 h-4 w-4" />
-                            {icon.label}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-1 h-10 sm:h-11 text-sm sm:text-base flex items-center gap-2"
+                  onClick={() => setShowAddIconModal(true)}
+                  disabled={isLoading}
+                >
+                  <React.Suspense fallback={<span className="w-5 h-5" />}>
+                    {DynamicIcon && <DynamicIcon className="h-5 w-5" />}
+                  </React.Suspense>
+                  {newCategoryIconKey || 'Choose Icon'}
+                </Button>
+                <IconPickerModal
+                  open={showAddIconModal}
+                  onClose={() => setShowAddIconModal(false)}
+                  onSelect={(iconName) => {
+                    setNewCategoryIconKey(iconName);
+                    setShowAddIconModal(false);
+                  }}
+                />
               </div>
               <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} className="h-10 sm:h-11 text-sm sm:text-base w-full md:w-auto md:self-end">
                 <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {isLoading && !editingCategory ? 'Adding...' : 'Add Category'}
@@ -342,24 +358,20 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                 autoFocus
                                 disabled={isLoading}
                               />
-                              <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                  <SelectTrigger className="w-[220px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0">
-                                      <SelectValue placeholder="Select icon" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                        const IconComp = icon.IconComponent;
-                                        return (
-                                          <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                                            <div className="flex items-center">
-                                              <IconComp className="mr-2 h-4 w-4" />
-                                              {icon.label}
-                                            </div>
-                                          </SelectItem>
-                                        );
-                                      })}
-                                  </SelectContent>
-                              </Select>
+                              <Button type="button" variant="outline" onClick={() => setShowEditIconModal(true)} disabled={isLoading} className="w-[220px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0 flex items-center gap-2 mt-1">
+                                <React.Suspense fallback={<span className="w-5 h-5" />}>
+                                  {DynamicEditIcon && <DynamicEditIcon className="h-5 w-5" />}
+                                </React.Suspense>
+                                {editingIconKey || 'Choose Icon'}
+                              </Button>
+                              <IconPickerModal
+                                open={showEditIconModal}
+                                onClose={() => setShowEditIconModal(false)}
+                                onSelect={(iconName) => {
+                                  setEditingIconKey(iconName);
+                                  setShowEditIconModal(false);
+                                }}
+                              />
                             </div>
                             <div className="flex items-center flex-shrink-0">
                               <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
