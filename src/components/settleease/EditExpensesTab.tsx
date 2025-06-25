@@ -131,10 +131,10 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
           </CardTitle>
           <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 min-h-0 px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
           {expenses.length > 0 ? (
-            <ScrollArea className="flex-1 min-h-0 h-full -mx-1 sm:-mx-2">
-              <div className="space-y-4 px-1 sm:px-2">
+            <ScrollArea className="h-[350px]">
+              <div className="space-y-4">
                 {expenseDates.map((date, index) => (
                     <div key={date}>
                         <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
@@ -147,7 +147,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                                 </span>
                             </div>
                         </div>
-                        <ul className="space-y-2.5 sm:space-y-3">
+                        <ul className="space-y-2.5 px-0.5 sm:px-1">
                             {groupedExpenses[date].map(expense => (
                                 <ExpenseListItem
                                   key={expense.id}
