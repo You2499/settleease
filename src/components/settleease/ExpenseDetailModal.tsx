@@ -118,6 +118,23 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         });
       }
     });
+
+    // Sort each person's items by category, then by name
+    Object.values(aggregatedData).forEach(personData => {
+      personData.items.sort((a, b) => {
+        const catA = (a.itemCategoryName || '').toLowerCase();
+        const catB = (b.itemCategoryName || '').toLowerCase();
+        if (catA < catB) return -1;
+        if (catA > catB) return 1;
+        // If same category, sort by item name
+        const nameA = (a.itemName || '').toLowerCase();
+        const nameB = (b.itemName || '').toLowerCase();
+        if (nameA < nameB) return -1;
+        if (nameA > nameB) return 1;
+        return 0;
+      });
+    });
+
     return aggregatedData;
   }, [expense.split_method, expense.items, amountEffectivelySplit]);
 
