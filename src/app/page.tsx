@@ -34,10 +34,10 @@ import {
   SETTLEMENT_PAYMENTS_TABLE,
   supabaseUrl,
   supabaseAnonKey,
-  AVAILABLE_CATEGORY_ICONS,
 } from '@/lib/settleease';
 
 import type { Person, Expense, Category, UserRole, ActiveView, SettlementPayment } from '@/lib/settleease';
+import * as LucideIcons from 'lucide-react';
 
 
 let db: SupabaseClient | undefined;
@@ -605,13 +605,11 @@ export default function SettleEasePage() {
  const getCategoryIconFromName = useCallback((categoryName: string): React.FC<React.SVGProps<SVGSVGElement>> => {
     if (categories && categories.length > 0) {
       const dynamicCat = categories.find(c => c.name === categoryName);
-      if (dynamicCat) {
-        const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === dynamicCat.icon_name);
-        if (iconDetail) return iconDetail.IconComponent;
+      if (dynamicCat && dynamicCat.icon_name) {
+        return (LucideIcons as any)[dynamicCat.icon_name] || Settings2;
       }
     }
-    const settingsIcon = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === 'Settings2');
-    return settingsIcon ? settingsIcon.IconComponent : Settings2;
+    return Settings2;
   }, [categories]);
 
 

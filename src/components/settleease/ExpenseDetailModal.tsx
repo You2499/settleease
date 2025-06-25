@@ -13,9 +13,9 @@ import { Separator } from "@/components/ui/separator";
 import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares, Category } from '@/lib/settleease/types';
-import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import * as LucideIcons from 'lucide-react';
 
 
 interface ExpenseDetailModalProps {
@@ -167,11 +167,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   }, [itemwiseBreakdownForDisplay, peopleMap]);
 
   const getItemCategoryIcon = (categoryName?: string) => {
-    if (!categoryName) return Settings2; 
-    const iconDetail = AVAILABLE_CATEGORY_ICONS.find(icon => icon.label.toLowerCase().includes(categoryName.toLowerCase()) || icon.iconKey.toLowerCase() === categoryName.toLowerCase());
-    if (iconDetail) return iconDetail.IconComponent;
-    
-    return getCategoryIconFromName(categoryName) || Settings2;
+    if (!categoryName) return Settings2;
+    return (LucideIcons as any)[categoryName] || Settings2;
   };
 
   // Helper: get category rank (fallback to a large number if not found)
