@@ -105,52 +105,39 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[580px]">
-      <div className="md:flex h-full md:min-h-[580px]"> {/* Added md:min-h-[580px] here */}
+    <div className="flex items-center justify-center min-h-screen bg-secondary/40 p-4">
+      <Card className="w-full max-w-4xl shadow-2xl rounded-xl overflow-hidden grid md:grid-cols-5">
+        
         {/* Left Pane: Branding & Features */}
-        <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out
-                         ${isLoginView ? 'bg-secondary/20 text-primary' : 'bg-primary text-primary-foreground'}`}>
-          <div className="flex flex-col flex-1 justify-center min-h-0"> 
-            {isLoginView ? (
-              <div className="flex flex-col flex-1 items-center justify-center text-center">
-                <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
-                <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
-                <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
-                  Sign in to continue simplifying your group expenses.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-6 sm:mb-8 text-center md:text-left">
-                  <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
-                  <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
-                  <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
-                    Simplify your shared expenses. Effortlessly.
-                  </p>
-                </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Key Features:</h3>
-                <ul className="space-y-2.5 text-xs sm:text-sm">
-                  <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
-                  <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-                  <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
-                  <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                  <li className="flex items-start"><HandshakeIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Collaborate securely with friends, family, or housemates.</li>
-                </ul>
-              </>
-            )}
+        <div className="md:col-span-2 flex-col p-8 transition-colors duration-300 ease-in-out bg-primary text-primary-foreground hidden md:flex">
+          <div className="flex-grow flex flex-col justify-center">
+            <div className="mb-8">
+              <HandCoins className="h-16 w-16 mb-4 text-primary-foreground/90" />
+              <h1 className="text-4xl font-bold font-headline">SettleEase</h1>
+              <p className="mt-2 text-lg text-primary-foreground/90">
+                Simplify your shared expenses.
+              </p>
+            </div>
+            <h3 className="text-xl font-semibold mb-4">Key Features:</h3>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start"><Zap className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
+              <li className="flex items-start"><Users className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+              <li className="flex items-start"><PartyPopper className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions for celebrations.</li>
+              <li className="flex items-start"><PieChart className="h-5 w-5 mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify settlements with clear, automated calculations.</li>
+            </ul>
           </div>
         </div>
 
         {/* Right Pane: Form */}
-        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0">
-          <div className="flex flex-col justify-center flex-1 min-h-0"> 
-            <CardHeader className="px-0 pt-0 pb-4 text-center">
-              <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
-                {isLoginView ? 'Sign In' : 'Create your Account'}
+        <div className="md:col-span-3 p-8 flex flex-col justify-center">
+            <CardHeader className="px-0 pt-0 pb-6 text-center">
+              <CardTitle className="text-3xl font-bold text-foreground">
+                {isLoginView ? 'Welcome Back!' : 'Create your Account'}
               </CardTitle>
+               <p className="text-muted-foreground text-sm mt-2">{isLoginView ? 'Sign in to access your dashboard.' : 'Get started in seconds.'}</p>
             </CardHeader>
 
-            <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
+            <CardContent className="px-0 pb-0 space-y-4">
               {error && (
                 <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md text-destructive text-sm flex items-start">
                   <AlertTriangle className="h-4 w-4 mr-2 mt-0.5 shrink-0" />
@@ -192,15 +179,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 </Button>
               </form>
 
-              <div className="relative my-3 sm:my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or
-                  </span>
-                </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-2 text-muted-foreground">
+                  Or continue with
+                </span>
               </div>
 
               <Button
@@ -209,7 +191,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 disabled={isLoading || isGoogleLoading}
               >
                 {isGoogleLoading ? (
-                  "Redirecting to Google..."
+                  "Redirecting..."
                 ) : (
                   <>
                     <GoogleIcon /> <span className="ml-2.5">Sign {isLoginView ? 'in' : 'up'} with Google</span>
@@ -218,15 +200,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </Button>
             </CardContent>
 
-            <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
+            <CardFooter className="px-0 pt-6 pb-0 flex-col items-center">
               <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); setError(null); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
             </CardFooter>
-          </div>
         </div>
-      </div>
-    </Card>
+      </Card>
+    </div>
   );
 }
 

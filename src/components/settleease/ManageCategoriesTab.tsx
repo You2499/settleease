@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -183,12 +182,12 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   return (
     <>
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <ListChecks className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Categories
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4">
+          <CardTitle className="flex items-center text-lg sm:text-xl">
+            <ListChecks className="mr-2 h-5 w-5 text-primary" /> Manage Categories
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Add new expense categories, choose icons, or edit existing ones.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Add, edit, or remove expense categories.</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
           
@@ -300,10 +299,10 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md">
                   <ListChecks className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                  <p className="text-md sm:text-lg font-medium">No Categories Yet</p>
-                  <p className="text-xs sm:text-sm">Add some categories using the form above to organize your expenses.</p>
+                  <p className="text-md sm:text-lg font-medium">No Categories Created</p>
+                  <p className="text-xs sm:text-sm">Use the form above to create your first expense category.</p>
               </div>
             )}
           </div>

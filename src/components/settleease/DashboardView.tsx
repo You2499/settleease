@@ -241,36 +241,38 @@ export default function DashboardView({
   }
 
   return (
-    <div className="space-y-4 md:space-y-6">
-      <SettlementSummary
-        simplifiedTransactions={simplifiedTransactions}
-        pairwiseTransactions={pairwiseTransactions}
-        allExpenses={expenses} 
-        people={people}
-        peopleMap={peopleMap}
-        settlementPayments={settlementPayments}
-        onMarkAsPaid={handleMarkAsPaid}
-        onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
-        onViewExpenseDetails={handleExpenseCardClick}
-        userRole={userRole} 
-      />
-      
-      <ExpenseLog
-        expenses={expenses}
-        peopleMap={peopleMap}
-        handleExpenseCardClick={handleExpenseCardClick}
-        getCategoryIconFromName={getCategoryIconFromName}
-      />
-
-      {selectedExpenseForModal && (
-        <ExpenseDetailModal
-          expense={selectedExpenseForModal}
-          isOpen={isExpenseModalOpen}
-          onOpenChange={setIsExpenseModalOpen}
+    <div className="h-full overflow-y-auto p-1">
+      <div className="space-y-4 md:space-y-6">
+        <SettlementSummary
+          simplifiedTransactions={simplifiedTransactions}
+          pairwiseTransactions={pairwiseTransactions}
+          allExpenses={expenses} 
+          people={people}
           peopleMap={peopleMap}
+          settlementPayments={settlementPayments}
+          onMarkAsPaid={handleMarkAsPaid}
+          onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
+          onViewExpenseDetails={handleExpenseCardClick}
+          userRole={userRole} 
+        />
+        
+        <ExpenseLog
+          expenses={expenses}
+          peopleMap={peopleMap}
+          handleExpenseCardClick={handleExpenseCardClick}
           getCategoryIconFromName={getCategoryIconFromName}
         />
-      )}
+
+        {selectedExpenseForModal && (
+          <ExpenseDetailModal
+            expense={selectedExpenseForModal}
+            isOpen={isExpenseModalOpen}
+            onOpenChange={setIsExpenseModalOpen}
+            peopleMap={peopleMap}
+            getCategoryIconFromName={getCategoryIconFromName}
+          />
+        )}
+      </div>
     </div>
   );
 }
