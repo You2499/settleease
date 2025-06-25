@@ -110,7 +110,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
         {/* Main Content: Icon Grid + Details Panel */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Icon Grid */}
-          <div className="flex-1 overflow-y-auto p-4 bg-background dark:bg-neutral-900">
+          <div className="flex-1 overflow-y-auto p-4 bg-background dark:bg-neutral-900 no-scrollbar">
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
               {filteredIconNames.map((iconName) => {
                 const Icon = getLucideIconComponent(iconName);
@@ -135,9 +135,9 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             </div>
           </div>
           {/* Details/Preview Panel */}
-          <div className="w-full md:w-[340px] flex-shrink-0 flex flex-col items-center justify-start min-h-[220px] max-h-full overflow-y-auto">
+          <div className="w-full md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center min-h-[220px] max-h-full overflow-y-auto no-scrollbar p-6">
             <div className="w-full">
-              <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center">
+              <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center justify-center min-h-[320px] h-full">
                 {SelectedIconComp && (
                   <div className="flex flex-col items-center gap-2 w-full">
                     <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}> 
@@ -179,6 +179,13 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
       <style jsx global>{`
         .icon-picker-no-close .radix-dialog-close {
           display: none !important;
+        }
+        .no-scrollbar::-webkit-scrollbar {
+          display: none !important;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
         }
       `}</style>
     </Dialog>
