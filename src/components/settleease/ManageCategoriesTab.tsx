@@ -79,6 +79,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     };
     return (
       <li ref={setNodeRef} style={style} {...attributes} {...(isAdmin ? listeners : {})}>
+        {isAdmin && <span {...listeners} className="inline-block mr-2 cursor-grab text-muted-foreground" title="Drag to reorder">☰</span>}
         {children}
       </li>
     );
@@ -104,7 +105,10 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     }
     setIsLoading(true);
     try {
-      const { data, error } = await db.from(CATEGORIES_TABLE).insert([{ name: newCategoryName.trim(), icon_name: newCategoryIconKey, created_at: new Date().toISOString() }]).select();
+      const maxRank = categories.length > 0 ? Math.max(...categories.map(c => c.rank ?? 0)) : 0;
+      const { data, error } = await db.from(CATEGORIES_TABLE).insert([
+        { name: newCategoryName.trim(), icon_name: newCategoryIconKey, created_at: new Date().toISOString(), rank: maxRank + 1 }
+      ]).select();
       if (error) throw error;
       toast({ title: "Category Added", description: `${newCategoryName.trim()} has been added.` });
       setNewCategoryName('');
