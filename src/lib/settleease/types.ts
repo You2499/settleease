@@ -1,5 +1,3 @@
-
-
 export interface PayerShare {
   personId: string;
   amount: number;
@@ -43,6 +41,7 @@ export interface Category {
   name: string;
   icon_name: string; // e.g., "Utensils", "Car"
   created_at?: string; // ISO date string
+  rank?: number; // For custom ordering
 }
 
 // Used in AddExpenseTab for form state

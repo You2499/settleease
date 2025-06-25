@@ -12,7 +12,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/com
 import { Separator } from "@/components/ui/separator";
 import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares } from '@/lib/settleease/types';
+import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares, Category } from '@/lib/settleease/types';
 import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +24,7 @@ interface ExpenseDetailModalProps {
   onOpenChange: (open: boolean) => void;
   peopleMap: Record<string, string>;
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  categories: Category[];
 }
 
 // WhatsApp SVG as a React component
@@ -46,7 +47,7 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName }: ExpenseDetailModalProps) {
+export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName, categories }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
   const CategoryIcon = getCategoryIconFromName(expense.category);
@@ -173,6 +174,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
     return getCategoryIconFromName(categoryName) || Settings2;
   };
 
+  // Helper: get category rank (fallback to a large number if not found)
+  const getCategoryRank = (catName?: string) => {
+    if (!catName) return 9999;
+    const cat = categories.find((c: Category) => c.name === catName);
+    return cat?.rank ?? 9999;
+  };
+
   // WhatsApp-formatted string generator
   function getWhatsAppExpenseDetails() {
     let lines = [];
@@ -210,10 +218,23 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
       });
       lines.push('');
       lines.push(`*Original Items & Pricing:*`);
-      expense.items.forEach((item: any) => {
-        const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
-        lines.push(`- _${item.name}_: ${formatCurrency(item.price)} (shared by: ${sortedSharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')})`);
-      });
+      if (expense.items) {
+        // Group items by category
+        const itemsByCategory: Record<string, ExpenseItemDetail[]> = {};
+        expense.items.forEach((item: any) => {
+          const cat = item.categoryName || '';
+          if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
+          itemsByCategory[cat].push(item);
+        });
+        const sortedCategoryNames = Object.keys(itemsByCategory).sort((a, b) => getCategoryRank(a) - getCategoryRank(b));
+        sortedCategoryNames.forEach(catName => {
+          if (catName) lines.push(`  *${catName}*`);
+          itemsByCategory[catName].forEach(item => {
+            const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
+            lines.push(`- _${item.name}_: ${formatCurrency(item.price)} (shared by: ${sortedSharedBy.map((id: string) => peopleMap[id] || 'Unknown').join(', ')})`);
+          });
+        });
+      }
     }
     lines.push('');
     lines.push(`*Shares:*`);
@@ -372,11 +393,29 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                     <div>
                         <h4 className="font-medium text-muted-foreground mb-1 sm:mb-1.5 flex items-center"><ShoppingBag className="mr-2 h-4 w-4"/>Original Items & Prices:</h4>
                         <ul className="space-y-1 text-xs">
-                        {expense.items.map(item => {
-                            const ItemCatIcon = getItemCategoryIcon(item.categoryName);
-                            return (
-                                <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
-                                    <div className="flex justify-between items-center">
+                        {expense.items && (
+                          <>
+                            {(() => {
+                              // Group items by category
+                              const itemsByCategory: Record<string, ExpenseItemDetail[]> = {};
+                              expense.items!.forEach(item => {
+                                const cat = item.categoryName || '';
+                                if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
+                                itemsByCategory[cat].push(item);
+                              });
+                              const sortedCategoryNames = Object.keys(itemsByCategory).sort((a, b) => getCategoryRank(a) - getCategoryRank(b));
+                              return sortedCategoryNames.flatMap(catName => [
+                                catName ? (
+                                  <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center">
+                                    {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
+                                    {catName}
+                                  </li>
+                                ) : null,
+                                ...itemsByCategory[catName].map(item => {
+                                  const ItemCatIcon = getItemCategoryIcon(item.categoryName);
+                                  return (
+                                    <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
+                                      <div className="flex justify-between items-center">
                                         <span className="font-medium truncate flex items-center mr-2" title={item.name}>
                                           <ItemCatIcon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
                                           {item.name}
@@ -385,16 +424,20 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                           )}
                                         </span>
                                         <span className="font-semibold text-primary whitespace-nowrap">{formatCurrency(Number(item.price))}</span>
-                                    </div>
-                                    {(() => {
-                                      const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
-                                      return (
-                                        <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
-                                      );
-                                    })()}
-                                </li>
-                            );
-                        })}
+                                      </div>
+                                      {(() => {
+                                        const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
+                                        return (
+                                          <div className="text-muted-foreground/80 pl-5 text-[10px] sm:text-xs truncate" title={`Shared by: ${sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}`}>Shared by: {sortedSharedBy.map(pid => peopleMap[pid] || 'Unknown').join(', ')}</div>
+                                        );
+                                      })()}
+                                    </li>
+                                  );
+                                })
+                              ]);
+                            })()}
+                          </>
+                        )}
                         </ul>
                          <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">Total of original items: {formatCurrency(expense.items.reduce((sum, item) => sum + Number(item.price), 0))}</p>
                     </div>

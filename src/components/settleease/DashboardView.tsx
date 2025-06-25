@@ -269,6 +269,7 @@ export default function DashboardView({
           onOpenChange={setIsExpenseModalOpen}
           peopleMap={peopleMap}
           getCategoryIconFromName={getCategoryIconFromName}
+          categories={dynamicCategories}
         />
       )}
     </div>

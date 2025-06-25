@@ -235,7 +235,7 @@ export default function SettleEasePage() {
     }
 
     try {
-      const { data: categoriesData, error: fetchCategoriesError } = await db.from(CATEGORIES_TABLE).select('*').order('name', { ascending: true });
+      const { data: categoriesData, error: fetchCategoriesError } = await db.from(CATEGORIES_TABLE).select('*').order('rank', { ascending: true }).order('name', { ascending: true });
       if (fetchCategoriesError) {
         console.error("Error fetching categories:", fetchCategoriesError);
         toast({ title: "Data Error", description: `Could not fetch categories: ${fetchCategoriesError.message}`, variant: "destructive" });
