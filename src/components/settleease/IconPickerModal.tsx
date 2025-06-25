@@ -94,9 +94,11 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900">
+      <DialogContent
+        className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900 icon-picker-no-close"
+      >
         {/* Search Bar */}
-        <div className="p-4 border-b border-border dark:border-neutral-800">
+        <div className="p-4 pb-0">
           <Input
             autoFocus
             placeholder={`Search ${filteredIconNames.length} icons ...`}
@@ -119,7 +121,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                     onMouseEnter={() => setPreviewIcon(iconName)}
                     onFocus={() => setPreviewIcon(iconName)}
                     onMouseLeave={() => setPreviewIcon(null)}
-                    className={`group flex flex-col items-center justify-center p-2 rounded-lg transition bg-transparent hover:bg-accent focus-visible:bg-accent outline-none border-2 border-transparent hover:border-primary focus-visible:border-primary ${previewIcon === iconName ? 'border-primary' : ''}`}
+                    className={`group flex flex-col items-center justify-center p-2 rounded-lg transition outline-none border-2 border-transparent focus-visible:border-primary hover:border-primary ${previewIcon === iconName ? 'border-primary' : ''}`}
                     title={iconName}
                     type="button"
                   >
@@ -133,43 +135,52 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             </div>
           </div>
           {/* Details/Preview Panel */}
-          <div className="w-full md:w-[320px] flex-shrink-0 border-t md:border-t-0 md:border-l border-border dark:border-neutral-800 bg-muted/40 dark:bg-neutral-900/80 p-4 flex flex-col items-center justify-start min-h-[220px] max-h-full overflow-y-auto">
-            {SelectedIconComp && (
-              <div className="flex flex-col items-center gap-2 w-full">
-                <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}> 
-                  <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
-                </Suspense>
-                <div className="text-base font-bold mt-1 text-foreground dark:text-white text-center w-full truncate">{toKebabCase(selectedIcon)}</div>
-                {selectedMeta && selectedMeta.tags && selectedMeta.tags.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-1 mb-1 w-full">
-                    {selectedMeta.tags.map((tag: string) => (
-                      <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5 dark:bg-neutral-800 dark:text-white">{tag}</span>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2 mt-2 w-full justify-center">
-                  <button onClick={handleCopySvg} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy SVG</button>
-                  <button onClick={handleCopyJsx} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy JSX</button>
-                  <a href={`https://lucide.dev/icon/${toKebabCase(selectedIcon)}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded bg-accent text-xs text-foreground hover:bg-accent/80 transition dark:bg-neutral-800 dark:text-white">See in action</a>
-                </div>
-                {/* Optionally show categories/contributors in a collapsible/less prominent way */}
-                {selectedMeta && selectedMeta.categories && selectedMeta.categories.length > 0 && (
-                  <div className="flex flex-wrap justify-center gap-1 mt-2 w-full">
-                    {selectedMeta.categories.map((cat: string) => (
-                      <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border dark:bg-neutral-800 dark:text-white dark:border-neutral-700">{cat}</span>
-                    ))}
-                  </div>
-                )}
-                {selectedMeta && selectedMeta.contributors && selectedMeta.contributors.length > 0 && (
-                  <div className="text-xs text-muted-foreground dark:text-neutral-400 mt-2 w-full text-center truncate">
-                    Contributors: {selectedMeta.contributors.join(', ')}
+          <div className="w-full md:w-[340px] flex-shrink-0 flex flex-col items-center justify-start min-h-[220px] max-h-full overflow-y-auto">
+            <div className="w-full">
+              <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center">
+                {SelectedIconComp && (
+                  <div className="flex flex-col items-center gap-2 w-full">
+                    <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}> 
+                      <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
+                    </Suspense>
+                    <div className="text-base font-bold mt-1 text-foreground dark:text-white text-center w-full truncate">{toKebabCase(selectedIcon)}</div>
+                    {selectedMeta && selectedMeta.tags && selectedMeta.tags.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1 mb-1 w-full">
+                        {selectedMeta.tags.map((tag: string) => (
+                          <span key={tag} className="bg-accent text-xs rounded px-2 py-0.5 dark:bg-neutral-800 dark:text-white">{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2 mt-2 w-full justify-center">
+                      <button onClick={handleCopySvg} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy SVG</button>
+                      <button onClick={handleCopyJsx} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy JSX</button>
+                      <a href={`https://lucide.dev/icon/${toKebabCase(selectedIcon)}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded bg-accent text-xs text-foreground hover:bg-accent/80 transition dark:bg-neutral-800 dark:text-white">See in action</a>
+                    </div>
+                    {/* Optionally show categories/contributors in a collapsible/less prominent way */}
+                    {selectedMeta && selectedMeta.categories && selectedMeta.categories.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1 mt-2 w-full">
+                        {selectedMeta.categories.map((cat: string) => (
+                          <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border dark:bg-neutral-800 dark:text-white dark:border-neutral-700">{cat}</span>
+                        ))}
+                      </div>
+                    )}
+                    {selectedMeta && selectedMeta.contributors && selectedMeta.contributors.length > 0 && (
+                      <div className="text-xs text-muted-foreground dark:text-neutral-400 mt-2 w-full text-center truncate">
+                        Contributors: {selectedMeta.contributors.join(', ')}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </DialogContent>
+      <style jsx global>{`
+        .icon-picker-no-close .radix-dialog-close {
+          display: none !important;
+        }
+      `}</style>
     </Dialog>
   );
 } 
