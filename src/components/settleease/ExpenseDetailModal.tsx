@@ -19,7 +19,7 @@ import { toast } from "@/hooks/use-toast";
 
 
 interface ExpenseDetailModalProps {
-  expense: Expense;
+  expense: Expense | 'loading' | null;
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   peopleMap: Record<string, string>;
@@ -48,6 +48,18 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName }: ExpenseDetailModalProps) {
   if (!expense) return null;
+  if (expense === 'loading') {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent className="flex items-center justify-center min-h-[200px]">
+          <div className="flex flex-col items-center justify-center w-full h-full">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4" />
+            <span className="text-muted-foreground text-sm">Loading latest expense details...</span>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const CategoryIcon = getCategoryIconFromName(expense.category);
   const SplitIcon = useMemo(() => {
