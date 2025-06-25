@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -15,20 +14,20 @@ interface UnequalSplitSectionProps {
 
 export default function UnequalSplitSection({ people, unequalShares, handleUnequalShareChange }: UnequalSplitSectionProps) {
   return (
-    <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-2.5">
+    <Card className="p-6 bg-card/50 shadow-sm mt-3 space-y-4">
       {people.length > 0 ? people.map(person => (
-        <div key={person.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
-          <Label htmlFor={`unequal-${person.id}`} className="text-sm">{person.name}</Label>
+        <div key={person.id} className="grid grid-cols-[1fr_auto] gap-4 items-center py-2 px-2 bg-card/70 rounded-lg">
+          <Label htmlFor={`unequal-${person.id}`} className="text-base font-medium">{person.name}</Label>
           <Input
             id={`unequal-${person.id}`}
             type="number"
             value={unequalShares[person.id] || ''}
             onChange={e => handleUnequalShareChange(person.id, e.target.value)}
             placeholder="Amount"
-            className="w-28"
+            className="w-32 h-11 text-base"
           />
         </div>
-      )) : <p className="text-xs text-muted-foreground">No people available for unequal split.</p>}
+      )) : <p className="text-sm text-muted-foreground">No people available for unequal split.</p>}
     </Card>
   );
 }
