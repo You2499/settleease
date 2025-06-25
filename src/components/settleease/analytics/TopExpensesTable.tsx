@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -19,7 +18,7 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
-        <CardTitle className="text-md sm:text-lg flex items-center">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
         </CardTitle>

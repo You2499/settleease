@@ -219,7 +219,7 @@ export default function DashboardView({
   if (people.length === 0 && expenses.length === 0) {
     return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Welcome to SettleEase!</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">Welcome to SettleEase!</CardTitle></CardHeader>
         <CardContent className="space-y-3"><FileText className="mx-auto h-12 w-12 text-primary/70" />
           <p className="text-md text-muted-foreground">No people added and no expenses recorded yet.</p>
           <p className="text-sm">Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.</p>
@@ -230,7 +230,7 @@ export default function DashboardView({
   if (expenses.length === 0 && settlementPayments.length === 0) {
      return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2"><CardTitle className="text-xl font-semibold text-primary">Ready to Settle?</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">Ready to Settle?</CardTitle></CardHeader>
         <CardContent className="space-y-3"><FileText className="mx-auto h-12 w-12 text-primary/70" />
           <p className="text-md text-muted-foreground">No expenses recorded or settlements made yet.</p>
           <p className="text-sm">Navigate to "Add Expense" to start managing your group finances.</p>

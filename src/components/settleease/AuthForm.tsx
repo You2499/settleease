@@ -145,7 +145,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0">
           <div className="flex flex-col justify-center flex-1 min-h-0"> 
             <CardHeader className="px-0 pt-0 pb-4 text-center">
-              <CardTitle className="text-2xl sm:text-3xl font-bold text-foreground">
+              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                 {isLoginView ? 'Sign In' : 'Create your Account'}
               </CardTitle>
             </CardHeader>

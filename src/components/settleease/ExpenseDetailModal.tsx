@@ -233,7 +233,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             
             <Card>
               <CardHeader className="pt-3 sm:pt-4 pb-2">
-                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                   <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>General Information
                 </CardTitle>
               </CardHeader>
@@ -262,7 +262,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
             
             <Card>
               <CardHeader className="pt-3 sm:pt-4 pb-2">
-                <CardTitle className="text-md sm:text-lg font-semibold flex items-center"><CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><CreditCard className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/>Payment & Contribution</CardTitle>
               </CardHeader>
               <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0"> {/* pt-0 for card content */}
                 <div>
@@ -308,7 +308,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
             <Card>
               <CardHeader className="pt-3 sm:pt-4 pb-2">
-                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                   <SplitIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Split Method: <span className="ml-1.5 capitalize font-normal text-foreground/90">{expense.split_method}</span>
                 </CardTitle>
               </CardHeader>
@@ -428,7 +428,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
             <Card>
               <CardHeader className="pt-3 sm:pt-4 pb-2">
-                <CardTitle className="text-md sm:text-lg font-semibold flex items-center">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                   <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground"/> Individual Net Effect
                 </CardTitle>
                  <CardDescription className="text-xs">

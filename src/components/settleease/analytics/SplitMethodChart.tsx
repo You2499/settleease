@@ -16,9 +16,9 @@ export default function SplitMethodChart({ splitMethodDistributionData, analytic
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
-        <CardTitle className="text-md sm:text-lg flex items-center">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <GitFork className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          Split Method Distribution {analyticsViewMode === 'personal' ? '(For Your Expenses)' : ''}
+          Split Method Distribution {analyticsViewMode === 'personal' ? '(Your Splits)' : ''}
         </CardTitle>
       </CardHeader>
       <CardContent className="h-[250px] sm:h-[300px] p-2 sm:p-4 pt-1">

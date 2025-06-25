@@ -30,7 +30,7 @@ export default function ExpenseListItem({
       <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
         <CardHeader className="pb-1.5 pt-2.5 px-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <CardTitle className="text-sm sm:text-[0.9rem] font-semibold leading-tight flex-1 mr-2 truncate" title={expense.description}>
+            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold" title={expense.description}>
               {expense.description}
             </CardTitle>
             <span className="text-sm sm:text-md font-bold text-primary mt-1 sm:mt-0">
