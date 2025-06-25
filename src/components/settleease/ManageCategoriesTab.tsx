@@ -18,13 +18,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2 } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -45,45 +42,11 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const [orderedCategories, setOrderedCategories] = useState<Category[]>([...categories]);
-  useEffect(() => { setOrderedCategories([...categories]); }, [categories]);
-
-  // DnD-kit setup
-  const sensors = useSensors(useSensor(PointerSensor));
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = orderedCategories.findIndex(cat => cat.id === active.id);
-    const newIndex = orderedCategories.findIndex(cat => cat.id === over.id);
-    const newOrder = arrayMove(orderedCategories, oldIndex, newIndex);
-    setOrderedCategories(newOrder);
-    // Update ranks in DB
-    if (db) {
-      for (let i = 0; i < newOrder.length; i++) {
-        const cat = newOrder[i];
-        if (cat.rank !== i) {
-          await db.from(CATEGORIES_TABLE).update({ rank: i }).eq('id', cat.id);
-        }
-      }
-      onCategoriesUpdate();
-    }
-  };
-
-  function SortableCategory({ category, children }: { category: Category, children: React.ReactNode }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: String(category.id) });
-    const style = {
-      transform: CSS.Transform.toString(transform),
-      transition,
-      opacity: isDragging ? 0.5 : 1,
-      cursor: isAdmin ? 'grab' : undefined,
-    };
-    return (
-      <li ref={setNodeRef} style={style} {...attributes}>
-        {isAdmin && <span {...listeners} className="inline-block mr-2 cursor-grab text-muted-foreground" title="Drag to reorder">☰</span>}
-        {children}
-      </li>
-    );
-  }
+  const [rankingMode, setRankingMode] = useState(false);
+  const [orderedCategories, setOrderedCategories] = useState<Category[]>([...categories].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)));
+  useEffect(() => {
+    setOrderedCategories([...categories].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)));
+  }, [categories]);
 
   const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
     const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
@@ -214,6 +177,64 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     }
   };
 
+  const moveCategory = (index: number, direction: 'up' | 'down') => {
+    const newOrder = [...orderedCategories];
+    if (direction === 'up' && index > 0) {
+      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    } else if (direction === 'down' && index < newOrder.length - 1) {
+      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
+    }
+    setOrderedCategories(newOrder);
+  };
+
+  const saveCategoryOrder = async () => {
+    if (!db) return;
+    setIsLoading(true);
+    try {
+      for (let i = 0; i < orderedCategories.length; i++) {
+        const cat = orderedCategories[i];
+        if (cat.rank !== i + 1) {
+          await db.from(CATEGORIES_TABLE).update({ rank: i + 1 }).eq('id', cat.id);
+        }
+      }
+      toast({ title: 'Category Order Saved', description: 'The new category order has been saved.' });
+      setRankingMode(false);
+      onCategoriesUpdate();
+    } catch (error: any) {
+      toast({ title: 'Error Saving Order', description: error.message || 'Could not save category order.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Reddit-style up/down button group
+  const RedditRankButtons = ({ idx, disabledUp, disabledDown, onUp, onDown, isLoading }: { idx: number, disabledUp: boolean, disabledDown: boolean, onUp: () => void, onDown: () => void, isLoading: boolean }) => (
+    <div className="flex flex-col items-center justify-center mr-3 rounded-md border border-border bg-background/70 px-1 py-1">
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-7 w-7 p-0 mb-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+        onClick={onUp}
+        disabled={disabledUp || isLoading}
+        tabIndex={0}
+        aria-label="Move Up"
+      >
+        <ArrowUp className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-7 w-7 p-0 mt-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+        onClick={onDown}
+        disabled={disabledDown || isLoading}
+        tabIndex={0}
+        aria-label="Move Down"
+      >
+        <ArrowDown className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
@@ -285,139 +306,98 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
           </div>
 
           <div className="flex-1 flex flex-col min-h-0">
-            <h4 className="text-md sm:text-lg font-semibold mb-2 sm:mb-3 text-primary">Current Categories</h4>
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h4 className="text-md sm:text-lg font-semibold text-primary">Current Categories</h4>
+              {isAdmin && !rankingMode && (
+                <Button size="sm" variant="outline" className="ml-auto" onClick={() => setRankingMode(true)}>
+                  Rank
+                </Button>
+              )}
+              {isAdmin && rankingMode && (
+                <div className="flex gap-2">
+                  <Button size="sm" variant="default" onClick={saveCategoryOrder} disabled={isLoading}>
+                    <Check className="h-4 w-4 mr-1" /> Save Order
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => { setRankingMode(false); setOrderedCategories([...categories].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))); }}>
+                    <X className="h-4 w-4 mr-1" /> Cancel
+                  </Button>
+                </div>
+              )}
+            </div>
             {orderedCategories.length > 0 ? (
-              isAdmin ? (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={orderedCategories.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                    <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
-                      <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
-                        {orderedCategories.map(category => {
-                          const IconComponent = getIconComponent(category.icon_name);
-                          return (
-                            <SortableCategory key={category.id} category={category}>
-                              {editingCategory?.id === category.id ? (
-                                <>
-                                  <Input
-                                    type="text"
-                                    value={editingName}
-                                    onChange={(e) => setEditingName(e.target.value)}
-                                    className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
-                                    autoFocus
-                                    disabled={isLoading}
-                                  />
-                                  <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                      <SelectTrigger className="w-full sm:w-[180px] md:w-[220px] h-8 sm:h-9 text-xs sm:text-sm mr-2">
-                                          <SelectValue placeholder="Select icon" />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                          {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                            const IconComp = icon.IconComponent;
-                                            return (
-                                              <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                                                <div className="flex items-center">
-                                                  <IconComp className="mr-2 h-4 w-4" />
-                                                  {icon.label}
-                                                </div>
-                                              </SelectItem>
-                                            );
-                                          })}
-                                      </SelectContent>
-                                  </Select>
-                                  <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
-                                    <Save className="h-4 w-4" />
-                                  </Button>
-                                  <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
-                                    <Ban className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="flex items-center flex-grow truncate mr-2">
-                                      <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                                      <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
-                                  </div>
-                                  <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                                    <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
-                                      <Pencil className="h-4 w-4" />
-                                    </Button>
-                                    <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </>
-                              )}
-                            </SortableCategory>
-                          );
-                        })}
-                      </ul>
-                    </ScrollArea>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
-                  <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
-                    {orderedCategories.map(category => {
-                      const IconComponent = getIconComponent(category.icon_name);
-                      return (
-                        <li key={category.id} className="flex items-center justify-between p-2.5 sm:p-3 bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group">
-                          {editingCategory?.id === category.id ? (
-                            <>
-                              <Input
-                                type="text"
-                                value={editingName}
-                                onChange={(e) => setEditingName(e.target.value)}
-                                className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
-                                autoFocus
-                                disabled={isLoading}
+              <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
+                <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
+                  {orderedCategories.map((category, idx) => {
+                    const IconComponent = getIconComponent(category.icon_name);
+                    return (
+                      <li key={category.id} className={`flex items-center justify-between bg-card/70 rounded-md shadow-sm hover:bg-card/90 transition-colors group ${isAdmin && rankingMode ? 'min-h-[60px] sm:min-h-[68px] py-2 sm:py-3' : 'p-2.5 sm:p-3'}`}>
+                        {editingCategory?.id === category.id ? (
+                          <>
+                            <Input
+                              type="text"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                              className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
+                              autoFocus
+                              disabled={isLoading}
+                            />
+                            <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
+                                <SelectTrigger className="w-full sm:w-[180px] md:w-[220px] h-8 sm:h-9 text-xs sm:text-sm mr-2">
+                                    <SelectValue placeholder="Select icon" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
+                                      const IconComp = icon.IconComponent;
+                                      return (
+                                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
+                                          <div className="flex items-center">
+                                            <IconComp className="mr-2 h-4 w-4" />
+                                            {icon.label}
+                                          </div>
+                                        </SelectItem>
+                                      );
+                                    })}
+                                </SelectContent>
+                            </Select>
+                            <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
+                              <Save className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
+                              <Ban className="h-4 w-4" />
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            {isAdmin && rankingMode && (
+                              <RedditRankButtons
+                                idx={idx}
+                                disabledUp={idx === 0}
+                                disabledDown={idx === orderedCategories.length - 1}
+                                onUp={() => moveCategory(idx, 'up')}
+                                onDown={() => moveCategory(idx, 'down')}
+                                isLoading={isLoading}
                               />
-                              <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                  <SelectTrigger className="w-full sm:w-[180px] md:w-[220px] h-8 sm:h-9 text-xs sm:text-sm mr-2">
-                                      <SelectValue placeholder="Select icon" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                        const IconComp = icon.IconComponent;
-                                        return (
-                                          <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                                            <div className="flex items-center">
-                                              <IconComp className="mr-2 h-4 w-4" />
-                                              {icon.label}
-                                            </div>
-                                          </SelectItem>
-                                        );
-                                      })}
-                                  </SelectContent>
-                              </Select>
-                              <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
-                                <Save className="h-4 w-4" />
+                            )}
+                            <div className="flex items-center flex-grow truncate mr-2">
+                                <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                                <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
+                                <span className="ml-2 text-xs text-muted-foreground">(Rank {idx + 1})</span>
+                            </div>
+                            <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
+                                <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
-                                <Ban className="h-4 w-4" />
+                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
+                                <Trash2 className="h-4 w-4" />
                               </Button>
-                            </>
-                          ) : (
-                            <>
-                              <div className="flex items-center flex-grow truncate mr-2">
-                                  <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                                  <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
-                              </div>
-                              <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                                <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </ScrollArea>
-              )
+                            </div>
+                          </>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </ScrollArea>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
                   <ListChecks className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
