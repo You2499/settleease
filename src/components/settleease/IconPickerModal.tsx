@@ -67,7 +67,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
           <div className="flex-1 min-w-0 flex flex-col h-full w-full min-h-0">
             <Input
               autoFocus
-              placeholder={`Search ${iconNames.length} icons ...`}
+              placeholder={`Search ${filteredIconNames.length} icons ...`}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="mb-4 md:mb-6 text-base px-4 py-3 rounded-lg border border-border bg-muted w-full"
