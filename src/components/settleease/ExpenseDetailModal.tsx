@@ -477,9 +477,9 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                             <ul
                                               key={catName + '-items'}
                                               style={{
-                                                borderLeft: '2px solid #6ee7b7',
-                                                marginLeft: '32px',
-                                                paddingLeft: '12px',
+                                                borderLeft: '2px solid var(--primary)',
+                                                marginLeft: '6px',
+                                                paddingLeft: '6px',
                                                 marginBottom: '8px'
                                               }}
                                             >
