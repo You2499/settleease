@@ -21,7 +21,7 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
-import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import { CATEGORIES_TABLE, EXPENSES_TABLE } from '@/lib/settleease/constants';
 import IconPickerModal from './IconPickerModal';
 
 interface ManageCategoriesTabProps {
@@ -59,12 +59,12 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   // Dynamic icon rendering
   const DynamicIcon = React.useMemo(() => {
     if (!newCategoryIconKey) return null;
-    return React.lazy(() => import(`lucide-react/lib/esm/icons/${newCategoryIconKey.toLowerCase()}.js`).catch(() => import('lucide-react').then(mod => ({ default: (mod as any)[newCategoryIconKey] }))));
+    return React.lazy(() => import('lucide-react').then(mod => ({ default: (mod as any)[newCategoryIconKey] }))) as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
   }, [newCategoryIconKey]);
 
   const DynamicEditIcon = React.useMemo(() => {
     if (!editingIconKey) return null;
-    return React.lazy(() => import(`lucide-react/lib/esm/icons/${editingIconKey.toLowerCase()}.js`).catch(() => import('lucide-react').then(mod => ({ default: (mod as any)[editingIconKey] }))));
+    return React.lazy(() => import('lucide-react').then(mod => ({ default: (mod as any)[editingIconKey] }))) as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
   }, [editingIconKey]);
 
   const handleAddCategory = async () => {

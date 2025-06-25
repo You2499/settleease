@@ -16,11 +16,8 @@ const iconNames = Object.keys(LucideIcons).filter(
 );
 
 function getLucideIconComponent(iconName: string) {
-  // Dynamic import for code splitting
   return React.lazy(() =>
-    import(`lucide-react/lib/esm/icons/${iconName.toLowerCase()}.js`).catch(() =>
-      Promise.resolve({ default: (LucideIcons as any)[iconName] })
-    )
+    import('lucide-react').then(mod => ({ default: (mod as any)[iconName] }))
   );
 }
 
@@ -70,7 +67,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
               const index = rowIndex * COLUMN_COUNT + columnIndex;
               if (index >= filteredIconNames.length) return null;
               const iconName = filteredIconNames[index];
-              const Icon = getLucideIconComponent(iconName);
+              const Icon = getLucideIconComponent(iconName) as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
               return (
                 <div
                   style={{ ...style, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
@@ -79,7 +76,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                   title={iconName}
                 >
                   <Suspense fallback={<div style={{ width: ICON_SIZE, height: ICON_SIZE }} />}> 
-                    <Icon size={ICON_SIZE} />
+                    <Icon width={ICON_SIZE} height={ICON_SIZE} />
                   </Suspense>
                   <span style={{ fontSize: 10, marginTop: 4, textAlign: 'center', width: ICON_SIZE + 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{iconName}</span>
                 </div>
