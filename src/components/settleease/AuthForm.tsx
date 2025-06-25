@@ -64,6 +64,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           },
         });
         if (signUpError) throw signUpError;
+        // If user exists but no session, likely already registered (via Google or email)
+        if (data.user && !data.session) {
+          const errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
+          setError(errorMessage);
+          toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
+          return;
+        }
         toast({ title: "Signup Successful", description: "Please check your email to confirm your account if required." });
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       }
