@@ -209,7 +209,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   // Reddit-style up/down button group
   const RedditRankButtons = ({ idx, disabledUp, disabledDown, onUp, onDown, isLoading }: { idx: number, disabledUp: boolean, disabledDown: boolean, onUp: () => void, onDown: () => void, isLoading: boolean }) => (
-    <div className="flex flex-col items-center justify-center mr-3 rounded-md border border-border bg-background/70 px-1 py-1">
+    <div className="flex flex-col items-center justify-center mr-3 ml-3 rounded-md border border-border bg-background/70 px-1 py-1">
       <Button
         variant="outline"
         size="icon"
