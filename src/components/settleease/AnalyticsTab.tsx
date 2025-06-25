@@ -187,29 +187,6 @@ export default function AnalyticsTab({
     };
   }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
-  const monthlyExpenseData: MonthlyExpenseData[] = useMemo(() => {
-    const data: Record<string, number> = {};
-    displayedExpenses.forEach(exp => {
-      if (exp.created_at) {
-        const monthYear = new Date(exp.created_at).toLocaleDateString('default', { year: 'numeric', month: 'short' });
-        let amountToLog = 0;
-        if (analyticsViewMode === 'group') {
-          amountToLog = Number(exp.total_amount);
-        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-          const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
-          amountToLog = Number(personShare?.amount || 0);
-        }
-        if (amountToLog > 0.001) {
-            data[monthYear] = (data[monthYear] || 0) + amountToLog;
-        }
-      }
-    });
-    return Object.entries(data)
-      .map(([month, totalAmount]) => ({ month, totalAmount }))
-      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-
   const detailedCategoryAnalytics: CategoryAnalyticsData[] = useMemo(() => {
     const categoryDataMap: Record<string, {
         totalAmount: number; 
@@ -684,8 +661,9 @@ export default function AnalyticsTab({
             
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
               <MonthlySpendingChart
-                monthlyExpenseData={monthlyExpenseData}
+                expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
               />
               <ShareVsPaidComparisonChart
                 shareVsPaidData={shareVsPaidData}
