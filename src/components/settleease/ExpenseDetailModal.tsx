@@ -474,7 +474,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                               {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
                                               {catName}
                                             </li>,
-                                            <ul key={catName + '-items'} className="border-l-2 border-primary/30 pl-1.5 mb-2">
+                                            <ul key={catName + '-items'} className="border-r-2 border-primary/30 pr-1.5 mb-2">
                                               {itemsByCategory[catName].map(itemShare => (
                                                 <li key={itemShare.itemId} className="flex justify-between pl-2">
                                                   <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
