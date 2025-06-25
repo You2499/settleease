@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useMemo } from 'react';
@@ -95,12 +94,30 @@ export default function DashboardView({
     expenses.forEach(expense => {
       if (expense.total_amount <= 0.001 || !expense.shares || !expense.paid_by) return;
 
+      // NEW LOGIC: Adjust paid_by for celebration contribution
+      let adjustedPaidBy = expense.paid_by;
+      if (expense.celebration_contribution && Number(expense.celebration_contribution?.amount || 0) > 0.001) {
+        const totalPaid = expense.paid_by.reduce((sum, p) => sum + Number(p.amount), 0);
+        if (totalPaid > 0.001) {
+          adjustedPaidBy = expense.paid_by.map(p => {
+            if (p.personId === expense.celebration_contribution?.personId) {
+              // Celebration contributor: no reduction
+              return { ...p };
+            } else {
+              // Other payers: reduce their paid amount proportionally
+              const proportionalReduction = (Number(p.amount) / totalPaid) * Number(expense.celebration_contribution?.amount || 0);
+              return { ...p, amount: Math.max(0, Number(p.amount) - proportionalReduction) };
+            }
+          });
+        }
+      }
+
       expense.shares.forEach(share => {
         const sharerId = share.personId;
         const sharerTotalOwedForThisExpense = Number(share.amount);
         if (sharerTotalOwedForThisExpense <= 0.001) return;
 
-        expense.paid_by.forEach(payment => {
+        adjustedPaidBy.forEach(payment => {
           const payerId = payment.personId;
           const payerAmountForThisExpense = Number(payment.amount);
           if (payerAmountForThisExpense <= 0.001 || expense.total_amount <= 0.001) return; // Avoid division by zero

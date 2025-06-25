@@ -294,8 +294,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 )}
                 <Separator className="my-2 sm:my-2.5" />
                 <div className="flex justify-between font-semibold">
-                  <span>Net Amount For Splitting:</span>
-                  <span className="text-accent">{formatCurrency(amountEffectivelySplit)}</span>
+                  <span>Net Amount For Splitting:* ${formatCurrency(amountEffectivelySplit)}</span>
                 </div>
               </CardContent>
             </Card>
@@ -436,14 +435,26 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                       const personName = peopleMap[personId] || 'Unknown Person';
                       
                       const paymentRecord = Array.isArray(expense.paid_by) ? expense.paid_by.find(p => p.personId === personId) : null;
-                      const amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
+                      let amountPhysicallyPaidByThisPerson = paymentRecord ? Number(paymentRecord.amount) : 0;
                       
                       const shareRecord = Array.isArray(expense.shares) ? expense.shares.find(s => s.personId === personId) : null;
                       const shareOfSplitAmountForThisPerson = shareRecord ? Number(shareRecord.amount) : 0;
 
                       const isCelebrationContributor = celebrationContributionOpt?.personId === personId;
                       const celebrationAmountByThisPerson = isCelebrationContributor ? (celebrationContributionOpt?.amount || 0) : 0;
-                                          
+                      
+                      // NEW LOGIC: If this person is a payer and not the celebration contributor, reduce their paid amount by the celebration amount
+                      if (!isCelebrationContributor && Array.isArray(expense.paid_by) && expense.paid_by.length > 0 && celebrationContributionOpt && celebrationContributionOpt.amount > 0.001) {
+                        // If multiple payers, distribute the celebration reduction proportionally to their paid amounts
+                        const totalPaid = expense.paid_by.reduce((sum, p) => sum + Number(p.amount), 0);
+                        if (totalPaid > 0.001) {
+                          const thisPayerPaid = paymentRecord ? Number(paymentRecord.amount) : 0;
+                          const proportionalReduction = (thisPayerPaid / totalPaid) * Number(celebrationContributionOpt.amount);
+                          amountPhysicallyPaidByThisPerson = Math.max(0, amountPhysicallyPaidByThisPerson - proportionalReduction);
+                        }
+                      }
+                      // The celebration contributor is not reimbursed for their treat; their paid amount is not reduced.
+                      
                       const netEffectForThisPerson = amountPhysicallyPaidByThisPerson - shareOfSplitAmountForThisPerson;
 
                       return (

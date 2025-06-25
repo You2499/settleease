@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from 'react';
@@ -41,6 +40,21 @@ interface AnalyticsTabProps {
 
 const UNCATEGORIZED = "Uncategorized";
 
+// Utility: Get adjusted paid amount for a person for an expense (net of celebration)
+function getAdjustedPaidAmountForPerson(exp: any, personId: string): number {
+  if (!Array.isArray(exp.paid_by)) return 0;
+  const paymentRecord = exp.paid_by.find((p: any) => p.personId === personId);
+  let paid = paymentRecord ? Number(paymentRecord.amount) : 0;
+  const isCelebrationContributor = exp.celebration_contribution?.personId === personId;
+  if (!isCelebrationContributor && exp.celebration_contribution && Number(exp.celebration_contribution.amount) > 0.001) {
+    const totalPaid = exp.paid_by.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
+    if (totalPaid > 0.001) {
+      const proportionalReduction = (paid / totalPaid) * Number(exp.celebration_contribution.amount);
+      paid = Math.max(0, paid - proportionalReduction);
+    }
+  }
+  return paid;
+}
 
 export default function AnalyticsTab({
   expenses: allExpenses,
@@ -388,12 +402,12 @@ export default function AnalyticsTab({
       displayedExpenses.forEach(exp => {
         let personPaidThisExpense = false;
         if (Array.isArray(exp.paid_by)) {
-          exp.paid_by.forEach(p => {
-            if (p.personId === person.id) {
-              totalPaid += Number(p.amount);
-              personPaidThisExpense = true;
-            }
-          });
+          // Use adjusted paid amount
+          const paid = getAdjustedPaidAmountForPerson(exp, person.id);
+          if (paid > 0.001) {
+            totalPaid += paid;
+            personPaidThisExpense = true;
+          }
         }
         if (personPaidThisExpense) expensesPaidCount++;
 
@@ -495,11 +509,9 @@ export default function AnalyticsTab({
       let totalPaidByPerson = 0;
       let totalShareForPerson = 0;
       displayedExpenses.forEach(expense => {
-        if (Array.isArray(expense.paid_by)) {
-          expense.paid_by.forEach(payment => {
-            if (payment.personId === person.id) totalPaidByPerson += Number(payment.amount);
-          });
-        }
+        // Use adjusted paid amount
+        const paid = getAdjustedPaidAmountForPerson(expense, person.id);
+        if (paid > 0.001) totalPaidByPerson += paid;
         if (Array.isArray(expense.shares)) {
           expense.shares.forEach(share => {
             if (share.personId === person.id) totalShareForPerson += Number(share.amount);
