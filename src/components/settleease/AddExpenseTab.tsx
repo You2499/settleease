@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -213,23 +212,20 @@ export default function AddExpenseTab({
 
       if (expenseToEdit) {
         // We are editing an expense.
-        // The personId should ideally be stable, taken from currentPayer.personId
-        // (which was set by the main useEffect from expenseToEdit or user interaction).
-        // We primarily sync the amount.
         const personIdToUse = currentPayer?.personId || 
                               (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
 
-        if (!currentPayer || currentPayer.personId !== personIdToUse || currentPayer.amount !== expectedAmount) {
+        if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
           setPayers([{
             id: currentPayer?.id || Date.now().toString(),
-            personId: personIdToUse!, // Assert personIdToUse is not undefined here
+            personId: personIdToUse!,
             amount: expectedAmount
           }]);
         }
       } else {
         // This is a new expense.
         const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
-        if (!currentPayer || currentPayer.personId !== defaultPersonIdForNewExpense || currentPayer.amount !== expectedAmount) {
+        if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
           setPayers([{
             id: currentPayer?.id || Date.now().toString(),
             personId: defaultPersonIdForNewExpense!,
@@ -243,13 +239,12 @@ export default function AddExpenseTab({
       if (payers.length === 0 && firstPayerPersonId) {
            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
       } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
-          // If there's one payer row but no person ID selected yet, set it to default.
-          if (payers[0].personId !== firstPayerPersonId) { // Check to prevent potential loop if default is also empty
+          if (payers[0].personId !== firstPayerPersonId) {
               setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
           }
       }
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, people, payers, expenseToEdit]);
+  }, [totalAmount, isMultiplePayers, defaultPayerId, people, expenseToEdit]);
 
 
   useEffect(() => {
