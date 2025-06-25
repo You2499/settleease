@@ -124,11 +124,9 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
 
   return (
     <>
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 border-b">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <FilePenLine className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Edit or Delete Expenses
-          </CardTitle>
+      <Card className="shadow-lg rounded-lg">
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <CardTitle className="flex items-center text-lg sm:text-xl"><FilePenLine className="mr-2 h-5 w-5 text-primary" /> Edit or Delete Expenses</CardTitle>
           <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
@@ -172,11 +170,7 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6">
-                <FilePenLine className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                <p className="text-md sm:text-lg font-medium">No Expenses Yet</p>
-                <p className="text-xs sm:text-sm">There are no expenses recorded to edit or delete. Add some first!</p>
-            </div>
+            <p className="text-sm text-muted-foreground p-2">No expenses recorded yet.</p>
           )}
         </CardContent>
       </Card>
