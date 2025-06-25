@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -23,12 +22,54 @@ import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Setti
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+import * as LucideIcons from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
   onCategoriesUpdate: () => void;
+}
+
+function LucideIconPicker({ value, onChange, disabled }: { value: string, onChange: (iconKey: string) => void, disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const iconKeys = Object.keys(LucideIcons).filter(key => key[0] === key[0].toUpperCase());
+  const filtered = search.trim() ? iconKeys.filter(key => key.toLowerCase().includes(search.toLowerCase())) : iconKeys;
+  const SelectedIcon = (LucideIcons[value as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>) || Settings2;
+  return (
+    <>
+      <Button type="button" variant="outline" className="flex items-center gap-2 w-full" onClick={() => setOpen(true)} disabled={disabled}>
+        <SelectedIcon className="h-5 w-5" />
+        <span className="truncate">{value || 'Pick an icon'}</span>
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-2xl">
+          <div className="mb-2">
+            <Input autoFocus placeholder="Search icons..." value={search} onChange={e => setSearch(e.target.value)} className="mb-2" />
+          </div>
+          <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2 max-h-96 overflow-y-auto">
+            {filtered.map(key => {
+              const Icon = LucideIcons[key as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  className={`flex flex-col items-center p-2 rounded border hover:bg-accent focus:bg-accent ${value === key ? 'border-primary' : 'border-transparent'}`}
+                  onClick={() => { onChange(key); setOpen(false); }}
+                  title={key}
+                >
+                  <Icon className="h-6 w-6 mb-1" />
+                  <span className="text-[10px] truncate w-12">{key}</span>
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate }: ManageCategoriesTabProps) {
@@ -43,6 +84,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const [isLoading, setIsLoading] = useState(false);
 
   const getIconComponent = (iconKey: string): React.FC<React.SVGProps<SVGSVGElement>> => {
+    if (iconKey && (iconKey in LucideIcons)) return LucideIcons[iconKey as keyof typeof LucideIcons] as React.FC<React.SVGProps<SVGSVGElement>>;
     const found = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === iconKey);
     return found ? found.IconComponent : Settings2;
   };
@@ -209,24 +251,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               </div>
               <div className="md:col-span-1">
                 <Label htmlFor="newCategoryIcon" className="text-xs">Icon</Label>
-                <Select value={newCategoryIconKey} onValueChange={setNewCategoryIconKey} disabled={isLoading}>
-                  <SelectTrigger id="newCategoryIcon" className="mt-1 h-10 sm:h-11 text-sm sm:text-base">
-                    <SelectValue placeholder="Select icon" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                      const IconComp = icon.IconComponent;
-                      return (
-                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                          <div className="flex items-center">
-                            <IconComp className="mr-2 h-4 w-4" />
-                            {icon.label}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+                <LucideIconPicker value={newCategoryIconKey} onChange={setNewCategoryIconKey} disabled={isLoading} />
               </div>
               <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} className="h-10 sm:h-11 text-sm sm:text-base w-full md:w-auto md:self-end">
                 <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {isLoading && !editingCategory ? 'Adding...' : 'Add Category'}
@@ -253,24 +278,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                               autoFocus
                               disabled={isLoading}
                             />
-                            <Select value={editingIconKey} onValueChange={setEditingIconKey} disabled={isLoading}>
-                                <SelectTrigger className="w-full sm:w-[180px] md:w-[220px] h-8 sm:h-9 text-xs sm:text-sm mr-2">
-                                    <SelectValue placeholder="Select icon" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {AVAILABLE_CATEGORY_ICONS.map(icon => {
-                                      const IconComp = icon.IconComponent;
-                                      return (
-                                        <SelectItem key={icon.iconKey} value={icon.iconKey}>
-                                          <div className="flex items-center">
-                                            <IconComp className="mr-2 h-4 w-4" />
-                                            {icon.label}
-                                          </div>
-                                        </SelectItem>
-                                      );
-                                    })}
-                                </SelectContent>
-                            </Select>
+                            <LucideIconPicker value={editingIconKey} onChange={setEditingIconKey} disabled={isLoading} />
                             <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                               <Save className="h-4 w-4" />
                             </Button>
