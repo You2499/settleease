@@ -23,7 +23,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
           Category Spending Breakdown {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-0 flex items-center justify-center">
         {pieChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsPieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>

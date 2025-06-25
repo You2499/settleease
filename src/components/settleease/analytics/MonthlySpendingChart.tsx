@@ -21,7 +21,7 @@ export default function MonthlySpendingChart({ monthlyExpenseData, analyticsView
           {analyticsViewMode === 'personal' ? 'Your Spending Over Time (Monthly)' : 'Group Expenses Over Time (Monthly)'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-0 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={monthlyExpenseData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
