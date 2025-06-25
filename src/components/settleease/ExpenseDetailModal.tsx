@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy, Calendar } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares } from '@/lib/settleease/types';
 import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
@@ -249,6 +249,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 <div className="flex flex-col sm:flex-row sm:justify-between">
                   <span className="text-muted-foreground shrink-0 mr-2">Main Category:</span> 
                   <span className="font-medium flex items-center self-start sm:self-auto"><CategoryIcon className="mr-1.5 h-4 w-4" /> {expense.category}</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <span className="text-muted-foreground shrink-0 mr-2">Expense Date:</span>
+                    <span className="font-medium flex items-center self-start sm:self-auto">
+                        <Calendar className="mr-1.5 h-4 w-4" /> 
+                        {expense.created_at ? new Date(expense.created_at).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' }) : 'Not set'}
+                    </span>
                 </div>
               </CardContent>
             </Card>

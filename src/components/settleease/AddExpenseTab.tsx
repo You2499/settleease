@@ -9,7 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale } from 'lucide-react';
+import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 import { toast } from "@/hooks/use-toast";
 
@@ -45,6 +49,7 @@ export default function AddExpenseTab({
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [category, setCategory] = useState('');
+  const [expenseDate, setExpenseDate] = useState<Date | undefined>(new Date());
   
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
@@ -100,6 +105,7 @@ export default function AddExpenseTab({
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
       setCategory(expenseToEdit.category);
+      setExpenseDate(expenseToEdit.created_at ? new Date(expenseToEdit.created_at) : new Date());
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
           setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
@@ -163,6 +169,7 @@ export default function AddExpenseTab({
       setDescription('');
       setTotalAmount(''); 
       setCategory(dynamicCategories[0]?.name || ''); // Set to first available dynamic category or empty
+      setExpenseDate(new Date());
       setIsMultiplePayers(false);
       setSplitMethod('equal');
 
@@ -476,7 +483,7 @@ export default function AddExpenseTab({
       if (expenseToEdit && expenseToEdit.id) {
         const { error } = await db
           .from(EXPENSES_TABLE)
-          .update({ ...commonPayload, updated_at: new Date().toISOString() })
+          .update({ ...commonPayload, created_at: expenseDate?.toISOString(), updated_at: new Date().toISOString() })
           .eq('id', expenseToEdit.id)
           .select();
         errorPayload = error;
@@ -484,7 +491,7 @@ export default function AddExpenseTab({
       } else {
         const { error } = await db
           .from(EXPENSES_TABLE)
-          .insert([{ ...commonPayload, created_at: new Date().toISOString() }])
+          .insert([{ ...commonPayload, created_at: expenseDate?.toISOString() }])
           .select();
         errorPayload = error;
         if (!error) toast({ title: "Expense Added", description: `${description} has been added successfully.` });
@@ -590,6 +597,31 @@ export default function AddExpenseTab({
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+                <Label htmlFor="expenseDate" className="text-sm sm:text-base">Expense Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal mt-1 text-sm sm:text-base h-10 sm:h-11",
+                            !expenseDate && "text-muted-foreground"
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={expenseDate}
+                        onSelect={setExpenseDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
             </div>
             {(parseFloat(totalAmount) || 0) > 0 && (
               <div className="p-3 bg-muted/50 border-dashed border-primary/50 rounded-md">
