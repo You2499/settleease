@@ -468,29 +468,29 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                                     const sortedCategoryNames = Object.keys(itemsByCategory).sort((a, b) => getCategoryRank(a) - getCategoryRank(b));
                                     return (
                                       <ul className="space-y-0.5 text-xs">
-                                        {sortedCategoryNames.flatMap(catName => [
-                                          catName ? (
-                                            <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center border-l-2 border-primary/30 pl-1.5">
+                                        {sortedCategoryNames.flatMap(catName =>
+                                          catName ? [
+                                            <li key={catName} className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center">
                                               {getItemCategoryIcon(catName) && React.createElement(getItemCategoryIcon(catName), { className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0" })}
                                               {catName}
-                                            </li>
-                                          ) : null,
-                                          ...itemsByCategory[catName].map(itemShare => {
-                                            return (
-                                              <li key={itemShare.itemId} className="flex justify-between pl-3">
-                                                <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
-                                                  {itemShare.itemName}
-                                                </span>
-                                                <span className="text-muted-foreground whitespace-nowrap">
-                                                  {formatCurrency(itemShare.shareForPerson)}
-                                                  <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
-                                                    (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
+                                            </li>,
+                                            <ul key={catName + '-items'} className="border-l-2 border-primary/30 pl-1.5 mb-2">
+                                              {itemsByCategory[catName].map(itemShare => (
+                                                <li key={itemShare.itemId} className="flex justify-between pl-2">
+                                                  <span className="truncate mr-1 flex items-center" title={itemShare.itemName}>
+                                                    {itemShare.itemName}
                                                   </span>
-                                                </span>
-                                              </li>
-                                            );
-                                          })
-                                        ])}
+                                                  <span className="text-muted-foreground whitespace-nowrap">
+                                                    {formatCurrency(itemShare.shareForPerson)}
+                                                    <span className="ml-1 text-gray-400 text-[9px] hidden sm:inline" title={`Original item price: ${formatCurrency(itemShare.originalItemPrice)}, Adjusted item price for split: ${formatCurrency(itemShare.adjustedItemPriceForSplit)}, Shared by: ${itemShare.sharedByCount} people`}>
+                                                      (of {formatCurrency(itemShare.adjustedItemPriceForSplit)})
+                                                    </span>
+                                                  </span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          ] : null
+                                        )}
                                       </ul>
                                     );
                                   })()
