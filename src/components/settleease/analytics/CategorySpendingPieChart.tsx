@@ -33,10 +33,10 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={60}
+                outerRadius={90}
                 labelLine={false}
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                fontSize={9}
+                fontSize={12}
               >
                 {pieChartData.map((entry, index) => (
                   <RechartsCell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />

@@ -29,7 +29,7 @@ export default function ShareVsPaidComparisonChart({
           Share vs. Paid {analyticsViewMode === 'personal' && personName ? `(For ${personName})` : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 flex items-center justify-center">
         {shareVsPaidData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsBarChart
