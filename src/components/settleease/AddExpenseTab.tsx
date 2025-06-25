@@ -9,13 +9,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale, Calendar as CalendarIcon, PlusCircle, Trash2 as TrashIcon, UserPlus } from 'lucide-react';
+import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale, Calendar as CalendarIcon } from 'lucide-react';
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 
 import { toast } from "@/hooks/use-toast";
 
@@ -554,169 +552,239 @@ export default function AddExpenseTab({
 
   return (
     <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 border-b">
-            <CardTitle className="flex items-center text-lg sm:text-xl font-bold">
-                {expenseToEdit ? <FileText className="mr-2 h-5 w-5 text-primary" /> : <PlusCircle className="mr-2 h-5 w-5 text-primary" />}
-                {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1">
-                {expenseToEdit ? 'Modify the details of the existing expense below.' : 'Fill out the form to add a new expense to your records.'}
-            </CardDescription>
-        </CardHeader>
-
-        <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
-            <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-                {/* Basic Info Section */}
-                <div className="space-y-3">
-                    <Label htmlFor="description" className="text-sm font-medium">What is this for?</Label>
-                    <Input
-                        id="description"
-                        placeholder="e.g., Dinner at Pizza Palace"
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        className="text-base"
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-3">
-                        <Label htmlFor="totalAmount" className="text-sm font-medium">Total Bill Amount</Label>
-                        <Input
-                            id="totalAmount"
-                            type="number"
-                            placeholder="0.00"
-                            value={totalAmount}
-                            onChange={(e) => setTotalAmount(e.target.value)}
-                            className="text-base font-semibold"
-                        />
-                    </div>
-                    <div className="space-y-3">
-                        <Label htmlFor="category" className="text-sm font-medium">Category</Label>
-                        <Select value={category} onValueChange={setCategory}>
-                            <SelectTrigger id="category" className="text-base">
-                                <SelectValue placeholder="Select a category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dynamicCategories.map((c) => (
-                                    <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <Label htmlFor="expenseDate" className="text-sm font-medium">Date of Expense</Label>
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button
-                                id="expenseDate"
-                                variant={"outline"}
-                                className={cn(
-                                    "w-full justify-start text-left font-normal text-base",
-                                    !expenseDate && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0">
-                            <Calendar
-                                mode="single"
-                                selected={expenseDate}
-                                onSelect={setExpenseDate}
-                                initialFocus
-                            />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                
-                <Separator />
-                
-                {/* Payer Section */}
-                <PayerInputSection
-                  people={people}
-                  payers={payers}
-                  isMultiplePayers={isMultiplePayers}
-                  onPayerChange={handlePayerChange}
-                  onAddPayer={addPayer}
-                  onRemovePayer={removePayer}
-                  onToggleMultiplePayers={handleToggleMultiplePayers}
-                  totalAmount={totalAmount}
-                />
-
-                <Separator />
-
-                {/* Celebration Contribution Section */}
-                <div className="space-y-3 rounded-md border border-amber-200 bg-amber-50/50 p-3">
-                    <div className="flex items-center space-x-2">
-                        <Checkbox id="celebration-mode" checked={isCelebrationMode} onCheckedChange={(checked) => setIsCelebrationMode(Boolean(checked))} />
-                        <Label htmlFor="celebration-mode" className="text-sm font-medium flex items-center"><PartyPopper className="h-4 w-4 mr-1.5 text-amber-600"/>Is this a celebration contribution?</Label>
-                    </div>
-                    {isCelebrationMode && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                            <div className="space-y-2">
-                                <Label htmlFor="celebration-payer" className="text-xs">Who is treating?</Label>
-                                <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId}>
-                                    <SelectTrigger id="celebration-payer">
-                                        <SelectValue placeholder="Select a person" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="celebration-amount" className="text-xs">Contribution Amount</Label>
-                                <Input id="celebration-amount" type="number" placeholder="0.00" value={celebrationAmountInput} onChange={e => setCelebrationAmountInput(e.target.value)} />
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                <Separator />
-                
-                {/* Split Method Section */}
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <div className='flex flex-col'>
-                            <Label className="text-sm font-medium">How should the bill be split?</Label>
-                            {amountToSplit > 0 && <span className="text-xs text-muted-foreground">{formatCurrency(amountToSplit)} to be split.</span>}
-                        </div>
-                        <SplitMethodSelector splitMethod={splitMethod} onSplitMethodChange={setSplitMethod} />
-                    </div>
-                    <div className="pt-2">
-                        {splitMethod === 'equal' && <EqualSplitSection people={people} selectedPeople={selectedPeopleEqual} onSelectionChange={handleEqualSplitChange} />}
-                        {splitMethod === 'unequal' && <UnequalSplitSection people={people} shares={unequalShares} onShareChange={handleUnequalShareChange} amountToSplit={amountToSplit} />}
-                        {splitMethod === 'itemwise' && (
-                            <ItemwiseSplitSection
-                                items={items}
-                                people={people}
-                                onItemChange={handleItemChange}
-                                onAddItem={handleAddItem}
-                                onRemoveItem={removeItem}
-                                onSharedByChange={handleItemSharedByChange}
-                                peopleMap={peopleMap}
-                                dynamicCategories={dynamicCategories}
-                                defaultCategory={defaultItemCategory}
-                            />
+      <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+          <CreditCard className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+        </CardTitle>
+        <CardDescription className="text-xs sm:text-sm">
+          {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
+        </CardDescription>
+      </CardHeader>
+      
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 pt-4 sm:pt-6">
+        
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+          <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Bill Information</h3>
+          <div className="space-y-3 sm:space-y-4">
+            <div>
+              <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
+              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner, Groceries" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <Label htmlFor="totalAmount" className="text-sm sm:text-base">Total Bill Amount</Label>
+                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
+              </div>
+              <div>
+                <Label htmlFor="category" className="text-sm sm:text-base">Main Category</Label>
+                <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
+                  <SelectTrigger id="category" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
+                    <SelectValue placeholder="Select main category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dynamicCategories.map(cat => {
+                        const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                        const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                        return (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          <div className="flex items-center">
+                            <IconComponent className="mr-2 h-4 w-4" />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                        );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+                <Label htmlFor="expenseDate" className="text-sm sm:text-base">Expense Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={"outline"}
+                        className={cn(
+                            "w-full justify-start text-left font-normal mt-1 text-sm sm:text-base h-10 sm:h-11",
+                            !expenseDate && "text-muted-foreground"
                         )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={expenseDate}
+                        onSelect={setExpenseDate}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+            </div>
+            {(parseFloat(totalAmount) || 0) > 0 && (
+              <div className="p-3 bg-muted/50 border-dashed border-primary/50 rounded-md">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                      <div className="flex items-center text-muted-foreground">
+                          <Wallet className="mr-2 h-4 w-4"/>
+                          <span>Amount to be Split:</span>
+                      </div>
+                      <span className="font-bold text-md sm:text-lg text-primary">{formatCurrency(amountToSplit)}</span>
+                  </div>
+                  {isCelebrationMode && actualCelebrationAmount > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1 text-right">
+                          (After {formatCurrency(actualCelebrationAmount)} contribution by {peopleMap[celebrationPayerId] || 'Payer'})
+                      </p>
+                  )}
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Who Paid?</h3>
+            <PayerInputSection
+                isMultiplePayers={isMultiplePayers}
+                onToggleMultiplePayers={handleToggleMultiplePayers}
+                payers={payers}
+                people={people}
+                defaultPayerId={defaultPayerId}
+                handlePayerChange={handlePayerChange}
+                addPayer={addPayer}
+                removePayer={removePayer}
+                expenseToEdit={expenseToEdit}
+            />
+        </div>
+        
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <h3 className="text-md sm:text-lg font-semibold flex items-center text-primary">
+                    <PartyPopper className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />Special Contribution
+                </h3>
+                <Checkbox
+                    id="celebrationMode"
+                    checked={isCelebrationMode}
+                    onCheckedChange={(checked) => {
+                        const newIsCelebrationMode = !!checked;
+                        setIsCelebrationMode(newIsCelebrationMode);
+                        if (!newIsCelebrationMode) {
+                        setCelebrationPayerId('');
+                        setCelebrationAmountInput('');
+                        } else if (people.length > 0 && !celebrationPayerId) {
+                        setCelebrationPayerId(defaultPayerId || people[0].id);
+                        }
+                    }}
+                    className="h-5 w-5"
+                    aria-label="Toggle celebration contribution mode"
+                />
+            </div>
+            {isCelebrationMode && (
+                <div className="p-3 sm:p-4 bg-accent/10 shadow-inner space-y-3 sm:space-y-4 mt-2 border border-accent/30 rounded-md">
+                <div className="text-xs flex items-start text-muted-foreground">
+                    <Info size={16} className="mr-2 mt-0.5 shrink-0 text-accent" />
+                    <span>A celebration contribution means one person covers a part of the bill as a treat. This amount is subtracted *before* splitting the remaining cost.</span>
+                </div>
+                <div>
+                    <Label htmlFor="celebrationPayer" className="text-sm sm:text-base">Who is treating?</Label>
+                    <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
+                    <SelectTrigger id="celebrationPayer" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
+                        <SelectValue placeholder="Select who is contributing" />
+                    </SelectTrigger>
+                    <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                    </Select>
+                </div>
+                <div>
+                    <Label htmlFor="celebrationAmount" className="text-sm sm:text-base">Contribution Amount</Label>
+                    <Input
+                    id="celebrationAmount"
+                    type="number"
+                    value={celebrationAmountInput}
+                    onChange={e => setCelebrationAmountInput(e.target.value)}
+                    placeholder="Amount they are covering"
+                    className="mt-1 text-sm sm:text-base h-10 sm:h-11"
+                    />
+                    <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
+                    {[10, 25, 50, 100].map(perc => (
+                        <Button
+                        key={perc}
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            const currentTotalNum = parseFloat(totalAmount) || 0;
+                            if (currentTotalNum > 0) {
+                            setCelebrationAmountInput(((currentTotalNum * perc) / 100).toFixed(2));
+                            } else {
+                            setCelebrationAmountInput('0.00');
+                            }
+                        }}
+                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
+                        >
+                        {perc}% of Bill
+                        </Button>
+                    ))}
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCelebrationAmountInput(totalAmount)}
+                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
+                        disabled={!totalAmount || parseFloat(totalAmount) <=0}
+                        >
+                        Full Bill Amount
+                        </Button>
                     </div>
                 </div>
-            </CardContent>
-        </ScrollArea>
-
-        <CardFooter className="p-4 sm:p-6 border-t flex flex-row-reverse">
-            <Button onClick={handleSubmitExpense} disabled={isLoading} className="w-full sm:w-auto">
-                {isLoading ? 'Saving...' : (expenseToEdit ? 'Update Expense' : 'Add Expense')}
-            </Button>
-            {expenseToEdit && onCancelEdit && (
-                <Button variant="outline" onClick={onCancelEdit} disabled={isLoading} className="mr-2 w-full sm:w-auto mb-2 sm:mb-0">
-                    Cancel
-                </Button>
+                </div>
             )}
-        </CardFooter>
+            {!isCelebrationMode && (
+                <p className="text-xs sm:text-sm text-muted-foreground">Toggle the switch on the right if someone is treating for a portion of this bill.</p>
+            )}
+        </div>
+
+        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Scale className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />How to Split the Cost?</h3>
+            <div className="space-y-3 sm:space-y-4">
+                <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+                
+                {splitMethod === 'equal' && (
+                    <EqualSplitSection 
+                    people={people}
+                    selectedPeopleEqual={selectedPeopleEqual}
+                    handleEqualSplitChange={handleEqualSplitChange}
+                    />
+                )}
+                {splitMethod === 'unequal' && (
+                    <UnequalSplitSection
+                    people={people}
+                    unequalShares={unequalShares}
+                    handleUnequalShareChange={handleUnequalShareChange}
+                    />
+                )}
+                {splitMethod === 'itemwise' && (
+                    <ItemwiseSplitSection
+                    items={items}
+                    people={people}
+                    dynamicCategories={dynamicCategories}
+                    handleItemChange={handleItemChange}
+                    handleItemSharedByChange={handleItemSharedByChange}
+                    removeItem={removeItem}
+                    addItem={handleAddItem}
+                    />
+                )}
+            </div>
+        </div>
+      </CardContent>
+
+      <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-3">
+        {expenseToEdit && onCancelEdit && (
+            <Button variant="outline" size="default" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">Cancel</Button>
+        )}
+        <Button onClick={handleSubmitExpense} size="default" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+          {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

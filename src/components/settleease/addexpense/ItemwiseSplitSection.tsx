@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -16,79 +17,103 @@ import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
 interface ItemwiseSplitSectionProps {
   items: ExpenseItemDetail[];
   people: Person[];
-  peopleMap: Record<string, string>;
   dynamicCategories: DynamicCategory[];
-  defaultCategory: string;
-  onItemChange: <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => void;
-  onSharedByChange: (itemIndex: number, personId: string) => void;
-  onRemoveItem: (index: number) => void;
-  onAddItem: () => void;
+  handleItemChange: <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => void;
+  handleItemSharedByChange: (itemIndex: number, personId: string) => void;
+  removeItem: (index: number) => void;
+  addItem: () => void;
 }
 
 export default function ItemwiseSplitSection({
   items,
   people,
-  onItemChange,
-  onSharedByChange,
-  onRemoveItem,
-  onAddItem,
   dynamicCategories,
-  defaultCategory,
+  handleItemChange,
+  handleItemSharedByChange,
+  removeItem,
+  addItem,
 }: ItemwiseSplitSectionProps) {
-    return (
-        <div className="space-y-3">
-            {items.map((item, itemIndex) => (
-                <div key={item.id} className="space-y-3 rounded-md border p-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
-                        <Input
-                            value={item.name}
-                            onChange={e => onItemChange(itemIndex, 'name', e.target.value)}
-                            placeholder={`Item #${itemIndex + 1}`}
+  return (
+    <Card className="p-3 sm:p-4 bg-card/50 shadow-sm mt-2 space-y-3 sm:space-y-4">
+        {items.map((item, itemIndex) => (
+        <Card key={item.id} className="p-3 sm:p-4 bg-background shadow-md rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-3 mb-2 sm:mb-3 items-center">
+                <Input 
+                    value={item.name} 
+                    onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
+                    placeholder={`Item ${itemIndex + 1} Name`} 
+                    className="h-9 sm:h-10 text-sm"
+                />
+                <Input 
+                    type="number" 
+                    value={item.price as string} 
+                    onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
+                    placeholder="Price" 
+                    className="w-full md:w-24 h-9 sm:h-10 text-sm"
+                />
+                <Select
+                  value={item.categoryName || ''}
+                  onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
+                  disabled={dynamicCategories.length === 0}
+                >
+                  <SelectTrigger className="h-9 sm:h-10 w-full md:w-36 sm:w-40 text-xs sm:text-sm">
+                    <SelectValue placeholder="Item Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dynamicCategories.map(cat => {
+                      const iconInfo = AVAILABLE_CATEGORY_ICONS.find(icon => icon.iconKey === cat.icon_name);
+                      const IconComponent = iconInfo ? iconInfo.IconComponent : Settings2;
+                      return (
+                        <SelectItem key={cat.id} value={cat.name}>
+                          <div className="flex items-center">
+                            <IconComponent className="mr-2 h-4 w-4" />
+                            {cat.name}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeItem(itemIndex)} 
+                    className="text-destructive h-9 w-9 sm:h-10 sm:w-10 md:w-auto justify-self-end md:justify-self-auto"
+                    disabled={items.length <=1}
+                    aria-label={`Remove item ${itemIndex + 1}`}
+                >
+                    <MinusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                </Button>
+            </div>
+            
+            <Label className="text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2 text-muted-foreground">Shared by:</Label>
+            {people.length > 0 ? (
+              <ScrollArea className="h-28 sm:h-32 rounded-md border p-1 bg-card/30">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 p-1.5 sm:p-2">
+                    {people.map(person => (
+                    <div key={person.id} className="flex items-center space-x-2">
+                        <Checkbox
+                            id={`item-${itemIndex}-person-${person.id}`}
+                            checked={item.sharedBy.includes(person.id)}
+                            onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
+                            className="h-4 w-4"
                         />
-                        <Input
-                            type="number"
-                            value={item.price as string}
-                            onChange={e => onItemChange(itemIndex, 'price', e.target.value)}
-                            placeholder="Price"
-                            className="w-full sm:w-28"
-                        />
-                         <Select
-                            value={item.categoryName || defaultCategory}
-                            onValueChange={(value) => onItemChange(itemIndex, 'categoryName', value)}
-                         >
-                            <SelectTrigger className="w-full sm:w-36">
-                                <SelectValue placeholder="Category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dynamicCategories.map(cat => <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <Label 
+                            htmlFor={`item-${itemIndex}-person-${person.id}`} 
+                            className="text-xs sm:text-sm font-normal cursor-pointer hover:text-foreground transition-colors"
+                        >
+                            {person.name}
+                        </Label>
                     </div>
-                     <div className="relative">
-                        <Button variant="ghost" size="icon" onClick={() => onRemoveItem(itemIndex)} className="absolute -top-11 right-0 text-muted-foreground hover:text-destructive" disabled={items.length <= 1}>
-                            <MinusCircle className="h-4 w-4" />
-                        </Button>
-                        <Label className="text-xs text-muted-foreground">Shared By</Label>
-                        <ScrollArea className="h-24 rounded-md border mt-1">
-                            <div className="p-2 grid grid-cols-2 gap-1">
-                                {people.map(person => (
-                                    <div key={person.id} className="flex items-center space-x-2 p-1 rounded-md hover:bg-muted">
-                                        <Checkbox
-                                            id={`item-${itemIndex}-person-${person.id}`}
-                                            checked={item.sharedBy.includes(person.id)}
-                                            onCheckedChange={() => onSharedByChange(itemIndex, person.id)}
-                                        />
-                                        <Label htmlFor={`item-${itemIndex}-person-${person.id}`} className="font-normal text-sm cursor-pointer">{person.name}</Label>
-                                    </div>
-                                ))}
-                            </div>
-                        </ScrollArea>
-                    </div>
+                    ))}
                 </div>
-            ))}
-            <Button variant="outline" size="sm" onClick={onAddItem} className="w-full">
-                <PlusCircle className="mr-2 h-4 w-4" /> Add Item
-            </Button>
-        </div>
-    );
+              </ScrollArea>
+            ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
+        </Card>
+        ))}
+        <Button variant="outline" size="default" onClick={addItem} className="w-full sm:w-auto mt-3 py-2 px-4 text-sm">
+            <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Add Item
+        </Button>
+    </Card>
+  );
 }

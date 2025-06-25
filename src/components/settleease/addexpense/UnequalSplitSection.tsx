@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -5,41 +6,29 @@ import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
 import { Card } from "@/components/ui/card";
 import type { Person } from '@/lib/settleease/types';
-import { formatCurrency } from '@/lib/settleease/utils';
 
 interface UnequalSplitSectionProps {
   people: Person[];
-  shares: Record<string, string>;
-  onShareChange: (personId: string, value: string) => void;
-  amountToSplit: number;
+  unequalShares: Record<string, string>;
+  handleUnequalShareChange: (personId: string, value: string) => void;
 }
 
-export default function UnequalSplitSection({ people, shares, onShareChange, amountToSplit }: UnequalSplitSectionProps) {
-    const totalAssigned = Object.values(shares).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-    const remaining = amountToSplit - totalAssigned;
-
-    return (
-        <div className="space-y-3">
-            <div className="text-right">
-                <p className={`text-sm font-medium ${remaining < -0.001 ? 'text-destructive' : 'text-muted-foreground'}`}>
-                    {formatCurrency(remaining)} remaining
-                </p>
-            </div>
-            <div className="space-y-2 rounded-md border p-2">
-                {people.map(person => (
-                    <div key={person.id} className="grid grid-cols-[1fr_auto] gap-3 items-center rounded-md p-2 hover:bg-muted">
-                        <Label htmlFor={`unequal-${person.id}`} className="font-normal">{person.name}</Label>
-                        <Input
-                            id={`unequal-${person.id}`}
-                            type="number"
-                            value={shares[person.id] || ''}
-                            onChange={e => onShareChange(person.id, e.target.value)}
-                            placeholder="0.00"
-                            className="w-32"
-                        />
-                    </div>
-                ))}
-            </div>
+export default function UnequalSplitSection({ people, unequalShares, handleUnequalShareChange }: UnequalSplitSectionProps) {
+  return (
+    <Card className="p-4 bg-card/50 shadow-sm mt-2 space-y-2.5">
+      {people.length > 0 ? people.map(person => (
+        <div key={person.id} className="grid grid-cols-[1fr_auto] gap-2 items-center">
+          <Label htmlFor={`unequal-${person.id}`} className="text-sm">{person.name}</Label>
+          <Input
+            id={`unequal-${person.id}`}
+            type="number"
+            value={unequalShares[person.id] || ''}
+            onChange={e => handleUnequalShareChange(person.id, e.target.value)}
+            placeholder="Amount"
+            className="w-28"
+          />
         </div>
-    );
+      )) : <p className="text-xs text-muted-foreground">No people available for unequal split.</p>}
+    </Card>
+  );
 }
