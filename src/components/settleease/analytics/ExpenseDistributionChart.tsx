@@ -1,17 +1,56 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from 'lucide-react'; // Assuming BarChart3 is the icon for distribution
-import type { ExpenseAmountDistributionData } from '@/lib/settleease/types';
+import { BarChart3 } from 'lucide-react';
+import type { Expense, ExpenseAmountDistributionData } from '@/lib/settleease/types';
 
 interface ExpenseDistributionChartProps {
-  expenseAmountDistributionData: ExpenseAmountDistributionData[];
+  expenses: Expense[];
   analyticsViewMode: 'group' | 'personal';
+  selectedPersonIdForAnalytics?: string | null;
 }
 
-export default function ExpenseDistributionChart({ expenseAmountDistributionData, analyticsViewMode }: ExpenseDistributionChartProps) {
+export default function ExpenseDistributionChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: ExpenseDistributionChartProps) {
+  const expenseAmountDistributionData: ExpenseAmountDistributionData[] = useMemo(() => {
+    const ranges = [
+      { label: `₹0-₹500`, min: 0, max: 500 },
+      { label: `₹501-₹1k`, min: 501, max: 1000 },
+      { label: `₹1k-₹2.5k`, min: 1001, max: 2500 },
+      { label: `₹2.5k-₹5k`, min: 2501, max: 5000 },
+      { label: `₹5k-₹10k`, min: 5001, max: 10000 },
+      { label: `₹10k+`, min: 10001, max: Infinity },
+    ];
+    const distribution: Record<string, number> = ranges.reduce((acc, range) => {
+      acc[range.label] = 0;
+      return acc;
+    }, {} as Record<string, number>);
+
+    expenses.forEach(exp => {
+      let amount = 0;
+      if (analyticsViewMode === 'group') {
+        amount = Number(exp.total_amount);
+      } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+        amount = Number(personShare?.amount || 0);
+      }
+      if (amount > 0) {
+        for (const range of ranges) {
+          if (amount >= range.min && amount <= range.max) {
+            distribution[range.label]++;
+            break;
+          }
+        }
+      }
+    });
+    return Object.entries(distribution).map(([range, count]) => ({ range, count })).filter(d => d.count > 0);
+  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+
+  if (expenseAmountDistributionData.length === 0) {
+    return null; // Don't render the card if there's no data
+  }
+
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">

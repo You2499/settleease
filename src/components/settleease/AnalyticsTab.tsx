@@ -444,39 +444,25 @@ export default function AnalyticsTab({
   }, [displayedExpenses, people, analyticsViewMode, selectedPersonIdForAnalytics]);
 
 
-  const expenseAmountDistributionData: ExpenseAmountDistributionData[] = useMemo(() => {
-    const ranges = [
-      { label: `₹0 - ₹500`, min: 0, max: 500 },
-      { label: `₹501 - ₹1k`, min: 501, max: 1000 },
-      { label: `₹1k - ₹2.5k`, min: 1001, max: 2500 },
-      { label: `₹2.5k - ₹5k`, min: 2501, max: 5000 },
-      { label: `₹5k - ₹10k`, min: 5001, max: 10000 },
-      { label: `₹10k+`, min: 10001, max: Infinity },
-    ];
-    const distribution: Record<string, number> = ranges.reduce((acc, range) => {
-      acc[range.label] = 0;
-      return acc;
-    }, {} as Record<string, number>);
+  const pieChartData: CategorySpendingPieChartDataPoint[] = useMemo(() => {
+    const top5Categories = detailedCategoryAnalytics.slice(0, 5);
+    if (top5Categories.length === 0) {
+      return [];
+    }
 
-    displayedExpenses.forEach(exp => {
-      let amount = 0;
-      if (analyticsViewMode === 'group') {
-        amount = Number(exp.total_amount);
-      } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
-        amount = Number(personShare?.amount || 0);
-      }
-      if (amount > 0) {
-          for (const range of ranges) {
-            if (amount >= range.min && amount <= range.max) {
-              distribution[range.label]++;
-              break;
-            }
-          }
-      }
-    });
-    return Object.entries(distribution).map(([range, count]) => ({ range, count })).filter(d => d.count > 0);
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+    const sumOfTop5Amounts = top5Categories.reduce((acc, curr) => acc + curr.totalAmount, 0);
+
+    if (sumOfTop5Amounts < 0.001) { 
+      return [];
+    }
+
+    return top5Categories.filter(entry => {
+      if (entry.totalAmount < 0.001) return false; 
+      const percentage = (entry.totalAmount / sumOfTop5Amounts) * 100;
+      
+      return percentage >= 0.5 || (top5Categories.length === 1 && entry.totalAmount > 0.001);
+    }).map(cat => ({ name: cat.name, totalAmount: cat.totalAmount })); // Ensure correct type for CategorySpendingPieChart
+  }, [detailedCategoryAnalytics]);
 
   const shareVsPaidData: ShareVsPaidDataPoint[] = useMemo(() => {
     const peopleToAnalyze = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
@@ -502,39 +488,6 @@ export default function AnalyticsTab({
     }).filter(d => d.paid > 0.01 || d.share > 0.01);
   }, [displayedExpenses, people, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics]);
 
-  const spendingByDayOfWeekData: SpendingByDayOfWeekData[] = useMemo(() => {
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const spending: Record<string, number> = days.reduce((acc, day) => { acc[day] = 0; return acc; }, {} as Record<string, number>);
-    displayedExpenses.forEach(exp => {
-      if (exp.created_at) {
-        const dayOfWeek = days[new Date(exp.created_at).getDay()];
-        let amountToLog = 0;
-        if (analyticsViewMode === 'group') {
-            amountToLog = Number(exp.total_amount);
-        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-            const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
-            amountToLog = Number(personShare?.amount || 0);
-        }
-        if (amountToLog > 0.001) {
-            spending[dayOfWeek] = (spending[dayOfWeek] || 0) + amountToLog;
-        }
-      }
-    });
-    return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-  const splitMethodDistributionData: SplitMethodDistributionData[] = useMemo(() => {
-    const counts: Record<string, number> = { 'equal': 0, 'unequal': 0, 'itemwise': 0 };
-    displayedExpenses.forEach(exp => {
-        if (analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001))) {
-            counts[exp.split_method] = (counts[exp.split_method] || 0) + 1;
-        }
-    });
-    return Object.entries(counts)
-      .map(([method, count]) => ({ method: method.charAt(0).toUpperCase() + method.slice(1), count }))
-      .filter(d => d.count > 0);
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
   const topExpensesData: TopExpenseData[] = useMemo(() => {
     if (analyticsViewMode === 'group') {
         return [...displayedExpenses]
@@ -552,28 +505,6 @@ export default function AnalyticsTab({
     }
     return [];
   }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-
-  const pieChartData: CategorySpendingPieChartDataPoint[] = useMemo(() => {
-    const top5Categories = detailedCategoryAnalytics.slice(0, 5);
-    if (top5Categories.length === 0) {
-      return [];
-    }
-
-    const sumOfTop5Amounts = top5Categories.reduce((acc, curr) => acc + curr.totalAmount, 0);
-
-    if (sumOfTop5Amounts < 0.001) { 
-      return [];
-    }
-
-    return top5Categories.filter(entry => {
-      if (entry.totalAmount < 0.001) return false; 
-      const percentage = (entry.totalAmount / sumOfTop5Amounts) * 100;
-      
-      return percentage >= 0.5 || (top5Categories.length === 1 && entry.totalAmount > 0.001);
-    }).map(cat => ({ name: cat.name, totalAmount: cat.totalAmount })); // Ensure correct type for CategorySpendingPieChart
-  }, [detailedCategoryAnalytics]);
-
 
   if (allExpenses.length === 0) {
     return (
@@ -674,18 +605,16 @@ export default function AnalyticsTab({
             </div>
 
             <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
-              {spendingByDayOfWeekData.length > 0 && (
-                <SpendingByDayChart
-                  spendingByDayOfWeekData={spendingByDayOfWeekData}
-                  analyticsViewMode={analyticsViewMode}
-                />
-              )}
-              {splitMethodDistributionData.length > 0 && (
-                <SplitMethodChart
-                  splitMethodDistributionData={splitMethodDistributionData}
-                  analyticsViewMode={analyticsViewMode}
-                />
-              )}
+              <SpendingByDayChart
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
+              <SplitMethodChart
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
             </div>
             
             {topExpensesData.length > 0 && (
@@ -713,12 +642,11 @@ export default function AnalyticsTab({
                 pieChartData={pieChartData}
                 analyticsViewMode={analyticsViewMode}
               />
-              {expenseAmountDistributionData.length > 0 && (
-                <ExpenseDistributionChart
-                  expenseAmountDistributionData={expenseAmountDistributionData}
-                  analyticsViewMode={analyticsViewMode}
-                />
-              )}
+              <ExpenseDistributionChart
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
             </div>
           </>
         )}

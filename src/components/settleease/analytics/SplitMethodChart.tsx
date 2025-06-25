@@ -1,18 +1,37 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell as RechartsCell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GitFork } from 'lucide-react';
 import { CHART_COLORS } from '@/lib/settleease/constants';
-import type { SplitMethodDistributionData } from '@/lib/settleease/types';
+import type { Expense, SplitMethodDistributionData } from '@/lib/settleease/types';
 
 interface SplitMethodChartProps {
-  splitMethodDistributionData: SplitMethodDistributionData[];
+  expenses: Expense[];
   analyticsViewMode: 'group' | 'personal';
+  selectedPersonIdForAnalytics?: string | null;
 }
 
-export default function SplitMethodChart({ splitMethodDistributionData, analyticsViewMode }: SplitMethodChartProps) {
+export default function SplitMethodChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: SplitMethodChartProps) {
+  const splitMethodDistributionData: SplitMethodDistributionData[] = useMemo(() => {
+    const counts: Record<string, number> = { 'equal': 0, 'unequal': 0, 'itemwise': 0 };
+    
+    expenses.forEach(exp => {
+      if (analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001))) {
+        counts[exp.split_method] = (counts[exp.split_method] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([method, count]) => ({ method: method.charAt(0).toUpperCase() + method.slice(1), count }))
+      .filter(d => d.count > 0);
+  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+
+  if (splitMethodDistributionData.length === 0) {
+    return null; // Don't render card if there's no data
+  }
+
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">

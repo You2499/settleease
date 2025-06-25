@@ -1,18 +1,48 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
-import type { SpendingByDayOfWeekData } from '@/lib/settleease/types';
+import type { Expense, SpendingByDayOfWeekData } from '@/lib/settleease/types';
 
 interface SpendingByDayChartProps {
-  spendingByDayOfWeekData: SpendingByDayOfWeekData[];
+  expenses: Expense[];
   analyticsViewMode: 'group' | 'personal';
+  selectedPersonIdForAnalytics?: string | null;
 }
 
-export default function SpendingByDayChart({ spendingByDayOfWeekData, analyticsViewMode }: SpendingByDayChartProps) {
+export default function SpendingByDayChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: SpendingByDayChartProps) {
+  const spendingByDayOfWeekData: SpendingByDayOfWeekData[] = useMemo(() => {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const spending: Record<string, number> = days.reduce((acc, day) => { acc[day] = 0; return acc; }, {} as Record<string, number>);
+    
+    expenses.forEach(exp => {
+      if (exp.created_at) {
+        const dayOfWeek = days[new Date(exp.created_at).getDay()];
+        let amountToLog = 0;
+        
+        if (analyticsViewMode === 'group') {
+            amountToLog = Number(exp.total_amount);
+        } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+            const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
+            amountToLog = Number(personShare?.amount || 0);
+        }
+        
+        if (amountToLog > 0.001) {
+            spending[dayOfWeek] = (spending[dayOfWeek] || 0) + amountToLog;
+        }
+      }
+    });
+    
+    return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
+  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+
+  if (spendingByDayOfWeekData.length === 0) {
+    return null; // Don't render the card if there's no data
+  }
+
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">
@@ -26,7 +56,7 @@ export default function SpendingByDayChart({ spendingByDayOfWeekData, analyticsV
           <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
             <Tooltip 
                 contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px', color: 'hsl(var(--popover-foreground))' }} 
                 labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
