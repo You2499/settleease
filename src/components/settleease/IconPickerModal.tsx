@@ -136,8 +136,8 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
           </div>
           {/* Details/Preview Panel */}
           <div className="w-full md:w-[340px] flex-shrink-0 flex flex-col items-center justify-center min-h-[220px] max-h-full overflow-y-auto no-scrollbar p-6">
-            <div className="w-full">
-              <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center justify-center min-h-[320px] h-full">
+            <div className="w-full h-full">
+              <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center h-full justify-center">
                 {SelectedIconComp && (
                   <div className="flex flex-col items-center gap-2 w-full">
                     <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}> 
@@ -153,7 +153,6 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                     )}
                     <div className="flex gap-2 mt-2 w-full justify-center">
                       <button onClick={handleCopySvg} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy SVG</button>
-                      <button onClick={handleCopyJsx} className="px-3 py-1 rounded bg-primary text-white text-xs hover:bg-primary/90 transition">Copy JSX</button>
                       <a href={`https://lucide.dev/icon/${toKebabCase(selectedIcon)}`} target="_blank" rel="noopener noreferrer" className="px-3 py-1 rounded bg-accent text-xs text-foreground hover:bg-accent/80 transition dark:bg-neutral-800 dark:text-white">See in action</a>
                     </div>
                     {/* Optionally show categories/contributors in a collapsible/less prominent way */}
@@ -162,11 +161,6 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                         {selectedMeta.categories.map((cat: string) => (
                           <span key={cat} className="bg-muted text-xs rounded px-2 py-0.5 border dark:bg-neutral-800 dark:text-white dark:border-neutral-700">{cat}</span>
                         ))}
-                      </div>
-                    )}
-                    {selectedMeta && selectedMeta.contributors && selectedMeta.contributors.length > 0 && (
-                      <div className="text-xs text-muted-foreground dark:text-neutral-400 mt-2 w-full text-center truncate">
-                        Contributors: {selectedMeta.contributors.join(', ')}
                       </div>
                     )}
                   </div>
