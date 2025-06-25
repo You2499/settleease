@@ -551,9 +551,11 @@ export default function AddExpenseTab({
   }
 
   return (
-    <Card className="shadow-lg rounded-lg h-full flex flex-col">
-      <CardHeader className="p-4 sm:p-6 pb-4">
-        <CardTitle className="flex items-center text-lg sm:text-xl"><CreditCard className="mr-2 h-5 w-5 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}</CardTitle>
+    <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+          <CreditCard className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+        </CardTitle>
         <CardDescription className="text-xs sm:text-sm">
           {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
         </CardDescription>
@@ -774,23 +776,14 @@ export default function AddExpenseTab({
             </div>
         </div>
       </CardContent>
-      
-      <CardFooter className="p-4 sm:p-6 pt-4 border-t bg-card/70">
-        <div className="w-full flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4">
-          <div className="flex items-center text-sm text-muted-foreground w-full sm:w-auto">
-            <Info className="mr-1.5 h-4 w-4" />
-            <span>Amount to be split: <span className="font-bold text-primary">{formatCurrency(amountToSplit)}</span></span>
-          </div>
 
-          <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2">
-            {onCancelEdit && (
-              <Button variant="outline" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">Cancel Edit</Button>
-            )}
-            <Button onClick={handleSubmitExpense} disabled={isLoading} className="w-full sm:w-auto font-semibold">
-              {isLoading ? (expenseToEdit ? 'Updating...' : 'Adding...') : (expenseToEdit ? 'Update Expense' : 'Add Expense')}
-            </Button>
-          </div>
-        </div>
+      <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-3">
+        {expenseToEdit && onCancelEdit && (
+            <Button variant="outline" size="default" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">Cancel</Button>
+        )}
+        <Button onClick={handleSubmitExpense} size="default" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+          {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
+        </Button>
       </CardFooter>
     </Card>
   );

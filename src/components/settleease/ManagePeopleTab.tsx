@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -195,12 +196,12 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
 
   return (
     <>
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4">
-          <CardTitle className="flex items-center text-lg sm:text-xl">
-            <Users className="mr-2 h-5 w-5 text-primary" /> Manage People
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <Users className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage People
           </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">Add, edit, or remove participants from your group.</CardDescription>
+          <CardDescription className="text-xs sm:text-sm">Add new participants to your group or edit existing ones.</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
           
@@ -269,10 +270,10 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md">
-                <Users className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                <p className="text-md sm:text-lg font-medium">No People Added</p>
-                <p className="text-xs sm:text-sm">Use the form above to add the first person to your group.</p>
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
+                  <Users className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+                  <p className="text-md sm:text-lg font-medium">No People Yet</p>
+                  <p className="text-xs sm:text-sm">Add people to your group using the form above.</p>
               </div>
             )}
           </div>

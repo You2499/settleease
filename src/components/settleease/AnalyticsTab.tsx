@@ -4,7 +4,7 @@ import React, { useMemo, useState } from 'react';
 import {
   BarChart3, Users, Eye, UserSquare
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -600,169 +600,151 @@ export default function AnalyticsTab({
 
   if (allExpenses.length === 0) {
     return (
-      <Card className="h-full flex flex-col items-center justify-center text-center p-6 shadow-lg rounded-lg">
-        <CardHeader className="p-0">
-          <BarChart3 className="h-20 w-20 mb-4 text-primary/30" />
-          <CardTitle className="text-2xl font-bold text-primary">Analytics</CardTitle>
+      <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
+        <CardHeader className="pb-2 pt-4">
+          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
+            <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
+          </CardTitle>
         </CardHeader>
-        <CardContent className="p-0 mt-4">
-          <p className="text-lg text-muted-foreground">No data to analyze.</p>
-          <p className="text-sm mt-1">Add some expenses to get started with analytics!</p>
+        <CardContent className="pt-0">
+          <p className="text-sm sm:text-md text-muted-foreground">No expenses recorded yet to analyze.</p>
+          <p className="text-xs sm:text-sm">Add some expenses to see detailed analytics here.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg h-full flex flex-col">
-      <CardHeader className="p-4 sm:p-6 pb-4">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4">
-          <div>
-            <CardTitle className="flex items-center text-lg sm:text-xl">
-              <BarChart3 className="mr-2 h-5 w-5 text-primary" /> Analytics Dashboard
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1.5">
-              An overview of spending habits and financial distributions.
-            </CardDescription>
-          </div>
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="analyticsViewMode" className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">View:</Label>
-              <Select value={analyticsViewMode} onValueChange={(val: 'group' | 'personal') => { setAnalyticsViewMode(val); setSelectedPersonIdForAnalytics(null); }}>
-                <SelectTrigger id="analyticsViewMode" className="h-9 w-full sm:w-[120px]">
-                  <SelectValue placeholder="Select view" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="group"><Users className="mr-2 h-4 w-4"/> Group</SelectItem>
-                  <SelectItem value="personal"><UserSquare className="mr-2 h-4 w-4"/> Personal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {analyticsViewMode === 'personal' && (
-              <div className="flex items-center gap-2">
-                <Label htmlFor="personSelect" className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Person:</Label>
-                <Select
-                  value={selectedPersonIdForAnalytics || ""}
-                  onValueChange={(val) => setSelectedPersonIdForAnalytics(val || null)}
-                >
-                  <SelectTrigger id="personSelect" className="h-9 w-full sm:w-[180px]">
-                    <SelectValue placeholder="Select a person..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {people.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="flex-1 min-h-0 p-4 sm:p-6 pt-0">
-        <Tabs defaultValue="overview" className="flex flex-col h-full">
-          <TabsList className="mb-4 shrink-0 grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="categories">Categories</TabsTrigger>
-            <TabsTrigger value="participants">Participants</TabsTrigger>
+    <ScrollArea className="h-full p-0.5">
+      <div className="space-y-4 md:space-y-6">
+        <Tabs value={analyticsViewMode} onValueChange={(value) => {
+          setAnalyticsViewMode(value as 'group' | 'personal');
+          if (value === 'group') setSelectedPersonIdForAnalytics(null);
+          else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
+        }} className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
+            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
+              <Eye className="h-4 w-4"/> Group Overview
+            </TabsTrigger>
+            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
+              <UserSquare className="h-4 w-4"/> Personal Insights
+            </TabsTrigger>
           </TabsList>
           
-          <div className="flex-1 min-h-0 overflow-y-auto">
-              <TabsContent value="overview" className="mt-0">
-                <ScrollArea className="h-full pr-4 -mr-4">
-                    <div className="space-y-4">
-                        <OverallAnalyticsSnapshot
-                           enhancedOverallStats={enhancedOverallStats}
-                           analyticsViewMode={analyticsViewMode}
-                           selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                           peopleMap={peopleMap}
-                        />
-                        <Card>
-                            <CardHeader><CardTitle>Spending Trends</CardTitle></CardHeader>
-                            <CardContent>
-                                <MonthlySpendingChart
-                                   monthlyExpenseData={monthlyExpenseData}
-                                   analyticsViewMode={analyticsViewMode}
-                                />
-                            </CardContent>
-                        </Card>
-                        <div className="grid md:grid-cols-2 gap-4">
-                            <Card>
-                                <CardHeader><CardTitle>Spending by Day</CardTitle></CardHeader>
-                                <CardContent><SpendingByDayChart
-                                   spendingByDayOfWeekData={spendingByDayOfWeekData}
-                                   analyticsViewMode={analyticsViewMode}
-                                /></CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader><CardTitle>Split Methods</CardTitle></CardHeader>
-                                <CardContent><SplitMethodChart
-                                   splitMethodDistributionData={splitMethodDistributionData}
-                                   analyticsViewMode={analyticsViewMode}
-                                /></CardContent>
-                            </Card>
-                        </div>
-                        <Card>
-                            <CardHeader><CardTitle>Expense Distribution</CardTitle></CardHeader>
-                            <CardContent><ExpenseDistributionChart
-                               expenseAmountDistributionData={expenseAmountDistributionData}
-                               analyticsViewMode={analyticsViewMode}
-                            /></CardContent>
-                        </Card>
-                        <TopExpensesTable
-                           topExpensesData={topExpensesData}
-                           analyticsViewMode={analyticsViewMode}
-                           peopleMap={peopleMap}
-                        />
-                    </div>
-                </ScrollArea>
-              </TabsContent>
-              
-              <TabsContent value="categories" className="mt-0 h-full">
-                  <ScrollArea className="h-full pr-4 -mr-4">
-                      <div className="space-y-4">
-                          <Card>
-                            <CardHeader><CardTitle>Spending by Category</CardTitle></CardHeader>
-                            <CardContent><CategorySpendingPieChart
-                               pieChartData={pieChartData}
-                               analyticsViewMode={analyticsViewMode}
-                            /></CardContent>
-                          </Card>
-                          <CategoryAnalyticsTable
-                             detailedCategoryAnalytics={detailedCategoryAnalytics}
-                             analyticsViewMode={analyticsViewMode}
-                          />
-                      </div>
-                  </ScrollArea>
-              </TabsContent>
-
-              <TabsContent value="participants" className="mt-0 h-full">
-                  <ScrollArea className="h-full pr-4 -mr-4">
-                      <div className="space-y-4">
-                        <Card>
-                            <CardHeader><CardTitle>Net Contribution (Paid vs. Share)</CardTitle></CardHeader>
-                            <CardContent>
-                                <ShareVsPaidComparisonChart
-                                   shareVsPaidData={shareVsPaidData}
-                                   analyticsViewMode={analyticsViewMode}
-                                   selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                                   peopleMap={peopleMap}
-                                />
-                            </CardContent>
-                        </Card>
-                        <ParticipantSummaryTable
-                           detailedParticipantAnalytics={detailedParticipantAnalytics}
-                           analyticsViewMode={analyticsViewMode}
-                           selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                           peopleMap={peopleMap}
-                        />
-                      </div>
-                  </ScrollArea>
-              </TabsContent>
-          </div>
+          <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
+          </TabsContent>
+          <TabsContent value="personal" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
+            <Card className="mb-4 sm:mb-6 px-3 py-2 sm:px-4 sm:py-3 shadow-md"> {/* Adjusted padding */}
+              <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
+                Select Person for Detailed Insights:
+              </Label>
+              <Select
+                value={selectedPersonIdForAnalytics || ''}
+                onValueChange={setSelectedPersonIdForAnalytics}
+                disabled={people.length === 0}
+              >
+                <SelectTrigger id="person-analytics-select" className="h-9 text-xs sm:text-sm">
+                  <SelectValue placeholder="Select a person..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Card>
+             {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
+              <Card className="shadow-md rounded-lg text-center py-6">
+                <CardContent className="pt-0">
+                  <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+
+        {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
+            <Card className="shadow-md rounded-lg text-center py-6">
+                <CardContent className="pt-0"> 
+                <p className="text-sm sm:text-md text-muted-foreground">
+                    {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 
+                    `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :
+                    "No expenses match the current filter."}
+                </p>
+                </CardContent>
+            </Card>
+        )}
+
+        {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
+          <>
+            <OverallAnalyticsSnapshot
+              enhancedOverallStats={enhancedOverallStats}
+              analyticsViewMode={analyticsViewMode}
+              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              peopleMap={peopleMap}
+            />
+            
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <MonthlySpendingChart
+                monthlyExpenseData={monthlyExpenseData}
+                analyticsViewMode={analyticsViewMode}
+              />
+              <ShareVsPaidComparisonChart
+                shareVsPaidData={shareVsPaidData}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                peopleMap={peopleMap}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              {spendingByDayOfWeekData.length > 0 && (
+                <SpendingByDayChart
+                  spendingByDayOfWeekData={spendingByDayOfWeekData}
+                  analyticsViewMode={analyticsViewMode}
+                />
+              )}
+              {splitMethodDistributionData.length > 0 && (
+                <SplitMethodChart
+                  splitMethodDistributionData={splitMethodDistributionData}
+                  analyticsViewMode={analyticsViewMode}
+                />
+              )}
+            </div>
+            
+            {topExpensesData.length > 0 && (
+              <TopExpensesTable
+                topExpensesData={topExpensesData}
+                analyticsViewMode={analyticsViewMode}
+                peopleMap={peopleMap}
+              />
+            )}
+
+            <CategoryAnalyticsTable
+              detailedCategoryAnalytics={detailedCategoryAnalytics}
+              analyticsViewMode={analyticsViewMode}
+            />
+            
+            <ParticipantSummaryTable
+              detailedParticipantAnalytics={detailedParticipantAnalytics}
+              analyticsViewMode={analyticsViewMode}
+              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              peopleMap={peopleMap}
+            />
+
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <CategorySpendingPieChart
+                pieChartData={pieChartData}
+                analyticsViewMode={analyticsViewMode}
+              />
+              {expenseAmountDistributionData.length > 0 && (
+                <ExpenseDistributionChart
+                  expenseAmountDistributionData={expenseAmountDistributionData}
+                  analyticsViewMode={analyticsViewMode}
+                />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </ScrollArea>
   );
 }
