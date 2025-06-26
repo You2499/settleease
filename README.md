@@ -1,88 +1,124 @@
-# SettleEase 💸
+# SettleEase
 
-<p align="center">
-  <strong>Effortlessly manage shared expenses and settle up with ease.</strong>
-</p>
+[![Netlify Status](https://api.netlify.com/api/v1/badges/0e6052f6-4cbd-4802-9641-1ab2b4109c50/deploy-status)](https://app.netlify.com/projects/settleease/deploys)
+[![Next.js](https://img.shields.io/badge/Next.js-15.3.3-blue?logo=nextdotjs)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database%20%26%20Auth-3FCF8E?logo=supabase)](https://supabase.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.4.1-38BDF8?logo=tailwindcss)](https://tailwindcss.com/)
 
-<br/>
+---
 
-SettleEase is a modern, full-stack application designed to simplify expense tracking and settlements within a group. Built with a powerful tech stack, it offers real-time updates and a user-friendly interface to make splitting bills and managing finances a seamless experience.
+## 🚀 SettleEase
+
+**SettleEase** is a modern, full-featured group expense management application. Effortlessly track, split, and settle shared expenses with friends, family, or roommates. Enjoy real-time collaboration, rich analytics, customizable categories, and a beautiful, responsive UI.
+
+---
 
 ## ✨ Features
 
-### Core Functionality
--   **📝 Expense Management:** Add, edit, and view expenses with detailed information.
--   **🗂️ Expense Categorization:** Organize expenses into customizable categories for better tracking.
--   **➗ Advanced Splitting Options:**
-    -   **Equal:** Split the bill equally among all participants.
-    -   **Unequal:** Manually assign different amounts to each person.
-    -   **Item-wise:** Split the cost by individual items on a bill.
--   **🤝 Settlement Management:** Automatically calculate who owes whom and track payments to settle debts.
--   **👥 People Management:** Easily add and manage the people involved in your expense group.
--   **🔐 User Authentication:** Secure sign-up and login with email/password and Google Sign-In.
+- **Authentication**: Secure login/sign-up with email/password and Google OAuth (Supabase Auth).
+- **Expense Management**:
+  - Add, edit, and delete expenses.
+  - Multiple split methods: equally, unequally, or item-wise.
+  - Multiple payers per expense.
+  - "Celebration" mode for special contributions (e.g., someone treats part of the bill).
+- **People Management**: Add, edit, and remove participants. Prevents deletion if involved in transactions.
+- **Category Management**: Create, edit, delete, and reorder categories. Pick from hundreds of Lucide icons.
+- **Settlements**: Calculate who owes whom, mark debts as paid/unpaid, and minimize the number of transactions.
+- **Analytics**: Group and personal stats, category breakdowns, spending trends, and more—visualized with charts and tables.
+- **Dashboard**: Overview of balances, debts, and recent expenses.
+- **Real-Time Sync**: All data updates live for all users (Supabase Realtime).
+- **Role-Based Access**: Admin/user roles for access control.
+- **Modern UI/UX**: Responsive, accessible, and themeable (light/dark/system).
+- **Icon Picker**: Choose from hundreds of Lucide icons for categories.
 
-### 📊 Analytics & Insights
-A powerful analytics dashboard provides a clear overview of spending habits:
--   **📈 Visual Dashboards:** Interactive charts for spending by category, monthly trends, and daily spending habits.
--   **🧑‍🤝‍🧑 Participant Summaries:** See who has paid the most and who has the largest share of expenses.
--   **🔝 Top Expenses:** Quickly identify the most significant expenses.
--   **⚖️ Paid vs. Share Comparison:** A clear breakdown of how much each person has paid versus their actual share.
-
-### 🤖 AI Integration
--   The application is configured with **Google's Gemini AI model** via Genkit. This sets the foundation for future AI-powered features like intelligent expense categorization or receipt parsing.
+---
 
 ## 🛠️ Tech Stack
 
--   **Frontend:** [Next.js](https://nextjs.org/), [React](https://react.dev/), [Tailwind CSS](https://tailwindcss.com/), [shadcn/ui](https://ui.shadcn.com/)
--   **Backend & Database:** [Supabase](https://supabase.com/) (PostgreSQL, Realtime, Auth)
--   **AI:** [Firebase Genkit](https://firebase.google.com/docs/genkit), [Google Gemini](https://ai.google.dev/)
--   **Deployment:** Ready for deployment on platforms like Vercel or Firebase App Hosting.
+- **Frontend**: [Next.js](https://nextjs.org/) (App Router), [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/) primitives, [Lucide Icons](https://lucide.dev/)
+- **Backend/Database**: [Supabase](https://supabase.com/) (Database, Auth, Realtime)
+- **Charts**: [Recharts](https://recharts.org/)
+- **Deployment**: [Netlify](https://www.netlify.com/)
 
-## 🚀 Getting Started
+---
 
-Follow these instructions to get a copy of the project up and running on your local machine for development and testing purposes.
+## 📦 Getting Started
 
-### Prerequisites
+### 1. **Clone the Repository**
 
--   [Node.js](https://nodejs.org/) (v18 or later)
--   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
--   A [Supabase](https://supabase.com/) account
+```bash
+git clone https://github.com/your-username/settleease.git
+cd settleease
+```
 
-### Installation & Setup
+### 2. **Install Dependencies**
 
-1.  **Clone the repository:**
-    ```sh
-    git clone <your-repository-url>
-    cd settleease
-    ```
+```bash
+npm install
+```
 
-2.  **Install dependencies:**
-    ```sh
-    npm install
-    ```
+### 3. **Configure Environment Variables**
 
-3.  **Set up your Supabase backend:**
-    *   Go to the [Supabase Dashboard](https://app.supabase.com) and create a new project.
-    *   Navigate to the **SQL Editor** and run the SQL scripts provided during the backend setup to create the necessary tables and functions.
-    *   Go to **Project Settings > API** to find your Project URL and `anon` public key.
+Create a `.env.local` file in the root directory and add your Supabase credentials:
 
-4.  **Configure environment variables:**
-    *   Create a new file named `.env.local` in the root of your project.
-    *   Add your Supabase credentials to the `.env.local` file:
-        ```env
-        NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_URL
-        NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-        ```
-    *   **Important:** The project currently has these keys hardcoded in `src/lib/settleease/constants.ts`. You should remove them from that file and rely on the environment variables for better security.
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+```
 
-5.  **Configure Authentication Providers in Supabase:**
-    *   In your Supabase project dashboard, go to the **Authentication** section.
-    *   Under **Providers**, enable **Email** and **Google**.
-    *   For Google, you will need to obtain a **Client ID** and **Client Secret** from the [Google API Console](https://console.developers.google.com/) and add them to the Supabase settings.
+### 4. **Run the Development Server**
 
-6.  **Run the development server:**
-    ```sh
-    npm run dev
-    ```
+```bash
+npm run dev
+```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:9002](http://localhost:9002) to view the app.
+
+---
+
+## 🧑‍💻 Usage
+
+- **Sign up or log in** (email/password or Google).
+- **Add people** to your group.
+- **Create categories** with custom icons.
+- **Add expenses**—choose split method, payers, and category.
+- **View analytics** for group or individual spending.
+- **Settle up**: see who owes whom, and mark payments as complete.
+- **Enjoy real-time updates**—all changes sync instantly for all users.
+
+---
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/your-feature`)
+3. Commit your changes (`git commit -am 'Add new feature'`)
+4. Push to the branch (`git push origin feature/your-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+---
+
+## 🌐 Links
+
+- [Live App on Netlify](https://settleease.netlify.app/)
+- [Supabase](https://supabase.com/)
+- [Next.js](https://nextjs.org/)
+- [Tailwind CSS](https://tailwindcss.com/)
+- [Lucide Icons](https://lucide.dev/)
+
+---
+
+## 🙏 Acknowledgements
+
+- [Supabase](https://supabase.com/) for the backend platform
+- [Next.js](https://nextjs.org/) for the React framework
+- [Radix UI](https://www.radix-ui.com/) and [Lucide Icons](https://lucide.dev/) for beautiful UI components
+- [Recharts](https://recharts.org/) for data visualization
