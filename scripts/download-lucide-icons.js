@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+const chalk = require('chalk');
 
 const ICONS_DIR = path.join(__dirname, '../lucide-icons');
 const GITHUB_API_URL = 'https://api.github.com/repos/lucide-icons/lucide/git/trees/main?recursive=1';
@@ -88,16 +89,16 @@ async function main() {
   if (!fs.existsSync(ICONS_DIR)) {
     fs.mkdirSync(ICONS_DIR);
   }
-  console.log('Fetching icon list from GitHub (recursive tree)...');
+  console.log(chalk.blue('🔽 Fetching icon list from GitHub (recursive tree)...'));
   const tree = await fetchJson(GITHUB_API_URL);
   const jsonIcons = tree.tree.filter(entry => entry.path.startsWith('icons/') && entry.path.endsWith('.json'));
-  console.log(`Found ${jsonIcons.length} icon JSON files. Downloading in parallel...`);
+  console.log(chalk.yellow(`🔎 Found ${jsonIcons.length} icon JSON files. Downloading in parallel...`));
   const files = jsonIcons.map(icon => ({
     url: RAW_BASE_URL + icon.path,
     dest: path.join(ICONS_DIR, path.basename(icon.path)),
   }));
   await downloadAll(files);
-  console.log(`\nDownloaded ${jsonIcons.length} icon JSON files to ${ICONS_DIR}`);
+  console.log(chalk.green(`\n✅ Downloaded ${jsonIcons.length} icon JSON files to ${ICONS_DIR}`));
 }
 
 main().catch(err => {
