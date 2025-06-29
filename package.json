@@ -7,7 +7,7 @@
     "genkit:dev": "genkit start -- tsx src/ai/dev.ts",
     "genkit:watch": "genkit start -- tsx --watch src/ai/dev.ts",
     "prebuild": "node scripts/download-lucide-icons.js && node scripts/generate-lucide-metadata.js 2>&1 | grep -v 'warning'",
-    "build": "next build --no-lint --silent 2>&1 | grep -v 'warning'",
+    "build": "next build --no-lint 2>&1 | grep -v 'warning'",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
