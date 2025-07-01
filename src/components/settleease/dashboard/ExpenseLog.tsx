@@ -51,10 +51,10 @@ export default function ExpenseLog({
                 <div key={date}>
                   <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
                     <div className="absolute inset-0 flex items-center">
-                      <Separator />
+                      <Separator className="bg-border shadow-inner opacity-80" />
                     </div>
                     <div className="relative flex justify-center text-xs">
-                      <span className="bg-card px-2 text-muted-foreground font-semibold">
+                      <span className="bg-card px-2 text-muted-foreground font-semibold rounded shadow-inner border border-border/60" style={{ position: 'relative', top: '1px' }}>
                         {date}
                       </span>
                     </div>

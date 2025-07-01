@@ -349,7 +349,8 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
                 )}
                 <Separator className="my-2 sm:my-2.5" />
                 <div className="flex justify-between font-semibold">
-                  <span>Net Amount For Splitting: {formatCurrency(amountEffectivelySplit)}</span>
+                  <span>Net Amount For Splitting:</span>
+                  <span className="text-right min-w-[80px]">{formatCurrency(amountEffectivelySplit)}</span>
                 </div>
               </CardContent>
             </Card>
