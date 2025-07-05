@@ -92,23 +92,23 @@ export default function SettlementSummary({
                   </div>
               </div>
             {transactionsToDisplay.length > 0 ? (
-              <ScrollArea className="h-[200px] border rounded-md p-1 mt-2"> {/* Reduced margin */}
+              <ScrollArea className="h-[200px] border rounded-md p-1 mt-2">
                 <ul className="space-y-2 p-2">
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
-                      <Card className="bg-card/70 p-2.5 shadow-sm">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-                          {/* Names and arrow, always aligned */}
-                          <div className="flex items-center flex-1 min-w-0">
-                            <span className="text-right truncate font-medium w-24 sm:w-32">{peopleMap[txn.from]}</span>
-                            <ArrowRight className="mx-2 text-accent flex-shrink-0 w-5" />
-                            <span className="text-left truncate font-medium w-24 sm:w-32">{peopleMap[txn.to]}</span>
+                      <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
+                          {/* Names and arrow, left-aligned, compact */}
+                          <div className="flex items-center flex-1 min-w-0 gap-2 text-sm">
+                            <span className="truncate font-normal text-foreground">{peopleMap[txn.from]}</span>
+                            <ArrowRight className="text-accent flex-shrink-0 w-4 h-4" />
+                            <span className="truncate font-normal text-foreground">{peopleMap[txn.to]}</span>
                           </div>
-                          {/* Amount, always aligned and emphasized */}
-                          <div className="w-full sm:w-28 text-center font-bold text-lg text-green-700">
+                          {/* Amount, bold and right-aligned */}
+                          <div className="w-full sm:w-24 text-right font-bold text-base sm:text-lg text-green-700">
                             {formatCurrency(txn.amount)}
                           </div>
-                          {/* Button, right-aligned on desktop, below on mobile if needed */}
+                          {/* Button, compact */}
                           <div className="flex-shrink-0 w-full sm:w-auto">
                             {userRole === 'admin' && (
                               <Button
@@ -116,7 +116,7 @@ export default function SettlementSummary({
                                 variant="outline"
                                 onClick={() => handleInternalMarkAsPaid(txn)}
                                 disabled={isLoading}
-                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto self-start sm:self-center mt-1 sm:mt-0"
+                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto mt-1 sm:mt-0"
                               >
                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
                               </Button>
