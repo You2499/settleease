@@ -98,11 +98,13 @@ export default function SettlementSummary({
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-                          {/* Names and arrow, left-aligned, compact */}
-                          <div className="flex items-center flex-1 min-w-0 gap-2 text-sm">
-                            <span className="truncate font-normal text-foreground">{peopleMap[txn.from]}</span>
-                            <ArrowRight className="text-accent flex-shrink-0 w-4 h-4" />
-                            <span className="truncate font-normal text-foreground">{peopleMap[txn.to]}</span>
+                          {/* Names and arrow, visually balanced */}
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <span className="truncate font-medium text-foreground">{peopleMap[txn.from]}</span>
+                            <span className="flex items-center justify-center w-6">
+                              <ArrowRight className="text-accent w-4 h-4" />
+                            </span>
+                            <span className="truncate font-medium text-foreground">{peopleMap[txn.to]}</span>
                           </div>
                           {/* Amount, bold and right-aligned */}
                           <div className="w-full sm:w-24 text-right font-bold text-base sm:text-lg text-green-700">
