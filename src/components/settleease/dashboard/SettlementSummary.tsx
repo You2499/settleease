@@ -97,21 +97,19 @@ export default function SettlementSummary({
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
-                          {/* Names and arrow, visually balanced */}
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="truncate font-medium text-foreground">{peopleMap[txn.from]}</span>
-                            <span className="flex items-center justify-center w-6">
-                              <ArrowRight className="text-accent w-4 h-4" />
-                            </span>
-                            <span className="truncate font-medium text-foreground">{peopleMap[txn.to]}</span>
-                          </div>
-                          {/* Amount, bold and right-aligned */}
-                          <div className="w-full sm:w-24 text-right font-bold text-base sm:text-lg text-green-700">
-                            {formatCurrency(txn.amount)}
-                          </div>
-                          {/* Button, compact */}
-                          <div className="flex-shrink-0 w-full sm:w-auto">
+                        <div className="grid grid-cols-5 items-center gap-2 sm:gap-3">
+                          {/* Debtor */}
+                          <span className="truncate font-medium text-foreground min-w-0 w-24 sm:w-32">{peopleMap[txn.from]}</span>
+                          {/* Arrow */}
+                          <span className="flex items-center justify-center w-6">
+                            <ArrowRight className="text-accent w-4 h-4" />
+                          </span>
+                          {/* Creditor */}
+                          <span className="truncate font-medium text-foreground min-w-0 w-24 sm:w-32">{peopleMap[txn.to]}</span>
+                          {/* Amount */}
+                          <span className="text-right font-bold text-base sm:text-lg text-green-700 w-20 sm:w-28">{formatCurrency(txn.amount)}</span>
+                          {/* Button */}
+                          <div className="flex-shrink-0 w-full sm:w-auto flex justify-end">
                             {userRole === 'admin' && (
                               <Button
                                 size="sm"
