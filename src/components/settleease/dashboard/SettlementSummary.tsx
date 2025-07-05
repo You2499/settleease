@@ -99,12 +99,12 @@ export default function SettlementSummary({
                       <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
                         <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-1.5">
                           <div className="col-span-1 sm:col-span-3">
-                            <div className="flex items-center w-full">
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px]">{peopleMap[txn.from]}</span>
-                              <span className="flex items-center justify-start w-5 mx-1">
+                            <div className="grid grid-cols-3 items-center w-full">
+                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-start">{peopleMap[txn.from]}</span>
+                              <span className="flex items-center justify-start w-5 mx-1 col-span-1 justify-self-start">
                                 <ArrowRight className="text-accent w-4 h-4" />
                               </span>
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px]">{peopleMap[txn.to]}</span>
+                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-center px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-center">{peopleMap[txn.to]}</span>
                             </div>
                           </div>
                           <span className="text-right font-bold text-green-700 text-base sm:text-lg mt-1 sm:mt-0 col-span-1 sm:col-span-1 flex justify-end">
