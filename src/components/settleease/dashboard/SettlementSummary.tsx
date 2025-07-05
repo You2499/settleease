@@ -97,26 +97,25 @@ export default function SettlementSummary({
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
-                        <div className="grid grid-cols-5 items-center gap-2 sm:gap-3">
-                          {/* Debtor */}
-                          <span className="truncate font-medium text-foreground min-w-0 w-24 sm:w-32">{peopleMap[txn.from]}</span>
-                          {/* Arrow */}
-                          <span className="flex items-center justify-center w-6">
-                            <ArrowRight className="text-accent w-4 h-4" />
+                        <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-1.5">
+                          <div className="flex items-center min-w-0 col-span-1 sm:col-span-3">
+                            <span className="truncate font-medium text-foreground min-w-0 max-w-[90px] sm:max-w-[120px] text-base sm:text-sm">{peopleMap[txn.from]}</span>
+                            <span className="flex items-center justify-center w-5 mx-1">
+                              <ArrowRight className="text-accent w-4 h-4" />
+                            </span>
+                            <span className="truncate font-medium text-foreground min-w-0 max-w-[90px] sm:max-w-[120px] text-base sm:text-sm">{peopleMap[txn.to]}</span>
+                          </div>
+                          <span className="text-right font-bold text-green-700 text-base sm:text-lg mt-1 sm:mt-0 col-span-1 sm:col-span-1 flex justify-end">
+                            {formatCurrency(txn.amount)}
                           </span>
-                          {/* Creditor */}
-                          <span className="truncate font-medium text-foreground min-w-0 w-24 sm:w-32">{peopleMap[txn.to]}</span>
-                          {/* Amount */}
-                          <span className="text-right font-bold text-base sm:text-lg text-green-700 w-20 sm:w-28">{formatCurrency(txn.amount)}</span>
-                          {/* Button */}
-                          <div className="flex-shrink-0 w-full sm:w-auto flex justify-end">
+                          <div className="flex-shrink-0 flex justify-end mt-1 sm:mt-0 col-span-1 sm:col-span-1">
                             {userRole === 'admin' && (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleInternalMarkAsPaid(txn)}
                                 disabled={isLoading}
-                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto mt-1 sm:mt-0"
+                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
                               >
                                 <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Mark as Paid
                               </Button>
