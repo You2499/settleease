@@ -97,13 +97,19 @@ export default function SettlementSummary({
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 p-2.5 shadow-sm">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5">
-                            <div className="flex-grow text-xs sm:text-sm">
-                              <span className="font-medium text-foreground">{peopleMap[txn.from] || 'Unknown'}</span>
-                              <ArrowRight className="h-3.5 w-3.5 text-accent mx-1 inline-block" />
-                              <span className="font-medium text-foreground">{peopleMap[txn.to] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-1.5 text-primary font-semibold text-sm sm:text-base">{formatCurrency(txn.amount)}</span>
-                            </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+                          {/* Names and arrow, always aligned */}
+                          <div className="flex items-center flex-1 min-w-0">
+                            <span className="text-right truncate font-medium w-24 sm:w-32">{peopleMap[txn.from]}</span>
+                            <ArrowRight className="mx-2 text-accent flex-shrink-0 w-5" />
+                            <span className="text-left truncate font-medium w-24 sm:w-32">{peopleMap[txn.to]}</span>
+                          </div>
+                          {/* Amount, always aligned and emphasized */}
+                          <div className="w-full sm:w-28 text-center font-bold text-lg text-green-700">
+                            {formatCurrency(txn.amount)}
+                          </div>
+                          {/* Button, right-aligned on desktop, below on mobile if needed */}
+                          <div className="flex-shrink-0 w-full sm:w-auto">
                             {userRole === 'admin' && (
                               <Button
                                 size="sm"
@@ -116,6 +122,7 @@ export default function SettlementSummary({
                               </Button>
                             )}
                           </div>
+                        </div>
                       </Card>
                     </li>
                   ))}
