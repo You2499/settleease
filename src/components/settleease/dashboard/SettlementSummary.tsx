@@ -104,7 +104,7 @@ export default function SettlementSummary({
                               <span className="flex items-center justify-center w-5 mx-1 col-span-1 justify-self-center">
                                 <ArrowRight className="text-accent w-4 h-4" />
                               </span>
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-center">{peopleMap[txn.to]}</span>
+                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-right px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-center">{peopleMap[txn.to]}</span>
                             </div>
                           </div>
                           <span className="text-right font-bold text-green-700 text-base sm:text-lg mt-1 sm:mt-0 col-span-1 sm:col-span-1 flex justify-end">
