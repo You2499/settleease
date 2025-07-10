@@ -12,10 +12,9 @@ interface TopExpensesTableProps {
   topExpensesData: TopExpenseData[];
   analyticsViewMode: 'group' | 'personal';
   peopleMap: Record<string, string>;
-  onExpenseClick?: (expense: TopExpenseData) => void;
 }
 
-export default function TopExpensesTable({ topExpensesData, analyticsViewMode, peopleMap, onExpenseClick }: TopExpensesTableProps) {
+export default function TopExpensesTable({ topExpensesData, analyticsViewMode, peopleMap }: TopExpensesTableProps) {
   return (
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">
@@ -36,11 +35,7 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
             </TableRow></TableHeader>
             <TableBody>
               {topExpensesData.map(exp => (
-                <TableRow
-                  key={exp.id}
-                  onClick={() => onExpenseClick && onExpenseClick(exp)}
-                  className={onExpenseClick ? "cursor-pointer hover:bg-accent/40 transition-colors" : undefined}
-                >
+                <TableRow key={exp.id}>
                   <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[100px] sm:max-w-xs" title={exp.description}>{exp.description}</TableCell>
                   <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell>
                   <TableCell className="py-1.5 px-2 text-xs hidden sm:table-cell">{exp.category}</TableCell>
