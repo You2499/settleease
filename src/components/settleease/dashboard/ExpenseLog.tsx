@@ -38,7 +38,7 @@ export default function ExpenseLog({
   const expenseDates = Object.keys(groupedExpenses);
 
   return (
-    <Card className="shadow-lg rounded-lg">
+    <Card className="w-full shadow-lg rounded-lg">
       <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2"> {/* Adjusted padding */}
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
         <CardDescription className="text-xs sm:text-sm">A list of all recorded expenses, most recent first. Click an expense for details.</CardDescription>
