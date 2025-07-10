@@ -50,8 +50,8 @@ export default function ShareVsPaidComparisonChart({
                 itemStyle={{ color: 'hsl(var(--foreground))' }}
               />
               <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
-              <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={Math.min(20, (shareVsPaidData.length > 0 ? (150 / shareVsPaidData.length / 2) : 20) * 0.8 )} />
-              <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={Math.min(20, (shareVsPaidData.length > 0 ? (150 / shareVsPaidData.length / 2) : 20) * 0.8 )} />
+              <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={20} />
+              <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={20} />
             </RechartsBarChart>
           </ResponsiveContainer>
         ) : (<p className="text-muted-foreground h-full flex items-center justify-center text-xs sm:text-sm">No data for comparison chart.</p>)}
