@@ -51,7 +51,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
           {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-0 flex items-center justify-center">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />

@@ -29,7 +29,7 @@ export default function ShareVsPaidComparisonChart({
           Share vs. Paid {analyticsViewMode === 'personal' && personName ? `(For ${personName})` : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-0 flex items-center justify-center">
+      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
         {shareVsPaidData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsBarChart
@@ -41,9 +41,6 @@ export default function ShareVsPaidComparisonChart({
                 dataKey="name"
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }}
                 interval={0}
-                angle={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? -25 : 0}
-                textAnchor={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? "end" : "middle"}
-                height={(shareVsPaidData.length > 3 && analyticsViewMode === 'group') ? 35 : 20}
               />
               <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
               <RechartsTooltip
