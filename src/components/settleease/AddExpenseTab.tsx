@@ -66,6 +66,7 @@ export default function AddExpenseTab({
   const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
 
   const [isLoading, setIsLoading] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   
   const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
 
@@ -600,7 +601,7 @@ export default function AddExpenseTab({
             </div>
             <div>
                 <Label htmlFor="expenseDate" className="text-sm sm:text-base">Expense Date</Label>
-                <Popover>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                     <PopoverTrigger asChild>
                         <Button
                         variant={"outline"}
@@ -617,7 +618,10 @@ export default function AddExpenseTab({
                         <Calendar
                         mode="single"
                         selected={expenseDate}
-                        onSelect={setExpenseDate}
+                        onSelect={(date) => {
+                            setExpenseDate(date);
+                            if (date) setCalendarOpen(false);
+                        }}
                         initialFocus
                         />
                     </PopoverContent>

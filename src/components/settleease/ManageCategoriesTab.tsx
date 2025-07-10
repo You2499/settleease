@@ -322,7 +322,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               <h4 className="text-md sm:text-lg font-semibold text-primary">Current Categories</h4>
               {!rankingMode && (
                 <Button size="sm" variant="outline" className="ml-auto" onClick={() => setRankingMode(true)}>
-                  Rank
+                  Edit Rank
                 </Button>
               )}
               {rankingMode && (
