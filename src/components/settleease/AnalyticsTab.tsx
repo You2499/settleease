@@ -28,6 +28,7 @@ import CategoryAnalyticsTable from './analytics/CategoryAnalyticsTable';
 import ParticipantSummaryTable from './analytics/ParticipantSummaryTable';
 import CategorySpendingPieChart from './analytics/CategorySpendingPieChart';
 import ExpenseDistributionChart from './analytics/ExpenseDistributionChart';
+import ExpenseDetailModal from '../ExpenseDetailModal';
 
 
 interface AnalyticsTabProps {
@@ -65,6 +66,8 @@ export default function AnalyticsTab({
 }: AnalyticsTabProps) {
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'group' | 'personal'>('group');
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
 
   const displayedExpenses = useMemo(() => {
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
@@ -622,6 +625,10 @@ export default function AnalyticsTab({
                 topExpensesData={topExpensesData}
                 analyticsViewMode={analyticsViewMode}
                 peopleMap={peopleMap}
+                onExpenseClick={(expense) => {
+                  setSelectedExpense(expense);
+                  setIsExpenseModalOpen(true);
+                }}
               />
             )}
 
@@ -651,6 +658,17 @@ export default function AnalyticsTab({
           </>
         )}
       </div>
+      <ExpenseDetailModal
+        expense={selectedExpense as Expense}
+        isOpen={isExpenseModalOpen}
+        onOpenChange={(open) => {
+          setIsExpenseModalOpen(open);
+          if (!open) setSelectedExpense(null);
+        }}
+        peopleMap={peopleMap}
+        getCategoryIconFromName={getCategoryIconFromName}
+        categories={dynamicCategories}
+      />
     </ScrollArea>
   );
 }
