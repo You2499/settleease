@@ -241,7 +241,7 @@ export default function DashboardView({
   }
 
   return (
-    <div className="min-h-screen flex flex-col space-y-4 md:space-y-6">
+    <div className="w-full min-h-screen flex flex-col space-y-4 md:space-y-6">
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
