@@ -644,6 +644,12 @@ export default function SettleEasePage() {
      return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
   }
 
+  // Helper for AddExpenseTab to redirect to dashboard after adding
+  const handleExpenseAddedAndRedirect = async () => {
+    await fetchAllData(false);
+    setActiveView('dashboard');
+  };
+
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -687,8 +693,8 @@ export default function SettleEasePage() {
                 getCategoryIconFromName={getCategoryIconFromName}
               />
             )}
-            {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={() => fetchAllData(false)} dynamicCategories={categories} />}
-            {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={() => fetchAllData(false)} dynamicCategories={categories} />}
+            {userRole === 'admin' && activeView === 'addExpense' && <AddExpenseTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} onExpenseAdded={handleExpenseAddedAndRedirect} dynamicCategories={categories} />}
+            {userRole === 'admin' && activeView === 'editExpenses' && <EditExpensesTab people={people} expenses={expenses} db={db} supabaseInitializationError={supabaseInitializationError} onActionComplete={handleExpenseAddedAndRedirect} dynamicCategories={categories} />}
             {userRole === 'admin' && activeView === 'managePeople' && <ManagePeopleTab people={people} db={db} supabaseInitializationError={supabaseInitializationError} />}
             {userRole === 'admin' && activeView === 'manageCategories' && <ManageCategoriesTab categories={categories} db={db} supabaseInitializationError={supabaseInitializationError} onCategoriesUpdate={() => fetchAllData(false)} />}
             {userRole === 'admin' && activeView === 'manageSettlements' && (
