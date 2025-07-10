@@ -38,14 +38,14 @@ export default function ExpenseLog({
   const expenseDates = Object.keys(groupedExpenses);
 
   return (
-    <Card className="w-full shadow-lg rounded-lg">
+    <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">
       <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2"> {/* Adjusted padding */}
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><FileText className="mr-2 h-5 w-5 text-primary" /> Expense Log</CardTitle>
         <CardDescription className="text-xs sm:text-sm">A list of all recorded expenses, most recent first. Click an expense for details.</CardDescription>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2"> {/* Adjusted padding */}
+      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0"> {/* Adjusted padding and flex-1 for fill */}
         {expenses.length > 0 ? (
-          <ScrollArea className="h-[350px]">
+          <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4">
               {expenseDates.map((date, index) => (
                 <div key={date}>

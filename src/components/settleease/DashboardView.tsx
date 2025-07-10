@@ -241,7 +241,7 @@ export default function DashboardView({
   }
 
   return (
-    <div className="w-full min-h-screen flex flex-col space-y-4 md:space-y-6">
+    <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6">
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
@@ -254,15 +254,15 @@ export default function DashboardView({
         onViewExpenseDetails={handleExpenseCardClick}
         userRole={userRole} 
       />
-      
-      <ExpenseLog
-        expenses={expenses}
-        peopleMap={peopleMap}
-        handleExpenseCardClick={handleExpenseCardClick}
-        getCategoryIconFromName={getCategoryIconFromName}
-        categories={dynamicCategories}
-      />
-
+      <div className="flex-1 flex flex-col">
+        <ExpenseLog
+          expenses={expenses}
+          peopleMap={peopleMap}
+          handleExpenseCardClick={handleExpenseCardClick}
+          getCategoryIconFromName={getCategoryIconFromName}
+          categories={dynamicCategories}
+        />
+      </div>
       {selectedExpenseForModal && (
         <ExpenseDetailModal
           expense={selectedExpenseForModal}
