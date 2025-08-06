@@ -512,12 +512,385 @@ export default function SettlementSummary({
               </CardContent>
             </Card>
 
-            {/* Step 2: Settlement Options */}
+            {/* Step 2: Detailed Expense Breakdown */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold">
+                  <FileText className="mr-2 h-5 w-5 text-orange-600" />
+                  Step 2: How Each Balance Was Calculated
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  See exactly which expenses contributed to each person's
+                  balance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-6">
+                  {Object.entries(personBalances)
+                    .sort(
+                      ([, a], [, b]) =>
+                        Math.abs(b.netBalance) - Math.abs(a.netBalance)
+                    )
+                    .map(([personId, balance]) => {
+                      const person = people.find((p) => p.id === personId);
+                      if (!person) return null;
+
+                      const isCreditor = balance.netBalance > 0.01;
+                      const isDebtor = balance.netBalance < -0.01;
+                      const isBalanced = Math.abs(balance.netBalance) <= 0.01;
+
+                      // Get expenses where this person was involved
+                      const relevantExpenses = allExpenses.filter((expense) => {
+                        const wasPayer =
+                          Array.isArray(expense.paid_by) &&
+                          expense.paid_by.some((p) => p.personId === personId);
+                        const hadShare =
+                          Array.isArray(expense.shares) &&
+                          expense.shares.some((s) => s.personId === personId);
+                        const hadCelebration =
+                          expense.celebration_contribution?.personId ===
+                          personId;
+                        return wasPayer || hadShare || hadCelebration;
+                      });
+
+                      return (
+                        <div
+                          key={personId}
+                          className={`relative p-6 rounded-xl border-2 shadow-sm transition-all ${
+                            isCreditor
+                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
+                              : isDebtor
+                              ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
+                          }`}
+                        >
+                          {/* Status Badge */}
+                          <div
+                            className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                              isCreditor
+                                ? "bg-green-500 text-white"
+                                : isDebtor
+                                ? "bg-red-500 text-white"
+                                : "bg-gray-500 text-white"
+                            }`}
+                          >
+                            {isCreditor
+                              ? "RECEIVES"
+                              : isDebtor
+                              ? "PAYS"
+                              : "BALANCED"}
+                          </div>
+
+                          {/* Person Header */}
+                          <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                              <div
+                                className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold shadow-lg ${
+                                  isCreditor
+                                    ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                    : isDebtor
+                                    ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                    : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                }`}
+                              >
+                                {person.name.charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+                                  {person.name}
+                                </h3>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  Involved in {relevantExpenses.length} expense
+                                  {relevantExpenses.length !== 1 ? "s" : ""}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div
+                                className={`text-3xl font-bold ${
+                                  isCreditor
+                                    ? "text-green-700 dark:text-green-300"
+                                    : isDebtor
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                {formatCurrency(Math.abs(balance.netBalance))}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                {isCreditor
+                                  ? "should receive"
+                                  : isDebtor
+                                  ? "should pay"
+                                  : "all balanced"}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expense Details */}
+                          <div className="space-y-4">
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+                              <Calculator className="w-4 h-4 mr-2" />
+                              Expense Breakdown
+                            </h4>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              {relevantExpenses.map((expense, i) => {
+                                // Calculate this person's involvement in this expense
+                                const amountPaid = Array.isArray(
+                                  expense.paid_by
+                                )
+                                  ? expense.paid_by.find(
+                                      (p) => p.personId === personId
+                                    )?.amount || 0
+                                  : 0;
+
+                                const shareAmount = Array.isArray(
+                                  expense.shares
+                                )
+                                  ? expense.shares.find(
+                                      (s) => s.personId === personId
+                                    )?.amount || 0
+                                  : 0;
+
+                                const celebrationAmount =
+                                  expense.celebration_contribution?.personId ===
+                                  personId
+                                    ? expense.celebration_contribution.amount ||
+                                      0
+                                    : 0;
+
+                                const totalOwed =
+                                  shareAmount + celebrationAmount;
+                                const netForThisExpense =
+                                  amountPaid - totalOwed;
+
+                                // Skip if person had no involvement
+                                if (amountPaid === 0 && totalOwed === 0)
+                                  return null;
+
+                                return (
+                                  <div
+                                    key={expense.id}
+                                    className="p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                                  >
+                                    <div className="flex justify-between items-start mb-3">
+                                      <div className="flex-1 min-w-0">
+                                        <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                          {expense.description}
+                                        </h5>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                          {expense.created_at
+                                            ? new Date(
+                                                expense.created_at
+                                              ).toLocaleDateString()
+                                            : "No date"}{" "}
+                                          • Total:{" "}
+                                          {formatCurrency(expense.total_amount)}
+                                        </p>
+                                      </div>
+                                      <div
+                                        className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
+                                          netForThisExpense > 0.01
+                                            ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+                                            : netForThisExpense < -0.01
+                                            ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
+                                        }`}
+                                      >
+                                        {netForThisExpense > 0.01
+                                          ? "+"
+                                          : netForThisExpense < -0.01
+                                          ? "-"
+                                          : ""}
+                                        {formatCurrency(
+                                          Math.abs(netForThisExpense)
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    <div className="space-y-2 text-sm">
+                                      {amountPaid > 0 && (
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-600 dark:text-gray-400">
+                                            💳 Amount paid:
+                                          </span>
+                                          <span className="font-medium text-green-600 dark:text-green-400">
+                                            +{formatCurrency(amountPaid)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {shareAmount > 0 && (
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-600 dark:text-gray-400">
+                                            🍽️ Share owed:
+                                          </span>
+                                          <span className="font-medium text-red-600 dark:text-red-400">
+                                            -{formatCurrency(shareAmount)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      {celebrationAmount > 0 && (
+                                        <div className="flex justify-between items-center">
+                                          <span className="text-gray-600 dark:text-gray-400">
+                                            🎉 Celebration:
+                                          </span>
+                                          <span className="font-medium text-red-600 dark:text-red-400">
+                                            -{formatCurrency(celebrationAmount)}
+                                          </span>
+                                        </div>
+                                      )}
+
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-200 dark:border-gray-700">
+                                        <span className="font-medium text-gray-800 dark:text-gray-200">
+                                          Net for this expense:
+                                        </span>
+                                        <span
+                                          className={`font-bold ${
+                                            netForThisExpense > 0.01
+                                              ? "text-green-700 dark:text-green-300"
+                                              : netForThisExpense < -0.01
+                                              ? "text-red-700 dark:text-red-300"
+                                              : "text-gray-700 dark:text-gray-300"
+                                          }`}
+                                        >
+                                          {netForThisExpense > 0.01
+                                            ? "+"
+                                            : netForThisExpense < -0.01
+                                            ? "-"
+                                            : ""}
+                                          {formatCurrency(
+                                            Math.abs(netForThisExpense)
+                                          )}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Settlement Payments */}
+                            {(balance.settledAsDebtor > 0 ||
+                              balance.settledAsCreditor > 0) && (
+                              <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                <h5 className="font-semibold text-blue-900 dark:text-blue-100 mb-3 flex items-center">
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Settlement Payments
+                                </h5>
+                                <div className="space-y-2 text-sm">
+                                  {balance.settledAsDebtor > 0 && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-blue-700 dark:text-blue-300">
+                                        Payments made by {person.name}:
+                                      </span>
+                                      <span className="font-medium text-green-600 dark:text-green-400">
+                                        +
+                                        {formatCurrency(
+                                          balance.settledAsDebtor
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {balance.settledAsCreditor > 0 && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-blue-700 dark:text-blue-300">
+                                        Payments received by {person.name}:
+                                      </span>
+                                      <span className="font-medium text-red-600 dark:text-red-400">
+                                        -
+                                        {formatCurrency(
+                                          balance.settledAsCreditor
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Final Calculation Summary */}
+                            <div
+                              className={`mt-6 p-4 rounded-lg border-2 ${
+                                isCreditor
+                                  ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
+                                  : isDebtor
+                                  ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
+                                  : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
+                              }`}
+                            >
+                              <h5 className="font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
+                                <DollarSign className="w-4 h-4 mr-2" />
+                                Final Calculation
+                              </h5>
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between items-center">
+                                  <span>Total paid across all expenses:</span>
+                                  <span className="font-medium text-green-600 dark:text-green-400">
+                                    +{formatCurrency(balance.totalPaid)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span>Total owed across all expenses:</span>
+                                  <span className="font-medium text-red-600 dark:text-red-400">
+                                    -{formatCurrency(balance.totalOwed)}
+                                  </span>
+                                </div>
+                                {(balance.settledAsDebtor > 0 ||
+                                  balance.settledAsCreditor > 0) && (
+                                  <div className="flex justify-between items-center">
+                                    <span>Net settlement adjustments:</span>
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">
+                                      {balance.settledAsDebtor -
+                                        balance.settledAsCreditor >=
+                                      0
+                                        ? "+"
+                                        : ""}
+                                      {formatCurrency(
+                                        balance.settledAsDebtor -
+                                          balance.settledAsCreditor
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300 dark:border-gray-600">
+                                  <span className="font-bold text-lg">
+                                    Final Balance:
+                                  </span>
+                                  <span
+                                    className={`font-bold text-xl ${
+                                      isCreditor
+                                        ? "text-green-700 dark:text-green-300"
+                                        : isDebtor
+                                        ? "text-red-700 dark:text-red-300"
+                                        : "text-gray-700 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                    {formatCurrency(
+                                      Math.abs(balance.netBalance)
+                                    )}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Step 3: Settlement Options */}
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center text-lg font-bold">
                   <ArrowRight className="mr-2 h-5 w-5 text-blue-600" />
-                  Step 2: Settlement Options
+                  Step 3: Settlement Options
                 </CardTitle>
                 <CardDescription className="text-sm">
                   Two ways to settle: Direct payments or optimized payments
