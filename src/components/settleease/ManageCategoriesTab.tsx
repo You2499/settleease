@@ -18,7 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2, ArrowUp, ArrowDown, Check, X } from 'lucide-react';
+import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2, ArrowUp, ArrowDown, Check, X, ArrowUpDown } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import { CATEGORIES_TABLE, EXPENSES_TABLE } from '@/lib/settleease/constants';

@@ -174,7 +174,10 @@ export default function SettlementSummary({
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           {" "}
           {/* Adjusted top padding */}
-          <TabsContent value="overview" className="mt-0 flex-1 flex flex-col min-h-0">
+          <TabsContent
+            value="overview"
+            className="mt-0 flex-1 flex flex-col min-h-0"
+          >
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 px-3 py-2 rounded-md gap-2">
               {" "}
               {/* Reduced padding */}
@@ -244,13 +247,20 @@ export default function SettlementSummary({
               <div className="flex-1 flex items-center justify-center text-center text-muted-foreground mt-2">
                 <div>
                   <FileText className="h-12 w-12 mx-auto mb-3 text-primary/30" />
-                  <p className="font-medium text-sm sm:text-base">All Settled Up!</p>
-                  <p className="text-xs">All debts are settled, or no expenses to settle yet!</p>
+                  <p className="font-medium text-sm sm:text-base">
+                    All Settled Up!
+                  </p>
+                  <p className="text-xs">
+                    All debts are settled, or no expenses to settle yet!
+                  </p>
                 </div>
               </div>
             )}
           </TabsContent>
-          <TabsContent value="person" className="mt-0 flex-1 flex flex-col min-h-0 space-y-3">
+          <TabsContent
+            value="person"
+            className="mt-0 flex-1 flex flex-col min-h-0 space-y-3"
+          >
             <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 px-3 py-2 rounded-md">
               {" "}
               {/* Reduced padding */}
@@ -571,6 +581,482 @@ export default function SettlementSummary({
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
                               <div className="space-y-8 pr-2">
+                                {/* Clean Mindmap Visualization */}
+                                <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+                                  {/* Individual Debts Network */}
+                                  <div className="mb-10">
+                                    <div className="text-center mb-6">
+                                      <h3 className="text-lg font-bold text-red-700 dark:text-red-400 mb-2">
+                                        Complex Debt Network
+                                      </h3>
+                                      <p className="text-sm text-red-600 dark:text-red-300">
+                                        {pairwiseTransactions.length} individual
+                                        connections
+                                      </p>
+                                    </div>
+
+                                    {/* Network Container */}
+                                    <div className="relative bg-red-50/30 dark:bg-red-950/10 rounded-lg border border-red-200 dark:border-red-800 p-4">
+                                      <div className="relative w-full h-[350px] overflow-hidden">
+                                        {/* People Nodes */}
+                                        {Object.keys(individualBalances)
+                                          .filter(
+                                            (personId) =>
+                                              Math.abs(
+                                                individualBalances[personId]
+                                              ) > 0.01
+                                          )
+                                          .map((personId, index, array) => {
+                                            const angle =
+                                              (index / array.length) *
+                                                2 *
+                                                Math.PI -
+                                              Math.PI / 2;
+                                            const radius = 120;
+                                            const centerX = 175;
+                                            const centerY = 175;
+                                            const x =
+                                              Math.cos(angle) * radius +
+                                              centerX;
+                                            const y =
+                                              Math.sin(angle) * radius +
+                                              centerY;
+                                            const balance =
+                                              individualBalances[personId];
+                                            const isCreditor = balance > 0.01;
+
+                                            return (
+                                              <div
+                                                key={`node-${personId}`}
+                                                className="absolute"
+                                                style={{
+                                                  left: `${x - 30}px`,
+                                                  top: `${y - 30}px`,
+                                                  zIndex: 10,
+                                                }}
+                                              >
+                                                <div
+                                                  className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg border-2 ${
+                                                    isCreditor
+                                                      ? "bg-green-100 border-green-400 text-green-800 dark:bg-green-900/50 dark:border-green-600 dark:text-green-200"
+                                                      : "bg-red-100 border-red-400 text-red-800 dark:bg-red-900/50 dark:border-red-600 dark:text-red-200"
+                                                  }`}
+                                                >
+                                                  <div className="text-center">
+                                                    <div className="text-lg font-bold">
+                                                      {peopleMap[
+                                                        personId
+                                                      ]?.charAt(0) || "?"}
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                                <div className="text-xs text-center mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded shadow-sm">
+                                                  {peopleMap[personId]?.split(
+                                                    " "
+                                                  )[0] || "Unknown"}
+                                                </div>
+                                                <div className="text-xs text-center font-bold">
+                                                  {isCreditor ? "+" : ""}
+                                                  {formatCurrency(
+                                                    Math.abs(balance)
+                                                  )}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+
+                                        {/* Connection Lines */}
+                                        <svg
+                                          className="absolute inset-0 w-full h-full"
+                                          style={{ zIndex: 1 }}
+                                        >
+                                          <defs>
+                                            <marker
+                                              id="arrowhead-red"
+                                              markerWidth="8"
+                                              markerHeight="6"
+                                              refX="7"
+                                              refY="3"
+                                              orient="auto"
+                                            >
+                                              <polygon
+                                                points="0 0, 8 3, 0 6"
+                                                fill="#ef4444"
+                                              />
+                                            </marker>
+                                          </defs>
+                                          {pairwiseTransactions.map(
+                                            (txn, index) => {
+                                              const peopleArray = Object.keys(
+                                                individualBalances
+                                              ).filter(
+                                                (personId) =>
+                                                  Math.abs(
+                                                    individualBalances[personId]
+                                                  ) > 0.01
+                                              );
+                                              const fromIndex =
+                                                peopleArray.indexOf(txn.from);
+                                              const toIndex =
+                                                peopleArray.indexOf(txn.to);
+
+                                              if (
+                                                fromIndex === -1 ||
+                                                toIndex === -1
+                                              )
+                                                return null;
+
+                                              const fromAngle =
+                                                (fromIndex /
+                                                  peopleArray.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
+                                              const toAngle =
+                                                (toIndex / peopleArray.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
+                                              const radius = 120;
+                                              const centerX = 175;
+                                              const centerY = 175;
+
+                                              // Calculate edge points of circles (not center)
+                                              const nodeRadius = 32; // Half of node width
+                                              const fromX =
+                                                Math.cos(fromAngle) * radius +
+                                                centerX;
+                                              const fromY =
+                                                Math.sin(fromAngle) * radius +
+                                                centerY;
+                                              const toX =
+                                                Math.cos(toAngle) * radius +
+                                                centerX;
+                                              const toY =
+                                                Math.sin(toAngle) * radius +
+                                                centerY;
+
+                                              // Calculate direction vector and adjust for node radius
+                                              const dx = toX - fromX;
+                                              const dy = toY - fromY;
+                                              const length = Math.sqrt(
+                                                dx * dx + dy * dy
+                                              );
+                                              const unitX = dx / length;
+                                              const unitY = dy / length;
+
+                                              const x1 =
+                                                fromX + unitX * nodeRadius;
+                                              const y1 =
+                                                fromY + unitY * nodeRadius;
+                                              const x2 =
+                                                toX - unitX * nodeRadius;
+                                              const y2 =
+                                                toY - unitY * nodeRadius;
+
+                                              return (
+                                                <g key={`line-${index}`}>
+                                                  <line
+                                                    x1={x1}
+                                                    y1={y1}
+                                                    x2={x2}
+                                                    y2={y2}
+                                                    stroke="#ef4444"
+                                                    strokeWidth="2"
+                                                    strokeDasharray="4,4"
+                                                    markerEnd="url(#arrowhead-red)"
+                                                    opacity="0.7"
+                                                  />
+                                                  {/* Amount label with background */}
+                                                  <text
+                                                    x={(x1 + x2) / 2}
+                                                    y={(y1 + y2) / 2 - 8}
+                                                    fill="#dc2626"
+                                                    fontSize="10"
+                                                    textAnchor="middle"
+                                                    className="font-bold"
+                                                  >
+                                                    <tspan className="bg-white">
+                                                      {formatCurrency(
+                                                        txn.amount
+                                                      )}
+                                                    </tspan>
+                                                  </text>
+                                                  <rect
+                                                    x={(x1 + x2) / 2 - 15}
+                                                    y={(y1 + y2) / 2 - 18}
+                                                    width="30"
+                                                    height="12"
+                                                    fill="white"
+                                                    fillOpacity="0.9"
+                                                    rx="2"
+                                                  />
+                                                  <text
+                                                    x={(x1 + x2) / 2}
+                                                    y={(y1 + y2) / 2 - 8}
+                                                    fill="#dc2626"
+                                                    fontSize="10"
+                                                    textAnchor="middle"
+                                                    className="font-bold"
+                                                  >
+                                                    {formatCurrency(txn.amount)}
+                                                  </text>
+                                                </g>
+                                              );
+                                            }
+                                          )}
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Transformation Arrow */}
+                                  <div className="flex justify-center my-8">
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center border-4 border-purple-300 dark:border-purple-700 shadow-lg">
+                                        <Shuffle className="h-8 w-8 text-purple-600 animate-spin" />
+                                      </div>
+                                      <div className="text-center mt-2">
+                                        <div className="text-sm font-bold text-purple-600">
+                                          OPTIMIZATION
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Optimized Settlement Network */}
+                                  <div className="mt-10">
+                                    <div className="text-center mb-6">
+                                      <h3 className="text-lg font-bold text-green-700 dark:text-green-400 mb-2">
+                                        Optimized Network
+                                      </h3>
+                                      <p className="text-sm text-green-600 dark:text-green-300">
+                                        {simplifiedTransactions.length} clean
+                                        connections
+                                      </p>
+                                    </div>
+
+                                    {/* Network Container */}
+                                    <div className="relative bg-green-50/30 dark:bg-green-950/10 rounded-lg border border-green-200 dark:border-green-800 p-4">
+                                      {simplifiedTransactions.length > 0 ? (
+                                        <div className="relative w-full h-[350px] overflow-hidden">
+                                          {/* People Nodes */}
+                                          {Object.keys(individualBalances)
+                                            .filter(
+                                              (personId) =>
+                                                Math.abs(
+                                                  individualBalances[personId]
+                                                ) > 0.01
+                                            )
+                                            .map((personId, index, array) => {
+                                              const angle =
+                                                (index / array.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
+                                              const radius = 120;
+                                              const centerX = 175;
+                                              const centerY = 175;
+                                              const x =
+                                                Math.cos(angle) * radius +
+                                                centerX;
+                                              const y =
+                                                Math.sin(angle) * radius +
+                                                centerY;
+                                              const balance =
+                                                individualBalances[personId];
+                                              const isCreditor = balance > 0.01;
+
+                                              return (
+                                                <div
+                                                  key={`opt-node-${personId}`}
+                                                  className="absolute"
+                                                  style={{
+                                                    left: `${x - 30}px`,
+                                                    top: `${y - 30}px`,
+                                                    zIndex: 10,
+                                                  }}
+                                                >
+                                                  <div
+                                                    className={`w-16 h-16 rounded-full flex items-center justify-center shadow-xl border-3 ${
+                                                      isCreditor
+                                                        ? "bg-green-100 border-green-500 text-green-800 dark:bg-green-900/50 dark:border-green-500 dark:text-green-200"
+                                                        : "bg-red-100 border-red-500 text-red-800 dark:bg-red-900/50 dark:border-red-500 dark:text-red-200"
+                                                    }`}
+                                                  >
+                                                    <div className="text-center">
+                                                      <div className="text-lg font-bold">
+                                                        {peopleMap[
+                                                          personId
+                                                        ]?.charAt(0) || "?"}
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                  <div className="text-xs text-center mt-1 font-medium bg-white dark:bg-gray-800 px-1 rounded shadow-sm">
+                                                    {peopleMap[personId]?.split(
+                                                      " "
+                                                    )[0] || "Unknown"}
+                                                  </div>
+                                                  <div className="text-xs text-center font-bold">
+                                                    {isCreditor ? "+" : ""}
+                                                    {formatCurrency(
+                                                      Math.abs(balance)
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+
+                                          {/* Optimized Connection Lines */}
+                                          <svg
+                                            className="absolute inset-0 w-full h-full"
+                                            style={{ zIndex: 1 }}
+                                          >
+                                            <defs>
+                                              <marker
+                                                id="arrowhead-green"
+                                                markerWidth="10"
+                                                markerHeight="8"
+                                                refX="9"
+                                                refY="4"
+                                                orient="auto"
+                                              >
+                                                <polygon
+                                                  points="0 0, 10 4, 0 8"
+                                                  fill="#22c55e"
+                                                />
+                                              </marker>
+                                            </defs>
+                                            {simplifiedTransactions.map(
+                                              (txn, index) => {
+                                                const peopleArray = Object.keys(
+                                                  individualBalances
+                                                ).filter(
+                                                  (personId) =>
+                                                    Math.abs(
+                                                      individualBalances[
+                                                        personId
+                                                      ]
+                                                    ) > 0.01
+                                                );
+                                                const fromIndex =
+                                                  peopleArray.indexOf(txn.from);
+                                                const toIndex =
+                                                  peopleArray.indexOf(txn.to);
+
+                                                if (
+                                                  fromIndex === -1 ||
+                                                  toIndex === -1
+                                                )
+                                                  return null;
+
+                                                const fromAngle =
+                                                  (fromIndex /
+                                                    peopleArray.length) *
+                                                    2 *
+                                                    Math.PI -
+                                                  Math.PI / 2;
+                                                const toAngle =
+                                                  (toIndex /
+                                                    peopleArray.length) *
+                                                    2 *
+                                                    Math.PI -
+                                                  Math.PI / 2;
+                                                const radius = 120;
+                                                const centerX = 175;
+                                                const centerY = 175;
+
+                                                // Calculate edge points of circles (not center)
+                                                const nodeRadius = 32; // Half of node width
+                                                const fromX =
+                                                  Math.cos(fromAngle) * radius +
+                                                  centerX;
+                                                const fromY =
+                                                  Math.sin(fromAngle) * radius +
+                                                  centerY;
+                                                const toX =
+                                                  Math.cos(toAngle) * radius +
+                                                  centerX;
+                                                const toY =
+                                                  Math.sin(toAngle) * radius +
+                                                  centerY;
+
+                                                // Calculate direction vector and adjust for node radius
+                                                const dx = toX - fromX;
+                                                const dy = toY - fromY;
+                                                const length = Math.sqrt(
+                                                  dx * dx + dy * dy
+                                                );
+                                                const unitX = dx / length;
+                                                const unitY = dy / length;
+
+                                                const x1 =
+                                                  fromX + unitX * nodeRadius;
+                                                const y1 =
+                                                  fromY + unitY * nodeRadius;
+                                                const x2 =
+                                                  toX - unitX * nodeRadius;
+                                                const y2 =
+                                                  toY - unitY * nodeRadius;
+
+                                                return (
+                                                  <g key={`opt-line-${index}`}>
+                                                    <line
+                                                      x1={x1}
+                                                      y1={y1}
+                                                      x2={x2}
+                                                      y2={y2}
+                                                      stroke="#22c55e"
+                                                      strokeWidth="4"
+                                                      markerEnd="url(#arrowhead-green)"
+                                                      className="drop-shadow-sm"
+                                                    />
+                                                    {/* Amount label with background */}
+                                                    <rect
+                                                      x={(x1 + x2) / 2 - 20}
+                                                      y={(y1 + y2) / 2 - 18}
+                                                      width="40"
+                                                      height="14"
+                                                      fill="white"
+                                                      fillOpacity="0.95"
+                                                      rx="3"
+                                                      stroke="#22c55e"
+                                                      strokeWidth="1"
+                                                    />
+                                                    <text
+                                                      x={(x1 + x2) / 2}
+                                                      y={(y1 + y2) / 2 - 7}
+                                                      fill="#16a34a"
+                                                      fontSize="11"
+                                                      textAnchor="middle"
+                                                      className="font-bold"
+                                                    >
+                                                      {formatCurrency(
+                                                        txn.amount
+                                                      )}
+                                                    </text>
+                                                  </g>
+                                                );
+                                              }
+                                            )}
+                                          </svg>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center justify-center h-[350px]">
+                                          <div className="text-center">
+                                            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                                            <div className="text-xl font-bold text-green-700 dark:text-green-300">
+                                              Perfect Balance!
+                                            </div>
+                                            <div className="text-sm text-green-600 dark:text-green-400">
+                                              No payments needed
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
                                 {/* Network Visualization */}
                                 <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
                                   {/* Individual Debts Network */}
