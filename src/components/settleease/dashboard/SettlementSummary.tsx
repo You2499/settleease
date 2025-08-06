@@ -322,20 +322,16 @@ export default function SettlementSummary({
               <Tabs
                 value={visualizationTab}
                 onValueChange={(value) =>
-                  setVisualizationTab(value as "simplified" | "individual" | "transformation")
+                  setVisualizationTab(
+                    value as "simplified" | "individual" | "transformation"
+                  )
                 }
                 className="w-full"
               >
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="simplified">
-                    Simplified
-                  </TabsTrigger>
-                  <TabsTrigger value="individual">
-                    Balances
-                  </TabsTrigger>
-                  <TabsTrigger value="transformation">
-                    How It Works
-                  </TabsTrigger>
+                  <TabsTrigger value="simplified">Simplified</TabsTrigger>
+                  <TabsTrigger value="individual">Balances</TabsTrigger>
+                  <TabsTrigger value="transformation">How It Works</TabsTrigger>
                 </TabsList>
 
                 <div className="mt-4 h-[500px]">
@@ -557,145 +553,197 @@ export default function SettlementSummary({
                       </CardContent>
                     </Card>
                   </TabsContent>
-
                   <TabsContent value="transformation" className="h-full m-0">
                     <Card className="h-full flex flex-col">
                       <CardHeader className="pt-3 sm:pt-4 pb-2 flex-shrink-0">
                         <CardTitle className="flex items-center text-lg font-bold">
                           <Shuffle className="mr-2 h-4 w-4 text-purple-600" />
-                          Settlement Transformation
+                          How It Works
                         </CardTitle>
                         <CardDescription className="text-xs">
-                          Understand how individual pairwise debts are optimized into simplified settlements.
+                          Visual transformation from complex to simple
+                          settlements
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
-                        {pairwiseTransactions.length > 0 || simplifiedTransactions.length > 0 ? (
+                        {pairwiseTransactions.length > 0 ||
+                        simplifiedTransactions.length > 0 ? (
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
-                              <div className="space-y-6 pr-2">
-                                
-                                {/* Step 1: Individual Pairwise Debts */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 rounded-full flex items-center justify-center text-xs font-bold">
-                                      1
+                              <div className="space-y-8 pr-2">
+                                {/* Visual Network - Before */}
+                                <div className="space-y-4">
+                                  <div className="text-center">
+                                    <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full">
+                                      <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
+                                      <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">
+                                        BEFORE: {pairwiseTransactions.length}{" "}
+                                        transactions
+                                      </span>
                                     </div>
-                                    <h4 className="font-semibold text-sm text-orange-700 dark:text-orange-400">
-                                      Individual Pairwise Debts ({pairwiseTransactions.length} transactions)
-                                    </h4>
                                   </div>
-                                  <div className="ml-8 space-y-2">
+
+                                  {/* Visual Network */}
+                                  <div className="relative bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-6 rounded-lg border border-orange-200 dark:border-orange-800 min-h-[120px]">
                                     {pairwiseTransactions.length > 0 ? (
-                                      pairwiseTransactions.slice(0, 5).map((txn, index) => (
-                                        <div key={`pairwise-${txn.from}-${txn.to}-${index}`} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-950/20 rounded-md border border-orange-200 dark:border-orange-800">
-                                          <div className="flex items-center space-x-2">
-                                            <span className="text-xs font-medium">{peopleMap[txn.from]}</span>
-                                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                            <span className="text-xs font-medium">{peopleMap[txn.to]}</span>
+                                      <div className="flex flex-wrap justify-center items-center gap-4">
+                                        {pairwiseTransactions
+                                          .slice(0, 6)
+                                          .map((txn, index) => (
+                                            <div
+                                              key={`visual-pairwise-${index}`}
+                                              className="flex items-center gap-2 animate-pulse"
+                                            >
+                                              <div className="w-8 h-8 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-orange-800 dark:text-orange-200">
+                                                {peopleMap[txn.from]?.charAt(
+                                                  0
+                                                ) || "?"}
+                                              </div>
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-12 h-0.5 bg-orange-400 dark:bg-orange-600 relative">
+                                                  <div className="absolute right-0 top-0 w-0 h-0 border-l-2 border-l-orange-400 dark:border-l-orange-600 border-t border-b border-transparent"></div>
+                                                </div>
+                                                <span className="text-xs font-medium text-orange-700 dark:text-orange-300 mt-1">
+                                                  {formatCurrency(txn.amount)}
+                                                </span>
+                                              </div>
+                                              <div className="w-8 h-8 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-orange-800 dark:text-orange-200">
+                                                {peopleMap[txn.to]?.charAt(0) ||
+                                                  "?"}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        {pairwiseTransactions.length > 6 && (
+                                          <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
+                                            +{pairwiseTransactions.length - 6}{" "}
+                                            more...
                                           </div>
-                                          <span className="text-xs font-bold text-orange-700 dark:text-orange-400">
-                                            {formatCurrency(txn.amount)}
-                                          </span>
-                                        </div>
-                                      ))
+                                        )}
+                                      </div>
                                     ) : (
-                                      <div className="text-xs text-muted-foreground italic">No pairwise debts to show</div>
-                                    )}
-                                    {pairwiseTransactions.length > 5 && (
-                                      <div className="text-xs text-muted-foreground text-center">
-                                        ... and {pairwiseTransactions.length - 5} more transactions
+                                      <div className="flex items-center justify-center h-full text-orange-600 dark:text-orange-400">
+                                        <span className="text-sm">
+                                          No individual debts
+                                        </span>
                                       </div>
                                     )}
                                   </div>
                                 </div>
 
-                                {/* Transformation Arrow */}
+                                {/* Transformation Animation */}
                                 <div className="flex justify-center">
                                   <div className="flex flex-col items-center space-y-2">
-                                    <ArrowDownUp className="h-8 w-8 text-purple-600 animate-pulse" />
-                                    <span className="text-xs font-medium text-purple-600">Algorithm Optimization</span>
+                                    <div className="relative">
+                                      <ArrowDownUp className="h-10 w-10 text-purple-600 animate-bounce" />
+                                      <div className="absolute -inset-2 bg-purple-100 dark:bg-purple-900/30 rounded-full animate-ping opacity-20"></div>
+                                    </div>
+                                    <div className="text-center">
+                                      <div className="text-xs font-bold text-purple-600">
+                                        ALGORITHM
+                                      </div>
+                                      <div className="text-xs text-purple-500">
+                                        Optimizing...
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
 
-                                {/* Step 2: Simplified Settlement */}
-                                <div className="space-y-3">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full flex items-center justify-center text-xs font-bold">
-                                      2
+                                {/* Visual Network - After */}
+                                <div className="space-y-4">
+                                  <div className="text-center">
+                                    <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
+                                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
+                                      <span className="text-xs font-semibold text-green-700 dark:text-green-400">
+                                        AFTER: {simplifiedTransactions.length}{" "}
+                                        transactions
+                                      </span>
                                     </div>
-                                    <h4 className="font-semibold text-sm text-green-700 dark:text-green-400">
-                                      Optimized Settlement ({simplifiedTransactions.length} transactions)
-                                    </h4>
                                   </div>
-                                  <div className="ml-8 space-y-2">
+
+                                  {/* Visual Network */}
+                                  <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800 min-h-[120px]">
                                     {simplifiedTransactions.length > 0 ? (
-                                      simplifiedTransactions.map((txn, index) => (
-                                        <div key={`simplified-${txn.from}-${txn.to}-${index}`} className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/20 rounded-md border border-green-200 dark:border-green-800">
-                                          <div className="flex items-center space-x-2">
-                                            <span className="text-xs font-medium">{peopleMap[txn.from]}</span>
-                                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                            <span className="text-xs font-medium">{peopleMap[txn.to]}</span>
-                                          </div>
-                                          <span className="text-xs font-bold text-green-700 dark:text-green-400">
-                                            {formatCurrency(txn.amount)}
+                                      <div className="flex flex-wrap justify-center items-center gap-6">
+                                        {simplifiedTransactions.map(
+                                          (txn, index) => (
+                                            <div
+                                              key={`visual-simplified-${index}`}
+                                              className="flex items-center gap-3"
+                                            >
+                                              <div className="w-10 h-10 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-sm font-bold text-green-800 dark:text-green-200 shadow-md">
+                                                {peopleMap[txn.from]?.charAt(
+                                                  0
+                                                ) || "?"}
+                                              </div>
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-16 h-1 bg-green-500 dark:bg-green-600 relative rounded-full shadow-sm">
+                                                  <div className="absolute right-0 top-0 w-0 h-0 border-l-4 border-l-green-500 dark:border-l-green-600 border-t-2 border-b-2 border-transparent"></div>
+                                                </div>
+                                                <span className="text-xs font-bold text-green-700 dark:text-green-300 mt-2 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded">
+                                                  {formatCurrency(txn.amount)}
+                                                </span>
+                                              </div>
+                                              <div className="w-10 h-10 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-sm font-bold text-green-800 dark:text-green-200 shadow-md">
+                                                {peopleMap[txn.to]?.charAt(0) ||
+                                                  "?"}
+                                              </div>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-center h-full">
+                                        <div className="text-center">
+                                          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
+                                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                            All Settled!
                                           </span>
                                         </div>
-                                      ))
-                                    ) : (
-                                      <div className="text-xs text-muted-foreground italic">All debts are settled!</div>
+                                      </div>
                                     )}
                                   </div>
                                 </div>
 
-                                {/* Explanation */}
-                                <div className="bg-blue-50 dark:bg-blue-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                  <h5 className="font-semibold text-sm text-blue-700 dark:text-blue-400 mb-2">
-                                    💡 Why the change?
-                                  </h5>
-                                  <div className="space-y-2 text-xs text-blue-600 dark:text-blue-300">
-                                    <p>
-                                      <strong>The algorithm optimizes settlements by:</strong>
-                                    </p>
-                                    <ul className="list-disc list-inside space-y-1 ml-2">
-                                      <li>Calculating each person's net balance (what they owe vs. what they're owed)</li>
-                                      <li>Finding the minimum number of transactions needed to settle all debts</li>
-                                      <li>Eliminating circular debts (A owes B, B owes C, C owes A)</li>
-                                      <li>Reducing transaction fees and complexity</li>
-                                    </ul>
-                                    {pairwiseTransactions.length > simplifiedTransactions.length && (
-                                      <p className="font-medium mt-2">
-                                        ✨ <strong>Result:</strong> Reduced from {pairwiseTransactions.length} to {simplifiedTransactions.length} transactions 
-                                        ({Math.round(((pairwiseTransactions.length - simplifiedTransactions.length) / pairwiseTransactions.length) * 100)}% fewer!)
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Example Explanation */}
-                                {simplifiedTransactions.length > 0 && (
-                                  <div className="bg-purple-50 dark:bg-purple-950/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                                    <h5 className="font-semibold text-sm text-purple-700 dark:text-purple-400 mb-2">
-                                      🔍 Example: Why might you pay someone you didn't share expenses with?
-                                    </h5>
-                                    <div className="text-xs text-purple-600 dark:text-purple-300 space-y-2">
-                                      <p>
-                                        Let's say you owe Alice $20, Alice owes Bob $15, and Bob owes you $10.
-                                      </p>
-                                      <p>
-                                        <strong>Instead of 3 separate transactions:</strong> You → Alice ($20), Alice → Bob ($15), Bob → You ($10)
-                                      </p>
-                                      <p>
-                                        <strong>The algorithm simplifies to:</strong> You → Alice ($5), Alice → Bob ($15)
-                                      </p>
-                                      <p className="font-medium">
-                                        This is why you might see yourself paying someone you didn't directly share expenses with - 
-                                        it's mathematically the most efficient way to settle everyone's debts!
-                                      </p>
+                                {/* Results Summary */}
+                                {pairwiseTransactions.length >
+                                  simplifiedTransactions.length && (
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                                    <div className="text-center space-y-2">
+                                      <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                                        ✨{" "}
+                                        {Math.round(
+                                          ((pairwiseTransactions.length -
+                                            simplifiedTransactions.length) /
+                                            pairwiseTransactions.length) *
+                                            100
+                                        )}
+                                        % Fewer Transactions!
+                                      </div>
+                                      <div className="text-xs text-blue-600 dark:text-blue-300">
+                                        Reduced from{" "}
+                                        <strong>
+                                          {pairwiseTransactions.length}
+                                        </strong>{" "}
+                                        to{" "}
+                                        <strong>
+                                          {simplifiedTransactions.length}
+                                        </strong>{" "}
+                                        payments
+                                      </div>
                                     </div>
                                   </div>
                                 )}
 
+                                {/* Quick Explanation */}
+                                <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
+                                  <div className="text-xs text-purple-700 dark:text-purple-300 text-center">
+                                    <strong>Why this works:</strong> The
+                                    algorithm finds the most efficient path by
+                                    calculating everyone's net balance, then
+                                    creating the minimum transactions needed to
+                                    settle all debts.
+                                  </div>
+                                </div>
                               </div>
                             </ScrollArea>
                           </div>
@@ -703,8 +751,12 @@ export default function SettlementSummary({
                           <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
                             <div>
                               <Shuffle className="h-12 w-12 mx-auto mb-3 text-purple-500" />
-                              <p className="font-medium">No settlements to transform</p>
-                              <p className="text-xs">Add some expenses to see how the algorithm works.</p>
+                              <p className="font-medium">
+                                No settlements to visualize
+                              </p>
+                              <p className="text-xs">
+                                Add some expenses to see the transformation
+                              </p>
                             </div>
                           </div>
                         )}
