@@ -138,6 +138,37 @@ export default function SettlementSummary({
     return balances;
   }, [people, allExpenses, settlementPayments]);
 
+  // Filter out paid transactions for mindmap visualization
+  const unpaidPairwiseTransactions = useMemo(() => {
+    return pairwiseTransactions.filter((txn) => {
+      // Check if this transaction has been fully settled
+      const settledAmount = settlementPayments
+        .filter(payment => 
+          payment.debtor_id === txn.from && 
+          payment.creditor_id === txn.to
+        )
+        .reduce((sum, payment) => sum + Number(payment.amount_settled), 0);
+      
+      // Only include if there's still an outstanding amount
+      return Number(txn.amount) > settledAmount;
+    });
+  }, [pairwiseTransactions, settlementPayments]);
+
+  const unpaidSimplifiedTransactions = useMemo(() => {
+    return simplifiedTransactions.filter((txn) => {
+      // Check if this transaction has been fully settled
+      const settledAmount = settlementPayments
+        .filter(payment => 
+          payment.debtor_id === txn.from && 
+          payment.creditor_id === txn.to
+        )
+        .reduce((sum, payment) => sum + Number(payment.amount_settled), 0);
+      
+      // Only include if there's still an outstanding amount
+      return Number(txn.amount) > settledAmount;
+    });
+  }, [simplifiedTransactions, settlementPayments]);
+
   return (
     <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">
       <Tabs
@@ -317,23 +348,23 @@ export default function SettlementSummary({
 
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
             <div className="space-y-6 pt-2">
-              {pairwiseTransactions.length > 0 ||
-              simplifiedTransactions.length > 0 ? (
+              {unpaidPairwiseTransactions.length > 0 ||
+              unpaidSimplifiedTransactions.length > 0 ? (
                 <>
                   {/* Individual Debts Mindmap */}
                   <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">
-                        Individual Debts Network
+                        Outstanding Individual Debts
                       </h3>
                       <p className="text-sm text-red-600 dark:text-red-300">
-                        {pairwiseTransactions.length} direct connections showing
-                        all individual debts
+                        {unpaidPairwiseTransactions.length} unpaid connections showing
+                        remaining individual debts
                       </p>
                     </div>
 
                     <div className="relative w-full h-[450px] bg-white/50 dark:bg-gray-900/50 rounded-lg border border-red-200 dark:border-red-700 overflow-hidden">
-                      {pairwiseTransactions.length > 0 ? (
+                      {unpaidPairwiseTransactions.length > 0 ? (
                         <>
                           {/* People Nodes - Vertical Layout */}
                           {Object.keys(individualBalances)
@@ -383,7 +414,7 @@ export default function SettlementSummary({
                               );
                             })}
 
-                          {/* Connection Lines - Vertical Layout */}
+                          {/* Connection Lines - Straight Vertical Layout */}
                           <svg
                             className="absolute inset-0 w-full h-full"
                             style={{ zIndex: 1 }}
@@ -414,9 +445,9 @@ export default function SettlementSummary({
                               // Group transactions by connection pairs to handle bidirectional cases
                               const connectionGroups: Record<
                                 string,
-                                typeof pairwiseTransactions
+                                typeof unpaidPairwiseTransactions
                               > = {};
-                              pairwiseTransactions.forEach((txn) => {
+                              unpaidPairwiseTransactions.forEach((txn) => {
                                 const key = [txn.from, txn.to].sort().join("-");
                                 if (!connectionGroups[key])
                                   connectionGroups[key] = [];
@@ -447,32 +478,22 @@ export default function SettlementSummary({
                                     const fromX = nodeX + 40; // Right edge of from node
                                     const toX = nodeX - 40; // Left edge of to node
 
-                                    // For multiple connections, offset horizontally
-                                    const horizontalOffset =
+                                    // For multiple connections, create vertical offset lanes
+                                    const laneOffset =
                                       transactions.length > 1
-                                        ? (txnIndex -
-                                            (transactions.length - 1) / 2) *
-                                          30
-                                        : 0;
-                                    const midX = nodeX + 150 + horizontalOffset;
+                                        ? 40 + txnIndex * 35
+                                        : 40;
+                                    const rightX = nodeX + 40 + laneOffset;
 
-                                    // Create curved path for better visibility
-                                    const pathData = `M ${fromX} ${fromY} Q ${midX} ${fromY} ${midX} ${
-                                      (fromY + toY) / 2
-                                    } Q ${midX} ${toY} ${toX} ${toY}`;
-
-                                    // Label position
-                                    const labelX = midX;
-                                    const labelY =
-                                      (fromY + toY) / 2 +
-                                      (transactions.length > 1
-                                        ? txnIndex * 25 - 12
-                                        : 0);
+                                    // Label position - positioned to the right of the line
+                                    const labelX = rightX + 25;
+                                    const labelY = (fromY + toY) / 2;
 
                                     return (
                                       <g key={`line-${groupIndex}-${txnIndex}`}>
-                                        <path
-                                          d={pathData}
+                                        {/* Three-segment straight line path */}
+                                        <polyline
+                                          points={`${fromX},${fromY} ${rightX},${fromY} ${rightX},${toY} ${toX},${toY}`}
                                           stroke="#ef4444"
                                           strokeWidth="2"
                                           strokeDasharray="5,5"
@@ -529,13 +550,13 @@ export default function SettlementSummary({
                         Optimized Settlement Network
                       </h3>
                       <p className="text-sm text-green-600 dark:text-green-300">
-                        {simplifiedTransactions.length} efficient connections
+                        {unpaidSimplifiedTransactions.length} outstanding efficient connections
                         for minimal transactions
                       </p>
                     </div>
 
                     <div className="relative w-full h-[450px] bg-white/50 dark:bg-gray-900/50 rounded-lg border border-green-200 dark:border-green-700 overflow-hidden">
-                      {simplifiedTransactions.length > 0 ? (
+                      {unpaidSimplifiedTransactions.length > 0 ? (
                         <>
                           {/* People Nodes - Vertical Layout */}
                           {Object.keys(individualBalances)
@@ -585,7 +606,7 @@ export default function SettlementSummary({
                               );
                             })}
 
-                          {/* Optimized Connection Lines - Vertical Layout */}
+                          {/* Optimized Connection Lines - Straight Vertical Layout */}
                           <svg
                             className="absolute inset-0 w-full h-full"
                             style={{ zIndex: 1 }}
@@ -605,7 +626,7 @@ export default function SettlementSummary({
                                 />
                               </marker>
                             </defs>
-                            {simplifiedTransactions.map((txn, index) => {
+                            {unpaidSimplifiedTransactions.map((txn, index) => {
                               const peopleArray = Object.keys(
                                 individualBalances
                               ).filter(
@@ -631,22 +652,18 @@ export default function SettlementSummary({
                               const fromX = nodeX + 40; // Right edge of from node
                               const toX = nodeX - 40; // Left edge of to node
 
-                              // For optimized connections, use a cleaner offset
-                              const midX = nodeX + 180;
+                              // For optimized connections, use single lane with more spacing
+                              const rightX = nodeX + 40 + 60; // Single lane for cleaner look
 
-                              // Create curved path for better visibility
-                              const pathData = `M ${fromX} ${fromY} Q ${midX} ${fromY} ${midX} ${
-                                (fromY + toY) / 2
-                              } Q ${midX} ${toY} ${toX} ${toY}`;
-
-                              // Label position
-                              const labelX = midX;
+                              // Label position - positioned to the right of the line
+                              const labelX = rightX + 30;
                               const labelY = (fromY + toY) / 2;
 
                               return (
                                 <g key={`opt-line-${index}`}>
-                                  <path
-                                    d={pathData}
+                                  {/* Three-segment straight line path */}
+                                  <polyline
+                                    points={`${fromX},${fromY} ${rightX},${fromY} ${rightX},${toY} ${toX},${toY}`}
                                     stroke="#22c55e"
                                     strokeWidth="4"
                                     fill="none"
