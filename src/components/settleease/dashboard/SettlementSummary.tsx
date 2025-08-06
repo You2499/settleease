@@ -27,8 +27,8 @@ import {
   CheckCircle2,
   FileText,
   Info,
-  BarChart3,
-  Check,
+  Calculator,
+  DollarSign,
 } from "lucide-react";
 import {
   Dialog,
@@ -98,66 +98,90 @@ export default function SettlementSummary({
     return people.find((p) => p.id === selectedPersonId) || null;
   }, [selectedPersonId, people]);
 
-  // Helper function to calculate a person's current balance
-  const calculatePersonBalance = (personId: string) => {
-    let balance = 0;
+  // Calculate person balances using the same logic as DashboardView
+  const personBalances = useMemo(() => {
+    const balances: Record<
+      string,
+      {
+        totalPaid: number;
+        totalOwed: number;
+        settledAsDebtor: number;
+        settledAsCreditor: number;
+        netBalance: number;
+      }
+    > = {};
 
-    // What they paid
+    // Initialize balances for all people
+    people.forEach((person) => {
+      balances[person.id] = {
+        totalPaid: 0,
+        totalOwed: 0,
+        settledAsDebtor: 0,
+        settledAsCreditor: 0,
+        netBalance: 0,
+      };
+    });
+
+    // Calculate from expenses
     allExpenses.forEach((expense) => {
+      // What they paid
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach((payment) => {
-          if (payment.personId === personId) {
-            balance += Number(payment.amount);
+          if (balances[payment.personId]) {
+            balances[payment.personId].totalPaid += Number(payment.amount);
           }
         });
       }
-    });
 
-    // What they owe
-    allExpenses.forEach((expense) => {
+      // What they owe (shares + celebration contributions)
       if (Array.isArray(expense.shares)) {
         expense.shares.forEach((share) => {
-          if (share.personId === personId) {
-            balance -= Number(share.amount);
+          if (balances[share.personId]) {
+            balances[share.personId].totalOwed += Number(share.amount);
           }
         });
       }
+
+      // Celebration contributions
+      if (
+        expense.celebration_contribution &&
+        expense.celebration_contribution.amount > 0
+      ) {
+        const contributorId = expense.celebration_contribution.personId;
+        if (balances[contributorId]) {
+          balances[contributorId].totalOwed += Number(
+            expense.celebration_contribution.amount
+          );
+        }
+      }
     });
 
-    // Adjust for settlements already made
+    // Add settlement payments
     settlementPayments.forEach((payment) => {
-      if (payment.debtor_id === personId) {
-        balance += Number(payment.amount_settled);
+      if (balances[payment.debtor_id]) {
+        balances[payment.debtor_id].settledAsDebtor += Number(
+          payment.amount_settled
+        );
       }
-      if (payment.creditor_id === personId) {
-        balance -= Number(payment.amount_settled);
+      if (balances[payment.creditor_id]) {
+        balances[payment.creditor_id].settledAsCreditor += Number(
+          payment.amount_settled
+        );
       }
     });
 
-    return balance;
-  };
-
-  // Filter out paid transactions for visualization
-  const unpaidPairwiseTransactions = useMemo(() => {
-    return pairwiseTransactions.filter((txn) => {
-      // Check the debtor's overall balance - if they're balanced or positive, they don't owe anything
-      const debtorBalance = calculatePersonBalance(txn.from);
-      const creditorBalance = calculatePersonBalance(txn.to);
-
-      // If the debtor is balanced (within 0.01) or has a positive balance, they don't owe this debt
-      if (debtorBalance >= -0.01) {
-        return false;
-      }
-
-      // If the creditor is balanced (within 0.01) or has a negative balance, they don't need to receive this debt
-      if (creditorBalance <= 0.01) {
-        return false;
-      }
-
-      // Otherwise, this is still an outstanding debt
-      return true;
+    // Calculate net balances
+    Object.keys(balances).forEach((personId) => {
+      const person = balances[personId];
+      person.netBalance =
+        person.totalPaid -
+        person.totalOwed +
+        person.settledAsDebtor -
+        person.settledAsCreditor;
     });
-  }, [pairwiseTransactions, settlementPayments, allExpenses]);
+
+    return balances;
+  }, [allExpenses, settlementPayments, people]);
 
   const unpaidSimplifiedTransactions = useMemo(() => {
     return simplifiedTransactions.filter((txn) => {
@@ -193,7 +217,7 @@ export default function SettlementSummary({
                 variant="outline"
                 onClick={() => setIsInfoModalOpen(true)}
               >
-                <Info className="mr-1 h-4 w-4" /> Visualize
+                <Info className="mr-1 h-4 w-4" /> How it Works
               </Button>
             </div>
             <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
@@ -341,1113 +365,311 @@ export default function SettlementSummary({
         </CardContent>
       </Tabs>
 
-      {/* Transparent Settlement Explanation Modal */}
+      {/* Simple, Trust-Building Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-5xl">
-          <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between">
-            <div className="flex items-center">
-              <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-                <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                Settlement Breakdown & Explanation
-              </DialogTitle>
-            </div>
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl">
+          <DialogHeader className="pb-4 border-b">
+            <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
+              <Calculator className="mr-2 h-5 w-5" />
+              How Settlement Works - Simple & Transparent
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-            <div className="space-y-4 sm:space-y-6 pt-2">
-              {/* Step 1: Individual Balances */}
-              <Card>
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                    <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                    Step 1: Everyone's Net Balance
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Based on all expenses and what each person paid vs. their
-                    share:
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {people
-                      .map((person) => {
-                        // Calculate this person's balance
-                        let balance = 0;
+          <div className="space-y-6 pt-4">
+            {/* Step 1: Simple Balance Calculation */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold">
+                  <DollarSign className="mr-2 h-5 w-5 text-green-600" />
+                  Step 1: Calculate Everyone's Balance
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Simple math: What you paid minus what you owe = your balance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(personBalances)
+                    .sort(([, a], [, b]) => b.netBalance - a.netBalance)
+                    .map(([personId, balance]) => {
+                      const person = people.find((p) => p.id === personId);
+                      if (!person) return null;
 
-                        // What they paid
-                        let totalPaid = 0;
-                        allExpenses.forEach((expense) => {
-                          if (Array.isArray(expense.paid_by)) {
-                            expense.paid_by.forEach((payment) => {
-                              if (payment.personId === person.id) {
-                                totalPaid += Number(payment.amount);
-                              }
-                            });
-                          }
-                        });
-
-                        // What they owe
-                        let totalOwed = 0;
-                        allExpenses.forEach((expense) => {
-                          if (Array.isArray(expense.shares)) {
-                            expense.shares.forEach((share) => {
-                              if (share.personId === person.id) {
-                                totalOwed += Number(share.amount);
-                              }
-                            });
-                          }
-                        });
-
-                        // Adjust for settlements already made
-                        let settledAsDebtor = 0;
-                        let settledAsCreditor = 0;
-                        settlementPayments.forEach((payment) => {
-                          if (payment.debtor_id === person.id) {
-                            settledAsDebtor += Number(payment.amount_settled);
-                          }
-                          if (payment.creditor_id === person.id) {
-                            settledAsCreditor += Number(payment.amount_settled);
-                          }
-                        });
-
-                        balance =
-                          totalPaid -
-                          totalOwed +
-                          settledAsDebtor -
-                          settledAsCreditor;
-
-                        const isCreditor = balance > 0.01;
-                        const isDebtor = balance < -0.01;
-                        const isSettled = Math.abs(balance) <= 0.01;
-
-                        return {
-                          person,
-                          balance,
-                          totalPaid,
-                          totalOwed,
-                          settledAsDebtor,
-                          settledAsCreditor,
-                          isCreditor,
-                          isDebtor,
-                          isSettled,
-                          sortOrder: isCreditor ? 0 : isDebtor ? 1 : 2, // Receives, Pays, Balanced
-                        };
-                      })
-                      .sort((a, b) => {
-                        // First sort by category (Receives, Pays, Balanced)
-                        if (a.sortOrder !== b.sortOrder) {
-                          return a.sortOrder - b.sortOrder;
-                        }
-                        // Then sort alphabetically within each category
-                        return a.person.name.localeCompare(b.person.name);
-                      })
-                      .map(
-                        ({
-                          person,
-                          balance,
-                          totalPaid,
-                          totalOwed,
-                          settledAsDebtor,
-                          settledAsCreditor,
-                          isCreditor,
-                          isDebtor,
-                          isSettled,
-                        }) => {
-                          return (
-                            <div
-                              key={person.id}
-                              className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
-                                isCreditor
-                                  ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
-                                  : isDebtor
-                                  ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
-                                  : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
-                              }`}
-                            >
-                              {/* Status Badge */}
-                              <div
-                                className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                                  isCreditor
-                                    ? "bg-green-500 text-white"
-                                    : isDebtor
-                                    ? "bg-red-500 text-white"
-                                    : "bg-gray-500 text-white"
-                                }`}
-                              >
-                                {isCreditor
-                                  ? "RECEIVES"
-                                  : isDebtor
-                                  ? "PAYS"
-                                  : "BALANCED"}
-                              </div>
-
-                              {/* Person Name and Amount */}
-                              <div className="flex items-center justify-between mb-3">
-                                <div className="flex items-center gap-2">
-                                  <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                      isCreditor
-                                        ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                                        : isDebtor
-                                        ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                                        : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                                    }`}
-                                  >
-                                    {person.name.charAt(0).toUpperCase()}
-                                  </div>
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                    {person.name}
-                                  </span>
-                                </div>
-                                <div className="text-right">
-                                  <div
-                                    className={`text-2xl font-bold ${
-                                      isCreditor
-                                        ? "text-green-700 dark:text-green-300"
-                                        : isDebtor
-                                        ? "text-red-700 dark:text-red-300"
-                                        : "text-gray-700 dark:text-gray-300"
-                                    }`}
-                                  >
-                                    {isCreditor ? "+" : isDebtor ? "-" : ""}
-                                    {formatCurrency(Math.abs(balance))}
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Breakdown Details */}
-                              <div className="space-y-2 text-xs">
-                                <div className="flex justify-between items-center py-1">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    Total Paid:
-                                  </span>
-                                  <span className="font-semibold text-green-700 dark:text-green-400">
-                                    {formatCurrency(totalPaid)}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between items-center py-1">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    Total Owed:
-                                  </span>
-                                  <span className="font-semibold text-red-700 dark:text-red-400">
-                                    {formatCurrency(totalOwed)}
-                                  </span>
-                                </div>
-                                {(settledAsDebtor > 0 ||
-                                  settledAsCreditor > 0) && (
-                                  <div className="flex justify-between items-center py-1">
-                                    <span className="text-gray-600 dark:text-gray-400">
-                                      Already Settled:
-                                    </span>
-                                    <span className="font-semibold text-blue-700 dark:text-blue-400">
-                                      {formatCurrency(
-                                        Math.abs(
-                                          settledAsCreditor - settledAsDebtor
-                                        )
-                                      )}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Final Status - More Prominent */}
-                                <div
-                                  className={`mt-3 pt-3 border-t-2 ${
-                                    isCreditor
-                                      ? "border-green-200 dark:border-green-800"
-                                      : isDebtor
-                                      ? "border-red-200 dark:border-red-800"
-                                      : "border-gray-200 dark:border-gray-800"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-center">
-                                    <div
-                                      className={`px-4 py-2 rounded-lg font-bold text-sm text-center ${
-                                        isCreditor
-                                          ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                                          : isDebtor
-                                          ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                                          : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                                      }`}
-                                    >
-                                      {isCreditor ? (
-                                        `Should Receive ${formatCurrency(
-                                          Math.abs(balance)
-                                        )}`
-                                      ) : isDebtor ? (
-                                        `Should Pay ${formatCurrency(
-                                          Math.abs(balance)
-                                        )}`
-                                      ) : (
-                                        <div className="flex items-center gap-2">
-                                          All Balanced{" "}
-                                          <Check className="w-4 h-4" />
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        }
-                      )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Step 2: Direct Debt Analysis */}
-              <Card>
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                    <ArrowRight className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                    Step 2: Direct Debt Analysis
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">
-                    Understanding how expenses create debt relationships between
-                    people:
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
-                  <div className="space-y-4">
-                    {/* Show ALL pairwise transactions with clear explanations */}
-                    {pairwiseTransactions.map((txn, index) => {
-                      // Find expenses that contribute to this debt
-                      const contributingExpenses = allExpenses.filter(
-                        (expense) => {
-                          const paidByPerson =
-                            Array.isArray(expense.paid_by) &&
-                            expense.paid_by.some((p) => p.personId === txn.to);
-                          const owedByPerson =
-                            Array.isArray(expense.shares) &&
-                            expense.shares.some((s) => s.personId === txn.from);
-                          return paidByPerson && owedByPerson;
-                        }
-                      );
-
-                      // Check if this debt is still outstanding based on overall balances
-                      const debtorBalance = calculatePersonBalance(txn.from);
-                      const creditorBalance = calculatePersonBalance(txn.to);
-                      const isOutstanding =
-                        debtorBalance < -0.01 && creditorBalance > 0.01;
-
-                      // Check if this specific debt has been settled
-                      const settledAmount = settlementPayments
-                        .filter(
-                          (payment) =>
-                            payment.debtor_id === txn.from &&
-                            payment.creditor_id === txn.to
-                        )
-                        .reduce(
-                          (sum, payment) =>
-                            sum + Number(payment.amount_settled),
-                          0
-                        );
-
-                      const isDirectlySettled =
-                        settledAmount >= Number(txn.amount) - 0.01;
+                      const isCreditor = balance.netBalance > 0.01;
+                      const isDebtor = balance.netBalance < -0.01;
 
                       return (
                         <div
-                          key={`debt-${index}`}
-                          className={`relative p-5 rounded-xl border-2 shadow-sm transition-all ${
-                            isOutstanding && !isDirectlySettled
-                              ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
-                              : isDirectlySettled
-                              ? "bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 border-blue-300 dark:border-blue-700"
-                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
+                          key={personId}
+                          className={`p-4 rounded-lg border-2 ${
+                            isCreditor
+                              ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800"
+                              : isDebtor
+                              ? "bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800"
+                              : "bg-gray-50 border-gray-200 dark:bg-gray-950/20 dark:border-gray-800"
                           }`}
                         >
-                          {/* Status Badge */}
-                          <div
-                            className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                              isOutstanding && !isDirectlySettled
-                                ? "bg-red-500 text-white"
-                                : isDirectlySettled
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-500 text-white"
-                            }`}
-                          >
-                            {isDirectlySettled
-                              ? "DIRECTLY SETTLED"
-                              : isOutstanding
-                              ? "OUTSTANDING"
-                              : "BALANCED OUT"}
-                          </div>
-
-                          {/* Main Transaction Display */}
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-4">
-                              {/* From Person Avatar */}
-                              <div className="flex flex-col items-center">
-                                <div
-                                  className={`w-12 h-12 border-2 rounded-full flex items-center justify-center shadow-sm ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "bg-red-200 dark:bg-red-800 border-red-400 dark:border-red-600"
-                                      : isDirectlySettled
-                                      ? "bg-blue-200 dark:bg-blue-800 border-blue-400 dark:border-blue-600"
-                                      : "bg-gray-200 dark:bg-gray-800 border-gray-400 dark:border-gray-600"
-                                  }`}
-                                >
-                                  <span
-                                    className={`font-bold text-lg ${
-                                      isOutstanding && !isDirectlySettled
-                                        ? "text-red-800 dark:text-red-200"
-                                        : isDirectlySettled
-                                        ? "text-blue-800 dark:text-blue-200"
-                                        : "text-gray-800 dark:text-gray-200"
-                                    }`}
-                                  >
-                                    {peopleMap[txn.from]?.charAt(0) || "?"}
-                                  </span>
-                                </div>
-                                <span
-                                  className={`text-xs font-medium mt-1 ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "text-red-700 dark:text-red-300"
-                                      : isDirectlySettled
-                                      ? "text-blue-700 dark:text-blue-300"
-                                      : "text-gray-700 dark:text-gray-300"
-                                  }`}
-                                >
-                                  Owes
-                                </span>
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                  isCreditor
+                                    ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                    : isDebtor
+                                    ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                    : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                }`}
+                              >
+                                {person.name.charAt(0).toUpperCase()}
                               </div>
-
-                              {/* Arrow */}
-                              <div className="flex flex-col items-center">
-                                <ArrowRight
-                                  className={`w-6 h-6 ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "text-red-500"
-                                      : isDirectlySettled
-                                      ? "text-blue-500"
-                                      : "text-gray-500"
-                                  }`}
-                                />
-                                <span
-                                  className={`text-xs mt-1 ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "text-red-600 dark:text-red-400"
-                                      : isDirectlySettled
-                                      ? "text-blue-600 dark:text-blue-400"
-                                      : "text-gray-600 dark:text-gray-400"
-                                  }`}
-                                >
-                                  {formatCurrency(txn.amount)}
-                                </span>
-                              </div>
-
-                              {/* To Person Avatar */}
-                              <div className="flex flex-col items-center">
-                                <div
-                                  className={`w-12 h-12 border-2 rounded-full flex items-center justify-center shadow-sm ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "bg-red-200 dark:bg-red-800 border-red-400 dark:border-red-600"
-                                      : isDirectlySettled
-                                      ? "bg-blue-200 dark:bg-blue-800 border-blue-400 dark:border-blue-600"
-                                      : "bg-gray-200 dark:bg-gray-800 border-gray-400 dark:border-gray-600"
-                                  }`}
-                                >
-                                  <span
-                                    className={`font-bold text-lg ${
-                                      isOutstanding && !isDirectlySettled
-                                        ? "text-red-800 dark:text-red-200"
-                                        : isDirectlySettled
-                                        ? "text-blue-800 dark:text-blue-200"
-                                        : "text-gray-800 dark:text-gray-200"
-                                    }`}
-                                  >
-                                    {peopleMap[txn.to]?.charAt(0) || "?"}
-                                  </span>
-                                </div>
-                                <span
-                                  className={`text-xs font-medium mt-1 ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "text-red-700 dark:text-red-300"
-                                      : isDirectlySettled
-                                      ? "text-blue-700 dark:text-blue-300"
-                                      : "text-gray-700 dark:text-gray-300"
-                                  }`}
-                                >
-                                  Is Owed
-                                </span>
-                              </div>
-
-                              {/* Transaction Details */}
-                              <div className="ml-4">
-                                <div className="font-bold text-gray-900 dark:text-gray-100 text-lg">
-                                  {peopleMap[txn.from] || "Unknown"} →{" "}
-                                  {peopleMap[txn.to] || "Unknown"}
-                                </div>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                  Based on {contributingExpenses.length} shared
-                                  expense
-                                  {contributingExpenses.length !== 1 ? "s" : ""}
-                                </div>
-                              </div>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                {person.name}
+                              </span>
                             </div>
-
-                            {/* Amount Display */}
                             <div className="text-right">
                               <div
-                                className={`text-3xl font-bold ${
-                                  isOutstanding && !isDirectlySettled
+                                className={`text-xl font-bold ${
+                                  isCreditor
+                                    ? "text-green-700 dark:text-green-300"
+                                    : isDebtor
                                     ? "text-red-700 dark:text-red-300"
-                                    : isDirectlySettled
-                                    ? "text-blue-700 dark:text-blue-300"
                                     : "text-gray-700 dark:text-gray-300"
                                 }`}
                               >
-                                {formatCurrency(txn.amount)}
+                                {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                {formatCurrency(Math.abs(balance.netBalance))}
                               </div>
-                              <div
-                                className={`text-sm font-medium ${
-                                  isOutstanding && !isDirectlySettled
-                                    ? "text-red-600 dark:text-red-400"
-                                    : isDirectlySettled
-                                    ? "text-blue-600 dark:text-blue-400"
-                                    : "text-gray-600 dark:text-gray-400"
-                                }`}
-                              >
-                                {isDirectlySettled
-                                  ? "Settled"
-                                  : isOutstanding
-                                  ? "Outstanding"
-                                  : "Balanced"}
+                              <div className="text-xs text-gray-600 dark:text-gray-400">
+                                {isCreditor
+                                  ? "should receive"
+                                  : isDebtor
+                                  ? "should pay"
+                                  : "all balanced"}
                               </div>
                             </div>
                           </div>
 
-                          {/* Status Explanation */}
-                          <div className="mb-4 p-3 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/30">
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-                              Why is this debt{" "}
-                              {isDirectlySettled
-                                ? "settled"
-                                : isOutstanding
-                                ? "outstanding"
-                                : "balanced out"}
-                              ?
+                          {/* Simple calculation breakdown */}
+                          <div className="text-sm space-y-2 pt-3 border-t border-gray-200 dark:border-gray-700">
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                What they paid:
+                              </span>
+                              <span className="font-medium text-green-600 dark:text-green-400">
+                                {formatCurrency(balance.totalPaid)}
+                              </span>
                             </div>
-                            <div className="text-xs text-gray-700 dark:text-gray-300">
-                              {isDirectlySettled ? (
-                                <>
-                                  This specific debt has been directly settled
-                                  with recorded payments totaling{" "}
-                                  {formatCurrency(settledAmount)}.
-                                </>
-                              ) : isOutstanding ? (
-                                <>
-                                  <strong>{peopleMap[txn.from]}</strong> still
-                                  owes money overall (balance: -
-                                  {formatCurrency(Math.abs(debtorBalance))}) and{" "}
-                                  <strong>{peopleMap[txn.to]}</strong> still
-                                  needs to receive money (balance: +
-                                  {formatCurrency(creditorBalance)}), so this
-                                  debt remains outstanding.
-                                </>
-                              ) : (
-                                <>
-                                  This debt is balanced out because either{" "}
-                                  <strong>{peopleMap[txn.from]}</strong> has
-                                  settled their overall balance through other
-                                  payments, or{" "}
-                                  <strong>{peopleMap[txn.to]}</strong> no longer
-                                  needs to receive money overall. The simplified
-                                  settlement plan handles this more efficiently.
-                                </>
-                              )}
+                            <div className="flex justify-between items-center">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                What they owe:
+                              </span>
+                              <span className="font-medium text-red-600 dark:text-red-400">
+                                -{formatCurrency(balance.totalOwed)}
+                              </span>
                             </div>
-                          </div>
-
-                          {/* Contributing Expenses */}
-                          {contributingExpenses.length > 0 && (
-                            <div className="mt-4 pt-4 border-t-2 border-gray-200 dark:border-gray-800">
-                              <div
-                                className={`rounded-lg p-3 ${
-                                  isOutstanding && !isDirectlySettled
-                                    ? "bg-red-100 dark:bg-red-900/30"
-                                    : isDirectlySettled
-                                    ? "bg-blue-100 dark:bg-blue-900/30"
-                                    : "bg-gray-100 dark:bg-gray-900/30"
+                            {(balance.settledAsDebtor > 0 ||
+                              balance.settledAsCreditor > 0) && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Already settled:
+                                </span>
+                                <span className="font-medium text-blue-600 dark:text-blue-400">
+                                  {balance.settledAsDebtor >
+                                  balance.settledAsCreditor
+                                    ? "+"
+                                    : "-"}
+                                  {formatCurrency(
+                                    Math.abs(
+                                      balance.settledAsCreditor -
+                                        balance.settledAsDebtor
+                                    )
+                                  )}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex justify-between items-center pt-2 border-t border-gray-300 dark:border-gray-600">
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                Final balance:
+                              </span>
+                              <span
+                                className={`font-bold ${
+                                  isCreditor
+                                    ? "text-green-700 dark:text-green-300"
+                                    : isDebtor
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-gray-700 dark:text-gray-300"
                                 }`}
                               >
-                                <div
-                                  className={`font-semibold mb-3 flex items-center ${
-                                    isOutstanding && !isDirectlySettled
-                                      ? "text-red-800 dark:text-red-200"
-                                      : isDirectlySettled
-                                      ? "text-blue-800 dark:text-blue-200"
-                                      : "text-gray-800 dark:text-gray-200"
-                                  }`}
-                                >
-                                  <FileText className="w-4 h-4 mr-2" />
-                                  Contributing Expenses (
-                                  {contributingExpenses.length})
-                                </div>
-                                <div className="space-y-2">
-                                  {contributingExpenses.map((expense, i) => {
-                                    // Calculate this person's share and what was paid
-                                    const personShare = Array.isArray(
-                                      expense.shares
-                                    )
-                                      ? expense.shares.find(
-                                          (s) => s.personId === txn.from
-                                        )?.amount || 0
-                                      : 0;
-                                    const personPaid = Array.isArray(
-                                      expense.paid_by
-                                    )
-                                      ? expense.paid_by.find(
-                                          (p) => p.personId === txn.from
-                                        )?.amount || 0
-                                      : 0;
-                                    const creditorPaid = Array.isArray(
-                                      expense.paid_by
-                                    )
-                                      ? expense.paid_by.find(
-                                          (p) => p.personId === txn.to
-                                        )?.amount || 0
-                                      : 0;
-
-                                    return (
-                                      <div
-                                        key={i}
-                                        className="flex justify-between items-start gap-3 p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm border border-gray-200 dark:border-gray-700"
-                                      >
-                                        <div className="flex-1 min-w-0">
-                                          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
-                                            {expense.description}
-                                          </div>
-                                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                            {expense.created_at
-                                              ? new Date(
-                                                  expense.created_at
-                                                ).toLocaleDateString()
-                                              : "No date"}{" "}
-                                            • Total:{" "}
-                                            {formatCurrency(
-                                              expense.total_amount
-                                            )}
-                                          </div>
-                                          <div className="text-xs mt-2 space-y-1">
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600 dark:text-gray-400">
-                                                {peopleMap[txn.from]}'s share:
-                                              </span>
-                                              <span className="font-medium text-red-600 dark:text-red-400">
-                                                {formatCurrency(personShare)}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600 dark:text-gray-400">
-                                                {peopleMap[txn.from]} paid:
-                                              </span>
-                                              <span className="font-medium text-green-600 dark:text-green-400">
-                                                {formatCurrency(personPaid)}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between">
-                                              <span className="text-gray-600 dark:text-gray-400">
-                                                {peopleMap[txn.to]} paid:
-                                              </span>
-                                              <span className="font-medium text-green-600 dark:text-green-400">
-                                                {formatCurrency(creditorPaid)}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between pt-1 border-t border-gray-200 dark:border-gray-700">
-                                              <span className="text-gray-800 dark:text-gray-200 font-medium">
-                                                Debt created:
-                                              </span>
-                                              <span className="font-bold text-red-700 dark:text-red-300">
-                                                {formatCurrency(
-                                                  Math.max(
-                                                    0,
-                                                    personShare - personPaid
-                                                  )
-                                                )}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
+                                {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                {formatCurrency(Math.abs(balance.netBalance))}
+                              </span>
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })}
+                </div>
+              </CardContent>
+            </Card>
 
-                    {/* Summary of what's shown */}
-                    <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                      <div className="flex items-start gap-3">
-                        <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
-                        <div>
-                          <div className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                            Understanding This Analysis
-                          </div>
-                          <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
-                            <p>
-                              This shows{" "}
-                              <strong>all direct debt relationships</strong>{" "}
-                              created by expenses, regardless of whether they'll
-                              appear in the final settlement plan.
-                            </p>
-                            <p>
-                              <strong>Outstanding debts</strong> (red) will need
-                              to be settled. <strong>Balanced debts</strong>{" "}
-                              (gray) are handled by the optimization algorithm -
-                              the person may pay someone else instead to achieve
-                              the same result more efficiently.
-                            </p>
-                            <p>
-                              <strong>Directly settled debts</strong> (blue)
-                              have been paid specifically between these two
-                              people.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Step 3: Simplification Process */}
-              {(unpaidPairwiseTransactions.length > 0 ||
-                unpaidSimplifiedTransactions.length > 0) && (
-                <Card>
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                      <ArrowRight className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                      Step 3: Simplification Process
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      How we optimize the direct debts into the minimum number
-                      of transactions:
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
-                    <div className="space-y-4">
-                      {/* Algorithm Explanation */}
-                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 p-4 rounded-xl border-2 border-blue-300 dark:border-blue-700">
-                        <div className="flex items-center gap-3 mb-3">
-                          <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
-                            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                          </div>
-                          <div>
-                            <h4 className="font-bold text-blue-900 dark:text-blue-100">
-                              Debt Simplification Algorithm
-                            </h4>
-                            <p className="text-xs text-blue-700 dark:text-blue-300">
-                              Converting {unpaidPairwiseTransactions.length}{" "}
-                              direct debts into{" "}
-                              {unpaidSimplifiedTransactions.length} optimized
-                              payments
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Before */}
-                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
-                              <FileText className="w-4 h-4 mr-2 text-red-500" />
-                              Before: {unpaidPairwiseTransactions.length} Direct
-                              Debts
-                            </div>
-                            <div className="space-y-1">
-                              {unpaidPairwiseTransactions
-                                .slice(0, 3)
-                                .map((txn, i) => (
-                                  <div
-                                    key={i}
-                                    className="text-xs text-gray-600 dark:text-gray-400 flex items-center"
-                                  >
-                                    <span className="truncate">
-                                      {peopleMap[txn.from]} →{" "}
-                                      {peopleMap[txn.to]}:{" "}
-                                      {formatCurrency(txn.amount)}
-                                    </span>
-                                  </div>
-                                ))}
-                              {unpaidPairwiseTransactions.length > 3 && (
-                                <div className="text-xs text-gray-500 dark:text-gray-500 italic">
-                                  ... and{" "}
-                                  {unpaidPairwiseTransactions.length - 3} more
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* After */}
-                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
-                            <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
-                              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
-                              After: {unpaidSimplifiedTransactions.length}{" "}
-                              Optimized Payments
-                            </div>
-                            <div className="space-y-1">
-                              {unpaidSimplifiedTransactions.map((txn, i) => (
-                                <div
-                                  key={i}
-                                  className="text-xs text-gray-600 dark:text-gray-400 flex items-center"
-                                >
-                                  <span className="truncate">
-                                    {peopleMap[txn.from]} → {peopleMap[txn.to]}:{" "}
-                                    {formatCurrency(txn.amount)}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Efficiency Gain */}
-                        <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <div className="text-center">
-                            <div className="text-lg font-bold text-green-700 dark:text-green-300">
-                              {Math.max(
-                                0,
-                                unpaidPairwiseTransactions.length -
-                                  unpaidSimplifiedTransactions.length
-                              )}{" "}
-                              fewer transactions needed
-                            </div>
-                            <div className="text-xs text-green-600 dark:text-green-400">
-                              {unpaidPairwiseTransactions.length > 0
-                                ? `${Math.round(
-                                    (1 -
-                                      unpaidSimplifiedTransactions.length /
-                                        unpaidPairwiseTransactions.length) *
-                                      100
-                                  )}% reduction in payment complexity`
-                                : "All debts optimally simplified"}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Step 4: Outstanding Optimized Settlements */}
-              {unpaidSimplifiedTransactions.length > 0 && (
-                <Card>
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                      <CheckCircle2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                      Step 4: Outstanding Optimized Settlement Plan
-                    </CardTitle>
-                    <CardDescription className="text-xs sm:text-sm">
-                      {unpaidSimplifiedTransactions.length} unpaid transactions
-                      - The minimum number of remaining payments needed to
-                      settle all outstanding debts efficiently:
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
-                    <div className="space-y-3">
-                      {unpaidSimplifiedTransactions.map((txn, index) => {
-                        // Calculate how much this person should receive/pay based on their balance
-                        let fromBalance = 0;
-                        let toBalance = 0;
-
-                        people.forEach((person) => {
-                          let balance = 0;
-
-                          // Calculate balance for this person
-                          allExpenses.forEach((expense) => {
-                            if (Array.isArray(expense.paid_by)) {
-                              expense.paid_by.forEach((payment) => {
-                                if (payment.personId === person.id) {
-                                  balance += Number(payment.amount);
-                                }
-                              });
-                            }
-                            if (Array.isArray(expense.shares)) {
-                              expense.shares.forEach((share) => {
-                                if (share.personId === person.id) {
-                                  balance -= Number(share.amount);
-                                }
-                              });
-                            }
-                          });
-
-                          // Adjust for settlements
-                          settlementPayments.forEach((payment) => {
-                            if (payment.debtor_id === person.id) {
-                              balance += Number(payment.amount_settled);
-                            }
-                            if (payment.creditor_id === person.id) {
-                              balance -= Number(payment.amount_settled);
-                            }
-                          });
-
-                          if (person.id === txn.from) fromBalance = balance;
-                          if (person.id === txn.to) toBalance = balance;
-                        });
-
-                        return (
-                          <div
-                            key={`opt-${index}`}
-                            className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm transition-all"
-                          >
-                            {/* Optimized Status Badge */}
-                            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-sm">
-                              OPTIMIZED
-                            </div>
-
-                            {/* Main Transaction Display */}
-                            <div className="flex items-center justify-between mb-4">
-                              <div className="flex items-center space-x-4">
-                                {/* From Person Avatar */}
-                                <div className="flex flex-col items-center">
-                                  <div className="w-12 h-12 bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600 rounded-full flex items-center justify-center shadow-sm">
-                                    <span className="font-bold text-green-800 dark:text-green-200 text-lg">
-                                      {peopleMap[txn.from]?.charAt(0) || "?"}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 mt-1">
-                                    Pays
-                                  </span>
-                                </div>
-
-                                {/* Arrow */}
-                                <div className="flex flex-col items-center">
-                                  <ArrowRight className="text-green-500 w-6 h-6" />
-                                  <span className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                    {formatCurrency(txn.amount)}
-                                  </span>
-                                </div>
-
-                                {/* To Person Avatar */}
-                                <div className="flex flex-col items-center">
-                                  <div className="w-12 h-12 bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600 rounded-full flex items-center justify-center shadow-sm">
-                                    <span className="font-bold text-green-800 dark:text-green-200 text-lg">
-                                      {peopleMap[txn.to]?.charAt(0) || "?"}
-                                    </span>
-                                  </div>
-                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 mt-1">
-                                    Receives
-                                  </span>
-                                </div>
-
-                                {/* Transaction Details */}
-                                <div className="ml-4">
-                                  <div className="font-bold text-gray-900 dark:text-gray-100 text-lg">
-                                    {peopleMap[txn.from] || "Unknown"} →{" "}
-                                    {peopleMap[txn.to] || "Unknown"}
-                                  </div>
-                                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    Optimized settlement payment
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Amount Display */}
-                              <div className="text-right">
-                                <div className="text-3xl font-bold text-green-700 dark:text-green-300">
-                                  {formatCurrency(txn.amount)}
-                                </div>
-                                <div className="text-sm text-green-600 dark:text-green-400 font-medium">
-                                  Settlement
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Balance Analysis */}
-                            <div className="mt-4 pt-4 border-t-2 border-green-200 dark:border-green-800">
-                              <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
-                                <div className="font-semibold text-green-800 dark:text-green-200 mb-3 flex items-center">
-                                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                                  Balance Analysis
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {/* From Person Balance */}
-                                  <div className="p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="w-6 h-6 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
-                                        <span className="text-xs font-bold text-red-800 dark:text-red-200">
-                                          {peopleMap[txn.from]?.charAt(0) ||
-                                            "?"}
-                                        </span>
-                                      </div>
-                                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                                        {peopleMap[txn.from] || "Unknown"}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm">
-                                      <div className="text-gray-600 dark:text-gray-400">
-                                        Current balance:
-                                      </div>
-                                      <div className="font-bold text-red-600 dark:text-red-400">
-                                        -{formatCurrency(Math.abs(fromBalance))}{" "}
-                                        to pay
-                                      </div>
-                                    </div>
-                                  </div>
-
-                                  {/* To Person Balance */}
-                                  <div className="p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm">
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <div className="w-6 h-6 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
-                                        <span className="text-xs font-bold text-green-800 dark:text-green-200">
-                                          {peopleMap[txn.to]?.charAt(0) || "?"}
-                                        </span>
-                                      </div>
-                                      <span className="font-medium text-gray-900 dark:text-gray-100">
-                                        {peopleMap[txn.to] || "Unknown"}
-                                      </span>
-                                    </div>
-                                    <div className="text-sm">
-                                      <div className="text-gray-600 dark:text-gray-400">
-                                        Current balance:
-                                      </div>
-                                      <div className="font-bold text-green-600 dark:text-green-400">
-                                        +{formatCurrency(toBalance)} to receive
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                {/* Efficiency Note */}
-                                <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
-                                  <div className="text-xs text-green-800 dark:text-green-200 text-center font-medium">
-                                    ✨ This optimized payment efficiently
-                                    settles both balances with minimal
-                                    transactions
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Summary */}
-              <Card className="relative bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700 shadow-lg">
-                <CardHeader className="pt-4 sm:pt-6 pb-3">
-                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
-                    <Info className="mr-3 h-6 w-6 text-blue-600 dark:text-blue-400" />
-                    Why This Settlement Plan?
-                  </CardTitle>
-                  <CardDescription className="text-blue-700 dark:text-blue-300 mt-2">
-                    Our settlement algorithm ensures fairness, efficiency, and
-                    transparency in every transaction.
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="pt-0 pb-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Transparent */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2">
-                            Transparent
-                          </h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                            Every amount is based on actual expenses and what
-                            each person paid vs. their fair share.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Efficient */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <ArrowRight className="w-5 h-5 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-green-900 dark:text-green-100 mb-2">
-                            Efficient
-                          </h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                            The optimized plan minimizes the number of
-                            transactions needed to settle all debts.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Fair */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-purple-900 dark:text-purple-100 mb-2">
-                            Fair
-                          </h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                            Everyone ends up paying exactly their share of all
-                            expenses, no more, no less.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Traceable */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center flex-shrink-0">
-                          <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-                        </div>
-                        <div>
-                          <h4 className="font-bold text-orange-900 dark:text-orange-100 mb-2">
-                            Traceable
-                          </h4>
-                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                            You can see which expenses contribute to each debt
-                            relationship for full transparency.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom Summary */}
-                  <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
-                    <div className="flex items-center justify-center gap-2 text-blue-800 dark:text-blue-200">
-                      <CheckCircle2 className="w-5 h-5" />
-                      <span className="font-semibold text-sm">
-                        This settlement plan ensures everyone pays their fair
-                        share with maximum efficiency
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Empty State */}
-              {unpaidPairwiseTransactions.length === 0 &&
-                unpaidSimplifiedTransactions.length === 0 && (
-                  <div className="text-center py-12">
-                    <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-green-700 dark:text-green-300">
-                      All Outstanding Debts Settled!
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Everyone has paid their outstanding amounts. No remaining
-                      settlements needed.
+            {/* Step 2: Settlement Options */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold">
+                  <ArrowRight className="mr-2 h-5 w-5 text-blue-600" />
+                  Step 2: Settlement Options
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Two ways to settle: Direct payments or optimized payments
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Direct Payments */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-3 flex items-center">
+                      <FileText className="w-4 h-4 mr-2" />
+                      Direct Payments ({pairwiseTransactions.length}{" "}
+                      transactions)
+                    </h4>
+                    <p className="text-sm text-blue-800 dark:text-blue-200 mb-3">
+                      Pay back exactly who you owe money to based on specific
+                      expenses.
                     </p>
+                    <div className="space-y-2">
+                      {pairwiseTransactions.slice(0, 3).map((txn, i) => (
+                        <div
+                          key={i}
+                          className="text-xs bg-white dark:bg-gray-800 p-2 rounded border"
+                        >
+                          <span className="font-medium">
+                            {peopleMap[txn.from]}
+                          </span>{" "}
+                          pays{" "}
+                          <span className="font-medium">
+                            {peopleMap[txn.to]}
+                          </span>{" "}
+                          <span className="font-bold text-green-600">
+                            {formatCurrency(txn.amount)}
+                          </span>
+                        </div>
+                      ))}
+                      {pairwiseTransactions.length > 3 && (
+                        <div className="text-xs text-blue-600 dark:text-blue-400 italic">
+                          ... and {pairwiseTransactions.length - 3} more
+                          payments
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-            </div>
+
+                  {/* Optimized Payments */}
+                  <div className="p-4 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <h4 className="font-bold text-green-900 dark:text-green-100 mb-3 flex items-center">
+                      <CheckCircle2 className="w-4 h-4 mr-2" />
+                      Optimized Payments ({
+                        unpaidSimplifiedTransactions.length
+                      }{" "}
+                      transactions)
+                    </h4>
+                    <p className="text-sm text-green-800 dark:text-green-200 mb-3">
+                      Minimum number of payments needed. Same result, fewer
+                      transactions.
+                    </p>
+                    <div className="space-y-2">
+                      {unpaidSimplifiedTransactions.map((txn, i) => (
+                        <div
+                          key={i}
+                          className="text-xs bg-white dark:bg-gray-800 p-2 rounded border"
+                        >
+                          <span className="font-medium">
+                            {peopleMap[txn.from]}
+                          </span>{" "}
+                          pays{" "}
+                          <span className="font-medium">
+                            {peopleMap[txn.to]}
+                          </span>{" "}
+                          <span className="font-bold text-green-600">
+                            {formatCurrency(txn.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {pairwiseTransactions.length >
+                      unpaidSimplifiedTransactions.length && (
+                      <div className="mt-3 p-2 bg-green-100 dark:bg-green-900/30 rounded text-center">
+                        <div className="text-sm font-bold text-green-700 dark:text-green-300">
+                          {pairwiseTransactions.length -
+                            unpaidSimplifiedTransactions.length}{" "}
+                          fewer payments needed!
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Why Trust This? */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center text-lg font-bold text-blue-900 dark:text-blue-100">
+                  <Info className="mr-2 h-5 w-5" />
+                  Why Trust This System?
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                        Simple Math
+                      </h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Every balance is calculated with basic addition and
+                        subtraction. No complex algorithms - just what you paid
+                        minus what you owe.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                        Same End Result
+                      </h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        Whether you choose direct or optimized payments,
+                        everyone ends up with the exact same final balance. The
+                        math always works out.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center flex-shrink-0">
+                      <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-blue-900 dark:text-blue-100">
+                        Transparent Process
+                      </h4>
+                      <p className="text-sm text-blue-800 dark:text-blue-200">
+                        You can verify every calculation yourself. Check the
+                        "Per Person" tab to see exactly how each person's
+                        balance is calculated.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </DialogContent>
       </Dialog>
