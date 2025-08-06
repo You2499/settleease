@@ -28,6 +28,7 @@ import {
   FileText,
   Info,
   BarChart3,
+  Check,
 } from "lucide-react";
 import {
   Dialog,
@@ -323,187 +324,228 @@ export default function SettlementSummary({
                 </CardHeader>
                 <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {people.map((person) => {
-                      // Calculate this person's balance
-                      let balance = 0;
+                    {people
+                      .map((person) => {
+                        // Calculate this person's balance
+                        let balance = 0;
 
-                      // What they paid
-                      let totalPaid = 0;
-                      allExpenses.forEach((expense) => {
-                        if (Array.isArray(expense.paid_by)) {
-                          expense.paid_by.forEach((payment) => {
-                            if (payment.personId === person.id) {
-                              totalPaid += Number(payment.amount);
-                            }
-                          });
+                        // What they paid
+                        let totalPaid = 0;
+                        allExpenses.forEach((expense) => {
+                          if (Array.isArray(expense.paid_by)) {
+                            expense.paid_by.forEach((payment) => {
+                              if (payment.personId === person.id) {
+                                totalPaid += Number(payment.amount);
+                              }
+                            });
+                          }
+                        });
+
+                        // What they owe
+                        let totalOwed = 0;
+                        allExpenses.forEach((expense) => {
+                          if (Array.isArray(expense.shares)) {
+                            expense.shares.forEach((share) => {
+                              if (share.personId === person.id) {
+                                totalOwed += Number(share.amount);
+                              }
+                            });
+                          }
+                        });
+
+                        // Adjust for settlements already made
+                        let settledAsDebtor = 0;
+                        let settledAsCreditor = 0;
+                        settlementPayments.forEach((payment) => {
+                          if (payment.debtor_id === person.id) {
+                            settledAsDebtor += Number(payment.amount_settled);
+                          }
+                          if (payment.creditor_id === person.id) {
+                            settledAsCreditor += Number(payment.amount_settled);
+                          }
+                        });
+
+                        balance =
+                          totalPaid -
+                          totalOwed +
+                          settledAsDebtor -
+                          settledAsCreditor;
+
+                        const isCreditor = balance > 0.01;
+                        const isDebtor = balance < -0.01;
+                        const isSettled = Math.abs(balance) <= 0.01;
+
+                        return {
+                          person,
+                          balance,
+                          totalPaid,
+                          totalOwed,
+                          settledAsDebtor,
+                          settledAsCreditor,
+                          isCreditor,
+                          isDebtor,
+                          isSettled,
+                          sortOrder: isCreditor ? 0 : isDebtor ? 1 : 2, // Receives, Pays, Balanced
+                        };
+                      })
+                      .sort((a, b) => {
+                        // First sort by category (Receives, Pays, Balanced)
+                        if (a.sortOrder !== b.sortOrder) {
+                          return a.sortOrder - b.sortOrder;
                         }
-                      });
-
-                      // What they owe
-                      let totalOwed = 0;
-                      allExpenses.forEach((expense) => {
-                        if (Array.isArray(expense.shares)) {
-                          expense.shares.forEach((share) => {
-                            if (share.personId === person.id) {
-                              totalOwed += Number(share.amount);
-                            }
-                          });
-                        }
-                      });
-
-                      // Adjust for settlements already made
-                      let settledAsDebtor = 0;
-                      let settledAsCreditor = 0;
-                      settlementPayments.forEach((payment) => {
-                        if (payment.debtor_id === person.id) {
-                          settledAsDebtor += Number(payment.amount_settled);
-                        }
-                        if (payment.creditor_id === person.id) {
-                          settledAsCreditor += Number(payment.amount_settled);
-                        }
-                      });
-
-                      balance =
-                        totalPaid -
-                        totalOwed +
-                        settledAsDebtor -
-                        settledAsCreditor;
-
-                      const isCreditor = balance > 0.01;
-                      const isDebtor = balance < -0.01;
-                      const isSettled = Math.abs(balance) <= 0.01;
-
-                      return (
-                        <div
-                          key={person.id}
-                          className={`relative p-4 rounded-xl border-2 shadow-sm transition-all hover:shadow-md ${
-                            isCreditor
-                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
-                              : isDebtor
-                              ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
-                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
-                          }`}
-                        >
-                          {/* Status Badge */}
-                          <div
-                            className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                              isCreditor
-                                ? "bg-green-500 text-white"
-                                : isDebtor
-                                ? "bg-red-500 text-white"
-                                : "bg-gray-500 text-white"
-                            }`}
-                          >
-                            {isCreditor
-                              ? "RECEIVES"
-                              : isDebtor
-                              ? "PAYS"
-                              : "BALANCED"}
-                          </div>
-
-                          {/* Person Name and Amount */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                                  isCreditor
-                                    ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                                    : isDebtor
-                                    ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                                    : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                                }`}
-                              >
-                                {person.name.charAt(0).toUpperCase()}
-                              </div>
-                              <span className="font-semibold text-gray-900 dark:text-gray-100">
-                                {person.name}
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <div
-                                className={`text-2xl font-bold ${
-                                  isCreditor
-                                    ? "text-green-700 dark:text-green-300"
-                                    : isDebtor
-                                    ? "text-red-700 dark:text-red-300"
-                                    : "text-gray-700 dark:text-gray-300"
-                                }`}
-                              >
-                                {isCreditor ? "+" : isDebtor ? "-" : ""}
-                                {formatCurrency(Math.abs(balance))}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Breakdown Details */}
-                          <div className="space-y-2 text-xs">
-                            <div className="flex justify-between items-center py-1">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Total Paid:
-                              </span>
-                              <span className="font-semibold text-green-700 dark:text-green-400">
-                                {formatCurrency(totalPaid)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-1">
-                              <span className="text-gray-600 dark:text-gray-400">
-                                Total Owed:
-                              </span>
-                              <span className="font-semibold text-red-700 dark:text-red-400">
-                                {formatCurrency(totalOwed)}
-                              </span>
-                            </div>
-                            {(settledAsDebtor > 0 || settledAsCreditor > 0) && (
-                              <div className="flex justify-between items-center py-1">
-                                <span className="text-gray-600 dark:text-gray-400">
-                                  Already Settled:
-                                </span>
-                                <span className="font-semibold text-blue-700 dark:text-blue-400">
-                                  {formatCurrency(
-                                    Math.abs(
-                                      settledAsCreditor - settledAsDebtor
-                                    )
-                                  )}
-                                </span>
-                              </div>
-                            )}
-
-                            {/* Final Status - More Prominent */}
+                        // Then sort alphabetically within each category
+                        return a.person.name.localeCompare(b.person.name);
+                      })
+                      .map(
+                        ({
+                          person,
+                          balance,
+                          totalPaid,
+                          totalOwed,
+                          settledAsDebtor,
+                          settledAsCreditor,
+                          isCreditor,
+                          isDebtor,
+                          isSettled,
+                        }) => {
+                          return (
                             <div
-                              className={`mt-3 pt-3 border-t-2 ${
+                              key={person.id}
+                              className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
                                 isCreditor
-                                  ? "border-green-200 dark:border-green-800"
+                                  ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                                   : isDebtor
-                                  ? "border-red-200 dark:border-red-800"
-                                  : "border-gray-200 dark:border-gray-800"
+                                  ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
+                                  : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
                               }`}
                             >
-                              <div className="flex items-center justify-center">
+                              {/* Status Badge */}
+                              <div
+                                className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                                  isCreditor
+                                    ? "bg-green-500 text-white"
+                                    : isDebtor
+                                    ? "bg-red-500 text-white"
+                                    : "bg-gray-500 text-white"
+                                }`}
+                              >
+                                {isCreditor
+                                  ? "RECEIVES"
+                                  : isDebtor
+                                  ? "PAYS"
+                                  : "BALANCED"}
+                              </div>
+
+                              {/* Person Name and Amount */}
+                              <div className="flex items-center justify-between mb-3">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                      isCreditor
+                                        ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                        : isDebtor
+                                        ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                        : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                    }`}
+                                  >
+                                    {person.name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                    {person.name}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <div
+                                    className={`text-2xl font-bold ${
+                                      isCreditor
+                                        ? "text-green-700 dark:text-green-300"
+                                        : isDebtor
+                                        ? "text-red-700 dark:text-red-300"
+                                        : "text-gray-700 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                    {formatCurrency(Math.abs(balance))}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Breakdown Details */}
+                              <div className="space-y-2 text-xs">
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    Total Paid:
+                                  </span>
+                                  <span className="font-semibold text-green-700 dark:text-green-400">
+                                    {formatCurrency(totalPaid)}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center py-1">
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    Total Owed:
+                                  </span>
+                                  <span className="font-semibold text-red-700 dark:text-red-400">
+                                    {formatCurrency(totalOwed)}
+                                  </span>
+                                </div>
+                                {(settledAsDebtor > 0 ||
+                                  settledAsCreditor > 0) && (
+                                  <div className="flex justify-between items-center py-1">
+                                    <span className="text-gray-600 dark:text-gray-400">
+                                      Already Settled:
+                                    </span>
+                                    <span className="font-semibold text-blue-700 dark:text-blue-400">
+                                      {formatCurrency(
+                                        Math.abs(
+                                          settledAsCreditor - settledAsDebtor
+                                        )
+                                      )}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {/* Final Status - More Prominent */}
                                 <div
-                                  className={`px-4 py-2 rounded-lg font-bold text-sm text-center ${
+                                  className={`mt-3 pt-3 border-t-2 ${
                                     isCreditor
-                                      ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                      ? "border-green-200 dark:border-green-800"
                                       : isDebtor
-                                      ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                                      : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                      ? "border-red-200 dark:border-red-800"
+                                      : "border-gray-200 dark:border-gray-800"
                                   }`}
                                 >
-                                  {isCreditor
-                                    ? `Should Receive ${formatCurrency(
-                                        Math.abs(balance)
-                                      )}`
-                                    : isDebtor
-                                    ? `Should Pay ${formatCurrency(
-                                        Math.abs(balance)
-                                      )}`
-                                    : "All Balanced ✓"}
+                                  <div className="flex items-center justify-center">
+                                    <div
+                                      className={`px-4 py-2 rounded-lg font-bold text-sm text-center ${
+                                        isCreditor
+                                          ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                          : isDebtor
+                                          ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                          : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                      }`}
+                                    >
+                                      {isCreditor ? (
+                                        `Should Receive ${formatCurrency(
+                                          Math.abs(balance)
+                                        )}`
+                                      ) : isDebtor ? (
+                                        `Should Pay ${formatCurrency(
+                                          Math.abs(balance)
+                                        )}`
+                                      ) : (
+                                        <div className="flex items-center gap-2">
+                                          All Balanced{" "}
+                                          <Check className="w-4 h-4" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        }
+                      )}
                   </div>
                 </CardContent>
               </Card>
@@ -545,7 +587,7 @@ export default function SettlementSummary({
                         return (
                           <div
                             key={`debt-${index}`}
-                            className="relative bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 p-5 rounded-xl border-2 border-red-300 dark:border-red-700 shadow-sm hover:shadow-md transition-all"
+                            className="relative bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 p-5 rounded-xl border-2 border-red-300 dark:border-red-700 shadow-sm transition-all"
                           >
                             {/* Debt Status Badge */}
                             <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white shadow-sm">
@@ -662,13 +704,132 @@ export default function SettlementSummary({
                 </Card>
               )}
 
-              {/* Step 3: Outstanding Optimized Settlements */}
+              {/* Step 3: Simplification Process */}
+              {(unpaidPairwiseTransactions.length > 0 ||
+                unpaidSimplifiedTransactions.length > 0) && (
+                <Card>
+                  <CardHeader className="pt-3 sm:pt-4 pb-2">
+                    <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                      <ArrowRight className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                      Step 3: Simplification Process
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                      How we optimize the direct debts into the minimum number
+                      of transactions:
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
+                    <div className="space-y-4">
+                      {/* Algorithm Explanation */}
+                      <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/30 dark:to-blue-900/20 p-4 rounded-xl border-2 border-blue-300 dark:border-blue-700">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-blue-900 dark:text-blue-100">
+                              Debt Simplification Algorithm
+                            </h4>
+                            <p className="text-xs text-blue-700 dark:text-blue-300">
+                              Converting {unpaidPairwiseTransactions.length}{" "}
+                              direct debts into{" "}
+                              {unpaidSimplifiedTransactions.length} optimized
+                              payments
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Before */}
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
+                              <FileText className="w-4 h-4 mr-2 text-red-500" />
+                              Before: {unpaidPairwiseTransactions.length} Direct
+                              Debts
+                            </div>
+                            <div className="space-y-1">
+                              {unpaidPairwiseTransactions
+                                .slice(0, 3)
+                                .map((txn, i) => (
+                                  <div
+                                    key={i}
+                                    className="text-xs text-gray-600 dark:text-gray-400 flex items-center"
+                                  >
+                                    <span className="truncate">
+                                      {peopleMap[txn.from]} →{" "}
+                                      {peopleMap[txn.to]}:{" "}
+                                      {formatCurrency(txn.amount)}
+                                    </span>
+                                  </div>
+                                ))}
+                              {unpaidPairwiseTransactions.length > 3 && (
+                                <div className="text-xs text-gray-500 dark:text-gray-500 italic">
+                                  ... and{" "}
+                                  {unpaidPairwiseTransactions.length - 3} more
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* After */}
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-lg shadow-sm">
+                            <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center">
+                              <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
+                              After: {unpaidSimplifiedTransactions.length}{" "}
+                              Optimized Payments
+                            </div>
+                            <div className="space-y-1">
+                              {unpaidSimplifiedTransactions.map((txn, i) => (
+                                <div
+                                  key={i}
+                                  className="text-xs text-gray-600 dark:text-gray-400 flex items-center"
+                                >
+                                  <span className="truncate">
+                                    {peopleMap[txn.from]} → {peopleMap[txn.to]}:{" "}
+                                    {formatCurrency(txn.amount)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Efficiency Gain */}
+                        <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <div className="text-center">
+                            <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                              {Math.max(
+                                0,
+                                unpaidPairwiseTransactions.length -
+                                  unpaidSimplifiedTransactions.length
+                              )}{" "}
+                              fewer transactions needed
+                            </div>
+                            <div className="text-xs text-green-600 dark:text-green-400">
+                              {unpaidPairwiseTransactions.length > 0
+                                ? `${Math.round(
+                                    (1 -
+                                      unpaidSimplifiedTransactions.length /
+                                        unpaidPairwiseTransactions.length) *
+                                      100
+                                  )}% reduction in payment complexity`
+                                : "All debts optimally simplified"}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Step 4: Outstanding Optimized Settlements */}
               {unpaidSimplifiedTransactions.length > 0 && (
                 <Card>
                   <CardHeader className="pt-3 sm:pt-4 pb-2">
                     <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                       <CheckCircle2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-                      Step 3: Outstanding Optimized Settlement Plan
+                      Step 4: Outstanding Optimized Settlement Plan
                     </CardTitle>
                     <CardDescription className="text-xs sm:text-sm">
                       {unpaidSimplifiedTransactions.length} unpaid transactions
@@ -721,7 +882,7 @@ export default function SettlementSummary({
                         return (
                           <div
                             key={`opt-${index}`}
-                            className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm hover:shadow-md transition-all"
+                            className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm transition-all"
                           >
                             {/* Optimized Status Badge */}
                             <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-sm">
@@ -861,11 +1022,6 @@ export default function SettlementSummary({
 
               {/* Summary */}
               <Card className="relative bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700 shadow-lg">
-                {/* Info Badge */}
-                <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
-                  INFO
-                </div>
-
                 <CardHeader className="pt-4 sm:pt-6 pb-3">
                   <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
                     <Info className="mr-3 h-6 w-6 text-blue-600 dark:text-blue-400" />
@@ -880,7 +1036,7 @@ export default function SettlementSummary({
                 <CardContent className="pt-0 pb-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Transparent */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center flex-shrink-0">
                           <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
@@ -898,7 +1054,7 @@ export default function SettlementSummary({
                     </div>
 
                     {/* Efficient */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center flex-shrink-0">
                           <ArrowRight className="w-5 h-5 text-green-600 dark:text-green-400" />
@@ -916,7 +1072,7 @@ export default function SettlementSummary({
                     </div>
 
                     {/* Fair */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center flex-shrink-0">
                           <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
@@ -934,7 +1090,7 @@ export default function SettlementSummary({
                     </div>
 
                     {/* Traceable */}
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 transition-all">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center flex-shrink-0">
                           <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
