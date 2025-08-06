@@ -564,194 +564,146 @@ export default function SettlementSummary({
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
-                        {pairwiseTransactions.length > 0 ||
-                        simplifiedTransactions.length > 0 ? (
+                        {pairwiseTransactions.length > 0 || simplifiedTransactions.length > 0 ? (
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
-                              <div className="space-y-6 pr-2">
-                                {/* Flowchart Container */}
-                                <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-6 rounded-lg border">
-                                  {/* Step 1: Individual Balances */}
-                                  <div className="flex flex-col items-center space-y-4">
-                                    <div className="bg-blue-100 dark:bg-blue-900/30 px-4 py-2 rounded-lg border-2 border-blue-300 dark:border-blue-700 shadow-sm">
-                                      <div className="text-sm font-bold text-blue-800 dark:text-blue-200 text-center">
-                                        1. Individual Balances
+                              <div className="space-y-8 pr-2">
+                                
+                                {/* Main Flowchart */}
+                                <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                                  
+                                  {/* Individual Debts Section */}
+                                  <div className="mb-8">
+                                    <div className="text-center mb-6">
+                                      <div className="inline-flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-4 py-2 rounded-full border-2 border-red-300 dark:border-red-700">
+                                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                        <span className="text-sm font-bold text-red-800 dark:text-red-200">
+                                          INDIVIDUAL DEBTS ({pairwiseTransactions.length} payments needed)
+                                        </span>
                                       </div>
                                     </div>
-
-                                    {/* Balance Nodes */}
-                                    <div className="flex flex-wrap justify-center gap-3">
-                                      {Object.entries(individualBalances)
-                                        .filter(
-                                          ([, balance]) =>
-                                            Math.abs(balance) > 0.01
-                                        )
-                                        .slice(0, 6)
-                                        .map(([personId, balance]) => {
-                                          const isCreditor = balance > 0.01;
-                                          return (
-                                            <div
-                                              key={personId}
-                                              className="flex flex-col items-center space-y-1"
-                                            >
-                                              <div
-                                                className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center shadow-sm ${
-                                                  isCreditor
-                                                    ? "bg-green-100 border-green-400 dark:bg-green-900/30 dark:border-green-600"
-                                                    : "bg-red-100 border-red-400 dark:bg-red-900/30 dark:border-red-600"
-                                                }`}
-                                              >
-                                                <div className="text-xs font-bold">
-                                                  {peopleMap[personId]?.split(
-                                                    " "
-                                                  )[0] || "Unknown"}
-                                                </div>
-                                                <div
-                                                  className={`text-xs font-bold ${
-                                                    isCreditor
-                                                      ? "text-green-700 dark:text-green-300"
-                                                      : "text-red-700 dark:text-red-300"
-                                                  }`}
-                                                >
-                                                  {isCreditor ? "+" : ""}
-                                                  {formatCurrency(balance)}
-                                                </div>
+                                    
+                                    {/* Individual Debt Lines */}
+                                    <div className="space-y-3">
+                                      {pairwiseTransactions.map((txn, index) => (
+                                        <div key={`individual-${index}`} className="flex items-center justify-center">
+                                          <div className="flex items-center bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800 shadow-sm min-w-[300px]">
+                                            {/* From Person */}
+                                            <div className="flex flex-col items-center">
+                                              <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
+                                                {peopleMap[txn.from]?.charAt(0) || '?'}
+                                              </div>
+                                              <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                                {peopleMap[txn.from]?.split(' ')[0] || 'Unknown'}
                                               </div>
                                             </div>
-                                          );
-                                        })}
-                                    </div>
-
-                                    {/* Flowchart Arrow */}
-                                    <div className="flex flex-col items-center">
-                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
-                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
+                                            
+                                            {/* Arrow and Amount */}
+                                            <div className="flex-1 flex flex-col items-center mx-4">
+                                              <div className="flex items-center w-full">
+                                                <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
+                                                <ArrowRight className="h-4 w-4 text-red-600 mx-2" />
+                                                <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
+                                              </div>
+                                              <div className="bg-red-100 dark:bg-red-900/50 px-3 py-1 rounded-full mt-2">
+                                                <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                                                  {formatCurrency(txn.amount)}
+                                                </span>
+                                              </div>
+                                            </div>
+                                            
+                                            {/* To Person */}
+                                            <div className="flex flex-col items-center">
+                                              <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
+                                                {peopleMap[txn.to]?.charAt(0) || '?'}
+                                              </div>
+                                              <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                                {peopleMap[txn.to]?.split(' ')[0] || 'Unknown'}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
                                     </div>
                                   </div>
 
-                                  {/* Step 2: Pairwise Transactions */}
-                                  <div className="flex flex-col items-center space-y-4">
-                                    <div className="bg-orange-100 dark:bg-orange-900/30 px-4 py-2 rounded-lg border-2 border-orange-300 dark:border-orange-700 shadow-sm">
-                                      <div className="text-sm font-bold text-orange-800 dark:text-orange-200 text-center">
-                                        2. Individual Debts (
-                                        {pairwiseTransactions.length})
+                                  {/* Transformation Arrow */}
+                                  <div className="flex justify-center my-8">
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-1 h-12 bg-purple-400 dark:bg-purple-600"></div>
+                                      <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center border-4 border-purple-300 dark:border-purple-700 shadow-lg">
+                                        <Shuffle className="h-8 w-8 text-purple-600 animate-pulse" />
+                                      </div>
+                                      <div className="w-1 h-12 bg-purple-400 dark:bg-purple-600"></div>
+                                      <div className="w-0 h-0 border-l-6 border-r-6 border-t-8 border-transparent border-t-purple-400 dark:border-t-purple-600"></div>
+                                      <div className="text-center mt-2">
+                                        <div className="text-xs font-bold text-purple-600">ALGORITHM</div>
+                                        <div className="text-xs text-purple-500">Optimizing...</div>
                                       </div>
                                     </div>
+                                  </div>
 
-                                    {/* Pairwise Transaction Nodes */}
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-w-lg">
-                                      {pairwiseTransactions
-                                        .slice(0, 6)
-                                        .map((txn, index) => (
-                                          <div
-                                            key={`pairwise-${index}`}
-                                            className="flex items-center space-x-1 bg-orange-50 dark:bg-orange-950/20 p-2 rounded border border-orange-200 dark:border-orange-800 shadow-sm"
-                                          >
-                                            <div className="w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold">
-                                              {peopleMap[txn.from]?.charAt(0) ||
-                                                "?"}
-                                            </div>
-                                            <ArrowRight className="h-3 w-3 text-orange-600 flex-shrink-0" />
-                                            <div className="w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold">
-                                              {peopleMap[txn.to]?.charAt(0) ||
-                                                "?"}
-                                            </div>
-                                            <div className="text-xs font-medium text-orange-700 dark:text-orange-300 truncate">
-                                              {formatCurrency(txn.amount)}
+                                  {/* Optimized Settlement Section */}
+                                  <div className="mt-8">
+                                    <div className="text-center mb-6">
+                                      <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full border-2 border-green-300 dark:border-green-700">
+                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span className="text-sm font-bold text-green-800 dark:text-green-200">
+                                          OPTIMIZED SETTLEMENT ({simplifiedTransactions.length} payments needed)
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Optimized Settlement Lines */}
+                                    {simplifiedTransactions.length > 0 ? (
+                                      <div className="space-y-4">
+                                        {simplifiedTransactions.map((txn, index) => (
+                                          <div key={`optimized-${index}`} className="flex items-center justify-center">
+                                            <div className="flex items-center bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800 shadow-md min-w-[350px]">
+                                              {/* From Person */}
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
+                                                  {peopleMap[txn.from]?.charAt(0) || '?'}
+                                                </div>
+                                                <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
+                                                  {peopleMap[txn.from]?.split(' ')[0] || 'Unknown'}
+                                                </div>
+                                              </div>
+                                              
+                                              {/* Arrow and Amount */}
+                                              <div className="flex-1 flex flex-col items-center mx-6">
+                                                <div className="flex items-center w-full">
+                                                  <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
+                                                  <ArrowRight className="h-6 w-6 text-green-600 mx-3" />
+                                                  <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
+                                                </div>
+                                                <div className="bg-green-200 dark:bg-green-800 px-4 py-2 rounded-full mt-3 shadow-sm border border-green-300 dark:border-green-600">
+                                                  <span className="text-lg font-bold text-green-800 dark:text-green-200">
+                                                    {formatCurrency(txn.amount)}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              
+                                              {/* To Person */}
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
+                                                  {peopleMap[txn.to]?.charAt(0) || '?'}
+                                                </div>
+                                                <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
+                                                  {peopleMap[txn.to]?.split(' ')[0] || 'Unknown'}
+                                                </div>
+                                              </div>
                                             </div>
                                           </div>
                                         ))}
-                                      {pairwiseTransactions.length > 6 && (
-                                        <div className="text-xs text-orange-600 dark:text-orange-400 self-center text-center col-span-full">
-                                          +{pairwiseTransactions.length - 6}{" "}
-                                          more debts
-                                        </div>
-                                      )}
-                                    </div>
-
-                                    {/* Flowchart Arrow */}
-                                    <div className="flex flex-col items-center">
-                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
-                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
-                                    </div>
-                                  </div>
-
-                                  {/* Step 3: Algorithm Processing */}
-                                  <div className="flex flex-col items-center space-y-4">
-                                    <div className="bg-purple-100 dark:bg-purple-900/30 px-4 py-2 rounded-lg border-2 border-purple-300 dark:border-purple-700 shadow-sm">
-                                      <div className="text-sm font-bold text-purple-800 dark:text-purple-200 text-center">
-                                        3. Algorithm Processing
-                                      </div>
-                                    </div>
-
-                                    {/* Processing Animation */}
-                                    <div className="flex items-center space-x-3 bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800 shadow-sm">
-                                      <div className="w-10 h-10 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center">
-                                        <Shuffle className="h-5 w-5 text-purple-600 animate-spin" />
-                                      </div>
-                                      <div className="text-xs text-purple-700 dark:text-purple-300">
-                                        <div className="font-bold">
-                                          Optimizing...
-                                        </div>
-                                        <div>Finding minimum paths</div>
-                                      </div>
-                                    </div>
-
-                                    {/* Flowchart Arrow */}
-                                    <div className="flex flex-col items-center">
-                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
-                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
-                                    </div>
-                                  </div>
-
-                                  {/* Step 4: Simplified Result */}
-                                  <div className="flex flex-col items-center space-y-4">
-                                    <div className="bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg border-2 border-green-300 dark:border-green-700 shadow-sm">
-                                      <div className="text-sm font-bold text-green-800 dark:text-green-200 text-center">
-                                        4. Optimized Settlement (
-                                        {simplifiedTransactions.length})
-                                      </div>
-                                    </div>
-
-                                    {/* Simplified Transaction Nodes */}
-                                    {simplifiedTransactions.length > 0 ? (
-                                      <div className="flex flex-wrap justify-center gap-4">
-                                        {simplifiedTransactions.map(
-                                          (txn, index) => (
-                                            <div
-                                              key={`simplified-${index}`}
-                                              className="flex items-center space-x-3 bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border-2 border-green-200 dark:border-green-800 shadow-md"
-                                            >
-                                              <div className="w-12 h-12 bg-green-200 dark:bg-green-800 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm">
-                                                <div>
-                                                  {peopleMap[txn.from]?.split(
-                                                    " "
-                                                  )[0] || "?"}
-                                                </div>
-                                              </div>
-                                              <div className="flex flex-col items-center">
-                                                <ArrowRight className="h-5 w-5 text-green-600 mb-1" />
-                                                <div className="text-xs font-bold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded shadow-sm">
-                                                  {formatCurrency(txn.amount)}
-                                                </div>
-                                              </div>
-                                              <div className="w-12 h-12 bg-green-200 dark:bg-green-800 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm">
-                                                <div>
-                                                  {peopleMap[txn.to]?.split(
-                                                    " "
-                                                  )[0] || "?"}
-                                                </div>
-                                              </div>
-                                            </div>
-                                          )
-                                        )}
                                       </div>
                                     ) : (
-                                      <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800 shadow-sm">
-                                        <div className="text-center">
-                                          <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                                          <div className="text-sm font-bold text-green-700 dark:text-green-300">
-                                            All Settled!
+                                      <div className="text-center">
+                                        <div className="inline-flex items-center bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
+                                          <CheckCircle2 className="h-12 w-12 text-green-500 mr-3" />
+                                          <div>
+                                            <div className="text-lg font-bold text-green-700 dark:text-green-300">All Settled!</div>
+                                            <div className="text-sm text-green-600 dark:text-green-400">No payments needed</div>
                                           </div>
                                         </div>
                                       </div>
@@ -759,29 +711,36 @@ export default function SettlementSummary({
                                   </div>
                                 </div>
 
-                                {/* Results Summary */}
-                                {pairwiseTransactions.length >
-                                  simplifiedTransactions.length && (
-                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm">
+                                {/* Efficiency Summary */}
+                                {pairwiseTransactions.length > simplifiedTransactions.length && (
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-lg">
                                     <div className="text-center">
-                                      <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                                        ✨{" "}
-                                        {Math.round(
-                                          ((pairwiseTransactions.length -
-                                            simplifiedTransactions.length) /
-                                            pairwiseTransactions.length) *
-                                            100
-                                        )}
-                                        % Reduction
+                                      <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">
+                                        ✨ {Math.round(((pairwiseTransactions.length - simplifiedTransactions.length) / pairwiseTransactions.length) * 100)}% More Efficient!
                                       </div>
-                                      <div className="text-xs text-blue-600 dark:text-blue-300">
-                                        From {pairwiseTransactions.length} →{" "}
-                                        {simplifiedTransactions.length}{" "}
-                                        transactions
+                                      <div className="text-sm text-blue-600 dark:text-blue-300">
+                                        Reduced from <strong>{pairwiseTransactions.length} individual payments</strong> to <strong>{simplifiedTransactions.length} optimized payments</strong>
+                                      </div>
+                                      <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
+                                        Same result, fewer transactions, completely fair to everyone
                                       </div>
                                     </div>
                                   </div>
                                 )}
+
+                                {/* Fairness Guarantee */}
+                                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                                  <div className="text-center">
+                                    <div className="flex items-center justify-center mb-2">
+                                      <CheckCircle2 className="h-5 w-5 text-emerald-600 mr-2" />
+                                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Fairness Guaranteed</span>
+                                    </div>
+                                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                                      Every person pays/receives exactly what they owe/are owed. The algorithm only changes WHO pays WHOM, never the amounts.
+                                    </div>
+                                  </div>
+                                </div>
+
                               </div>
                             </ScrollArea>
                           </div>
@@ -789,12 +748,8 @@ export default function SettlementSummary({
                           <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
                             <div>
                               <Shuffle className="h-12 w-12 mx-auto mb-3 text-purple-500" />
-                              <p className="font-medium">
-                                No settlements to show
-                              </p>
-                              <p className="text-xs">
-                                Add expenses to see the flowchart
-                              </p>
+                              <p className="font-medium">No settlements to visualize</p>
+                              <p className="text-xs">Add expenses to see the settlement flowchart</p>
                             </div>
                           </div>
                         )}
