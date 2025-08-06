@@ -560,114 +560,195 @@ export default function SettlementSummary({
                           Settlement Network
                         </CardTitle>
                         <CardDescription className="text-xs">
-                          Network visualization showing debt connections and optimization
+                          Network visualization showing debt connections and
+                          optimization
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
-                        {pairwiseTransactions.length > 0 || simplifiedTransactions.length > 0 ? (
+                        {pairwiseTransactions.length > 0 ||
+                        simplifiedTransactions.length > 0 ? (
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
                               <div className="space-y-8 pr-2">
-                                
                                 {/* Network Visualization */}
                                 <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                                  
                                   {/* Individual Debts Network */}
                                   <div className="mb-12">
                                     <div className="text-center mb-8">
                                       <div className="inline-flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-4 py-2 rounded-full border-2 border-red-300 dark:border-red-700">
                                         <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                         <span className="text-sm font-bold text-red-800 dark:text-red-200">
-                                          COMPLEX DEBT NETWORK ({pairwiseTransactions.length} connections)
+                                          COMPLEX DEBT NETWORK (
+                                          {pairwiseTransactions.length}{" "}
+                                          connections)
                                         </span>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Network Container */}
                                     <div className="relative bg-red-50/50 dark:bg-red-950/10 p-8 rounded-lg border border-red-200 dark:border-red-800 min-h-[300px]">
                                       {/* People Nodes positioned in a circle */}
                                       <div className="relative w-full h-[280px]">
                                         {Object.keys(individualBalances)
-                                          .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                          .filter(
+                                            (personId) =>
+                                              Math.abs(
+                                                individualBalances[personId]
+                                              ) > 0.01
+                                          )
                                           .map((personId, index, array) => {
-                                            const angle = (index / array.length) * 2 * Math.PI - Math.PI / 2;
+                                            const angle =
+                                              (index / array.length) *
+                                                2 *
+                                                Math.PI -
+                                              Math.PI / 2;
                                             const radius = 100;
-                                            const x = Math.cos(angle) * radius + 140;
-                                            const y = Math.sin(angle) * radius + 140;
-                                            const balance = individualBalances[personId];
+                                            const x =
+                                              Math.cos(angle) * radius + 140;
+                                            const y =
+                                              Math.sin(angle) * radius + 140;
+                                            const balance =
+                                              individualBalances[personId];
                                             const isCreditor = balance > 0.01;
-                                            
+
                                             return (
                                               <div
                                                 key={`node-${personId}`}
                                                 className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                                                style={{ left: `${x}px`, top: `${y}px` }}
+                                                style={{
+                                                  left: `${x}px`,
+                                                  top: `${y}px`,
+                                                }}
                                               >
-                                                <div className={`w-16 h-16 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-lg border-2 ${
-                                                  isCreditor 
-                                                    ? 'bg-green-200 border-green-400 text-green-800 dark:bg-green-800 dark:border-green-600 dark:text-green-200' 
-                                                    : 'bg-red-200 border-red-400 text-red-800 dark:bg-red-800 dark:border-red-600 dark:text-red-200'
-                                                }`}>
-                                                  <div className="text-xs">{peopleMap[personId]?.charAt(0) || '?'}</div>
+                                                <div
+                                                  className={`w-16 h-16 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-lg border-2 ${
+                                                    isCreditor
+                                                      ? "bg-green-200 border-green-400 text-green-800 dark:bg-green-800 dark:border-green-600 dark:text-green-200"
+                                                      : "bg-red-200 border-red-400 text-red-800 dark:bg-red-800 dark:border-red-600 dark:text-red-200"
+                                                  }`}
+                                                >
+                                                  <div className="text-xs">
+                                                    {peopleMap[
+                                                      personId
+                                                    ]?.charAt(0) || "?"}
+                                                  </div>
                                                   <div className="text-xs font-bold">
-                                                    {isCreditor ? '+' : ''}{formatCurrency(Math.abs(balance))}
+                                                    {isCreditor ? "+" : ""}
+                                                    {formatCurrency(
+                                                      Math.abs(balance)
+                                                    )}
                                                   </div>
                                                 </div>
                                                 <div className="text-xs text-center mt-1 font-medium">
-                                                  {peopleMap[personId]?.split(' ')[0] || 'Unknown'}
+                                                  {peopleMap[personId]?.split(
+                                                    " "
+                                                  )[0] || "Unknown"}
                                                 </div>
                                               </div>
                                             );
                                           })}
-                                        
+
                                         {/* Debt Connection Lines */}
-                                        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-                                          {pairwiseTransactions.map((txn, index) => {
-                                            const fromIndex = Object.keys(individualBalances)
-                                              .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
-                                              .indexOf(txn.from);
-                                            const toIndex = Object.keys(individualBalances)
-                                              .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
-                                              .indexOf(txn.to);
-                                            
-                                            if (fromIndex === -1 || toIndex === -1) return null;
-                                            
-                                            const array = Object.keys(individualBalances).filter(personId => Math.abs(individualBalances[personId]) > 0.01);
-                                            const fromAngle = (fromIndex / array.length) * 2 * Math.PI - Math.PI / 2;
-                                            const toAngle = (toIndex / array.length) * 2 * Math.PI - Math.PI / 2;
-                                            const radius = 100;
-                                            const x1 = Math.cos(fromAngle) * radius + 140;
-                                            const y1 = Math.sin(fromAngle) * radius + 140;
-                                            const x2 = Math.cos(toAngle) * radius + 140;
-                                            const y2 = Math.sin(toAngle) * radius + 140;
-                                            
-                                            return (
-                                              <g key={`line-${index}`}>
-                                                <line
-                                                  x1={x1}
-                                                  y1={y1}
-                                                  x2={x2}
-                                                  y2={y2}
-                                                  stroke="#ef4444"
-                                                  strokeWidth="2"
-                                                  strokeDasharray="5,5"
-                                                  className="animate-pulse"
-                                                />
-                                                {/* Amount label */}
-                                                <text
-                                                  x={(x1 + x2) / 2}
-                                                  y={(y1 + y2) / 2}
-                                                  fill="#dc2626"
-                                                  fontSize="10"
-                                                  textAnchor="middle"
-                                                  className="font-bold"
-                                                  style={{ textShadow: '0 0 3px white' }}
-                                                >
-                                                  {formatCurrency(txn.amount)}
-                                                </text>
-                                              </g>
-                                            );
-                                          })}
+                                        <svg
+                                          className="absolute inset-0 w-full h-full pointer-events-none"
+                                          style={{ zIndex: 1 }}
+                                        >
+                                          {pairwiseTransactions.map(
+                                            (txn, index) => {
+                                              const fromIndex = Object.keys(
+                                                individualBalances
+                                              )
+                                                .filter(
+                                                  (personId) =>
+                                                    Math.abs(
+                                                      individualBalances[
+                                                        personId
+                                                      ]
+                                                    ) > 0.01
+                                                )
+                                                .indexOf(txn.from);
+                                              const toIndex = Object.keys(
+                                                individualBalances
+                                              )
+                                                .filter(
+                                                  (personId) =>
+                                                    Math.abs(
+                                                      individualBalances[
+                                                        personId
+                                                      ]
+                                                    ) > 0.01
+                                                )
+                                                .indexOf(txn.to);
+
+                                              if (
+                                                fromIndex === -1 ||
+                                                toIndex === -1
+                                              )
+                                                return null;
+
+                                              const array = Object.keys(
+                                                individualBalances
+                                              ).filter(
+                                                (personId) =>
+                                                  Math.abs(
+                                                    individualBalances[personId]
+                                                  ) > 0.01
+                                              );
+                                              const fromAngle =
+                                                (fromIndex / array.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
+                                              const toAngle =
+                                                (toIndex / array.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
+                                              const radius = 100;
+                                              const x1 =
+                                                Math.cos(fromAngle) * radius +
+                                                140;
+                                              const y1 =
+                                                Math.sin(fromAngle) * radius +
+                                                140;
+                                              const x2 =
+                                                Math.cos(toAngle) * radius +
+                                                140;
+                                              const y2 =
+                                                Math.sin(toAngle) * radius +
+                                                140;
+
+                                              return (
+                                                <g key={`line-${index}`}>
+                                                  <line
+                                                    x1={x1}
+                                                    y1={y1}
+                                                    x2={x2}
+                                                    y2={y2}
+                                                    stroke="#ef4444"
+                                                    strokeWidth="2"
+                                                    strokeDasharray="5,5"
+                                                    className="animate-pulse"
+                                                  />
+                                                  {/* Amount label */}
+                                                  <text
+                                                    x={(x1 + x2) / 2}
+                                                    y={(y1 + y2) / 2}
+                                                    fill="#dc2626"
+                                                    fontSize="10"
+                                                    textAnchor="middle"
+                                                    className="font-bold"
+                                                    style={{
+                                                      textShadow:
+                                                        "0 0 3px white",
+                                                    }}
+                                                  >
+                                                    {formatCurrency(txn.amount)}
+                                                  </text>
+                                                </g>
+                                              );
+                                            }
+                                          )}
                                         </svg>
                                       </div>
                                     </div>
@@ -680,8 +761,12 @@ export default function SettlementSummary({
                                         <Shuffle className="h-10 w-10 text-purple-600 animate-spin" />
                                       </div>
                                       <div className="text-center mt-3">
-                                        <div className="text-sm font-bold text-purple-600">OPTIMIZATION</div>
-                                        <div className="text-xs text-purple-500">Simplifying network...</div>
+                                        <div className="text-sm font-bold text-purple-600">
+                                          OPTIMIZATION
+                                        </div>
+                                        <div className="text-xs text-purple-500">
+                                          Simplifying network...
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -692,129 +777,218 @@ export default function SettlementSummary({
                                       <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full border-2 border-green-300 dark:border-green-700">
                                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                                         <span className="text-sm font-bold text-green-800 dark:text-green-200">
-                                          OPTIMIZED NETWORK ({simplifiedTransactions.length} connections)
+                                          OPTIMIZED NETWORK (
+                                          {simplifiedTransactions.length}{" "}
+                                          connections)
                                         </span>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Network Container */}
                                     <div className="relative bg-green-50/50 dark:bg-green-950/10 p-8 rounded-lg border border-green-200 dark:border-green-800 min-h-[300px]">
                                       {simplifiedTransactions.length > 0 ? (
                                         <div className="relative w-full h-[280px]">
                                           {/* People Nodes positioned in a circle */}
                                           {Object.keys(individualBalances)
-                                            .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                            .filter(
+                                              (personId) =>
+                                                Math.abs(
+                                                  individualBalances[personId]
+                                                ) > 0.01
+                                            )
                                             .map((personId, index, array) => {
-                                              const angle = (index / array.length) * 2 * Math.PI - Math.PI / 2;
+                                              const angle =
+                                                (index / array.length) *
+                                                  2 *
+                                                  Math.PI -
+                                                Math.PI / 2;
                                               const radius = 100;
-                                              const x = Math.cos(angle) * radius + 140;
-                                              const y = Math.sin(angle) * radius + 140;
-                                              const balance = individualBalances[personId];
+                                              const x =
+                                                Math.cos(angle) * radius + 140;
+                                              const y =
+                                                Math.sin(angle) * radius + 140;
+                                              const balance =
+                                                individualBalances[personId];
                                               const isCreditor = balance > 0.01;
-                                              
+
                                               return (
                                                 <div
                                                   key={`opt-node-${personId}`}
                                                   className="absolute transform -translate-x-1/2 -translate-y-1/2"
-                                                  style={{ left: `${x}px`, top: `${y}px` }}
+                                                  style={{
+                                                    left: `${x}px`,
+                                                    top: `${y}px`,
+                                                  }}
                                                 >
-                                                  <div className={`w-18 h-18 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-xl border-3 ${
-                                                    isCreditor 
-                                                      ? 'bg-green-200 border-green-500 text-green-800 dark:bg-green-800 dark:border-green-500 dark:text-green-200' 
-                                                      : 'bg-red-200 border-red-500 text-red-800 dark:bg-red-800 dark:border-red-500 dark:text-red-200'
-                                                  }`}>
-                                                    <div className="text-sm">{peopleMap[personId]?.charAt(0) || '?'}</div>
+                                                  <div
+                                                    className={`w-18 h-18 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-xl border-3 ${
+                                                      isCreditor
+                                                        ? "bg-green-200 border-green-500 text-green-800 dark:bg-green-800 dark:border-green-500 dark:text-green-200"
+                                                        : "bg-red-200 border-red-500 text-red-800 dark:bg-red-800 dark:border-red-500 dark:text-red-200"
+                                                    }`}
+                                                  >
+                                                    <div className="text-sm">
+                                                      {peopleMap[
+                                                        personId
+                                                      ]?.charAt(0) || "?"}
+                                                    </div>
                                                     <div className="text-xs font-bold">
-                                                      {isCreditor ? '+' : ''}{formatCurrency(Math.abs(balance))}
+                                                      {isCreditor ? "+" : ""}
+                                                      {formatCurrency(
+                                                        Math.abs(balance)
+                                                      )}
                                                     </div>
                                                   </div>
                                                   <div className="text-xs text-center mt-1 font-bold">
-                                                    {peopleMap[personId]?.split(' ')[0] || 'Unknown'}
+                                                    {peopleMap[personId]?.split(
+                                                      " "
+                                                    )[0] || "Unknown"}
                                                   </div>
                                                 </div>
                                               );
                                             })}
-                                          
+
                                           {/* Optimized Connection Lines */}
-                                          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
-                                            {simplifiedTransactions.map((txn, index) => {
-                                              const fromIndex = Object.keys(individualBalances)
-                                                .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
-                                                .indexOf(txn.from);
-                                              const toIndex = Object.keys(individualBalances)
-                                                .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
-                                                .indexOf(txn.to);
-                                              
-                                              if (fromIndex === -1 || toIndex === -1) return null;
-                                              
-                                              const array = Object.keys(individualBalances).filter(personId => Math.abs(individualBalances[personId]) > 0.01);
-                                              const fromAngle = (fromIndex / array.length) * 2 * Math.PI - Math.PI / 2;
-                                              const toAngle = (toIndex / array.length) * 2 * Math.PI - Math.PI / 2;
-                                              const radius = 100;
-                                              const x1 = Math.cos(fromAngle) * radius + 140;
-                                              const y1 = Math.sin(fromAngle) * radius + 140;
-                                              const x2 = Math.cos(toAngle) * radius + 140;
-                                              const y2 = Math.sin(toAngle) * radius + 140;
-                                              
-                                              return (
-                                                <g key={`opt-line-${index}`}>
-                                                  <line
-                                                    x1={x1}
-                                                    y1={y1}
-                                                    x2={x2}
-                                                    y2={y2}
-                                                    stroke="#22c55e"
-                                                    strokeWidth="4"
-                                                    className="drop-shadow-sm"
-                                                  />
-                                                  {/* Arrow marker */}
-                                                  <defs>
-                                                    <marker
-                                                      id={`arrowhead-${index}`}
-                                                      markerWidth="10"
-                                                      markerHeight="7"
-                                                      refX="9"
-                                                      refY="3.5"
-                                                      orient="auto"
+                                          <svg
+                                            className="absolute inset-0 w-full h-full pointer-events-none"
+                                            style={{ zIndex: 1 }}
+                                          >
+                                            {simplifiedTransactions.map(
+                                              (txn, index) => {
+                                                const fromIndex = Object.keys(
+                                                  individualBalances
+                                                )
+                                                  .filter(
+                                                    (personId) =>
+                                                      Math.abs(
+                                                        individualBalances[
+                                                          personId
+                                                        ]
+                                                      ) > 0.01
+                                                  )
+                                                  .indexOf(txn.from);
+                                                const toIndex = Object.keys(
+                                                  individualBalances
+                                                )
+                                                  .filter(
+                                                    (personId) =>
+                                                      Math.abs(
+                                                        individualBalances[
+                                                          personId
+                                                        ]
+                                                      ) > 0.01
+                                                  )
+                                                  .indexOf(txn.to);
+
+                                                if (
+                                                  fromIndex === -1 ||
+                                                  toIndex === -1
+                                                )
+                                                  return null;
+
+                                                const array = Object.keys(
+                                                  individualBalances
+                                                ).filter(
+                                                  (personId) =>
+                                                    Math.abs(
+                                                      individualBalances[
+                                                        personId
+                                                      ]
+                                                    ) > 0.01
+                                                );
+                                                const fromAngle =
+                                                  (fromIndex / array.length) *
+                                                    2 *
+                                                    Math.PI -
+                                                  Math.PI / 2;
+                                                const toAngle =
+                                                  (toIndex / array.length) *
+                                                    2 *
+                                                    Math.PI -
+                                                  Math.PI / 2;
+                                                const radius = 100;
+                                                const x1 =
+                                                  Math.cos(fromAngle) * radius +
+                                                  140;
+                                                const y1 =
+                                                  Math.sin(fromAngle) * radius +
+                                                  140;
+                                                const x2 =
+                                                  Math.cos(toAngle) * radius +
+                                                  140;
+                                                const y2 =
+                                                  Math.sin(toAngle) * radius +
+                                                  140;
+
+                                                return (
+                                                  <g key={`opt-line-${index}`}>
+                                                    <line
+                                                      x1={x1}
+                                                      y1={y1}
+                                                      x2={x2}
+                                                      y2={y2}
+                                                      stroke="#22c55e"
+                                                      strokeWidth="4"
+                                                      className="drop-shadow-sm"
+                                                    />
+                                                    {/* Arrow marker */}
+                                                    <defs>
+                                                      <marker
+                                                        id={`arrowhead-${index}`}
+                                                        markerWidth="10"
+                                                        markerHeight="7"
+                                                        refX="9"
+                                                        refY="3.5"
+                                                        orient="auto"
+                                                      >
+                                                        <polygon
+                                                          points="0 0, 10 3.5, 0 7"
+                                                          fill="#22c55e"
+                                                        />
+                                                      </marker>
+                                                    </defs>
+                                                    <line
+                                                      x1={x1}
+                                                      y1={y1}
+                                                      x2={x2}
+                                                      y2={y2}
+                                                      stroke="#22c55e"
+                                                      strokeWidth="4"
+                                                      markerEnd={`url(#arrowhead-${index})`}
+                                                    />
+                                                    {/* Amount label */}
+                                                    <text
+                                                      x={(x1 + x2) / 2}
+                                                      y={(y1 + y2) / 2 - 5}
+                                                      fill="#16a34a"
+                                                      fontSize="12"
+                                                      textAnchor="middle"
+                                                      className="font-bold"
+                                                      style={{
+                                                        textShadow:
+                                                          "0 0 3px white",
+                                                      }}
                                                     >
-                                                      <polygon
-                                                        points="0 0, 10 3.5, 0 7"
-                                                        fill="#22c55e"
-                                                      />
-                                                    </marker>
-                                                  </defs>
-                                                  <line
-                                                    x1={x1}
-                                                    y1={y1}
-                                                    x2={x2}
-                                                    y2={y2}
-                                                    stroke="#22c55e"
-                                                    strokeWidth="4"
-                                                    markerEnd={`url(#arrowhead-${index})`}
-                                                  />
-                                                  {/* Amount label */}
-                                                  <text
-                                                    x={(x1 + x2) / 2}
-                                                    y={(y1 + y2) / 2 - 5}
-                                                    fill="#16a34a"
-                                                    fontSize="12"
-                                                    textAnchor="middle"
-                                                    className="font-bold"
-                                                    style={{ textShadow: '0 0 3px white' }}
-                                                  >
-                                                    {formatCurrency(txn.amount)}
-                                                  </text>
-                                                </g>
-                                              );
-                                            })}
+                                                      {formatCurrency(
+                                                        txn.amount
+                                                      )}
+                                                    </text>
+                                                  </g>
+                                                );
+                                              }
+                                            )}
                                           </svg>
                                         </div>
                                       ) : (
                                         <div className="flex items-center justify-center h-[280px]">
                                           <div className="text-center">
                                             <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                                            <div className="text-xl font-bold text-green-700 dark:text-green-300">Perfect Balance!</div>
-                                            <div className="text-sm text-green-600 dark:text-green-400">No payments needed</div>
+                                            <div className="text-xl font-bold text-green-700 dark:text-green-300">
+                                              Perfect Balance!
+                                            </div>
+                                            <div className="text-sm text-green-600 dark:text-green-400">
+                                              No payments needed
+                                            </div>
                                           </div>
                                         </div>
                                       )}
@@ -823,17 +997,35 @@ export default function SettlementSummary({
                                 </div>
 
                                 {/* Network Analysis */}
-                                {pairwiseTransactions.length > simplifiedTransactions.length && (
+                                {pairwiseTransactions.length >
+                                  simplifiedTransactions.length && (
                                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-lg">
                                     <div className="text-center">
                                       <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">
-                                        🕸️ Network Simplified by {Math.round(((pairwiseTransactions.length - simplifiedTransactions.length) / pairwiseTransactions.length) * 100)}%
+                                        🕸️ Network Simplified by{" "}
+                                        {Math.round(
+                                          ((pairwiseTransactions.length -
+                                            simplifiedTransactions.length) /
+                                            pairwiseTransactions.length) *
+                                            100
+                                        )}
+                                        %
                                       </div>
                                       <div className="text-sm text-blue-600 dark:text-blue-300">
-                                        From <strong>{pairwiseTransactions.length} complex connections</strong> to <strong>{simplifiedTransactions.length} clean paths</strong>
+                                        From{" "}
+                                        <strong>
+                                          {pairwiseTransactions.length} complex
+                                          connections
+                                        </strong>{" "}
+                                        to{" "}
+                                        <strong>
+                                          {simplifiedTransactions.length} clean
+                                          paths
+                                        </strong>
                                       </div>
                                       <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
-                                        Same balances, cleaner network, fewer transactions
+                                        Same balances, cleaner network, fewer
+                                        transactions
                                       </div>
                                     </div>
                                   </div>
@@ -842,7 +1034,9 @@ export default function SettlementSummary({
                                 {/* Network Legend */}
                                 <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 p-4 rounded-lg border border-gray-200 dark:border-gray-800">
                                   <div className="text-center">
-                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Network Legend</div>
+                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">
+                                      Network Legend
+                                    </div>
                                     <div className="flex justify-center space-x-6 text-xs">
                                       <div className="flex items-center">
                                         <div className="w-4 h-4 bg-green-200 border-2 border-green-400 rounded-full mr-2"></div>
@@ -863,62 +1057,76 @@ export default function SettlementSummary({
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 {/* Main Flowchart */}
                                 <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
-                                  
                                   {/* Individual Debts Section */}
                                   <div className="mb-8">
                                     <div className="text-center mb-6">
                                       <div className="inline-flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-4 py-2 rounded-full border-2 border-red-300 dark:border-red-700">
                                         <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                                         <span className="text-sm font-bold text-red-800 dark:text-red-200">
-                                          INDIVIDUAL DEBTS ({pairwiseTransactions.length} payments needed)
+                                          INDIVIDUAL DEBTS (
+                                          {pairwiseTransactions.length} payments
+                                          needed)
                                         </span>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Individual Debt Lines */}
                                     <div className="space-y-3">
-                                      {pairwiseTransactions.map((txn, index) => (
-                                        <div key={`individual-${index}`} className="flex items-center justify-center">
-                                          <div className="flex items-center bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800 shadow-sm min-w-[300px]">
-                                            {/* From Person */}
-                                            <div className="flex flex-col items-center">
-                                              <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
-                                                {peopleMap[txn.from]?.charAt(0) || '?'}
+                                      {pairwiseTransactions.map(
+                                        (txn, index) => (
+                                          <div
+                                            key={`individual-${index}`}
+                                            className="flex items-center justify-center"
+                                          >
+                                            <div className="flex items-center bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-200 dark:border-red-800 shadow-sm min-w-[300px]">
+                                              {/* From Person */}
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
+                                                  {peopleMap[txn.from]?.charAt(
+                                                    0
+                                                  ) || "?"}
+                                                </div>
+                                                <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                                  {peopleMap[txn.from]?.split(
+                                                    " "
+                                                  )[0] || "Unknown"}
+                                                </div>
                                               </div>
-                                              <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
-                                                {peopleMap[txn.from]?.split(' ')[0] || 'Unknown'}
+
+                                              {/* Arrow and Amount */}
+                                              <div className="flex-1 flex flex-col items-center mx-4">
+                                                <div className="flex items-center w-full">
+                                                  <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
+                                                  <ArrowRight className="h-4 w-4 text-red-600 mx-2" />
+                                                  <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
+                                                </div>
+                                                <div className="bg-red-100 dark:bg-red-900/50 px-3 py-1 rounded-full mt-2">
+                                                  <span className="text-sm font-bold text-red-700 dark:text-red-300">
+                                                    {formatCurrency(txn.amount)}
+                                                  </span>
+                                                </div>
                                               </div>
-                                            </div>
-                                            
-                                            {/* Arrow and Amount */}
-                                            <div className="flex-1 flex flex-col items-center mx-4">
-                                              <div className="flex items-center w-full">
-                                                <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
-                                                <ArrowRight className="h-4 w-4 text-red-600 mx-2" />
-                                                <div className="flex-1 h-0.5 bg-red-400 dark:bg-red-600"></div>
-                                              </div>
-                                              <div className="bg-red-100 dark:bg-red-900/50 px-3 py-1 rounded-full mt-2">
-                                                <span className="text-sm font-bold text-red-700 dark:text-red-300">
-                                                  {formatCurrency(txn.amount)}
-                                                </span>
-                                              </div>
-                                            </div>
-                                            
-                                            {/* To Person */}
-                                            <div className="flex flex-col items-center">
-                                              <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
-                                                {peopleMap[txn.to]?.charAt(0) || '?'}
-                                              </div>
-                                              <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
-                                                {peopleMap[txn.to]?.split(' ')[0] || 'Unknown'}
+
+                                              {/* To Person */}
+                                              <div className="flex flex-col items-center">
+                                                <div className="w-12 h-12 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center text-sm font-bold text-red-800 dark:text-red-200 shadow-sm">
+                                                  {peopleMap[txn.to]?.charAt(
+                                                    0
+                                                  ) || "?"}
+                                                </div>
+                                                <div className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                                  {peopleMap[txn.to]?.split(
+                                                    " "
+                                                  )[0] || "Unknown"}
+                                                </div>
                                               </div>
                                             </div>
                                           </div>
-                                        </div>
-                                      ))}
+                                        )
+                                      )}
                                     </div>
                                   </div>
 
@@ -932,8 +1140,12 @@ export default function SettlementSummary({
                                       <div className="w-1 h-12 bg-purple-400 dark:bg-purple-600"></div>
                                       <div className="w-0 h-0 border-l-6 border-r-6 border-t-8 border-transparent border-t-purple-400 dark:border-t-purple-600"></div>
                                       <div className="text-center mt-2">
-                                        <div className="text-xs font-bold text-purple-600">ALGORITHM</div>
-                                        <div className="text-xs text-purple-500">Optimizing...</div>
+                                        <div className="text-xs font-bold text-purple-600">
+                                          ALGORITHM
+                                        </div>
+                                        <div className="text-xs text-purple-500">
+                                          Optimizing...
+                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -944,61 +1156,82 @@ export default function SettlementSummary({
                                       <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full border-2 border-green-300 dark:border-green-700">
                                         <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                                         <span className="text-sm font-bold text-green-800 dark:text-green-200">
-                                          OPTIMIZED SETTLEMENT ({simplifiedTransactions.length} payments needed)
+                                          OPTIMIZED SETTLEMENT (
+                                          {simplifiedTransactions.length}{" "}
+                                          payments needed)
                                         </span>
                                       </div>
                                     </div>
-                                    
+
                                     {/* Optimized Settlement Lines */}
                                     {simplifiedTransactions.length > 0 ? (
                                       <div className="space-y-4">
-                                        {simplifiedTransactions.map((txn, index) => (
-                                          <div key={`optimized-${index}`} className="flex items-center justify-center">
-                                            <div className="flex items-center bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800 shadow-md min-w-[350px]">
-                                              {/* From Person */}
-                                              <div className="flex flex-col items-center">
-                                                <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
-                                                  {peopleMap[txn.from]?.charAt(0) || '?'}
+                                        {simplifiedTransactions.map(
+                                          (txn, index) => (
+                                            <div
+                                              key={`optimized-${index}`}
+                                              className="flex items-center justify-center"
+                                            >
+                                              <div className="flex items-center bg-green-50 dark:bg-green-950/20 p-4 rounded-lg border-2 border-green-200 dark:border-green-800 shadow-md min-w-[350px]">
+                                                {/* From Person */}
+                                                <div className="flex flex-col items-center">
+                                                  <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
+                                                    {peopleMap[
+                                                      txn.from
+                                                    ]?.charAt(0) || "?"}
+                                                  </div>
+                                                  <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
+                                                    {peopleMap[txn.from]?.split(
+                                                      " "
+                                                    )[0] || "Unknown"}
+                                                  </div>
                                                 </div>
-                                                <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
-                                                  {peopleMap[txn.from]?.split(' ')[0] || 'Unknown'}
+
+                                                {/* Arrow and Amount */}
+                                                <div className="flex-1 flex flex-col items-center mx-6">
+                                                  <div className="flex items-center w-full">
+                                                    <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
+                                                    <ArrowRight className="h-6 w-6 text-green-600 mx-3" />
+                                                    <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
+                                                  </div>
+                                                  <div className="bg-green-200 dark:bg-green-800 px-4 py-2 rounded-full mt-3 shadow-sm border border-green-300 dark:border-green-600">
+                                                    <span className="text-lg font-bold text-green-800 dark:text-green-200">
+                                                      {formatCurrency(
+                                                        txn.amount
+                                                      )}
+                                                    </span>
+                                                  </div>
                                                 </div>
-                                              </div>
-                                              
-                                              {/* Arrow and Amount */}
-                                              <div className="flex-1 flex flex-col items-center mx-6">
-                                                <div className="flex items-center w-full">
-                                                  <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
-                                                  <ArrowRight className="h-6 w-6 text-green-600 mx-3" />
-                                                  <div className="flex-1 h-1 bg-green-500 dark:bg-green-600 rounded-full"></div>
-                                                </div>
-                                                <div className="bg-green-200 dark:bg-green-800 px-4 py-2 rounded-full mt-3 shadow-sm border border-green-300 dark:border-green-600">
-                                                  <span className="text-lg font-bold text-green-800 dark:text-green-200">
-                                                    {formatCurrency(txn.amount)}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                              
-                                              {/* To Person */}
-                                              <div className="flex flex-col items-center">
-                                                <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
-                                                  {peopleMap[txn.to]?.charAt(0) || '?'}
-                                                </div>
-                                                <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
-                                                  {peopleMap[txn.to]?.split(' ')[0] || 'Unknown'}
+
+                                                {/* To Person */}
+                                                <div className="flex flex-col items-center">
+                                                  <div className="w-16 h-16 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-lg font-bold text-green-800 dark:text-green-200 shadow-md border-2 border-green-300 dark:border-green-600">
+                                                    {peopleMap[txn.to]?.charAt(
+                                                      0
+                                                    ) || "?"}
+                                                  </div>
+                                                  <div className="text-sm font-bold text-green-700 dark:text-green-300 mt-2">
+                                                    {peopleMap[txn.to]?.split(
+                                                      " "
+                                                    )[0] || "Unknown"}
+                                                  </div>
                                                 </div>
                                               </div>
                                             </div>
-                                          </div>
-                                        ))}
+                                          )
+                                        )}
                                       </div>
                                     ) : (
                                       <div className="text-center">
                                         <div className="inline-flex items-center bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
                                           <CheckCircle2 className="h-12 w-12 text-green-500 mr-3" />
                                           <div>
-                                            <div className="text-lg font-bold text-green-700 dark:text-green-300">All Settled!</div>
-                                            <div className="text-sm text-green-600 dark:text-green-400">No payments needed</div>
+                                            <div className="text-lg font-bold text-green-700 dark:text-green-300">
+                                              All Settled!
+                                            </div>
+                                            <div className="text-sm text-green-600 dark:text-green-400">
+                                              No payments needed
+                                            </div>
                                           </div>
                                         </div>
                                       </div>
@@ -1007,17 +1240,35 @@ export default function SettlementSummary({
                                 </div>
 
                                 {/* Efficiency Summary */}
-                                {pairwiseTransactions.length > simplifiedTransactions.length && (
+                                {pairwiseTransactions.length >
+                                  simplifiedTransactions.length && (
                                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-lg">
                                     <div className="text-center">
                                       <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">
-                                        ✨ {Math.round(((pairwiseTransactions.length - simplifiedTransactions.length) / pairwiseTransactions.length) * 100)}% More Efficient!
+                                        ✨{" "}
+                                        {Math.round(
+                                          ((pairwiseTransactions.length -
+                                            simplifiedTransactions.length) /
+                                            pairwiseTransactions.length) *
+                                            100
+                                        )}
+                                        % More Efficient!
                                       </div>
                                       <div className="text-sm text-blue-600 dark:text-blue-300">
-                                        Reduced from <strong>{pairwiseTransactions.length} individual payments</strong> to <strong>{simplifiedTransactions.length} optimized payments</strong>
+                                        Reduced from{" "}
+                                        <strong>
+                                          {pairwiseTransactions.length}{" "}
+                                          individual payments
+                                        </strong>{" "}
+                                        to{" "}
+                                        <strong>
+                                          {simplifiedTransactions.length}{" "}
+                                          optimized payments
+                                        </strong>
                                       </div>
                                       <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
-                                        Same result, fewer transactions, completely fair to everyone
+                                        Same result, fewer transactions,
+                                        completely fair to everyone
                                       </div>
                                     </div>
                                   </div>
@@ -1028,14 +1279,17 @@ export default function SettlementSummary({
                                   <div className="text-center">
                                     <div className="flex items-center justify-center mb-2">
                                       <CheckCircle2 className="h-5 w-5 text-emerald-600 mr-2" />
-                                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">Fairness Guaranteed</span>
+                                      <span className="text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                                        Fairness Guaranteed
+                                      </span>
                                     </div>
                                     <div className="text-xs text-emerald-600 dark:text-emerald-400">
-                                      Every person pays/receives exactly what they owe/are owed. The algorithm only changes WHO pays WHOM, never the amounts.
+                                      Every person pays/receives exactly what
+                                      they owe/are owed. The algorithm only
+                                      changes WHO pays WHOM, never the amounts.
                                     </div>
                                   </div>
                                 </div>
-
                               </div>
                             </ScrollArea>
                           </div>
@@ -1043,8 +1297,12 @@ export default function SettlementSummary({
                           <div className="flex-1 flex items-center justify-center text-center text-muted-foreground">
                             <div>
                               <Shuffle className="h-12 w-12 mx-auto mb-3 text-purple-500" />
-                              <p className="font-medium">No settlements to visualize</p>
-                              <p className="text-xs">Add expenses to see the settlement flowchart</p>
+                              <p className="font-medium">
+                                No settlements to visualize
+                              </p>
+                              <p className="text-xs">
+                                Add expenses to see the settlement flowchart
+                              </p>
                             </div>
                           </div>
                         )}
