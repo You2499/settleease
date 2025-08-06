@@ -557,10 +557,10 @@ export default function SettlementSummary({
                       <CardHeader className="pt-3 sm:pt-4 pb-2 flex-shrink-0">
                         <CardTitle className="flex items-center text-lg font-bold">
                           <Shuffle className="mr-2 h-4 w-4 text-purple-600" />
-                          Settlement Flowchart
+                          Settlement Network
                         </CardTitle>
                         <CardDescription className="text-xs">
-                          Step-by-step flowchart showing debt optimization
+                          Network visualization showing debt connections and optimization
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
@@ -568,6 +568,301 @@ export default function SettlementSummary({
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
                               <div className="space-y-8 pr-2">
+                                
+                                {/* Network Visualization */}
+                                <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                                  
+                                  {/* Individual Debts Network */}
+                                  <div className="mb-12">
+                                    <div className="text-center mb-8">
+                                      <div className="inline-flex items-center gap-2 bg-red-100 dark:bg-red-900/30 px-4 py-2 rounded-full border-2 border-red-300 dark:border-red-700">
+                                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                        <span className="text-sm font-bold text-red-800 dark:text-red-200">
+                                          COMPLEX DEBT NETWORK ({pairwiseTransactions.length} connections)
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Network Container */}
+                                    <div className="relative bg-red-50/50 dark:bg-red-950/10 p-8 rounded-lg border border-red-200 dark:border-red-800 min-h-[300px]">
+                                      {/* People Nodes positioned in a circle */}
+                                      <div className="relative w-full h-[280px]">
+                                        {Object.keys(individualBalances)
+                                          .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                          .map((personId, index, array) => {
+                                            const angle = (index / array.length) * 2 * Math.PI - Math.PI / 2;
+                                            const radius = 100;
+                                            const x = Math.cos(angle) * radius + 140;
+                                            const y = Math.sin(angle) * radius + 140;
+                                            const balance = individualBalances[personId];
+                                            const isCreditor = balance > 0.01;
+                                            
+                                            return (
+                                              <div
+                                                key={`node-${personId}`}
+                                                className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                                                style={{ left: `${x}px`, top: `${y}px` }}
+                                              >
+                                                <div className={`w-16 h-16 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-lg border-2 ${
+                                                  isCreditor 
+                                                    ? 'bg-green-200 border-green-400 text-green-800 dark:bg-green-800 dark:border-green-600 dark:text-green-200' 
+                                                    : 'bg-red-200 border-red-400 text-red-800 dark:bg-red-800 dark:border-red-600 dark:text-red-200'
+                                                }`}>
+                                                  <div className="text-xs">{peopleMap[personId]?.charAt(0) || '?'}</div>
+                                                  <div className="text-xs font-bold">
+                                                    {isCreditor ? '+' : ''}{formatCurrency(Math.abs(balance))}
+                                                  </div>
+                                                </div>
+                                                <div className="text-xs text-center mt-1 font-medium">
+                                                  {peopleMap[personId]?.split(' ')[0] || 'Unknown'}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        
+                                        {/* Debt Connection Lines */}
+                                        <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+                                          {pairwiseTransactions.map((txn, index) => {
+                                            const fromIndex = Object.keys(individualBalances)
+                                              .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                              .indexOf(txn.from);
+                                            const toIndex = Object.keys(individualBalances)
+                                              .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                              .indexOf(txn.to);
+                                            
+                                            if (fromIndex === -1 || toIndex === -1) return null;
+                                            
+                                            const array = Object.keys(individualBalances).filter(personId => Math.abs(individualBalances[personId]) > 0.01);
+                                            const fromAngle = (fromIndex / array.length) * 2 * Math.PI - Math.PI / 2;
+                                            const toAngle = (toIndex / array.length) * 2 * Math.PI - Math.PI / 2;
+                                            const radius = 100;
+                                            const x1 = Math.cos(fromAngle) * radius + 140;
+                                            const y1 = Math.sin(fromAngle) * radius + 140;
+                                            const x2 = Math.cos(toAngle) * radius + 140;
+                                            const y2 = Math.sin(toAngle) * radius + 140;
+                                            
+                                            return (
+                                              <g key={`line-${index}`}>
+                                                <line
+                                                  x1={x1}
+                                                  y1={y1}
+                                                  x2={x2}
+                                                  y2={y2}
+                                                  stroke="#ef4444"
+                                                  strokeWidth="2"
+                                                  strokeDasharray="5,5"
+                                                  className="animate-pulse"
+                                                />
+                                                {/* Amount label */}
+                                                <text
+                                                  x={(x1 + x2) / 2}
+                                                  y={(y1 + y2) / 2}
+                                                  fill="#dc2626"
+                                                  fontSize="10"
+                                                  textAnchor="middle"
+                                                  className="font-bold"
+                                                  style={{ textShadow: '0 0 3px white' }}
+                                                >
+                                                  {formatCurrency(txn.amount)}
+                                                </text>
+                                              </g>
+                                            );
+                                          })}
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Transformation */}
+                                  <div className="flex justify-center my-8">
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-20 h-20 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center border-4 border-purple-300 dark:border-purple-700 shadow-xl">
+                                        <Shuffle className="h-10 w-10 text-purple-600 animate-spin" />
+                                      </div>
+                                      <div className="text-center mt-3">
+                                        <div className="text-sm font-bold text-purple-600">OPTIMIZATION</div>
+                                        <div className="text-xs text-purple-500">Simplifying network...</div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Optimized Settlement Network */}
+                                  <div className="mt-12">
+                                    <div className="text-center mb-8">
+                                      <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-full border-2 border-green-300 dark:border-green-700">
+                                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                        <span className="text-sm font-bold text-green-800 dark:text-green-200">
+                                          OPTIMIZED NETWORK ({simplifiedTransactions.length} connections)
+                                        </span>
+                                      </div>
+                                    </div>
+                                    
+                                    {/* Network Container */}
+                                    <div className="relative bg-green-50/50 dark:bg-green-950/10 p-8 rounded-lg border border-green-200 dark:border-green-800 min-h-[300px]">
+                                      {simplifiedTransactions.length > 0 ? (
+                                        <div className="relative w-full h-[280px]">
+                                          {/* People Nodes positioned in a circle */}
+                                          {Object.keys(individualBalances)
+                                            .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                            .map((personId, index, array) => {
+                                              const angle = (index / array.length) * 2 * Math.PI - Math.PI / 2;
+                                              const radius = 100;
+                                              const x = Math.cos(angle) * radius + 140;
+                                              const y = Math.sin(angle) * radius + 140;
+                                              const balance = individualBalances[personId];
+                                              const isCreditor = balance > 0.01;
+                                              
+                                              return (
+                                                <div
+                                                  key={`opt-node-${personId}`}
+                                                  className="absolute transform -translate-x-1/2 -translate-y-1/2"
+                                                  style={{ left: `${x}px`, top: `${y}px` }}
+                                                >
+                                                  <div className={`w-18 h-18 rounded-full flex flex-col items-center justify-center text-sm font-bold shadow-xl border-3 ${
+                                                    isCreditor 
+                                                      ? 'bg-green-200 border-green-500 text-green-800 dark:bg-green-800 dark:border-green-500 dark:text-green-200' 
+                                                      : 'bg-red-200 border-red-500 text-red-800 dark:bg-red-800 dark:border-red-500 dark:text-red-200'
+                                                  }`}>
+                                                    <div className="text-sm">{peopleMap[personId]?.charAt(0) || '?'}</div>
+                                                    <div className="text-xs font-bold">
+                                                      {isCreditor ? '+' : ''}{formatCurrency(Math.abs(balance))}
+                                                    </div>
+                                                  </div>
+                                                  <div className="text-xs text-center mt-1 font-bold">
+                                                    {peopleMap[personId]?.split(' ')[0] || 'Unknown'}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          
+                                          {/* Optimized Connection Lines */}
+                                          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 1 }}>
+                                            {simplifiedTransactions.map((txn, index) => {
+                                              const fromIndex = Object.keys(individualBalances)
+                                                .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                                .indexOf(txn.from);
+                                              const toIndex = Object.keys(individualBalances)
+                                                .filter(personId => Math.abs(individualBalances[personId]) > 0.01)
+                                                .indexOf(txn.to);
+                                              
+                                              if (fromIndex === -1 || toIndex === -1) return null;
+                                              
+                                              const array = Object.keys(individualBalances).filter(personId => Math.abs(individualBalances[personId]) > 0.01);
+                                              const fromAngle = (fromIndex / array.length) * 2 * Math.PI - Math.PI / 2;
+                                              const toAngle = (toIndex / array.length) * 2 * Math.PI - Math.PI / 2;
+                                              const radius = 100;
+                                              const x1 = Math.cos(fromAngle) * radius + 140;
+                                              const y1 = Math.sin(fromAngle) * radius + 140;
+                                              const x2 = Math.cos(toAngle) * radius + 140;
+                                              const y2 = Math.sin(toAngle) * radius + 140;
+                                              
+                                              return (
+                                                <g key={`opt-line-${index}`}>
+                                                  <line
+                                                    x1={x1}
+                                                    y1={y1}
+                                                    x2={x2}
+                                                    y2={y2}
+                                                    stroke="#22c55e"
+                                                    strokeWidth="4"
+                                                    className="drop-shadow-sm"
+                                                  />
+                                                  {/* Arrow marker */}
+                                                  <defs>
+                                                    <marker
+                                                      id={`arrowhead-${index}`}
+                                                      markerWidth="10"
+                                                      markerHeight="7"
+                                                      refX="9"
+                                                      refY="3.5"
+                                                      orient="auto"
+                                                    >
+                                                      <polygon
+                                                        points="0 0, 10 3.5, 0 7"
+                                                        fill="#22c55e"
+                                                      />
+                                                    </marker>
+                                                  </defs>
+                                                  <line
+                                                    x1={x1}
+                                                    y1={y1}
+                                                    x2={x2}
+                                                    y2={y2}
+                                                    stroke="#22c55e"
+                                                    strokeWidth="4"
+                                                    markerEnd={`url(#arrowhead-${index})`}
+                                                  />
+                                                  {/* Amount label */}
+                                                  <text
+                                                    x={(x1 + x2) / 2}
+                                                    y={(y1 + y2) / 2 - 5}
+                                                    fill="#16a34a"
+                                                    fontSize="12"
+                                                    textAnchor="middle"
+                                                    className="font-bold"
+                                                    style={{ textShadow: '0 0 3px white' }}
+                                                  >
+                                                    {formatCurrency(txn.amount)}
+                                                  </text>
+                                                </g>
+                                              );
+                                            })}
+                                          </svg>
+                                        </div>
+                                      ) : (
+                                        <div className="flex items-center justify-center h-[280px]">
+                                          <div className="text-center">
+                                            <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                                            <div className="text-xl font-bold text-green-700 dark:text-green-300">Perfect Balance!</div>
+                                            <div className="text-sm text-green-600 dark:text-green-400">No payments needed</div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Network Analysis */}
+                                {pairwiseTransactions.length > simplifiedTransactions.length && (
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-6 rounded-lg border-2 border-blue-200 dark:border-blue-800 shadow-lg">
+                                    <div className="text-center">
+                                      <div className="text-2xl font-bold text-blue-700 dark:text-blue-400 mb-2">
+                                        🕸️ Network Simplified by {Math.round(((pairwiseTransactions.length - simplifiedTransactions.length) / pairwiseTransactions.length) * 100)}%
+                                      </div>
+                                      <div className="text-sm text-blue-600 dark:text-blue-300">
+                                        From <strong>{pairwiseTransactions.length} complex connections</strong> to <strong>{simplifiedTransactions.length} clean paths</strong>
+                                      </div>
+                                      <div className="text-xs text-blue-500 dark:text-blue-400 mt-2">
+                                        Same balances, cleaner network, fewer transactions
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Network Legend */}
+                                <div className="bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 p-4 rounded-lg border border-gray-200 dark:border-gray-800">
+                                  <div className="text-center">
+                                    <div className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-3">Network Legend</div>
+                                    <div className="flex justify-center space-x-6 text-xs">
+                                      <div className="flex items-center">
+                                        <div className="w-4 h-4 bg-green-200 border-2 border-green-400 rounded-full mr-2"></div>
+                                        <span>Should Receive Money</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <div className="w-4 h-4 bg-red-200 border-2 border-red-400 rounded-full mr-2"></div>
+                                        <span>Should Pay Money</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <div className="w-6 h-0.5 bg-green-500 mr-2"></div>
+                                        <span>Optimized Payment</span>
+                                      </div>
+                                      <div className="flex items-center">
+                                        <div className="w-6 h-0.5 bg-red-400 border-dashed mr-2"></div>
+                                        <span>Individual Debt</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                                 
                                 {/* Main Flowchart */}
                                 <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-8 rounded-lg border-2 border-gray-200 dark:border-gray-700">
