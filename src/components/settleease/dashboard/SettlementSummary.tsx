@@ -27,12 +27,7 @@ import {
   CheckCircle2,
   FileText,
   Info,
-  TrendingUp,
   BarChart3,
-  Minus,
-  Plus,
-  ArrowDownUp,
-  Shuffle,
 } from "lucide-react";
 import {
   Dialog,
@@ -102,53 +97,17 @@ export default function SettlementSummary({
     return people.find((p) => p.id === selectedPersonId) || null;
   }, [selectedPersonId, people]);
 
-  // Calculate individual balances for visualization
-  const individualBalances = useMemo(() => {
-    if (people.length === 0) return {};
-
-    const balances: Record<string, number> = {};
-    people.forEach((p) => (balances[p.id] = 0));
-
-    // Calculate balances from expenses
-    allExpenses.forEach((expense) => {
-      if (Array.isArray(expense.paid_by)) {
-        expense.paid_by.forEach((payment) => {
-          balances[payment.personId] =
-            (balances[payment.personId] || 0) + Number(payment.amount);
-        });
-      }
-      if (Array.isArray(expense.shares)) {
-        expense.shares.forEach((share) => {
-          balances[share.personId] =
-            (balances[share.personId] || 0) - Number(share.amount);
-        });
-      }
-    });
-
-    // Adjust for settlement payments
-    settlementPayments.forEach((payment) => {
-      if (balances[payment.debtor_id] !== undefined) {
-        balances[payment.debtor_id] += Number(payment.amount_settled);
-      }
-      if (balances[payment.creditor_id] !== undefined) {
-        balances[payment.creditor_id] -= Number(payment.amount_settled);
-      }
-    });
-
-    return balances;
-  }, [people, allExpenses, settlementPayments]);
-
-  // Filter out paid transactions for mindmap visualization
+  // Filter out paid transactions for visualization
   const unpaidPairwiseTransactions = useMemo(() => {
     return pairwiseTransactions.filter((txn) => {
       // Check if this transaction has been fully settled
       const settledAmount = settlementPayments
-        .filter(payment => 
-          payment.debtor_id === txn.from && 
-          payment.creditor_id === txn.to
+        .filter(
+          (payment) =>
+            payment.debtor_id === txn.from && payment.creditor_id === txn.to
         )
         .reduce((sum, payment) => sum + Number(payment.amount_settled), 0);
-      
+
       // Only include if there's still an outstanding amount
       return Number(txn.amount) > settledAmount;
     });
@@ -158,12 +117,12 @@ export default function SettlementSummary({
     return simplifiedTransactions.filter((txn) => {
       // Check if this transaction has been fully settled
       const settledAmount = settlementPayments
-        .filter(payment => 
-          payment.debtor_id === txn.from && 
-          payment.creditor_id === txn.to
+        .filter(
+          (payment) =>
+            payment.debtor_id === txn.from && payment.creditor_id === txn.to
         )
         .reduce((sum, payment) => sum + Number(payment.amount_settled), 0);
-      
+
       // Only include if there's still an outstanding amount
       return Number(txn.amount) > settledAmount;
     });
@@ -188,7 +147,7 @@ export default function SettlementSummary({
                 variant="outline"
                 onClick={() => setIsInfoModalOpen(true)}
               >
-                <Info className="mr-1 h-4 w-4" /> More Info
+                <Info className="mr-1 h-4 w-4" /> Visualize
               </Button>
             </div>
             <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
@@ -232,13 +191,13 @@ export default function SettlementSummary({
                           <div className="col-span-1 sm:col-span-3">
                             <div className="grid grid-cols-3 items-center w-full">
                               <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-start">
-                                {peopleMap[txn.from]}
+                                {peopleMap[txn.from] || 'Unknown'}
                               </span>
                               <span className="flex items-center justify-center w-5 mx-1 col-span-1 justify-self-center">
                                 <ArrowRight className="text-accent w-4 h-4" />
                               </span>
                               <span className="truncate font-medium text-foreground text-base sm:text-sm text-right px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-center">
-                                {peopleMap[txn.to]}
+                                {peopleMap[txn.to] || 'Unknown'}
                               </span>
                             </div>
                           </div>
@@ -336,394 +295,408 @@ export default function SettlementSummary({
         </CardContent>
       </Tabs>
 
-      {/* Settlement Info Modal - Simplified with just 2 mindmaps */}
+      {/* Transparent Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl">
-          <DialogHeader className="pb-3 border-b">
-            <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-              <BarChart3 className="mr-2 h-5 w-5" />
-              Settlement Networks
-            </DialogTitle>
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-5xl">
+          <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between">
+            <div className="flex items-center">
+              <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
+                <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                Settlement Breakdown & Explanation
+              </DialogTitle>
+            </div>
           </DialogHeader>
 
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-            <div className="space-y-6 pt-2">
-              {unpaidPairwiseTransactions.length > 0 ||
-              unpaidSimplifiedTransactions.length > 0 ? (
-                <>
-                  {/* Individual Debts Mindmap */}
-                  <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 p-6 rounded-lg border border-red-200 dark:border-red-800">
-                    <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold text-red-700 dark:text-red-400 mb-2">
-                        Outstanding Individual Debts
-                      </h3>
-                      <p className="text-sm text-red-600 dark:text-red-300">
-                        {unpaidPairwiseTransactions.length} unpaid connections showing
-                        remaining individual debts
-                      </p>
+            <div className="space-y-4 sm:space-y-6 pt-2">
+            {/* Step 1: Individual Balances */}
+            <Card>
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                  <Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                  Step 1: Everyone's Net Balance
+                </CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Based on all expenses and what each person paid vs. their share:
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {people.map((person) => {
+                  // Calculate this person's balance
+                  let balance = 0;
+
+                  // What they paid
+                  let totalPaid = 0;
+                  allExpenses.forEach((expense) => {
+                    if (Array.isArray(expense.paid_by)) {
+                      expense.paid_by.forEach((payment) => {
+                        if (payment.personId === person.id) {
+                          totalPaid += Number(payment.amount);
+                        }
+                      });
+                    }
+                  });
+
+                  // What they owe
+                  let totalOwed = 0;
+                  allExpenses.forEach((expense) => {
+                    if (Array.isArray(expense.shares)) {
+                      expense.shares.forEach((share) => {
+                        if (share.personId === person.id) {
+                          totalOwed += Number(share.amount);
+                        }
+                      });
+                    }
+                  });
+
+                  // Adjust for settlements already made
+                  let settledAsDebtor = 0;
+                  let settledAsCreditor = 0;
+                  settlementPayments.forEach((payment) => {
+                    if (payment.debtor_id === person.id) {
+                      settledAsDebtor += Number(payment.amount_settled);
+                    }
+                    if (payment.creditor_id === person.id) {
+                      settledAsCreditor += Number(payment.amount_settled);
+                    }
+                  });
+
+                  balance =
+                    totalPaid - totalOwed + settledAsDebtor - settledAsCreditor;
+
+                  const isCreditor = balance > 0.01;
+                  const isDebtor = balance < -0.01;
+                  const isSettled = Math.abs(balance) <= 0.01;
+
+                  return (
+                    <div
+                      key={person.id}
+                      className={`p-3 rounded-lg border ${
+                        isCreditor
+                          ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                          : isDebtor
+                          ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
+                          : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">{person.name}</span>
+                        <span
+                          className={`font-bold ${
+                            isCreditor
+                              ? "text-green-700 dark:text-green-300"
+                              : isDebtor
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          {isCreditor ? "+" : ""}
+                          {formatCurrency(Math.abs(balance))}
+                        </span>
+                      </div>
+                      <div className="text-xs space-y-1">
+                        <div className="flex justify-between">
+                          <span>Paid:</span>
+                          <span className="text-green-600">
+                            {formatCurrency(totalPaid)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Owes:</span>
+                          <span className="text-red-600">
+                            {formatCurrency(totalOwed)}
+                          </span>
+                        </div>
+                        {(settledAsDebtor > 0 || settledAsCreditor > 0) && (
+                          <div className="flex justify-between text-blue-600">
+                            <span>Settled:</span>
+                            <span>
+                              {formatCurrency(
+                                settledAsCreditor - settledAsDebtor
+                              )}
+                            </span>
+                          </div>
+                        )}
+                        <div className="pt-1 border-t">
+                          <span className="font-medium">
+                            {isCreditor
+                              ? "Should receive"
+                              : isDebtor
+                              ? "Should pay"
+                              : "Balanced"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                  );
+                })}
+              </div>
+            </div>
 
-                    <div className="relative w-full h-[450px] bg-white/50 dark:bg-gray-900/50 rounded-lg border border-red-200 dark:border-red-700 overflow-hidden">
-                      {unpaidPairwiseTransactions.length > 0 ? (
-                        <>
-                          {/* People Nodes - Vertical Layout */}
-                          {Object.keys(individualBalances)
-                            .filter(
-                              (personId) =>
-                                Math.abs(individualBalances[personId]) > 0.01
-                            )
-                            .map((personId, index, array) => {
-                              const spacing = Math.min(
-                                80,
-                                350 / Math.max(array.length - 1, 1)
-                              );
-                              const startY = 50;
-                              const y = startY + index * spacing;
-                              const x = 100; // Fixed x position for vertical layout
-                              const balance = individualBalances[personId];
-                              const isCreditor = balance > 0.01;
+            {/* Step 2: Outstanding Direct Debts */}
+            {unpaidPairwiseTransactions.length > 0 && (
+              <Card>
+                <CardHeader className="pt-3 sm:pt-4 pb-2">
+                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                    <ArrowRight className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    Step 2: Outstanding Direct Debt Relationships
+                  </CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    {unpaidPairwiseTransactions.length} unpaid transactions - These are the remaining unpaid debts between people based on who paid for what:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
 
-                              return (
-                                <div
-                                  key={`node-${personId}`}
-                                  className="absolute"
-                                  style={{
-                                    left: `${x - 40}px`,
-                                    top: `${y - 30}px`,
-                                    zIndex: 10,
-                                  }}
-                                >
-                                  <div
-                                    className={`w-20 h-16 rounded-lg flex items-center justify-center shadow-lg border-2 ${
-                                      isCreditor
-                                        ? "bg-green-100 border-green-500 text-green-800 dark:bg-green-900/70 dark:border-green-500 dark:text-green-200"
-                                        : "bg-red-100 border-red-500 text-red-800 dark:bg-red-900/70 dark:border-red-500 dark:text-red-200"
-                                    }`}
-                                  >
-                                    <div className="text-center">
-                                      <div className="text-lg font-bold">
-                                        {peopleMap[personId]?.charAt(0) || "?"}
-                                      </div>
-                                      <div className="text-xs font-medium truncate max-w-[70px]">
-                                        {peopleMap[personId]?.split(" ")[0] ||
-                                          "Unknown"}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                <div className="space-y-3">
+                  {unpaidPairwiseTransactions.map((txn, index) => {
+                    // Find expenses that contribute to this debt
+                    const contributingExpenses = allExpenses.filter(
+                      (expense) => {
+                        const paidByPerson =
+                          Array.isArray(expense.paid_by) &&
+                          expense.paid_by.some((p) => p.personId === txn.to);
+                        const owedByPerson =
+                          Array.isArray(expense.shares) &&
+                          expense.shares.some((s) => s.personId === txn.from);
+                        return paidByPerson && owedByPerson;
+                      }
+                    );
 
-                          {/* Connection Lines - Straight Vertical Layout */}
-                          <svg
-                            className="absolute inset-0 w-full h-full"
-                            style={{ zIndex: 1 }}
-                          >
-                            <defs>
-                              <marker
-                                id="arrowhead-red-debt"
-                                markerWidth="8"
-                                markerHeight="6"
-                                refX="7"
-                                refY="3"
-                                orient="auto"
-                              >
-                                <polygon
-                                  points="0 0, 8 3, 0 6"
-                                  fill="#ef4444"
-                                />
-                              </marker>
-                            </defs>
-                            {(() => {
-                              const peopleArray = Object.keys(
-                                individualBalances
-                              ).filter(
-                                (personId) =>
-                                  Math.abs(individualBalances[personId]) > 0.01
-                              );
-
-                              // Group transactions by connection pairs to handle bidirectional cases
-                              const connectionGroups: Record<
-                                string,
-                                typeof unpaidPairwiseTransactions
-                              > = {};
-                              unpaidPairwiseTransactions.forEach((txn) => {
-                                const key = [txn.from, txn.to].sort().join("-");
-                                if (!connectionGroups[key])
-                                  connectionGroups[key] = [];
-                                connectionGroups[key].push(txn);
-                              });
-
-                              return Object.entries(connectionGroups).flatMap(
-                                ([connectionKey, transactions], groupIndex) => {
-                                  return transactions.map((txn, txnIndex) => {
-                                    const fromIndex = peopleArray.indexOf(
-                                      txn.from
-                                    );
-                                    const toIndex = peopleArray.indexOf(txn.to);
-
-                                    if (fromIndex === -1 || toIndex === -1)
-                                      return null;
-
-                                    const spacing = Math.min(
-                                      80,
-                                      350 / Math.max(peopleArray.length - 1, 1)
-                                    );
-                                    const startY = 50;
-                                    const fromY = startY + fromIndex * spacing;
-                                    const toY = startY + toIndex * spacing;
-                                    const nodeX = 100;
-
-                                    // Calculate connection points
-                                    const fromX = nodeX + 40; // Right edge of from node
-                                    const toX = nodeX - 40; // Left edge of to node
-
-                                    // For multiple connections, create vertical offset lanes
-                                    const laneOffset =
-                                      transactions.length > 1
-                                        ? 40 + txnIndex * 35
-                                        : 40;
-                                    const rightX = nodeX + 40 + laneOffset;
-
-                                    // Label position - positioned to the right of the line
-                                    const labelX = rightX + 25;
-                                    const labelY = (fromY + toY) / 2;
-
-                                    return (
-                                      <g key={`line-${groupIndex}-${txnIndex}`}>
-                                        {/* Three-segment straight line path */}
-                                        <polyline
-                                          points={`${fromX},${fromY} ${rightX},${fromY} ${rightX},${toY} ${toX},${toY}`}
-                                          stroke="#ef4444"
-                                          strokeWidth="2"
-                                          strokeDasharray="5,5"
-                                          fill="none"
-                                          markerEnd="url(#arrowhead-red-debt)"
-                                          opacity="0.8"
-                                        />
-                                        <rect
-                                          x={labelX - 22}
-                                          y={labelY - 10}
-                                          width="44"
-                                          height="20"
-                                          fill="white"
-                                          fillOpacity="0.95"
-                                          rx="4"
-                                          stroke="#ef4444"
-                                          strokeWidth="1"
-                                        />
-                                        <text
-                                          x={labelX}
-                                          y={labelY + 3}
-                                          fill="#dc2626"
-                                          fontSize="11"
-                                          textAnchor="middle"
-                                          className="font-bold"
-                                        >
-                                          {formatCurrency(txn.amount)}
-                                        </text>
-                                      </g>
-                                    );
-                                  });
-                                }
-                              );
-                            })()}
-                          </svg>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <CheckCircle2 className="h-16 w-16 text-gray-400 mx-auto mb-3" />
-                            <div className="text-lg font-bold text-gray-600 dark:text-gray-400">
-                              No Individual Debts
+                    return (
+                      <div
+                        key={`debt-${index}`}
+                        className="bg-white dark:bg-gray-800 p-4 rounded border"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-lg flex items-center justify-center">
+                              <span className="font-bold text-red-700 dark:text-red-300 text-sm">
+                                {peopleMap[txn.from]?.charAt(0) || "?"}
+                              </span>
+                            </div>
+                            <ArrowRight className="text-red-500 w-4 h-4" />
+                            <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-lg flex items-center justify-center">
+                              <span className="font-bold text-red-700 dark:text-red-300 text-sm">
+                                {peopleMap[txn.to]?.charAt(0) || "?"}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {peopleMap[txn.from] || 'Unknown'} owes {peopleMap[txn.to] || 'Unknown'}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                From {contributingExpenses.length} shared
+                                expense
+                                {contributingExpenses.length !== 1 ? "s" : ""}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Optimized Settlement Mindmap */}
-                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800">
-                    <div className="text-center mb-6">
-                      <h3 className="text-xl font-bold text-green-700 dark:text-green-400 mb-2">
-                        Optimized Settlement Network
-                      </h3>
-                      <p className="text-sm text-green-600 dark:text-green-300">
-                        {unpaidSimplifiedTransactions.length} outstanding efficient connections
-                        for minimal transactions
-                      </p>
-                    </div>
-
-                    <div className="relative w-full h-[450px] bg-white/50 dark:bg-gray-900/50 rounded-lg border border-green-200 dark:border-green-700 overflow-hidden">
-                      {unpaidSimplifiedTransactions.length > 0 ? (
-                        <>
-                          {/* People Nodes - Vertical Layout */}
-                          {Object.keys(individualBalances)
-                            .filter(
-                              (personId) =>
-                                Math.abs(individualBalances[personId]) > 0.01
-                            )
-                            .map((personId, index, array) => {
-                              const spacing = Math.min(
-                                80,
-                                350 / Math.max(array.length - 1, 1)
-                              );
-                              const startY = 50;
-                              const y = startY + index * spacing;
-                              const x = 100; // Fixed x position for vertical layout
-                              const balance = individualBalances[personId];
-                              const isCreditor = balance > 0.01;
-
-                              return (
-                                <div
-                                  key={`opt-node-${personId}`}
-                                  className="absolute"
-                                  style={{
-                                    left: `${x - 40}px`,
-                                    top: `${y - 30}px`,
-                                    zIndex: 10,
-                                  }}
-                                >
-                                  <div
-                                    className={`w-20 h-16 rounded-lg flex items-center justify-center shadow-xl border-3 ${
-                                      isCreditor
-                                        ? "bg-green-100 border-green-500 text-green-800 dark:bg-green-900/70 dark:border-green-500 dark:text-green-200"
-                                        : "bg-red-100 border-red-500 text-red-800 dark:bg-red-900/70 dark:border-red-500 dark:text-red-200"
-                                    }`}
-                                  >
-                                    <div className="text-center">
-                                      <div className="text-lg font-bold">
-                                        {peopleMap[personId]?.charAt(0) || "?"}
-                                      </div>
-                                      <div className="text-xs font-medium truncate max-w-[70px]">
-                                        {peopleMap[personId]?.split(" ")[0] ||
-                                          "Unknown"}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
-
-                          {/* Optimized Connection Lines - Straight Vertical Layout */}
-                          <svg
-                            className="absolute inset-0 w-full h-full"
-                            style={{ zIndex: 1 }}
-                          >
-                            <defs>
-                              <marker
-                                id="arrowhead-green-opt"
-                                markerWidth="10"
-                                markerHeight="8"
-                                refX="9"
-                                refY="4"
-                                orient="auto"
-                              >
-                                <polygon
-                                  points="0 0, 10 4, 0 8"
-                                  fill="#22c55e"
-                                />
-                              </marker>
-                            </defs>
-                            {unpaidSimplifiedTransactions.map((txn, index) => {
-                              const peopleArray = Object.keys(
-                                individualBalances
-                              ).filter(
-                                (personId) =>
-                                  Math.abs(individualBalances[personId]) > 0.01
-                              );
-                              const fromIndex = peopleArray.indexOf(txn.from);
-                              const toIndex = peopleArray.indexOf(txn.to);
-
-                              if (fromIndex === -1 || toIndex === -1)
-                                return null;
-
-                              const spacing = Math.min(
-                                80,
-                                350 / Math.max(peopleArray.length - 1, 1)
-                              );
-                              const startY = 50;
-                              const fromY = startY + fromIndex * spacing;
-                              const toY = startY + toIndex * spacing;
-                              const nodeX = 100;
-
-                              // Calculate connection points
-                              const fromX = nodeX + 40; // Right edge of from node
-                              const toX = nodeX - 40; // Left edge of to node
-
-                              // For optimized connections, use single lane with more spacing
-                              const rightX = nodeX + 40 + 60; // Single lane for cleaner look
-
-                              // Label position - positioned to the right of the line
-                              const labelX = rightX + 30;
-                              const labelY = (fromY + toY) / 2;
-
-                              return (
-                                <g key={`opt-line-${index}`}>
-                                  {/* Three-segment straight line path */}
-                                  <polyline
-                                    points={`${fromX},${fromY} ${rightX},${fromY} ${rightX},${toY} ${toX},${toY}`}
-                                    stroke="#22c55e"
-                                    strokeWidth="4"
-                                    fill="none"
-                                    markerEnd="url(#arrowhead-green-opt)"
-                                    className="drop-shadow-sm"
-                                  />
-                                  <rect
-                                    x={labelX - 25}
-                                    y={labelY - 12}
-                                    width="50"
-                                    height="24"
-                                    fill="white"
-                                    fillOpacity="0.95"
-                                    rx="4"
-                                    stroke="#22c55e"
-                                    strokeWidth="2"
-                                  />
-                                  <text
-                                    x={labelX}
-                                    y={labelY + 3}
-                                    fill="#16a34a"
-                                    fontSize="13"
-                                    textAnchor="middle"
-                                    className="font-bold"
-                                  >
-                                    {formatCurrency(txn.amount)}
-                                  </text>
-                                </g>
-                              );
-                            })}
-                          </svg>
-                        </>
-                      ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <div className="text-center">
-                            <CheckCircle2 className="h-20 w-20 text-green-500 mx-auto mb-4" />
-                            <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-                              Perfect Balance!
-                            </div>
-                            <div className="text-lg text-green-600 dark:text-green-400">
-                              No payments needed
-                            </div>
+                          <div className="font-bold text-red-700 dark:text-red-300 text-lg">
+                            {formatCurrency(txn.amount)}
                           </div>
                         </div>
-                      )}
-                    </div>
+
+                        {contributingExpenses.length > 0 && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-red-200">
+                            <div className="font-medium mb-1">
+                              Contributing expenses:
+                            </div>
+                            {contributingExpenses
+                              .slice(0, 3)
+                              .map((expense, i) => (
+                                <div key={i} className="flex justify-between">
+                                  <span className="truncate mr-2">
+                                    {expense.description}
+                                  </span>
+                                  <span>{formatCurrency(expense.amount)}</span>
+                                </div>
+                              ))}
+                            {contributingExpenses.length > 3 && (
+                              <div className="text-center mt-1">
+                                ... and {contributingExpenses.length - 3} more
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Outstanding Optimized Settlements */}
+            {unpaidSimplifiedTransactions.length > 0 && (
+              <Card>
+                <CardHeader className="pt-3 sm:pt-4 pb-2">
+                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                    <CheckCircle2 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                    Step 3: Outstanding Optimized Settlement Plan
+                  </CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    {unpaidSimplifiedTransactions.length} unpaid transactions - The minimum number of remaining payments needed to settle all outstanding debts efficiently:
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
+
+                <div className="space-y-3">
+                  {unpaidSimplifiedTransactions.map((txn, index) => {
+                    // Calculate how much this person should receive/pay based on their balance
+                    let fromBalance = 0;
+                    let toBalance = 0;
+
+                    people.forEach((person) => {
+                      let balance = 0;
+
+                      // Calculate balance for this person
+                      allExpenses.forEach((expense) => {
+                        if (Array.isArray(expense.paid_by)) {
+                          expense.paid_by.forEach((payment) => {
+                            if (payment.personId === person.id) {
+                              balance += Number(payment.amount);
+                            }
+                          });
+                        }
+                        if (Array.isArray(expense.shares)) {
+                          expense.shares.forEach((share) => {
+                            if (share.personId === person.id) {
+                              balance -= Number(share.amount);
+                            }
+                          });
+                        }
+                      });
+
+                      // Adjust for settlements
+                      settlementPayments.forEach((payment) => {
+                        if (payment.debtor_id === person.id) {
+                          balance += Number(payment.amount_settled);
+                        }
+                        if (payment.creditor_id === person.id) {
+                          balance -= Number(payment.amount_settled);
+                        }
+                      });
+
+                      if (person.id === txn.from) fromBalance = balance;
+                      if (person.id === txn.to) toBalance = balance;
+                    });
+
+                    return (
+                      <div
+                        key={`opt-${index}`}
+                        className="bg-white dark:bg-gray-800 p-4 rounded border"
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-lg flex items-center justify-center">
+                              <span className="font-bold text-green-700 dark:text-green-300 text-sm">
+                                {peopleMap[txn.from]?.charAt(0) || "?"}
+                              </span>
+                            </div>
+                            <ArrowRight className="text-green-500 w-4 h-4" />
+                            <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-lg flex items-center justify-center">
+                              <span className="font-bold text-green-700 dark:text-green-300 text-sm">
+                                {peopleMap[txn.to]?.charAt(0) || "?"}
+                              </span>
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {peopleMap[txn.from] || 'Unknown'} pays {peopleMap[txn.to] || 'Unknown'}
+                              </div>
+                              <div className="text-sm text-gray-600 dark:text-gray-400">
+                                Optimized settlement
+                              </div>
+                            </div>
+                          </div>
+                          <div className="font-bold text-green-700 dark:text-green-300 text-lg">
+                            {formatCurrency(txn.amount)}
+                          </div>
+                        </div>
+
+                        <div className="text-xs text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-green-200">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <div className="font-medium">
+                                {peopleMap[txn.from] || 'Unknown'}'s situation:
+                              </div>
+                              <div>
+                                Net balance:{" "}
+                                <span className="text-red-600">
+                                  {formatCurrency(Math.abs(fromBalance))}
+                                </span>{" "}
+                                to pay
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-medium">
+                                {peopleMap[txn.to] || 'Unknown'}'s situation:
+                              </div>
+                              <div>
+                                Net balance:{" "}
+                                <span className="text-green-600">
+                                  {formatCurrency(toBalance)}
+                                </span>{" "}
+                                to receive
+                              </div>
+                            </div>
+                          </div>
+                          <div className="mt-2 text-center font-medium">
+                            This payment settles part of both balances
+                            efficiently
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Summary */}
+            <Card>
+              <CardHeader className="pt-3 sm:pt-4 pb-2">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                  <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+                  Why This Settlement Plan?
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
+                <div className="space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <span className="text-muted-foreground shrink-0 mr-2">Transparent:</span>
+                    <span className="font-medium text-left sm:text-right">Every amount is based on actual expenses and what each person paid vs. their fair share.</span>
                   </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center h-64 text-center text-muted-foreground">
-                  <div>
-                    <Shuffle className="h-12 w-12 mx-auto mb-3" />
-                    <p className="font-medium">No settlement data available</p>
-                    <p className="text-xs">
-                      Add some expenses to see settlement networks.
-                    </p>
+                  <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <span className="text-muted-foreground shrink-0 mr-2">Efficient:</span>
+                    <span className="font-medium text-left sm:text-right">The optimized plan minimizes the number of transactions needed.</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <span className="text-muted-foreground shrink-0 mr-2">Fair:</span>
+                    <span className="font-medium text-left sm:text-right">Everyone ends up paying exactly their share of all expenses, no more, no less.</span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <span className="text-muted-foreground shrink-0 mr-2">Traceable:</span>
+                    <span className="font-medium text-left sm:text-right">You can see which expenses contribute to each debt relationship.</span>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Empty State */}
+            {unpaidPairwiseTransactions.length === 0 &&
+              unpaidSimplifiedTransactions.length === 0 && (
+                <div className="text-center py-12">
+                  <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-lg font-bold text-green-700 dark:text-green-300">
+                    All Outstanding Debts Settled!
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Everyone has paid their outstanding amounts. No remaining
+                    settlements needed.
+                  </p>
+                </div>
               )}
-            </div>
           </div>
         </DialogContent>
       </Dialog>
