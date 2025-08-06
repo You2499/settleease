@@ -142,11 +142,11 @@ export default function SettlementSummary({
   }, [people, allExpenses, settlementPayments]);
 
   return (
-    <Card className="w-full shadow-lg rounded-lg">
+    <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">
       <Tabs
         value={viewMode}
         onValueChange={(value) => setViewMode(value as "overview" | "person")}
-        className="w-full"
+        className="w-full h-full flex flex-col"
       >
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           {" "}
@@ -171,10 +171,10 @@ export default function SettlementSummary({
             </TabsList>
           </div>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           {" "}
           {/* Adjusted top padding */}
-          <TabsContent value="overview" className="mt-0">
+          <TabsContent value="overview" className="mt-0 flex-1 flex flex-col min-h-0">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 px-3 py-2 rounded-md gap-2">
               {" "}
               {/* Reduced padding */}
@@ -198,7 +198,7 @@ export default function SettlementSummary({
               </div>
             </div>
             {transactionsToDisplay.length > 0 ? (
-              <ScrollArea className="h-[200px] border rounded-md p-1 mt-2">
+              <ScrollArea className="flex-1 min-h-0 border rounded-md p-1 mt-2">
                 <ul className="space-y-2 p-2">
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
@@ -241,15 +241,16 @@ export default function SettlementSummary({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="text-sm text-muted-foreground p-3 bg-secondary/30 rounded-md text-center min-h-[100px] flex items-center justify-center mt-2">
-                {" "}
-                {/* Reduced margin */}
-                <FileText className="mr-2 h-5 w-5" />
-                All debts are settled, or no expenses to settle yet!
+              <div className="flex-1 flex items-center justify-center text-center text-muted-foreground mt-2">
+                <div>
+                  <FileText className="h-12 w-12 mx-auto mb-3 text-primary/30" />
+                  <p className="font-medium text-sm sm:text-base">All Settled Up!</p>
+                  <p className="text-xs">All debts are settled, or no expenses to settle yet!</p>
+                </div>
               </div>
             )}
           </TabsContent>
-          <TabsContent value="person" className="mt-0 space-y-3">
+          <TabsContent value="person" className="mt-0 flex-1 flex flex-col min-h-0 space-y-3">
             <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 px-3 py-2 rounded-md">
               {" "}
               {/* Reduced padding */}
