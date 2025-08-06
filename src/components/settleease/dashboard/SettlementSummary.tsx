@@ -158,12 +158,11 @@ export default function SettlementSummary({
                 Hub
               </CardTitle>
               <Button
-                variant="ghost"
                 size="sm"
+                variant="outline"
                 onClick={() => setIsInfoModalOpen(true)}
-                className="text-xs px-2 py-1 h-auto"
               >
-                <Info className="mr-1 h-3.5 w-3.5" /> More Info
+                <Info className="mr-1 h-4 w-4" /> More Info
               </Button>
             </div>
             <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
