@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { ArrowRight, Users, Handshake, CheckCircle2, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle } from 'lucide-react';
+import { ArrowRight, Users, Handshake, CheckCircle2, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, TrendingUp, BarChart3, Minus, Plus } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -49,6 +49,7 @@ export default function SettlementSummary({
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [visualizationTab, setVisualizationTab] = useState<'simplified' | 'individual'>('simplified');
 
   const transactionsToDisplay = simplifySettlement ? simplifiedTransactions : pairwiseTransactions;
 
@@ -66,6 +67,40 @@ export default function SettlementSummary({
     if (!selectedPersonId) return null;
     return people.find(p => p.id === selectedPersonId) || null;
   }, [selectedPersonId, people]);
+
+  // Calculate individual balances for visualization
+  const individualBalances = useMemo(() => {
+    if (people.length === 0) return {};
+
+    const balances: Record<string, number> = {};
+    people.forEach(p => balances[p.id] = 0);
+
+    // Calculate balances from expenses
+    allExpenses.forEach(expense => {
+      if (Array.isArray(expense.paid_by)) {
+        expense.paid_by.forEach(payment => {
+          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
+        });
+      }
+      if (Array.isArray(expense.shares)) {
+        expense.shares.forEach(share => {
+          balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
+        });
+      }
+    });
+
+    // Adjust for settlement payments
+    settlementPayments.forEach(payment => {
+      if (balances[payment.debtor_id] !== undefined) {
+        balances[payment.debtor_id] += Number(payment.amount_settled);
+      }
+      if (balances[payment.creditor_id] !== undefined) {
+        balances[payment.creditor_id] -= Number(payment.amount_settled);
+      }
+    });
+
+    return balances;
+  }, [people, allExpenses, settlementPayments]);
 
   return (
     <Card className="w-full shadow-lg rounded-lg">
@@ -197,135 +232,161 @@ export default function SettlementSummary({
         <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
           <DialogHeader className="pb-3 border-b">
             <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-              <Construction className="mr-2 h-5 w-5 text-orange-500" />
-              Settlement Hub - Advanced Analytics
+              <BarChart3 className="mr-2 h-5 w-5" />
+              Settlement Visualization
             </DialogTitle>
           </DialogHeader>
           
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-            <div className="space-y-4 sm:space-y-6 pt-2">
+            <div className="space-y-4 pt-2">
               
-              {/* Under Construction Banner */}
-              <Card className="border-2 border-dashed border-orange-400 bg-orange-50 dark:bg-orange-950/20">
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-lg font-bold text-orange-700 dark:text-orange-400">
-                    <Wrench className="mr-2 h-4 w-4 animate-pulse" />
-                    🚧 Feature Under Development
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm space-y-2 pt-0">
-                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-300">
-                    <Zap className="h-4 w-4" />
-                    <span className="font-medium">Status: Active Development</span>
-                  </div>
-                  <p className="text-orange-700 dark:text-orange-200">
-                    This advanced settlement analytics panel is currently being built by our engineering team. 
-                    Expected features include debt visualization, payment history analysis, and smart settlement recommendations.
-                  </p>
-                </CardContent>
-              </Card>
+              {/* Visualization Tabs */}
+              <Tabs value={visualizationTab} onValueChange={(value) => setVisualizationTab(value as 'simplified' | 'individual')} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="simplified">Simplified Settlement</TabsTrigger>
+                  <TabsTrigger value="individual">Individual Balances</TabsTrigger>
+                </TabsList>
 
-              {/* Debug Info Cards */}
-              <Card className="bg-slate-900 text-green-400 font-mono">
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-lg font-bold">
-                    <Code className="mr-2 h-4 w-4" />
-                    Debug Console
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs space-y-2 pt-0">
-                  <div className="space-y-1">
-                    <div className="text-cyan-400">[INFO] Settlement engine initialized</div>
-                    <div className="text-yellow-400">[WARN] Advanced analytics module loading...</div>
-                    <div className="text-green-400">[SUCCESS] Transaction processor online</div>
-                    <div className="text-blue-400">[DEBUG] Calculating optimal settlement paths...</div>
-                    <div className="text-purple-400">[SYSTEM] Memory usage: 42.7MB | CPU: 12%</div>
-                    <div className="text-red-400">[ERROR] Feature not yet implemented</div>
-                    <div className="text-gray-400">└── Expected completion: Q2 2024</div>
-                  </div>
-                </CardContent>
-              </Card>
+                <TabsContent value="simplified" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pt-3 sm:pt-4 pb-2">
+                      <CardTitle className="flex items-center text-lg font-bold">
+                        <TrendingUp className="mr-2 h-4 w-4 text-green-600" />
+                        Optimized Settlement Path
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        This shows the minimum number of transactions needed to settle all debts efficiently.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {simplifiedTransactions.length > 0 ? (
+                        <div className="space-y-3">
+                          {simplifiedTransactions.map((txn, index) => (
+                            <div key={`${txn.from}-${txn.to}-${index}`} className="flex items-center justify-between p-3 bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-950/20 dark:to-blue-950/20 rounded-lg border">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center text-xs font-bold text-primary">
+                                  {index + 1}
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium text-sm">{peopleMap[txn.from]}</span>
+                                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium text-sm">{peopleMap[txn.to]}</span>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <div className="font-bold text-green-700 text-lg">{formatCurrency(txn.amount)}</div>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                            <div className="text-xs text-muted-foreground text-center">
+                              ✨ Total transactions needed: <span className="font-bold text-primary">{simplifiedTransactions.length}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Handshake className="h-12 w-12 mx-auto mb-3 text-green-500" />
+                          <p className="font-medium">All debts are settled!</p>
+                          <p className="text-xs">No transactions needed.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-              {/* Placeholder Features */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="opacity-60">
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-lg font-bold text-muted-foreground">
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Debt Visualization
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs sm:text-sm pt-0">
-                    <div className="h-24 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 rounded-md flex items-center justify-center">
-                      <span className="text-muted-foreground">Interactive debt graph coming soon...</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="opacity-60">
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-lg font-bold text-muted-foreground">
-                      <AlertCircle className="mr-2 h-4 w-4" />
-                      Smart Recommendations
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-xs sm:text-sm pt-0">
-                    <div className="h-24 bg-gradient-to-r from-green-100 to-teal-100 dark:from-green-900/20 dark:to-teal-900/20 rounded-md flex items-center justify-center">
-                      <span className="text-muted-foreground">AI-powered settlement suggestions...</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Mock Data Display */}
-              <Card>
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-lg font-bold">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Current Settlement Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm space-y-2 pt-0">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-muted-foreground">Total Transactions:</span>
-                      <span className="font-bold ml-2">{simplifiedTransactions.length + pairwiseTransactions.length}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Active People:</span>
-                      <span className="font-bold ml-2">{people.length}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Settlement Payments:</span>
-                      <span className="font-bold ml-2">{settlementPayments.length}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Total Expenses:</span>
-                      <span className="font-bold ml-2">{allExpenses.length}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Coming Soon Features */}
-              <Card className="border-2 border-dashed border-blue-300 bg-blue-50 dark:bg-blue-950/20">
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-lg font-bold text-blue-700 dark:text-blue-400">
-                    <Zap className="mr-2 h-4 w-4" />
-                    Coming Soon™
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="text-xs sm:text-sm pt-0">
-                  <ul className="space-y-1 text-blue-600 dark:text-blue-300">
-                    <li>• 📊 Advanced debt analytics and trends</li>
-                    <li>• 🎯 Optimal settlement path calculator</li>
-                    <li>• 📱 WhatsApp integration for payment reminders</li>
-                    <li>• 🔔 Smart notification system</li>
-                    <li>• 📈 Historical settlement performance</li>
-                    <li>• 🤖 AI-powered debt prediction</li>
-                  </ul>
-                </CardContent>
-              </Card>
+                <TabsContent value="individual" className="mt-4 space-y-4">
+                  <Card>
+                    <CardHeader className="pt-3 sm:pt-4 pb-2">
+                      <CardTitle className="flex items-center text-lg font-bold">
+                        <Users className="mr-2 h-4 w-4 text-blue-600" />
+                        Individual Balance Breakdown
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Shows each person's net balance after all expenses and payments.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {Object.keys(individualBalances).length > 0 ? (
+                        <div className="space-y-3">
+                          {Object.entries(individualBalances)
+                            .sort(([, balanceA], [, balanceB]) => balanceB - balanceA)
+                            .map(([personId, balance]) => {
+                              const isCreditor = balance > 0.01;
+                              const isDebtor = balance < -0.01;
+                              const isSettled = Math.abs(balance) <= 0.01;
+                              
+                              return (
+                                <div key={personId} className={`flex items-center justify-between p-3 rounded-lg border ${
+                                  isCreditor ? 'bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-800' :
+                                  isDebtor ? 'bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-950/20 dark:to-orange-950/20 border-red-200 dark:border-red-800' :
+                                  'bg-gradient-to-r from-gray-50 to-slate-50 dark:from-gray-950/20 dark:to-slate-950/20 border-gray-200 dark:border-gray-800'
+                                }`}>
+                                  <div className="flex items-center space-x-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                                      isCreditor ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                      isDebtor ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                      'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400'
+                                    }`}>
+                                      {isCreditor ? <Plus className="h-4 w-4" /> : 
+                                       isDebtor ? <Minus className="h-4 w-4" /> : 
+                                       <CheckCircle2 className="h-4 w-4" />}
+                                    </div>
+                                    <div>
+                                      <div className="font-medium text-sm">{peopleMap[personId]}</div>
+                                      <div className="text-xs text-muted-foreground">
+                                        {isCreditor ? 'Should receive' : 
+                                         isDebtor ? 'Should pay' : 
+                                         'Settled'}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className={`font-bold text-lg ${
+                                      isCreditor ? 'text-green-700' :
+                                      isDebtor ? 'text-red-700' :
+                                      'text-gray-600'
+                                    }`}>
+                                      {isSettled ? formatCurrency(0) : formatCurrency(Math.abs(balance))}
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          
+                          {/* Summary Stats */}
+                          <div className="mt-6 grid grid-cols-3 gap-3">
+                            <div className="text-center p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                              <div className="text-xs text-muted-foreground">Creditors</div>
+                              <div className="font-bold text-green-700">
+                                {Object.values(individualBalances).filter(b => b > 0.01).length}
+                              </div>
+                            </div>
+                            <div className="text-center p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                              <div className="text-xs text-muted-foreground">Debtors</div>
+                              <div className="font-bold text-red-700">
+                                {Object.values(individualBalances).filter(b => b < -0.01).length}
+                              </div>
+                            </div>
+                            <div className="text-center p-3 bg-gray-50 dark:bg-gray-950/20 rounded-lg">
+                              <div className="text-xs text-muted-foreground">Settled</div>
+                              <div className="font-bold text-gray-700">
+                                {Object.values(individualBalances).filter(b => Math.abs(b) <= 0.01).length}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <Users className="h-12 w-12 mx-auto mb-3" />
+                          <p className="font-medium">No balance data available</p>
+                          <p className="text-xs">Add some expenses to see individual balances.</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
 
             </div>
           </div>
