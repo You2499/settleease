@@ -376,60 +376,129 @@ export default function SettlementSummary({
                       return (
                         <div
                           key={person.id}
-                          className={`p-3 rounded-lg border ${
+                          className={`relative p-4 rounded-xl border-2 shadow-sm transition-all hover:shadow-md ${
                             isCreditor
-                              ? "bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800"
+                              ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                               : isDebtor
-                              ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800"
-                              : "bg-gray-50 dark:bg-gray-950/20 border-gray-200 dark:border-gray-800"
+                              ? "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
+                              : "bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950/30 dark:to-gray-900/20 border-gray-300 dark:border-gray-700"
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium">{person.name}</span>
-                            <span
-                              className={`font-bold ${
-                                isCreditor
-                                  ? "text-green-700 dark:text-green-300"
-                                  : isDebtor
-                                  ? "text-red-700 dark:text-red-300"
-                                  : "text-gray-700 dark:text-gray-300"
-                              }`}
-                            >
-                              {isCreditor ? "+" : ""}
-                              {formatCurrency(Math.abs(balance))}
-                            </span>
+                          {/* Status Badge */}
+                          <div
+                            className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                              isCreditor
+                                ? "bg-green-500 text-white"
+                                : isDebtor
+                                ? "bg-red-500 text-white"
+                                : "bg-gray-500 text-white"
+                            }`}
+                          >
+                            {isCreditor
+                              ? "RECEIVES"
+                              : isDebtor
+                              ? "PAYS"
+                              : "BALANCED"}
                           </div>
-                          <div className="text-xs space-y-1">
-                            <div className="flex justify-between">
-                              <span>Paid:</span>
-                              <span className="text-green-600">
+
+                          {/* Person Name and Amount */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                                  isCreditor
+                                    ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                    : isDebtor
+                                    ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                    : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                }`}
+                              >
+                                {person.name.charAt(0).toUpperCase()}
+                              </div>
+                              <span className="font-semibold text-gray-900 dark:text-gray-100">
+                                {person.name}
+                              </span>
+                            </div>
+                            <div className="text-right">
+                              <div
+                                className={`text-2xl font-bold ${
+                                  isCreditor
+                                    ? "text-green-700 dark:text-green-300"
+                                    : isDebtor
+                                    ? "text-red-700 dark:text-red-300"
+                                    : "text-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                {isCreditor ? "+" : isDebtor ? "-" : ""}
+                                {formatCurrency(Math.abs(balance))}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Breakdown Details */}
+                          <div className="space-y-2 text-xs">
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Total Paid:
+                              </span>
+                              <span className="font-semibold text-green-700 dark:text-green-400">
                                 {formatCurrency(totalPaid)}
                               </span>
                             </div>
-                            <div className="flex justify-between">
-                              <span>Owes:</span>
-                              <span className="text-red-600">
+                            <div className="flex justify-between items-center py-1">
+                              <span className="text-gray-600 dark:text-gray-400">
+                                Total Owed:
+                              </span>
+                              <span className="font-semibold text-red-700 dark:text-red-400">
                                 {formatCurrency(totalOwed)}
                               </span>
                             </div>
                             {(settledAsDebtor > 0 || settledAsCreditor > 0) && (
-                              <div className="flex justify-between text-blue-600">
-                                <span>Settled:</span>
-                                <span>
+                              <div className="flex justify-between items-center py-1">
+                                <span className="text-gray-600 dark:text-gray-400">
+                                  Already Settled:
+                                </span>
+                                <span className="font-semibold text-blue-700 dark:text-blue-400">
                                   {formatCurrency(
-                                    settledAsCreditor - settledAsDebtor
+                                    Math.abs(
+                                      settledAsCreditor - settledAsDebtor
+                                    )
                                   )}
                                 </span>
                               </div>
                             )}
-                            <div className="pt-1 border-t">
-                              <span className="font-medium">
-                                {isCreditor
-                                  ? "Should receive"
+
+                            {/* Final Status - More Prominent */}
+                            <div
+                              className={`mt-3 pt-3 border-t-2 ${
+                                isCreditor
+                                  ? "border-green-200 dark:border-green-800"
                                   : isDebtor
-                                  ? "Should pay"
-                                  : "Balanced"}
-                              </span>
+                                  ? "border-red-200 dark:border-red-800"
+                                  : "border-gray-200 dark:border-gray-800"
+                              }`}
+                            >
+                              <div className="flex items-center justify-center">
+                                <div
+                                  className={`px-4 py-2 rounded-lg font-bold text-sm text-center ${
+                                    isCreditor
+                                      ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                                      : isDebtor
+                                      ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                                      : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                                  }`}
+                                >
+                                  {isCreditor
+                                    ? `Should Receive ${formatCurrency(
+                                        Math.abs(balance)
+                                      )}`
+                                    : isDebtor
+                                    ? `Should Pay ${formatCurrency(
+                                        Math.abs(balance)
+                                      )}`
+                                    : "All Balanced ✓"}
+                                </div>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -476,66 +545,113 @@ export default function SettlementSummary({
                         return (
                           <div
                             key={`debt-${index}`}
-                            className="bg-white dark:bg-gray-800 p-4 rounded border"
+                            className="relative bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 p-5 rounded-xl border-2 border-red-300 dark:border-red-700 shadow-sm hover:shadow-md transition-all"
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-lg flex items-center justify-center">
-                                  <span className="font-bold text-red-700 dark:text-red-300 text-sm">
-                                    {peopleMap[txn.from]?.charAt(0) || "?"}
+                            {/* Debt Status Badge */}
+                            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white shadow-sm">
+                              DIRECT DEBT
+                            </div>
+
+                            {/* Main Transaction Display */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center space-x-4">
+                                {/* From Person Avatar */}
+                                <div className="flex flex-col items-center">
+                                  <div className="w-12 h-12 bg-red-200 dark:bg-red-800 border-2 border-red-400 dark:border-red-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="font-bold text-red-800 dark:text-red-200 text-lg">
+                                      {peopleMap[txn.from]?.charAt(0) || "?"}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                    Owes
                                   </span>
                                 </div>
-                                <ArrowRight className="text-red-500 w-4 h-4" />
-                                <div className="w-10 h-10 bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-lg flex items-center justify-center">
-                                  <span className="font-bold text-red-700 dark:text-red-300 text-sm">
-                                    {peopleMap[txn.to]?.charAt(0) || "?"}
+
+                                {/* Arrow */}
+                                <div className="flex flex-col items-center">
+                                  <ArrowRight className="text-red-500 w-6 h-6" />
+                                  <span className="text-xs text-red-600 dark:text-red-400 mt-1">
+                                    {formatCurrency(txn.amount)}
                                   </span>
                                 </div>
-                                <div>
-                                  <div className="font-medium">
-                                    {peopleMap[txn.from] || "Unknown"} owes{" "}
+
+                                {/* To Person Avatar */}
+                                <div className="flex flex-col items-center">
+                                  <div className="w-12 h-12 bg-red-200 dark:bg-red-800 border-2 border-red-400 dark:border-red-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="font-bold text-red-800 dark:text-red-200 text-lg">
+                                      {peopleMap[txn.to]?.charAt(0) || "?"}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-medium text-red-700 dark:text-red-300 mt-1">
+                                    Receives
+                                  </span>
+                                </div>
+
+                                {/* Transaction Details */}
+                                <div className="ml-4">
+                                  <div className="font-bold text-gray-900 dark:text-gray-100 text-lg">
+                                    {peopleMap[txn.from] || "Unknown"} →{" "}
                                     {peopleMap[txn.to] || "Unknown"}
                                   </div>
                                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    From {contributingExpenses.length} shared
-                                    expense
+                                    Based on {contributingExpenses.length}{" "}
+                                    shared expense
                                     {contributingExpenses.length !== 1
                                       ? "s"
                                       : ""}
                                   </div>
                                 </div>
                               </div>
-                              <div className="font-bold text-red-700 dark:text-red-300 text-lg">
-                                {formatCurrency(txn.amount)}
+
+                              {/* Amount Display */}
+                              <div className="text-right">
+                                <div className="text-3xl font-bold text-red-700 dark:text-red-300">
+                                  {formatCurrency(txn.amount)}
+                                </div>
+                                <div className="text-sm text-red-600 dark:text-red-400 font-medium">
+                                  Outstanding
+                                </div>
                               </div>
                             </div>
 
+                            {/* Contributing Expenses */}
                             {contributingExpenses.length > 0 && (
-                              <div className="text-xs text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-red-200">
-                                <div className="font-medium mb-1">
-                                  Contributing expenses:
-                                </div>
-                                {contributingExpenses
-                                  .slice(0, 3)
-                                  .map((expense, i) => (
-                                    <div
-                                      key={i}
-                                      className="flex justify-between"
-                                    >
-                                      <span className="truncate mr-2">
-                                        {expense.description}
-                                      </span>
-                                      <span>
-                                        {formatCurrency(expense.total_amount)}
-                                      </span>
-                                    </div>
-                                  ))}
-                                {contributingExpenses.length > 3 && (
-                                  <div className="text-center mt-1">
-                                    ... and {contributingExpenses.length - 3}{" "}
-                                    more
+                              <div className="mt-4 pt-4 border-t-2 border-red-200 dark:border-red-800">
+                                <div className="bg-red-100 dark:bg-red-900/30 rounded-lg p-3">
+                                  <div className="font-semibold text-red-800 dark:text-red-200 mb-3 flex items-center">
+                                    <FileText className="w-4 h-4 mr-2" />
+                                    Contributing Expenses (
+                                    {contributingExpenses.length})
                                   </div>
-                                )}
+                                  <div className="space-y-2">
+                                    {contributingExpenses.map((expense, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex justify-between items-start gap-3 p-2 bg-white dark:bg-gray-800 rounded-md shadow-sm"
+                                      >
+                                        <div className="flex-1 min-w-0">
+                                          <div className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                                            {expense.description}
+                                          </div>
+                                          <div className="text-xs text-gray-500 dark:text-gray-400">
+                                            {expense.created_at
+                                              ? new Date(
+                                                  expense.created_at
+                                                ).toLocaleDateString()
+                                              : "No date"}
+                                          </div>
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="font-bold text-gray-900 dark:text-gray-100">
+                                            {formatCurrency(
+                                              expense.total_amount
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -605,68 +721,134 @@ export default function SettlementSummary({
                         return (
                           <div
                             key={`opt-${index}`}
-                            className="bg-white dark:bg-gray-800 p-4 rounded border"
+                            className="relative bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 p-5 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm hover:shadow-md transition-all"
                           >
-                            <div className="flex items-center justify-between mb-3">
-                              <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-lg flex items-center justify-center">
-                                  <span className="font-bold text-green-700 dark:text-green-300 text-sm">
-                                    {peopleMap[txn.from]?.charAt(0) || "?"}
+                            {/* Optimized Status Badge */}
+                            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-sm">
+                              OPTIMIZED
+                            </div>
+
+                            {/* Main Transaction Display */}
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="flex items-center space-x-4">
+                                {/* From Person Avatar */}
+                                <div className="flex flex-col items-center">
+                                  <div className="w-12 h-12 bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="font-bold text-green-800 dark:text-green-200 text-lg">
+                                      {peopleMap[txn.from]?.charAt(0) || "?"}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 mt-1">
+                                    Pays
                                   </span>
                                 </div>
-                                <ArrowRight className="text-green-500 w-4 h-4" />
-                                <div className="w-10 h-10 bg-green-100 dark:bg-green-900/30 border-2 border-green-500 rounded-lg flex items-center justify-center">
-                                  <span className="font-bold text-green-700 dark:text-green-300 text-sm">
-                                    {peopleMap[txn.to]?.charAt(0) || "?"}
+
+                                {/* Arrow */}
+                                <div className="flex flex-col items-center">
+                                  <ArrowRight className="text-green-500 w-6 h-6" />
+                                  <span className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    {formatCurrency(txn.amount)}
                                   </span>
                                 </div>
-                                <div>
-                                  <div className="font-medium">
-                                    {peopleMap[txn.from] || "Unknown"} pays{" "}
+
+                                {/* To Person Avatar */}
+                                <div className="flex flex-col items-center">
+                                  <div className="w-12 h-12 bg-green-200 dark:bg-green-800 border-2 border-green-400 dark:border-green-600 rounded-full flex items-center justify-center shadow-sm">
+                                    <span className="font-bold text-green-800 dark:text-green-200 text-lg">
+                                      {peopleMap[txn.to]?.charAt(0) || "?"}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-medium text-green-700 dark:text-green-300 mt-1">
+                                    Receives
+                                  </span>
+                                </div>
+
+                                {/* Transaction Details */}
+                                <div className="ml-4">
+                                  <div className="font-bold text-gray-900 dark:text-gray-100 text-lg">
+                                    {peopleMap[txn.from] || "Unknown"} →{" "}
                                     {peopleMap[txn.to] || "Unknown"}
                                   </div>
                                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    Optimized settlement
+                                    Optimized settlement payment
                                   </div>
                                 </div>
                               </div>
-                              <div className="font-bold text-green-700 dark:text-green-300 text-lg">
-                                {formatCurrency(txn.amount)}
+
+                              {/* Amount Display */}
+                              <div className="text-right">
+                                <div className="text-3xl font-bold text-green-700 dark:text-green-300">
+                                  {formatCurrency(txn.amount)}
+                                </div>
+                                <div className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                  Settlement
+                                </div>
                               </div>
                             </div>
 
-                            <div className="text-xs text-gray-600 dark:text-gray-400 pl-4 border-l-2 border-green-200">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                  <div className="font-medium">
-                                    {peopleMap[txn.from] || "Unknown"}'s
-                                    situation:
+                            {/* Balance Analysis */}
+                            <div className="mt-4 pt-4 border-t-2 border-green-200 dark:border-green-800">
+                              <div className="bg-green-100 dark:bg-green-900/30 rounded-lg p-3">
+                                <div className="font-semibold text-green-800 dark:text-green-200 mb-3 flex items-center">
+                                  <CheckCircle2 className="w-4 h-4 mr-2" />
+                                  Balance Analysis
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* From Person Balance */}
+                                  <div className="p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="w-6 h-6 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
+                                        <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                                          {peopleMap[txn.from]?.charAt(0) ||
+                                            "?"}
+                                        </span>
+                                      </div>
+                                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {peopleMap[txn.from] || "Unknown"}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm">
+                                      <div className="text-gray-600 dark:text-gray-400">
+                                        Current balance:
+                                      </div>
+                                      <div className="font-bold text-red-600 dark:text-red-400">
+                                        -{formatCurrency(Math.abs(fromBalance))}{" "}
+                                        to pay
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div>
-                                    Net balance:{" "}
-                                    <span className="text-red-600">
-                                      {formatCurrency(Math.abs(fromBalance))}
-                                    </span>{" "}
-                                    to pay
+
+                                  {/* To Person Balance */}
+                                  <div className="p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm">
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <div className="w-6 h-6 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
+                                        <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                                          {peopleMap[txn.to]?.charAt(0) || "?"}
+                                        </span>
+                                      </div>
+                                      <span className="font-medium text-gray-900 dark:text-gray-100">
+                                        {peopleMap[txn.to] || "Unknown"}
+                                      </span>
+                                    </div>
+                                    <div className="text-sm">
+                                      <div className="text-gray-600 dark:text-gray-400">
+                                        Current balance:
+                                      </div>
+                                      <div className="font-bold text-green-600 dark:text-green-400">
+                                        +{formatCurrency(toBalance)} to receive
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                                <div>
-                                  <div className="font-medium">
-                                    {peopleMap[txn.to] || "Unknown"}'s
-                                    situation:
-                                  </div>
-                                  <div>
-                                    Net balance:{" "}
-                                    <span className="text-green-600">
-                                      {formatCurrency(toBalance)}
-                                    </span>{" "}
-                                    to receive
+
+                                {/* Efficiency Note */}
+                                <div className="mt-3 p-2 bg-green-50 dark:bg-green-900/20 rounded border border-green-200 dark:border-green-800">
+                                  <div className="text-xs text-green-800 dark:text-green-200 text-center font-medium">
+                                    ✨ This optimized payment efficiently
+                                    settles both balances with minimal
+                                    transactions
                                   </div>
                                 </div>
-                              </div>
-                              <div className="mt-2 text-center font-medium">
-                                This payment settles part of both balances
-                                efficiently
                               </div>
                             </div>
                           </div>
@@ -678,49 +860,105 @@ export default function SettlementSummary({
               )}
 
               {/* Summary */}
-              <Card>
-                <CardHeader className="pt-3 sm:pt-4 pb-2">
-                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                    <Info className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              <Card className="relative bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 border-2 border-blue-300 dark:border-blue-700 shadow-lg">
+                {/* Info Badge */}
+                <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+                  INFO
+                </div>
+
+                <CardHeader className="pt-4 sm:pt-6 pb-3">
+                  <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-blue-900 dark:text-blue-100">
+                    <Info className="mr-3 h-6 w-6 text-blue-600 dark:text-blue-400" />
                     Why This Settlement Plan?
                   </CardTitle>
+                  <CardDescription className="text-blue-700 dark:text-blue-300 mt-2">
+                    Our settlement algorithm ensures fairness, efficiency, and
+                    transparency in every transaction.
+                  </CardDescription>
                 </CardHeader>
-                <CardContent className="text-xs sm:text-sm space-y-1.5 sm:space-y-2 pt-0">
-                  <div className="space-y-2">
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground shrink-0 mr-2">
-                        Transparent:
-                      </span>
-                      <span className="font-medium text-left sm:text-right">
-                        Every amount is based on actual expenses and what each
-                        person paid vs. their fair share.
-                      </span>
+
+                <CardContent className="pt-0 pb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Transparent */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-blue-900 dark:text-blue-100 mb-2">
+                            Transparent
+                          </h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            Every amount is based on actual expenses and what
+                            each person paid vs. their fair share.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground shrink-0 mr-2">
-                        Efficient:
-                      </span>
-                      <span className="font-medium text-left sm:text-right">
-                        The optimized plan minimizes the number of transactions
-                        needed.
-                      </span>
+
+                    {/* Efficient */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <ArrowRight className="w-5 h-5 text-green-600 dark:text-green-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-green-900 dark:text-green-100 mb-2">
+                            Efficient
+                          </h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            The optimized plan minimizes the number of
+                            transactions needed to settle all debts.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground shrink-0 mr-2">
-                        Fair:
-                      </span>
-                      <span className="font-medium text-left sm:text-right">
-                        Everyone ends up paying exactly their share of all
-                        expenses, no more, no less.
-                      </span>
+
+                    {/* Fair */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Users className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-purple-900 dark:text-purple-100 mb-2">
+                            Fair
+                          </h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            Everyone ends up paying exactly their share of all
+                            expenses, no more, no less.
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground shrink-0 mr-2">
-                        Traceable:
-                      </span>
-                      <span className="font-medium text-left sm:text-right">
-                        You can see which expenses contribute to each debt
-                        relationship.
+
+                    {/* Traceable */}
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all">
+                      <div className="flex items-start gap-3">
+                        <div className="w-10 h-10 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center flex-shrink-0">
+                          <BarChart3 className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-orange-900 dark:text-orange-100 mb-2">
+                            Traceable
+                          </h4>
+                          <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                            You can see which expenses contribute to each debt
+                            relationship for full transparency.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Summary */}
+                  <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/30 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-center gap-2 text-blue-800 dark:text-blue-200">
+                      <CheckCircle2 className="w-5 h-5" />
+                      <span className="font-semibold text-sm">
+                        This settlement plan ensures everyone pays their fair
+                        share with maximum efficiency
                       </span>
                     </div>
                   </div>
