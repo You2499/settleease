@@ -558,11 +558,10 @@ export default function SettlementSummary({
                       <CardHeader className="pt-3 sm:pt-4 pb-2 flex-shrink-0">
                         <CardTitle className="flex items-center text-lg font-bold">
                           <Shuffle className="mr-2 h-4 w-4 text-purple-600" />
-                          How It Works
+                          Settlement Flowchart
                         </CardTitle>
                         <CardDescription className="text-xs">
-                          Visual transformation from complex to simple
-                          settlements
+                          Step-by-step flowchart showing debt optimization
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
@@ -570,134 +569,191 @@ export default function SettlementSummary({
                         simplifiedTransactions.length > 0 ? (
                           <div className="flex-1 flex flex-col min-h-0">
                             <ScrollArea className="flex-1 min-h-0">
-                              <div className="space-y-8 pr-2">
-                                {/* Visual Network - Before */}
-                                <div className="space-y-4">
-                                  <div className="text-center">
-                                    <div className="inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full">
-                                      <div className="w-4 h-4 bg-orange-500 rounded-full"></div>
-                                      <span className="text-xs font-semibold text-orange-700 dark:text-orange-400">
-                                        BEFORE: {pairwiseTransactions.length}{" "}
-                                        transactions
-                                      </span>
+                              <div className="space-y-6 pr-2">
+                                {/* Flowchart Container */}
+                                <div className="bg-gradient-to-br from-slate-50 to-gray-100 dark:from-slate-900/50 dark:to-gray-900/50 p-6 rounded-lg border">
+                                  {/* Step 1: Individual Balances */}
+                                  <div className="flex flex-col items-center space-y-4">
+                                    <div className="bg-blue-100 dark:bg-blue-900/30 px-4 py-2 rounded-lg border-2 border-blue-300 dark:border-blue-700 shadow-sm">
+                                      <div className="text-sm font-bold text-blue-800 dark:text-blue-200 text-center">
+                                        1. Individual Balances
+                                      </div>
                                     </div>
-                                  </div>
 
-                                  {/* Visual Network */}
-                                  <div className="relative bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 p-6 rounded-lg border border-orange-200 dark:border-orange-800 min-h-[120px]">
-                                    {pairwiseTransactions.length > 0 ? (
-                                      <div className="flex flex-wrap justify-center items-center gap-4">
-                                        {pairwiseTransactions
-                                          .slice(0, 6)
-                                          .map((txn, index) => (
+                                    {/* Balance Nodes */}
+                                    <div className="flex flex-wrap justify-center gap-3">
+                                      {Object.entries(individualBalances)
+                                        .filter(
+                                          ([, balance]) =>
+                                            Math.abs(balance) > 0.01
+                                        )
+                                        .slice(0, 6)
+                                        .map(([personId, balance]) => {
+                                          const isCreditor = balance > 0.01;
+                                          return (
                                             <div
-                                              key={`visual-pairwise-${index}`}
-                                              className="flex items-center gap-2 animate-pulse"
+                                              key={personId}
+                                              className="flex flex-col items-center space-y-1"
                                             >
-                                              <div className="w-8 h-8 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-orange-800 dark:text-orange-200">
-                                                {peopleMap[txn.from]?.charAt(
-                                                  0
-                                                ) || "?"}
-                                              </div>
-                                              <div className="flex flex-col items-center">
-                                                <div className="w-12 h-0.5 bg-orange-400 dark:bg-orange-600 relative">
-                                                  <div className="absolute right-0 top-0 w-0 h-0 border-l-2 border-l-orange-400 dark:border-l-orange-600 border-t border-b border-transparent"></div>
+                                              <div
+                                                className={`w-14 h-14 rounded-lg border-2 flex flex-col items-center justify-center shadow-sm ${
+                                                  isCreditor
+                                                    ? "bg-green-100 border-green-400 dark:bg-green-900/30 dark:border-green-600"
+                                                    : "bg-red-100 border-red-400 dark:bg-red-900/30 dark:border-red-600"
+                                                }`}
+                                              >
+                                                <div className="text-xs font-bold">
+                                                  {peopleMap[personId]?.split(
+                                                    " "
+                                                  )[0] || "Unknown"}
                                                 </div>
-                                                <span className="text-xs font-medium text-orange-700 dark:text-orange-300 mt-1">
-                                                  {formatCurrency(txn.amount)}
-                                                </span>
-                                              </div>
-                                              <div className="w-8 h-8 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold text-orange-800 dark:text-orange-200">
-                                                {peopleMap[txn.to]?.charAt(0) ||
-                                                  "?"}
+                                                <div
+                                                  className={`text-xs font-bold ${
+                                                    isCreditor
+                                                      ? "text-green-700 dark:text-green-300"
+                                                      : "text-red-700 dark:text-red-300"
+                                                  }`}
+                                                >
+                                                  {isCreditor ? "+" : ""}
+                                                  {formatCurrency(balance)}
+                                                </div>
                                               </div>
                                             </div>
-                                          ))}
-                                        {pairwiseTransactions.length > 6 && (
-                                          <div className="text-xs text-orange-600 dark:text-orange-400 font-medium">
-                                            +{pairwiseTransactions.length - 6}{" "}
-                                            more...
+                                          );
+                                        })}
+                                    </div>
+
+                                    {/* Flowchart Arrow */}
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
+                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
+                                    </div>
+                                  </div>
+
+                                  {/* Step 2: Pairwise Transactions */}
+                                  <div className="flex flex-col items-center space-y-4">
+                                    <div className="bg-orange-100 dark:bg-orange-900/30 px-4 py-2 rounded-lg border-2 border-orange-300 dark:border-orange-700 shadow-sm">
+                                      <div className="text-sm font-bold text-orange-800 dark:text-orange-200 text-center">
+                                        2. Individual Debts (
+                                        {pairwiseTransactions.length})
+                                      </div>
+                                    </div>
+
+                                    {/* Pairwise Transaction Nodes */}
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-w-lg">
+                                      {pairwiseTransactions
+                                        .slice(0, 6)
+                                        .map((txn, index) => (
+                                          <div
+                                            key={`pairwise-${index}`}
+                                            className="flex items-center space-x-1 bg-orange-50 dark:bg-orange-950/20 p-2 rounded border border-orange-200 dark:border-orange-800 shadow-sm"
+                                          >
+                                            <div className="w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold">
+                                              {peopleMap[txn.from]?.charAt(0) ||
+                                                "?"}
+                                            </div>
+                                            <ArrowRight className="h-3 w-3 text-orange-600 flex-shrink-0" />
+                                            <div className="w-6 h-6 bg-orange-200 dark:bg-orange-800 rounded-full flex items-center justify-center text-xs font-bold">
+                                              {peopleMap[txn.to]?.charAt(0) ||
+                                                "?"}
+                                            </div>
+                                            <div className="text-xs font-medium text-orange-700 dark:text-orange-300 truncate">
+                                              {formatCurrency(txn.amount)}
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <div className="flex items-center justify-center h-full text-orange-600 dark:text-orange-400">
-                                        <span className="text-sm">
-                                          No individual debts
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Transformation Animation */}
-                                <div className="flex justify-center">
-                                  <div className="flex flex-col items-center space-y-2">
-                                    <div className="relative">
-                                      <ArrowDownUp className="h-10 w-10 text-purple-600 animate-bounce" />
-                                      <div className="absolute -inset-2 bg-purple-100 dark:bg-purple-900/30 rounded-full animate-ping opacity-20"></div>
+                                        ))}
+                                      {pairwiseTransactions.length > 6 && (
+                                        <div className="text-xs text-orange-600 dark:text-orange-400 self-center text-center col-span-full">
+                                          +{pairwiseTransactions.length - 6}{" "}
+                                          more debts
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="text-center">
-                                      <div className="text-xs font-bold text-purple-600">
-                                        ALGORITHM
-                                      </div>
-                                      <div className="text-xs text-purple-500">
-                                        Optimizing...
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
 
-                                {/* Visual Network - After */}
-                                <div className="space-y-4">
-                                  <div className="text-center">
-                                    <div className="inline-flex items-center gap-2 bg-green-100 dark:bg-green-900/30 px-3 py-1 rounded-full">
-                                      <div className="w-4 h-4 bg-green-500 rounded-full"></div>
-                                      <span className="text-xs font-semibold text-green-700 dark:text-green-400">
-                                        AFTER: {simplifiedTransactions.length}{" "}
-                                        transactions
-                                      </span>
+                                    {/* Flowchart Arrow */}
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
+                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
                                     </div>
                                   </div>
 
-                                  {/* Visual Network */}
-                                  <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800 min-h-[120px]">
+                                  {/* Step 3: Algorithm Processing */}
+                                  <div className="flex flex-col items-center space-y-4">
+                                    <div className="bg-purple-100 dark:bg-purple-900/30 px-4 py-2 rounded-lg border-2 border-purple-300 dark:border-purple-700 shadow-sm">
+                                      <div className="text-sm font-bold text-purple-800 dark:text-purple-200 text-center">
+                                        3. Algorithm Processing
+                                      </div>
+                                    </div>
+
+                                    {/* Processing Animation */}
+                                    <div className="flex items-center space-x-3 bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800 shadow-sm">
+                                      <div className="w-10 h-10 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center">
+                                        <Shuffle className="h-5 w-5 text-purple-600 animate-spin" />
+                                      </div>
+                                      <div className="text-xs text-purple-700 dark:text-purple-300">
+                                        <div className="font-bold">
+                                          Optimizing...
+                                        </div>
+                                        <div>Finding minimum paths</div>
+                                      </div>
+                                    </div>
+
+                                    {/* Flowchart Arrow */}
+                                    <div className="flex flex-col items-center">
+                                      <div className="w-0.5 h-6 bg-gray-400 dark:bg-gray-600"></div>
+                                      <div className="w-0 h-0 border-l-4 border-r-4 border-t-6 border-transparent border-t-gray-400 dark:border-t-gray-600"></div>
+                                    </div>
+                                  </div>
+
+                                  {/* Step 4: Simplified Result */}
+                                  <div className="flex flex-col items-center space-y-4">
+                                    <div className="bg-green-100 dark:bg-green-900/30 px-4 py-2 rounded-lg border-2 border-green-300 dark:border-green-700 shadow-sm">
+                                      <div className="text-sm font-bold text-green-800 dark:text-green-200 text-center">
+                                        4. Optimized Settlement (
+                                        {simplifiedTransactions.length})
+                                      </div>
+                                    </div>
+
+                                    {/* Simplified Transaction Nodes */}
                                     {simplifiedTransactions.length > 0 ? (
-                                      <div className="flex flex-wrap justify-center items-center gap-6">
+                                      <div className="flex flex-wrap justify-center gap-4">
                                         {simplifiedTransactions.map(
                                           (txn, index) => (
                                             <div
-                                              key={`visual-simplified-${index}`}
-                                              className="flex items-center gap-3"
+                                              key={`simplified-${index}`}
+                                              className="flex items-center space-x-3 bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border-2 border-green-200 dark:border-green-800 shadow-md"
                                             >
-                                              <div className="w-10 h-10 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-sm font-bold text-green-800 dark:text-green-200 shadow-md">
-                                                {peopleMap[txn.from]?.charAt(
-                                                  0
-                                                ) || "?"}
+                                              <div className="w-12 h-12 bg-green-200 dark:bg-green-800 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm">
+                                                <div>
+                                                  {peopleMap[txn.from]?.split(
+                                                    " "
+                                                  )[0] || "?"}
+                                                </div>
                                               </div>
                                               <div className="flex flex-col items-center">
-                                                <div className="w-16 h-1 bg-green-500 dark:bg-green-600 relative rounded-full shadow-sm">
-                                                  <div className="absolute right-0 top-0 w-0 h-0 border-l-4 border-l-green-500 dark:border-l-green-600 border-t-2 border-b-2 border-transparent"></div>
-                                                </div>
-                                                <span className="text-xs font-bold text-green-700 dark:text-green-300 mt-2 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded">
+                                                <ArrowRight className="h-5 w-5 text-green-600 mb-1" />
+                                                <div className="text-xs font-bold text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded shadow-sm">
                                                   {formatCurrency(txn.amount)}
-                                                </span>
+                                                </div>
                                               </div>
-                                              <div className="w-10 h-10 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center text-sm font-bold text-green-800 dark:text-green-200 shadow-md">
-                                                {peopleMap[txn.to]?.charAt(0) ||
-                                                  "?"}
+                                              <div className="w-12 h-12 bg-green-200 dark:bg-green-800 rounded-lg flex flex-col items-center justify-center text-xs font-bold shadow-sm">
+                                                <div>
+                                                  {peopleMap[txn.to]?.split(
+                                                    " "
+                                                  )[0] || "?"}
+                                                </div>
                                               </div>
                                             </div>
                                           )
                                         )}
                                       </div>
                                     ) : (
-                                      <div className="flex items-center justify-center h-full">
+                                      <div className="bg-green-50 dark:bg-green-950/20 p-6 rounded-lg border border-green-200 dark:border-green-800 shadow-sm">
                                         <div className="text-center">
                                           <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-2" />
-                                          <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                                          <div className="text-sm font-bold text-green-700 dark:text-green-300">
                                             All Settled!
-                                          </span>
+                                          </div>
                                         </div>
                                       </div>
                                     )}
@@ -707,8 +763,8 @@ export default function SettlementSummary({
                                 {/* Results Summary */}
                                 {pairwiseTransactions.length >
                                   simplifiedTransactions.length && (
-                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <div className="text-center space-y-2">
+                                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 shadow-sm">
+                                    <div className="text-center">
                                       <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
                                         ✨{" "}
                                         {Math.round(
@@ -717,33 +773,16 @@ export default function SettlementSummary({
                                             pairwiseTransactions.length) *
                                             100
                                         )}
-                                        % Fewer Transactions!
+                                        % Reduction
                                       </div>
                                       <div className="text-xs text-blue-600 dark:text-blue-300">
-                                        Reduced from{" "}
-                                        <strong>
-                                          {pairwiseTransactions.length}
-                                        </strong>{" "}
-                                        to{" "}
-                                        <strong>
-                                          {simplifiedTransactions.length}
-                                        </strong>{" "}
-                                        payments
+                                        From {pairwiseTransactions.length} →{" "}
+                                        {simplifiedTransactions.length}{" "}
+                                        transactions
                                       </div>
                                     </div>
                                   </div>
                                 )}
-
-                                {/* Quick Explanation */}
-                                <div className="bg-purple-50 dark:bg-purple-950/20 p-3 rounded-lg border border-purple-200 dark:border-purple-800">
-                                  <div className="text-xs text-purple-700 dark:text-purple-300 text-center">
-                                    <strong>Why this works:</strong> The
-                                    algorithm finds the most efficient path by
-                                    calculating everyone's net balance, then
-                                    creating the minimum transactions needed to
-                                    settle all debts.
-                                  </div>
-                                </div>
                               </div>
                             </ScrollArea>
                           </div>
@@ -752,10 +791,10 @@ export default function SettlementSummary({
                             <div>
                               <Shuffle className="h-12 w-12 mx-auto mb-3 text-purple-500" />
                               <p className="font-medium">
-                                No settlements to visualize
+                                No settlements to show
                               </p>
                               <p className="text-xs">
-                                Add some expenses to see the transformation
+                                Add expenses to see the flowchart
                               </p>
                             </div>
                           </div>
