@@ -98,21 +98,66 @@ export default function SettlementSummary({
     return people.find((p) => p.id === selectedPersonId) || null;
   }, [selectedPersonId, people]);
 
+  // Helper function to calculate a person's current balance
+  const calculatePersonBalance = (personId: string) => {
+    let balance = 0;
+
+    // What they paid
+    allExpenses.forEach((expense) => {
+      if (Array.isArray(expense.paid_by)) {
+        expense.paid_by.forEach((payment) => {
+          if (payment.personId === personId) {
+            balance += Number(payment.amount);
+          }
+        });
+      }
+    });
+
+    // What they owe
+    allExpenses.forEach((expense) => {
+      if (Array.isArray(expense.shares)) {
+        expense.shares.forEach((share) => {
+          if (share.personId === personId) {
+            balance -= Number(share.amount);
+          }
+        });
+      }
+    });
+
+    // Adjust for settlements already made
+    settlementPayments.forEach((payment) => {
+      if (payment.debtor_id === personId) {
+        balance += Number(payment.amount_settled);
+      }
+      if (payment.creditor_id === personId) {
+        balance -= Number(payment.amount_settled);
+      }
+    });
+
+    return balance;
+  };
+
   // Filter out paid transactions for visualization
   const unpaidPairwiseTransactions = useMemo(() => {
     return pairwiseTransactions.filter((txn) => {
-      // Check if this transaction has been fully settled
-      const settledAmount = settlementPayments
-        .filter(
-          (payment) =>
-            payment.debtor_id === txn.from && payment.creditor_id === txn.to
-        )
-        .reduce((sum, payment) => sum + Number(payment.amount_settled), 0);
+      // Check the debtor's overall balance - if they're balanced or positive, they don't owe anything
+      const debtorBalance = calculatePersonBalance(txn.from);
+      const creditorBalance = calculatePersonBalance(txn.to);
 
-      // Only include if there's still an outstanding amount
-      return Number(txn.amount) > settledAmount;
+      // If the debtor is balanced (within 0.01) or has a positive balance, they don't owe this debt
+      if (debtorBalance >= -0.01) {
+        return false;
+      }
+
+      // If the creditor is balanced (within 0.01) or has a negative balance, they don't need to receive this debt
+      if (creditorBalance <= 0.01) {
+        return false;
+      }
+
+      // Otherwise, this is still an outstanding debt
+      return true;
     });
-  }, [pairwiseTransactions, settlementPayments]);
+  }, [pairwiseTransactions, settlementPayments, allExpenses]);
 
   const unpaidSimplifiedTransactions = useMemo(() => {
     return simplifiedTransactions.filter((txn) => {
