@@ -138,12 +138,6 @@ export default function Step3SimplificationProcess({
                   <p className="text-sm text-red-700 dark:text-red-300">
                     Based on who paid for what
                   </p>
-                  {activeDirectDebts.some(txn => !peopleIds.has(txn.from) || !peopleIds.has(txn.to)) && (
-                    <p className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 px-2 py-1 rounded mt-1">
-                      <Lightbulb className="w-3 h-3 inline mr-1" />
-                      Blue badges show balanced people (included to explain optimized payments)
-                    </p>
-                  )}
                 </div>
               </div>
               <div className="text-right">
@@ -155,6 +149,15 @@ export default function Step3SimplificationProcess({
                 </div>
               </div>
             </div>
+
+            {activeDirectDebts.some(txn => !peopleIds.has(txn.from) || !peopleIds.has(txn.to)) && (
+              <div className="mb-3">
+                <p className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 px-3 py-2 rounded">
+                  <Lightbulb className="w-3 h-3 inline mr-1" />
+                  Blue badges show balanced people (included to explain optimized payments)
+                </p>
+              </div>
+            )}
 
             <div className="space-y-2">
               {activeDirectDebts.map((txn, i) => {
