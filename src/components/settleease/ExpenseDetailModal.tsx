@@ -259,15 +259,23 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={showBackButton ? () => {} : onOpenChange}>
-      <DialogContent className={`max-h-[90vh] overflow-y-auto no-scrollbar ${showBackButton ? '[&>button]:hidden' : ''}`}
-        onInteractOutside={showBackButton ? (e) => e.preventDefault() : undefined}
-        onEscapeKeyDown={showBackButton ? (e) => e.preventDefault() : undefined}
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      {showBackButton && (
+        <style dangerouslySetInnerHTML={{
+          __html: `
+            [data-radix-dialog-content] > button[data-radix-dialog-close] {
+              display: none !important;
+            }
+          `
+        }} />
+      )}
+      <DialogContent 
+        className="max-h-[90vh] overflow-y-auto no-scrollbar relative"
       >
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-4 right-12 z-10"
+          className={`absolute top-4 z-10 ${showBackButton ? 'right-16' : 'right-12'}`}
           title="Copy for WhatsApp"
           onClick={handleCopy}
         >
@@ -275,13 +283,13 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         </Button>
         {showBackButton && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="icon"
-            className="absolute top-4 right-4 z-10"
-            title="Back"
+            className="absolute top-4 right-4 z-[100] bg-background hover:bg-accent border-2 border-primary/20 shadow-lg"
+            title="Back to Step 2"
             onClick={onBack}
           >
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeft className="h-4 w-4 text-primary" />
           </Button>
         )}
         <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
