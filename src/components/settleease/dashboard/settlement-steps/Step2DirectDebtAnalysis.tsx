@@ -171,10 +171,10 @@ export default function Step2DirectDebtAnalysis({
                       onClick={() => togglePersonExpansion(personId)}
                       className={`w-full justify-start p-2 h-auto font-semibold rounded-md transition-colors ${
                         isCreditor
-                          ? "text-green-800 dark:text-green-200 hover:bg-green-200/50 dark:hover:bg-green-800/30"
+                          ? "text-green-800 dark:text-green-200 hover:bg-green-200/50 hover:text-green-800 dark:hover:bg-green-800/30 dark:hover:text-green-200"
                           : isDebtor
-                          ? "text-red-800 dark:text-red-200 hover:bg-red-200/50 dark:hover:bg-red-800/30"
-                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-800/30"
+                          ? "text-red-800 dark:text-red-200 hover:bg-red-200/50 hover:text-red-800 dark:hover:bg-red-800/30 dark:hover:text-red-200"
+                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-200/50 hover:text-gray-800 dark:hover:bg-gray-800/30 dark:hover:text-gray-200"
                       }`}
                     >
                       {expandedPersons.has(personId) ? (

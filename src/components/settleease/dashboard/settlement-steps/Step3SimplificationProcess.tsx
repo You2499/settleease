@@ -72,16 +72,23 @@ export default function Step3SimplificationProcess({
   people,
   peopleMap,
 }: Step3SimplificationProcessProps) {
-  // Use all pairwise transactions as they represent direct debt relationships
-  // These are the actual "who owes whom" relationships from expenses
+  // Filter pairwise transactions to only include people in the filtered list
+  // This ensures balanced people don't appear in direct debt relationships when hidden
+  const peopleIds = new Set(people.map(p => p.id));
+  
   const activeDirectDebts = pairwiseTransactions
     .filter((txn) => txn.amount > 0.01)
+    .filter((txn) => peopleIds.has(txn.from) && peopleIds.has(txn.to)) // Only show transactions between visible people
     .sort((a, b) => {
       // Sort by debtor name first, then by creditor name
       const debtorComparison = (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '');
       if (debtorComparison !== 0) return debtorComparison;
       return (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || '');
     });
+
+  // Filter unpaid simplified transactions to only include visible people
+  const filteredUnpaidSimplifiedTransactions = unpaidSimplifiedTransactions
+    .filter((txn) => peopleIds.has(txn.from) && peopleIds.has(txn.to));
 
   // Calculate intermediate debt relationships
   const { debtors, creditors } = calculateIntermediateDebts(
@@ -98,7 +105,7 @@ export default function Step3SimplificationProcess({
         </CardTitle>
         <CardDescription className="text-sm">
           See how we transform {activeDirectDebts.length} direct debts into{" "}
-          {unpaidSimplifiedTransactions.length} optimized payments through
+          {filteredUnpaidSimplifiedTransactions.length} optimized payments through
           internal simplification and algorithmic optimization
         </CardDescription>
       </CardHeader>
@@ -292,7 +299,7 @@ export default function Step3SimplificationProcess({
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold text-green-700 dark:text-green-300">
-                  {unpaidSimplifiedTransactions.length}
+                  {filteredUnpaidSimplifiedTransactions.length}
                 </div>
                 <div className="text-sm text-green-600 dark:text-green-400">
                   transactions
@@ -301,7 +308,7 @@ export default function Step3SimplificationProcess({
             </div>
 
             <div className="space-y-2">
-              {unpaidSimplifiedTransactions.map((txn, i) => (
+              {filteredUnpaidSimplifiedTransactions.map((txn, i) => (
                 <div
                   key={i}
                   className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm"
@@ -336,18 +343,18 @@ export default function Step3SimplificationProcess({
           </div>
 
           {/* Efficiency Gain */}
-          {activeDirectDebts.length > unpaidSimplifiedTransactions.length && (
+          {activeDirectDebts.length > filteredUnpaidSimplifiedTransactions.length && (
             <div className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-xl border-2 border-blue-300 dark:border-blue-700">
               <div className="text-center">
                 <div className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-2">
                   {activeDirectDebts.length -
-                    unpaidSimplifiedTransactions.length}{" "}
+                    filteredUnpaidSimplifiedTransactions.length}{" "}
                   fewer transactions!
                 </div>
                 <div className="text-lg font-semibold text-blue-700 dark:text-blue-300 mb-3">
                   {Math.round(
                     (1 -
-                      unpaidSimplifiedTransactions.length /
+                      filteredUnpaidSimplifiedTransactions.length /
                         activeDirectDebts.length) *
                       100
                   )}
