@@ -72,23 +72,31 @@ export default function Step3SimplificationProcess({
   people,
   peopleMap,
 }: Step3SimplificationProcessProps) {
-  // Filter pairwise transactions to only include people in the filtered list
-  // This ensures balanced people don't appear in direct debt relationships when hidden
+  // First filter the simplified transactions to only include visible people
   const peopleIds = new Set(people.map(p => p.id));
-  
+  const filteredUnpaidSimplifiedTransactions = unpaidSimplifiedTransactions
+    .filter((txn) => peopleIds.has(txn.from) && peopleIds.has(txn.to));
+
+  // Filter pairwise transactions with smart logic:
+  // 1. Always show transactions where the debtor is visible (they need to understand what they owe)
+  // 2. Show transactions where creditor is visible (they need to see what they're owed)  
+  // 3. This ensures people can trace their optimized payments back to original debts
   const activeDirectDebts = pairwiseTransactions
     .filter((txn) => txn.amount > 0.01)
-    .filter((txn) => peopleIds.has(txn.from) && peopleIds.has(txn.to)) // Only show transactions between visible people
+    .filter((txn) => {
+      // Show if debtor is visible (they need to see what they owe)
+      if (peopleIds.has(txn.from)) return true;
+      // Show if creditor is visible (they need to see what they're owed)  
+      if (peopleIds.has(txn.to)) return true;
+      // Hide if both parties are hidden
+      return false;
+    })
     .sort((a, b) => {
       // Sort by debtor name first, then by creditor name
       const debtorComparison = (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '');
       if (debtorComparison !== 0) return debtorComparison;
       return (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || '');
     });
-
-  // Filter unpaid simplified transactions to only include visible people
-  const filteredUnpaidSimplifiedTransactions = unpaidSimplifiedTransactions
-    .filter((txn) => peopleIds.has(txn.from) && peopleIds.has(txn.to));
 
   // Calculate intermediate debt relationships
   const { debtors, creditors } = calculateIntermediateDebts(
@@ -129,6 +137,11 @@ export default function Step3SimplificationProcess({
                   <p className="text-sm text-red-700 dark:text-red-300">
                     Based on who paid for what
                   </p>
+                  {people.length < Object.keys(personBalances).length && (
+                    <p className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 px-2 py-1 rounded mt-1">
+                      Note: Some balanced people shown to explain optimized payments
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="text-right">
@@ -160,12 +173,26 @@ export default function Step3SimplificationProcess({
                       </span>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">{peopleMap[txn.from]}</span>
+                      <span className="font-medium">
+                        {peopleMap[txn.from]}
+                        {!peopleIds.has(txn.from) && (
+                          <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
+                            balanced
+                          </span>
+                        )}
+                      </span>
                       <span className="text-gray-600 dark:text-gray-400">
                         {" "}
                         owes{" "}
                       </span>
-                      <span className="font-medium">{peopleMap[txn.to]}</span>
+                      <span className="font-medium">
+                        {peopleMap[txn.to]}
+                        {!peopleIds.has(txn.to) && (
+                          <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
+                            balanced
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                   <div className="font-bold text-red-600 dark:text-red-400">
