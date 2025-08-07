@@ -16,6 +16,7 @@ import {
   Info,
   GitMerge,
   Shuffle,
+  Lightbulb,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { CalculatedTransaction } from "@/lib/settleease/types";
@@ -137,9 +138,10 @@ export default function Step3SimplificationProcess({
                   <p className="text-sm text-red-700 dark:text-red-300">
                     Based on who paid for what
                   </p>
-                  {people.length < Object.keys(personBalances).length && (
+                  {activeDirectDebts.some(txn => !peopleIds.has(txn.from) || !peopleIds.has(txn.to)) && (
                     <p className="text-xs text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/20 px-2 py-1 rounded mt-1">
-                      Note: Some balanced people shown to explain optimized payments
+                      <Lightbulb className="w-3 h-3 inline mr-1" />
+                      Blue badges show balanced people (included to explain optimized payments)
                     </p>
                   )}
                 </div>
@@ -155,51 +157,48 @@ export default function Step3SimplificationProcess({
             </div>
 
             <div className="space-y-2">
-              {activeDirectDebts.map((txn, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-bold text-red-800 dark:text-red-200">
-                        {peopleMap[txn.from]?.charAt(0) || "?"}
-                      </span>
+              {activeDirectDebts.map((txn, i) => {
+                const hasBalancedPerson = !peopleIds.has(txn.from) || !peopleIds.has(txn.to);
+                
+                return (
+                  <div
+                    key={i}
+                    className="relative flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm"
+                  >
+                    {/* Balanced indicator pill */}
+                    {hasBalancedPerson && (
+                      <div className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+                        balanced person
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                          {peopleMap[txn.from]?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                      <ArrowRight className="w-4 h-4 text-gray-400" />
+                      <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
+                        <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                          {peopleMap[txn.to]?.charAt(0) || "?"}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="font-medium">{peopleMap[txn.from]}</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          {" "}
+                          owes{" "}
+                        </span>
+                        <span className="font-medium">{peopleMap[txn.to]}</span>
+                      </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-gray-400" />
-                    <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
-                      <span className="text-xs font-bold text-green-800 dark:text-green-200">
-                        {peopleMap[txn.to]?.charAt(0) || "?"}
-                      </span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-medium">
-                        {peopleMap[txn.from]}
-                        {!peopleIds.has(txn.from) && (
-                          <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
-                            balanced
-                          </span>
-                        )}
-                      </span>
-                      <span className="text-gray-600 dark:text-gray-400">
-                        {" "}
-                        owes{" "}
-                      </span>
-                      <span className="font-medium">
-                        {peopleMap[txn.to]}
-                        {!peopleIds.has(txn.to) && (
-                          <span className="ml-1 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-1 py-0.5 rounded">
-                            balanced
-                          </span>
-                        )}
-                      </span>
+                    <div className="font-bold text-red-600 dark:text-red-400">
+                      {formatCurrency(txn.amount)}
                     </div>
                   </div>
-                  <div className="font-bold text-red-600 dark:text-red-400">
-                    {formatCurrency(txn.amount)}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 

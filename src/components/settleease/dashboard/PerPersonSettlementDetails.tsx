@@ -155,7 +155,7 @@ export default function PerPersonSettlementDetails({
                             className="text-xs px-2 py-1 h-auto flex-1 sm:flex-none"
                             disabled={isLoadingParent}
                         >
-                           <ExternalLink className="mr-1 h-3 w-3"/> Expenses
+                           <ExternalLink className="mr-1 h-4 w-4"/> Expenses
                         </Button>
                         {type === 'debt' && userRole === 'admin' && (
                           <Button
@@ -164,7 +164,7 @@ export default function PerPersonSettlementDetails({
                             disabled={isLoadingParent}
                             className="text-xs px-2 py-1 h-auto bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
                           >
-                            <CheckCircle2 className="mr-1 h-3 w-3" /> Paid
+                            <CheckCircle2 className="mr-1 h-4 w-4" /> Paid
                           </Button>
                         )}
                       </div>
@@ -203,7 +203,7 @@ export default function PerPersonSettlementDetails({
                             <li key={`pairwise-debt-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm gap-1.5">
                                     <span>Owes <strong className="text-foreground">{peopleMap[txn.to]}</strong>: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
-                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'debt')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
+                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'debt')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-4 w-4"/> Expenses</Button>
                                 </div>
                             </Card></li>
                         ))}
@@ -221,7 +221,7 @@ export default function PerPersonSettlementDetails({
                             <li key={`pairwise-credit-${i}`}><Card className="bg-card/50 p-2.5 shadow-sm">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between text-xs sm:text-sm gap-1.5">
                                     <span><strong className="text-foreground">{peopleMap[txn.from]}</strong> owes you: <span className="text-primary font-semibold">{formatCurrency(txn.amount)}</span></span>
-                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'credit')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-3 w-3"/> Expenses</Button>
+                                    <Button variant="outline" size="sm" className="text-xs h-auto px-2 py-1 w-full sm:w-auto" onClick={() => handleViewRelevantExpenses(txn, 'credit')} disabled={isLoadingParent}><ExternalLink className="mr-1 h-4 w-4"/> Expenses</Button>
                                 </div>
                             </Card></li>
                         ))}
@@ -268,7 +268,7 @@ export default function PerPersonSettlementDetails({
                               disabled={isLoadingParent}
                               className="text-xs px-2 py-1 h-auto w-full sm:w-auto self-start sm:self-center mt-1 sm:mt-0"
                             >
-                              <Undo2 className="mr-1 h-3 w-3" /> Unmark
+                              <Undo2 className="mr-1 h-4 w-4" /> Unmark
                             </Button>
                           )}
                         </div>

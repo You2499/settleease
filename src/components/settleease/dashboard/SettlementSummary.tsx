@@ -310,7 +310,7 @@ export default function SettlementSummary({
                                 disabled={isLoading}
                                 className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
                               >
-                                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />{" "}
+                                <CheckCircle2 className="mr-1 h-4 w-4" />
                                 Mark as Paid
                               </Button>
                             )}

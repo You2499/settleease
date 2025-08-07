@@ -783,9 +783,13 @@ export default function AddExpenseTab({
 
       <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-3">
         {expenseToEdit && onCancelEdit && (
-            <Button variant="outline" size="default" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">Cancel</Button>
+            <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">
+              <AlertTriangle className="mr-1 h-4 w-4" />
+              Cancel
+            </Button>
         )}
-        <Button onClick={handleSubmitExpense} size="default" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+        <Button onClick={handleSubmitExpense} size="sm" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+          <CreditCard className="mr-1 h-4 w-4" />
           {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
         </Button>
       </CardFooter>

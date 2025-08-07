@@ -116,7 +116,13 @@ export default function Step1BalanceOverview({
                         <h3 className="font-bold text-gray-900 dark:text-gray-100">
                           {person.name}
                         </h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                        <p className={`text-sm font-medium ${
+                          isCreditor
+                            ? "text-green-700 dark:text-green-300"
+                            : isDebtor
+                            ? "text-red-700 dark:text-red-300"
+                            : "text-gray-600 dark:text-gray-400"
+                        }`}>
                           {isCreditor ? "should receive" : isDebtor ? "should pay" : "all balanced"}
                         </p>
                       </div>
@@ -185,14 +191,20 @@ export default function Step1BalanceOverview({
                       
                       {/* Status indicator */}
                       <div className="mt-1 flex items-center justify-center">
-                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-xs">
+                        <div className={`flex items-center gap-2 text-sm font-medium ${
+                          isBalanced 
+                            ? "text-gray-600 dark:text-gray-400"
+                            : isCreditor
+                            ? "text-green-700 dark:text-green-300"
+                            : "text-red-700 dark:text-red-300"
+                        }`}>
                           {isBalanced ? (
                             <>
                               <CheckCircle2 className="w-4 h-4" />
                               All Balanced
                             </>
                           ) : (
-                            <span className="opacity-50">
+                            <span>
                               {isCreditor ? "Should receive" : "Should pay"}
                             </span>
                           )}

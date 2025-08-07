@@ -223,7 +223,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       <Button
         variant="outline"
         size="icon"
-        className="h-7 w-7 p-0 mb-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+        className="h-8 w-8 p-0 mb-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
         onClick={onUp}
         disabled={disabledUp || isLoading}
         tabIndex={0}
@@ -234,7 +234,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       <Button
         variant="outline"
         size="icon"
-        className="h-7 w-7 p-0 mt-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
+        className="h-8 w-8 p-0 mt-1 text-muted-foreground hover:text-primary hover:bg-accent focus-visible:ring-2 focus-visible:ring-primary"
         onClick={onDown}
         disabled={disabledDown || isLoading}
         tabIndex={0}
@@ -311,8 +311,8 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                   }}
                 />
               </div>
-              <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} className="h-10 sm:h-11 text-sm sm:text-base w-full md:w-auto md:self-end">
-                <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {isLoading && !editingCategory ? 'Adding...' : 'Add Category'}
+              <Button onClick={handleAddCategory} disabled={!newCategoryName.trim() || !newCategoryIconKey || isLoading} size="sm" className="w-full md:w-auto md:self-end">
+                <PlusCircle className="mr-1 h-4 w-4" /> {isLoading && !editingCategory ? 'Adding...' : 'Add Category'}
               </Button>
             </div>
           </div>
@@ -370,10 +370,10 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                               />
                             </div>
                             <div className="flex items-center flex-shrink-0">
-                              <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
+                              <Button variant="ghost" size="icon" onClick={handleSaveEdit} className="h-8 w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                                 <Save className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
+                              <Button variant="ghost" size="icon" onClick={handleCancelEdit} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
                                 <Ban className="h-4 w-4" />
                               </Button>
                             </div>
@@ -395,10 +395,10 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                 <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
                             </div>
                             <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
+                              <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
+                              <Button variant="ghost" size="icon" onClick={() => handleConfirmDelete(category)} className="h-8 w-8 text-red-600 hover:text-red-700" title="Delete category" disabled={isLoading || !!editingCategory}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>

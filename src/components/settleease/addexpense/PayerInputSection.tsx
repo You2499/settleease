@@ -65,7 +65,7 @@ export default function PayerInputSection({
               </div>
             </Card>
           ))}
-          <Button variant="outline" size="sm" onClick={addPayer} className="text-xs" disabled={people.length === 0}><PlusCircle className="mr-1.5 h-3.5 w-3.5" /> Add Another Payer</Button>
+          <Button variant="outline" size="sm" onClick={addPayer} className="text-xs" disabled={people.length === 0}><PlusCircle className="mr-1 h-4 w-4" /> Add Another Payer</Button>
         </div>
       ) : (
         <Select value={payers[0]?.personId || ''} onValueChange={val => handlePayerChange(0, 'personId', val)} disabled={people.length === 0}>

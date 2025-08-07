@@ -220,8 +220,8 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                   onKeyDown={(e) => e.key === 'Enter' && handleAddPerson()}
                 />
               </div>
-              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || isLoading} className="h-10 sm:h-11 w-full sm:w-auto text-sm sm:text-base">
-                <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> {isLoading && !editingPersonId ? 'Adding...' : 'Add Person'}
+              <Button onClick={handleAddPerson} disabled={!newPersonName.trim() || isLoading} size="sm" className="w-full sm:w-auto">
+                <PlusCircle className="mr-1 h-4 w-4" /> {isLoading && !editingPersonId ? 'Adding...' : 'Add Person'}
               </Button>
             </div>
           </div>
@@ -244,10 +244,10 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                             disabled={isLoading}
                             onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}
                           />
-                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-7 w-7 sm:h-8 sm:w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
+                          <Button variant="ghost" size="icon" onClick={handleSavePersonName} className="h-8 w-8 text-green-600 hover:text-green-700" title="Save" disabled={isLoading}>
                             <Save className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
+                          <Button variant="ghost" size="icon" onClick={handleCancelEditPerson} className="h-8 w-8 text-muted-foreground hover:text-foreground" title="Cancel" disabled={isLoading}>
                             <Ban className="h-4 w-4" />
                           </Button>
                         </>
@@ -255,10 +255,10 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                         <>
                           <span className="truncate flex-grow text-sm font-medium" title={person.name}>{person.name}</span>
                           <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600 hover:text-blue-700" title="Edit name" disabled={isLoading || !!editingPersonId}>
+                            <Button variant="ghost" size="icon" onClick={() => handleStartEditPerson(person)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit name" disabled={isLoading || !!editingPersonId}>
                               <Pencil className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-7 w-7 sm:h-8 sm:w-8 text-red-600 hover:text-red-700" title="Remove person" disabled={isLoading || !!editingPersonId}>
+                            <Button variant="ghost" size="icon" onClick={() => handleConfirmRemovePerson(person)} className="h-8 w-8 text-red-600 hover:text-red-700" title="Remove person" disabled={isLoading || !!editingPersonId}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

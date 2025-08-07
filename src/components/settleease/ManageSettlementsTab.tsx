@@ -203,7 +203,7 @@ export default function ManageSettlementsTab({
                               disabled={isLoading}
                               className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
                             >
-                              <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Mark as Paid
+                              <CheckCircle2 className="mr-1 h-4 w-4" /> Mark as Paid
                             </Button>
                           </div>
                         </div>
@@ -248,7 +248,7 @@ export default function ManageSettlementsTab({
                               disabled={isLoading}
                               className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
                             >
-                              <Undo2 className="mr-1.5 h-3.5 w-3.5 sm:h-4 sm:w-4" /> Unmark
+                              <Undo2 className="mr-1 h-4 w-4" /> Unmark
                             </Button>
                           </div>
                         </div>

@@ -146,11 +146,11 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
                                   categories={dynamicCategories}
                                   actions={
                                     <>
-                                      <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                                          <Pencil className="mr-1.5 h-3.5 w-3.5" /> Edit
+                                      <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="w-full sm:w-auto">
+                                          <Pencil className="mr-1 h-4 w-4" /> Edit
                                       </Button>
-                                      <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="text-xs px-3 py-1.5 h-auto w-full sm:w-auto">
-                                          <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete
+                                      <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="w-full sm:w-auto">
+                                          <Trash2 className="mr-1 h-4 w-4" /> Delete
                                       </Button>
                                     </>
                                   }
