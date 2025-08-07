@@ -116,23 +116,10 @@ export default function Step4SettlementOptions({
               </div>
             </div>
 
-            {/* Pros/Cons */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <h6 className="font-semibold text-green-800 dark:text-green-200 text-sm mb-2">✅ Advantages</h6>
-                <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                  <li>• Clear who owes whom</li>
-                  <li>• Based on actual expenses</li>
-                  <li>• Easy to track and verify</li>
-                </ul>
-              </div>
-              <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
-                <h6 className="font-semibold text-orange-800 dark:text-orange-200 text-sm mb-2">⚠️ Considerations</h6>
-                <ul className="text-xs text-orange-700 dark:text-orange-300 space-y-1">
-                  <li>• More transactions to make</li>
-                  <li>• Takes longer to complete</li>
-                  <li>• More complex coordination</li>
-                </ul>
+            {/* Key Info */}
+            <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="text-sm text-blue-800 dark:text-blue-200 text-center">
+                <strong>Direct approach:</strong> Pay exactly who you owe based on specific expenses
               </div>
             </div>
           </div>
@@ -224,40 +211,24 @@ export default function Step4SettlementOptions({
               </div>
             )}
 
-            {/* Pros/Cons */}
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                <h6 className="font-semibold text-green-800 dark:text-green-200 text-sm mb-2">✅ Advantages</h6>
-                <ul className="text-xs text-green-700 dark:text-green-300 space-y-1">
-                  <li>• Fewer transactions to make</li>
-                  <li>• Faster settlement process</li>
-                  <li>• Same mathematical result</li>
-                </ul>
-              </div>
-              <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                <h6 className="font-semibold text-blue-800 dark:text-blue-200 text-sm mb-2">ℹ️ Note</h6>
-                <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-                  <li>• May not pay direct creditors</li>
-                  <li>• Requires group coordination</li>
-                  <li>• Trust in the algorithm</li>
-                </ul>
+            {/* Key Info */}
+            <div className="mt-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="text-sm text-green-800 dark:text-green-200 text-center">
+                <strong>Optimized approach:</strong> Minimum transactions with same final result for everyone
               </div>
             </div>
           </div>
 
-          {/* Comparison Summary */}
-          <div className="p-4 bg-gradient-to-r from-blue-50 via-purple-50 to-green-50 dark:from-blue-950/20 dark:via-purple-950/20 dark:to-green-950/20 rounded-xl border-2 border-purple-200 dark:border-purple-700">
-            <h5 className="font-bold text-purple-900 dark:text-purple-100 text-center mb-3 flex items-center justify-center">
-              <Info className="w-5 h-5 mr-2" />
-              Both Methods Achieve the Same Result
-            </h5>
-            <div className="text-sm text-purple-800 dark:text-purple-200 text-center space-y-2">
-              <p>
-                <strong>Everyone ends up with exactly the same final balance</strong> regardless of which method you choose.
-              </p>
-              <p>
-                The difference is only in <em>how many transactions</em> it takes to get there.
-              </p>
+          {/* Key Insight */}
+          <div className="p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-950/20 dark:to-green-950/20 rounded-xl border-2 border-purple-200 dark:border-purple-700">
+            <div className="text-center">
+              <div className="font-bold text-purple-900 dark:text-purple-100 mb-2 flex items-center justify-center">
+                <Info className="w-5 h-5 mr-2" />
+                Same Result, Different Path
+              </div>
+              <div className="text-sm text-purple-800 dark:text-purple-200">
+                Both methods achieve identical final balances - choose based on your preference for <strong>simplicity</strong> (optimized) vs <strong>transparency</strong> (direct).
+              </div>
             </div>
           </div>
         </div>

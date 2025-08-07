@@ -8,7 +8,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ArrowRight, Users, Calculator, Zap, Info } from "lucide-react";
+import {
+  ArrowRight,
+  Users,
+  Calculator,
+  Zap,
+  Info,
+  GitMerge,
+  Shuffle,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { CalculatedTransaction } from "@/lib/settleease/types";
 
@@ -28,6 +36,35 @@ interface Step3SimplificationProcessProps {
   peopleMap: Record<string, string>;
 }
 
+// Helper function to calculate intermediate debt relationships
+function calculateIntermediateDebts(
+  personBalances: Record<string, PersonBalance>,
+  peopleMap: Record<string, string>
+): {
+  debtors: Array<{ id: string; name: string; amount: number }>;
+  creditors: Array<{ id: string; name: string; amount: number }>;
+} {
+  const debtors = Object.entries(personBalances)
+    .filter(([_, balance]) => balance.netBalance < -0.01)
+    .map(([id, balance]) => ({
+      id,
+      name: peopleMap[id] || "Unknown",
+      amount: Math.abs(balance.netBalance),
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  const creditors = Object.entries(personBalances)
+    .filter(([_, balance]) => balance.netBalance > 0.01)
+    .map(([id, balance]) => ({
+      id,
+      name: peopleMap[id] || "Unknown",
+      amount: balance.netBalance,
+    }))
+    .sort((a, b) => b.amount - a.amount);
+
+  return { debtors, creditors };
+}
+
 export default function Step3SimplificationProcess({
   pairwiseTransactions,
   unpaidSimplifiedTransactions,
@@ -42,6 +79,12 @@ export default function Step3SimplificationProcess({
     return debtorBalance < -0.01 && creditorBalance > 0.01;
   });
 
+  // Calculate intermediate debt relationships
+  const { debtors, creditors } = calculateIntermediateDebts(
+    personBalances,
+    peopleMap
+  );
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -51,7 +94,8 @@ export default function Step3SimplificationProcess({
         </CardTitle>
         <CardDescription className="text-sm">
           See how we transform {activeDirectDebts.length} direct debts into{" "}
-          {unpaidSimplifiedTransactions.length} optimized payments
+          {unpaidSimplifiedTransactions.length} optimized payments through
+          internal simplification and algorithmic optimization
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
@@ -121,16 +165,107 @@ export default function Step3SimplificationProcess({
             </div>
           </div>
 
-          {/* Transformation Arrow */}
+          {/* First Transformation: Internal Simplification */}
           <div className="flex items-center justify-center">
-            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200 dark:border-purple-700">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-lg border border-blue-200 dark:border-blue-700">
+              <GitMerge className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              <div className="text-center">
+                <div className="font-bold text-blue-900 dark:text-blue-100">
+                  Internal Simplification
+                </div>
+                <div className="text-sm text-blue-700 dark:text-blue-300">
+                  Grouping debtors and creditors by net balance
+                </div>
+              </div>
+              <ArrowRight className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+          </div>
+
+          {/* Intermediate: Simplified Debt Structure */}
+          <div className="relative p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-700">
+            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+              INTERMEDIATE
+            </div>
+
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
+                  <Shuffle className="w-5 h-5 text-blue-800 dark:text-blue-200" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-blue-900 dark:text-blue-100">
+                    Simplified Debt Structure
+                  </h4>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                    Who owes money vs who should receive money
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Debtors */}
+              <div className="space-y-2">
+                <h5 className="font-semibold text-red-800 dark:text-red-200 text-sm flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                  People who owe money
+                </h5>
+                {debtors.map((debtor) => (
+                  <div
+                    key={debtor.id}
+                    className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-950/30 rounded border border-red-200 dark:border-red-800"
+                  >
+                    <span className="font-medium text-red-900 dark:text-red-100">
+                      {debtor.name}
+                    </span>
+                    <span className="font-bold text-red-700 dark:text-red-300">
+                      -{formatCurrency(debtor.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Creditors */}
+              <div className="space-y-2">
+                <h5 className="font-semibold text-green-800 dark:text-green-200 text-sm flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                  People who should receive money
+                </h5>
+                {creditors.map((creditor) => (
+                  <div
+                    key={creditor.id}
+                    className="flex items-center justify-between p-2 bg-green-50 dark:bg-green-950/30 rounded border border-green-200 dark:border-green-800"
+                  >
+                    <span className="font-medium text-green-900 dark:text-green-100">
+                      {creditor.name}
+                    </span>
+                    <span className="font-bold text-green-700 dark:text-green-300">
+                      +{formatCurrency(creditor.amount)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <div className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Key insight:</strong> Instead of tracking who owes whom
+                specifically, we now just know who needs to pay money and who
+                needs to receive money. This makes optimization much simpler!
+              </div>
+            </div>
+          </div>
+
+          {/* Second Transformation: Algorithm Optimization */}
+          <div className="flex items-center justify-center">
+            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border border-purple-200 dark:border-purple-700">
               <Calculator className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               <div className="text-center">
                 <div className="font-bold text-purple-900 dark:text-purple-100">
                   Algorithm Optimization
                 </div>
                 <div className="text-sm text-purple-700 dark:text-purple-300">
-                  Minimizing transactions while preserving balances
+                  Matching debtors with creditors efficiently
                 </div>
               </div>
               <ArrowRight className="w-6 h-6 text-purple-600 dark:text-purple-400" />
@@ -234,67 +369,31 @@ export default function Step3SimplificationProcess({
               <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
               <div>
                 <div className="font-bold text-yellow-900 dark:text-yellow-100 mb-2">
-                  Why This Works
+                  How The Two-Step Simplification Works
                 </div>
                 <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-2">
                   <p>
-                    <strong>The magic:</strong> Instead of everyone paying their
-                    direct creditors, we rearrange payments so people with
-                    negative balances pay people with positive balances.
+                    <strong>Step 1 - Internal Simplification:</strong> We first
+                    identify who has negative balances (debtors) and who has
+                    positive balances (creditors), ignoring the specific expense
+                    relationships.
                   </p>
                   <p>
-                    <strong>Example:</strong> If Alice owes Bob $10 and Bob owes
-                    Carol $10, we skip the middle step - Alice pays Carol $10
-                    directly.
+                    <strong>Step 2 - Optimal Matching:</strong> We then match
+                    debtors with creditors in the most efficient way possible,
+                    minimizing the total number of transactions needed.
+                  </p>
+                  <p>
+                    <strong>Example:</strong> If Prasang owes Gagan ₹181, but
+                    Gagan is already settled, we redirect Prasang's payment to
+                    someone who actually needs to receive money (like Nikhil).
                   </p>
                   <p>
                     <strong>Result:</strong> Everyone ends up with exactly the
-                    same final balance, but with fewer actual payments to make.
+                    same final balance, but with much fewer actual payments to
+                    make.
                   </p>
                 </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Balance Verification */}
-          <div className="p-4 bg-gray-50 dark:bg-gray-900/30 rounded-xl border border-gray-200 dark:border-gray-700">
-            <h5 className="font-bold text-gray-900 dark:text-gray-100 mb-3 flex items-center">
-              <Calculator className="w-4 h-4 mr-2" />
-              Balance Verification
-            </h5>
-            <div className="text-sm text-gray-700 dark:text-gray-300">
-              <p className="mb-2">
-                <strong>Guarantee:</strong> Both methods result in identical
-                final balances for everyone.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-                {Object.entries(personBalances)
-                  .filter(([, balance]) => Math.abs(balance.netBalance) > 0.01)
-                  .map(([personId, balance]) => {
-                    const person = people.find((p) => p.id === personId);
-                    if (!person) return null;
-
-                    const isCreditor = balance.netBalance > 0.01;
-
-                    return (
-                      <div
-                        key={personId}
-                        className="flex items-center justify-between p-2 bg-white dark:bg-gray-800 rounded border"
-                      >
-                        <span className="font-medium">{person.name}</span>
-                        <span
-                          className={`font-bold ${
-                            isCreditor
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
-                          }`}
-                        >
-                          {isCreditor ? "+" : "-"}
-                          {formatCurrency(Math.abs(balance.netBalance))}
-                        </span>
-                      </div>
-                    );
-                  })}
               </div>
             </div>
           </div>

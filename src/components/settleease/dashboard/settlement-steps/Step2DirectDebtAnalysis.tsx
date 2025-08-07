@@ -8,11 +8,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileText, Info, Calculator, CheckCircle2, DollarSign } from "lucide-react";
+import { FileText, Info, Calculator, DollarSign, CreditCard, Utensils, PartyPopper, User } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { 
   Expense, 
-  SettlementPayment, 
   Person 
 } from "@/lib/settleease/types";
 
@@ -26,7 +25,6 @@ interface PersonBalance {
 
 interface Step2DirectDebtAnalysisProps {
   allExpenses: Expense[];
-  settlementPayments: SettlementPayment[];
   personBalances: Record<string, PersonBalance>;
   people: Person[];
   peopleMap: Record<string, string>;
@@ -34,7 +32,6 @@ interface Step2DirectDebtAnalysisProps {
 
 export default function Step2DirectDebtAnalysis({
   allExpenses,
-  settlementPayments,
   personBalances,
   people,
   peopleMap,
@@ -61,7 +58,6 @@ export default function Step2DirectDebtAnalysis({
               
               const isCreditor = balance.netBalance > 0.01;
               const isDebtor = balance.netBalance < -0.01;
-              const isBalanced = Math.abs(balance.netBalance) <= 0.01;
 
               // Get expenses where this person was involved
               const relevantExpenses = allExpenses.filter(expense => {
@@ -141,7 +137,7 @@ export default function Step2DirectDebtAnalysis({
                     </h4>
                     
                     <div className="grid grid-cols-1 gap-2">
-                      {relevantExpenses.map((expense, i) => {
+                      {relevantExpenses.map((expense) => {
                         // Calculate this person's involvement in this expense
                         const amountPaid = Array.isArray(expense.paid_by) 
                           ? expense.paid_by.find(p => p.personId === personId)?.amount || 0
@@ -161,6 +157,11 @@ export default function Step2DirectDebtAnalysis({
                         // Skip if person had no involvement
                         if (amountPaid === 0 && totalOwed === 0) return null;
 
+                        // Find who paid for this expense
+                        const payers = Array.isArray(expense.paid_by) 
+                          ? expense.paid_by.map(p => peopleMap[p.personId]).filter(Boolean)
+                          : [];
+
                         return (
                           <div
                             key={expense.id}
@@ -171,11 +172,19 @@ export default function Step2DirectDebtAnalysis({
                                 <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
                                   {expense.description}
                                 </h5>
-                                <p className="text-xs text-gray-500 dark:text-gray-400">
-                                  {expense.created_at 
-                                    ? new Date(expense.created_at).toLocaleDateString()
-                                    : "No date"} • Total: {formatCurrency(expense.total_amount)}
-                                </p>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                  <div>
+                                    {expense.created_at 
+                                      ? new Date(expense.created_at).toLocaleDateString()
+                                      : "No date"} • Total: {formatCurrency(expense.total_amount)}
+                                  </div>
+                                  {payers.length > 0 && (
+                                    <div className="flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      <span>Paid by: {payers.join(", ")}</span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                               <div className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
                                 netForThisExpense > 0.01
@@ -192,8 +201,9 @@ export default function Step2DirectDebtAnalysis({
                             <div className="space-y-1 text-xs">
                               {amountPaid > 0 && (
                                 <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    💳 Amount paid:
+                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <CreditCard className="w-3 h-3" />
+                                    Amount paid:
                                   </span>
                                   <span className="font-medium text-green-600 dark:text-green-400">
                                     +{formatCurrency(amountPaid)}
@@ -203,8 +213,9 @@ export default function Step2DirectDebtAnalysis({
                               
                               {shareAmount > 0 && (
                                 <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    🍽️ Share owed:
+                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <Utensils className="w-3 h-3" />
+                                    Share owed:
                                   </span>
                                   <span className="font-medium text-red-600 dark:text-red-400">
                                     -{formatCurrency(shareAmount)}
@@ -214,8 +225,9 @@ export default function Step2DirectDebtAnalysis({
                               
                               {celebrationAmount > 0 && (
                                 <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400">
-                                    🎉 Celebration:
+                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                    <PartyPopper className="w-3 h-3" />
+                                    Celebration:
                                   </span>
                                   <span className="font-medium text-red-600 dark:text-red-400">
                                     -{formatCurrency(celebrationAmount)}
@@ -243,38 +255,6 @@ export default function Step2DirectDebtAnalysis({
                         );
                       })}
                     </div>
-
-                    {/* Settlement Payments */}
-                    {(balance.settledAsDebtor > 0 || balance.settledAsCreditor > 0) && (
-                      <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                        <h5 className="font-semibold text-blue-900 dark:text-blue-100 mb-2 flex items-center text-sm">
-                          <CheckCircle2 className="w-4 h-4 mr-2" />
-                          Settlement Payments
-                        </h5>
-                        <div className="space-y-1 text-xs">
-                          {balance.settledAsDebtor > 0 && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-blue-700 dark:text-blue-300">
-                                Payments made by {person.name}:
-                              </span>
-                              <span className="font-medium text-green-600 dark:text-green-400">
-                                +{formatCurrency(balance.settledAsDebtor)}
-                              </span>
-                            </div>
-                          )}
-                          {balance.settledAsCreditor > 0 && (
-                            <div className="flex justify-between items-center">
-                              <span className="text-blue-700 dark:text-blue-300">
-                                Payments received by {person.name}:
-                              </span>
-                              <span className="font-medium text-red-600 dark:text-red-400">
-                                -{formatCurrency(balance.settledAsCreditor)}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
 
                     {/* Final Calculation Summary - Compact */}
                     <div className={`mt-4 p-3 rounded-lg border-2 ${

@@ -8,7 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Users, CheckCircle2 } from "lucide-react";
+import { Users, CheckCircle2, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { Person } from "@/lib/settleease/types";
 
@@ -98,11 +98,11 @@ export default function Step1BalanceOverview({
                       : "BALANCED"}
                   </div>
 
-                  {/* Person Name and Amount */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
+                  {/* Person Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
                       <div
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shadow-sm ${
                           isCreditor
                             ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
                             : isDebtor
@@ -112,9 +112,14 @@ export default function Step1BalanceOverview({
                       >
                         {person.name.charAt(0).toUpperCase()}
                       </div>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        {person.name}
-                      </span>
+                      <div>
+                        <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                          {person.name}
+                        </h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">
+                          {isCreditor ? "should receive" : isDebtor ? "should pay" : "all balanced"}
+                        </p>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div
@@ -132,81 +137,86 @@ export default function Step1BalanceOverview({
                     </div>
                   </div>
 
-                  {/* Breakdown Details */}
-                  <div className="space-y-2 text-xs">
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Total Paid:
-                      </span>
-                      <span className="font-semibold text-green-700 dark:text-green-400">
-                        {formatCurrency(balance.totalPaid)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-1">
-                      <span className="text-gray-600 dark:text-gray-400">
-                        Total Owed:
-                      </span>
-                      <span className="font-semibold text-red-700 dark:text-red-400">
-                        {formatCurrency(balance.totalOwed)}
-                      </span>
-                    </div>
-                    {(balance.settledAsDebtor > 0 ||
-                      balance.settledAsCreditor > 0) && (
-                      <div className="flex justify-between items-center py-1">
-                        <span className="text-gray-600 dark:text-gray-400">
-                          Already Settled:
-                        </span>
-                        <span className="font-semibold text-blue-700 dark:text-blue-400">
-                          {formatCurrency(
-                            Math.abs(
-                              balance.settledAsCreditor - balance.settledAsDebtor
-                            )
-                          )}
+                  {/* Calculation Breakdown */}
+                  <div className={`p-3 rounded-lg border-2 ${
+                    isCreditor
+                      ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
+                      : isDebtor
+                      ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
+                      : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
+                  }`}>
+                    <div className="space-y-1 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Total paid:</span>
+                        <span className="font-medium text-green-600 dark:text-green-400">
+                          +{formatCurrency(balance.totalPaid)}
                         </span>
                       </div>
-                    )}
-
-                    {/* Final Status - More Prominent */}
-                    <div
-                      className={`mt-3 pt-3 border-t-2 ${
-                        isCreditor
-                          ? "border-green-200 dark:border-green-800"
-                          : isDebtor
-                          ? "border-red-200 dark:border-red-800"
-                          : "border-gray-200 dark:border-gray-800"
-                      }`}
-                    >
-                      <div className="flex items-center justify-center">
-                        <div
-                          className={`px-4 py-2 rounded-lg font-bold text-sm text-center ${
-                            isCreditor
-                              ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                              : isDebtor
-                              ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                              : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                          }`}
-                        >
-                          {isCreditor ? (
-                            `Should Receive ${formatCurrency(
-                              Math.abs(balance.netBalance)
-                            )}`
-                          ) : isDebtor ? (
-                            `Should Pay ${formatCurrency(
-                              Math.abs(balance.netBalance)
-                            )}`
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              All Balanced{" "}
-                              <CheckCircle2 className="w-4 h-4" />
-                            </div>
-                          )}
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600 dark:text-gray-400">Total owed:</span>
+                        <span className="font-medium text-red-600 dark:text-red-400">
+                          -{formatCurrency(balance.totalOwed)}
+                        </span>
+                      </div>
+                      {(balance.settledAsDebtor > 0 || balance.settledAsCreditor > 0) && (
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 dark:text-gray-400">Net settlements:</span>
+                          <span className="font-medium text-blue-600 dark:text-blue-400">
+                            {(balance.settledAsDebtor - balance.settledAsCreditor) >= 0 ? "+" : ""}
+                            {formatCurrency(balance.settledAsDebtor - balance.settledAsCreditor)}
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600">
+                        <span className="font-bold text-gray-800 dark:text-gray-200">Net Balance:</span>
+                        <span className={`font-bold text-lg ${
+                          isCreditor
+                            ? "text-green-700 dark:text-green-300"
+                            : isDebtor
+                            ? "text-red-700 dark:text-red-300"
+                            : "text-gray-700 dark:text-gray-300"
+                        }`}>
+                          {isCreditor ? "+" : isDebtor ? "-" : ""}
+                          {formatCurrency(Math.abs(balance.netBalance))}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Status indicator */}
+                    {isBalanced && (
+                      <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600 flex items-center justify-center">
+                        <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-xs">
+                          <CheckCircle2 className="w-4 h-4" />
+                          All Balanced
                         </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+        </div>
+
+        {/* Summary explanation */}
+        <div className="mt-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+          <div className="flex items-start gap-3">
+            <Info className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <div className="font-semibold text-green-900 dark:text-green-100 mb-2">
+                Understanding Net Balances
+              </div>
+              <div className="text-sm text-green-800 dark:text-green-200 space-y-2">
+                <p>
+                  Each person's net balance is calculated as: <strong>Total Paid - Total Owed</strong>
+                </p>
+                <p>
+                  <strong>Green (Receives)</strong> means they paid more than their share, 
+                  <strong> Red (Pays)</strong> means they owe money, and 
+                  <strong> Gray (Balanced)</strong> means they're even.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>
