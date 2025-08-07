@@ -244,13 +244,7 @@ export default function Step3SimplificationProcess({
               </div>
             </div>
 
-            <div className="mt-4 p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-              <div className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Key insight:</strong> Instead of tracking who owes whom
-                specifically, we now just know who needs to pay money and who
-                needs to receive money. This makes optimization much simpler!
-              </div>
-            </div>
+
           </div>
 
           {/* Second Transformation: Algorithm Optimization */}
@@ -360,40 +354,7 @@ export default function Step3SimplificationProcess({
             </div>
           )}
 
-          {/* Key Insight */}
-          <div className="p-4 bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 rounded-xl border-2 border-yellow-300 dark:border-yellow-700">
-            <div className="flex items-start gap-3">
-              <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <div className="font-bold text-yellow-900 dark:text-yellow-100 mb-2">
-                  How The Two-Step Simplification Works
-                </div>
-                <div className="text-sm text-yellow-800 dark:text-yellow-200 space-y-2">
-                  <p>
-                    <strong>Step 1 - Internal Simplification:</strong> We first
-                    identify who has negative balances (debtors) and who has
-                    positive balances (creditors), ignoring the specific expense
-                    relationships.
-                  </p>
-                  <p>
-                    <strong>Step 2 - Optimal Matching:</strong> We then match
-                    debtors with creditors in the most efficient way possible,
-                    minimizing the total number of transactions needed.
-                  </p>
-                  <p>
-                    <strong>Example:</strong> If Prasang owes Gagan ₹181, but
-                    Gagan is already settled, we redirect Prasang's payment to
-                    someone who actually needs to receive money (like Nikhil).
-                  </p>
-                  <p>
-                    <strong>Result:</strong> Everyone ends up with exactly the
-                    same final balance, but with much fewer actual payments to
-                    make.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+
         </div>
       </CardContent>
     </Card>

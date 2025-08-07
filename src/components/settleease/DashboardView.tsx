@@ -142,6 +142,27 @@ export default function DashboardView({
       }
     });
 
+    // Calculate net settlement balance for each person (payments made - payments received)
+    const netSettlementBalances: Record<string, number> = {};
+    people.forEach(p => netSettlementBalances[p.id] = 0);
+    
+    settlementPayments.forEach(sp => {
+      const amount = Number(sp.amount_settled);
+      netSettlementBalances[sp.debtor_id] = (netSettlementBalances[sp.debtor_id] || 0) + amount; // Payments made
+      netSettlementBalances[sp.creditor_id] = (netSettlementBalances[sp.creditor_id] || 0) - amount; // Payments received
+    });
+
+    // Calculate total debt obligations for each person from expenses
+    const totalDebtObligations: Record<string, number> = {};
+    people.forEach(p => totalDebtObligations[p.id] = 0);
+    
+    for (const debtorId in rawPairwiseDebtsFromExpenses) {
+      for (const creditorId in rawPairwiseDebtsFromExpenses[debtorId]) {
+        totalDebtObligations[debtorId] += rawPairwiseDebtsFromExpenses[debtorId][creditorId].amount;
+      }
+    }
+
+    // For direct pairwise settlements (specific debtor-creditor pairs)
     const settledAmountsMap: Record<string, Record<string, number>> = {};
     settlementPayments.forEach(sp => {
       if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
@@ -150,6 +171,14 @@ export default function DashboardView({
 
     const pTransactions: CalculatedTransaction[] = [];
     for (const debtorId in rawPairwiseDebtsFromExpenses) {
+      // Check if this person has settled all their debts through any payments
+      const hasSettledAllDebts = netSettlementBalances[debtorId] >= totalDebtObligations[debtorId] - 0.01;
+      
+      if (hasSettledAllDebts) {
+        // Skip all debts for this person as they've settled everything
+        continue;
+      }
+      
       for (const creditorId in rawPairwiseDebtsFromExpenses[debtorId]) {
         let netAmount = rawPairwiseDebtsFromExpenses[debtorId][creditorId].amount;
         const alreadySettled = settledAmountsMap[debtorId]?.[creditorId] || 0;

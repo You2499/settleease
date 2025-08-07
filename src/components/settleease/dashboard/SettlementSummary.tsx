@@ -47,7 +47,6 @@ import PerPersonSettlementDetails from "./PerPersonSettlementDetails";
 import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
 import Step2DirectDebtAnalysis from "./settlement-steps/Step2DirectDebtAnalysis";
 import Step3SimplificationProcess from "./settlement-steps/Step3SimplificationProcess";
-import Step4SettlementOptions from "./settlement-steps/Step4SettlementOptions";
 
 interface SettlementSummaryProps {
   simplifiedTransactions: CalculatedTransaction[];
@@ -399,12 +398,6 @@ export default function SettlementSummary({
                 unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
                 personBalances={personBalances}
                 people={people}
-                peopleMap={peopleMap}
-              />
-
-              <Step4SettlementOptions
-                pairwiseTransactions={pairwiseTransactions}
-                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
                 peopleMap={peopleMap}
               />
             </div>
