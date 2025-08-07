@@ -84,10 +84,6 @@ export default function SettlementSummary({
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [showBalancedPeople, setShowBalancedPeople] = useState(false);
 
-  const transactionsToDisplay = simplifySettlement
-    ? simplifiedTransactions
-    : pairwiseTransactions;
-
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
     : "Detailed pairwise debts reflecting direct expense involvements and payments.";
@@ -195,7 +191,7 @@ export default function SettlementSummary({
     if (showBalancedPeople) {
       return people;
     }
-    return people.filter(person => {
+    return people.filter((person) => {
       const balance = personBalances[person.id];
       return balance && Math.abs(balance.netBalance) > 0.01;
     });
@@ -206,14 +202,52 @@ export default function SettlementSummary({
       return personBalances;
     }
     const filtered: typeof personBalances = {};
-    filteredPeople.forEach(person => {
+    filteredPeople.forEach((person) => {
       filtered[person.id] = personBalances[person.id];
     });
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
+  const transactionsToDisplay = useMemo(() => {
+    if (simplifySettlement) {
+      return simplifiedTransactions;
+    }
+
+    // For pairwise transactions, filter out those involving balanced people
+    // unless showBalancedPeople is true
+    if (showBalancedPeople) {
+      return pairwiseTransactions;
+    }
+
+    const visiblePeopleIds = new Set(filteredPeople.map((p) => p.id));
+    return pairwiseTransactions.filter((txn) => {
+      // Show if debtor is visible (they need to see what they owe)
+      if (visiblePeopleIds.has(txn.from)) return true;
+      // Show if creditor is visible (they need to see what they're owed)
+      if (visiblePeopleIds.has(txn.to)) return true;
+      // Hide if both parties are hidden
+      return false;
+    });
+  }, [
+    simplifySettlement,
+    simplifiedTransactions,
+    pairwiseTransactions,
+    showBalancedPeople,
+    filteredPeople,
+  ]);
+
   const unpaidSimplifiedTransactions = useMemo(() => {
-    return simplifiedTransactions.filter((txn) => {
+    let filteredTransactions = simplifiedTransactions;
+
+    // Filter out transactions involving balanced people unless showBalancedPeople is true
+    if (!showBalancedPeople) {
+      const visiblePeopleIds = new Set(filteredPeople.map((p) => p.id));
+      filteredTransactions = simplifiedTransactions.filter(
+        (txn) => visiblePeopleIds.has(txn.from) && visiblePeopleIds.has(txn.to)
+      );
+    }
+
+    return filteredTransactions.filter((txn) => {
       // Check if this transaction has been fully settled
       const settledAmount = settlementPayments
         .filter(
@@ -225,7 +259,12 @@ export default function SettlementSummary({
       // Only include if there's still an outstanding amount
       return Number(txn.amount) > settledAmount;
     });
-  }, [simplifiedTransactions, settlementPayments]);
+  }, [
+    simplifiedTransactions,
+    settlementPayments,
+    showBalancedPeople,
+    filteredPeople,
+  ]);
 
   return (
     <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">
@@ -414,14 +453,18 @@ export default function SettlementSummary({
               ) : (
                 <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               )}
-              <Label htmlFor="show-balanced" className="text-sm font-medium cursor-pointer">
+              <Label
+                htmlFor="show-balanced"
+                className="text-sm font-medium cursor-pointer"
+              >
                 Show balanced people
               </Label>
-              {!showBalancedPeople && people.length - filteredPeople.length > 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-                  {people.length - filteredPeople.length} hidden
-                </span>
-              )}
+              {!showBalancedPeople &&
+                people.length - filteredPeople.length > 0 && (
+                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                    {people.length - filteredPeople.length} hidden
+                  </span>
+                )}
             </div>
             <Switch
               id="show-balanced"
