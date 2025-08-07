@@ -371,17 +371,19 @@ export default function SettlementSummary({
 
       {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[95vh] w-[95vw] max-w-6xl overflow-hidden p-0">
-          <DialogHeader className="px-4 sm:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-            <DialogTitle className="text-lg sm:text-xl md:text-2xl text-primary flex items-center">
-              <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              How Settlement Works - Simple & Transparent
-            </DialogTitle>
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl">
+          <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between">
+            <div className="flex items-center">
+              <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
+                <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                How Settlement Works - Simple & Transparent
+              </DialogTitle>
+            </div>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 px-4 sm:px-6">
-            <div className="space-y-4 sm:space-y-6 py-4">
-              <Step1BalanceOverview 
+          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
+            <div className="space-y-4 sm:space-y-6 pt-2">
+              <Step1BalanceOverview
                 personBalances={personBalances}
                 people={people}
               />
@@ -410,7 +412,7 @@ export default function SettlementSummary({
 
               <TrustSection />
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </Card>
