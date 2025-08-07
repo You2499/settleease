@@ -28,6 +28,8 @@ import {
   FileText,
   Info,
   Calculator,
+  EyeOff,
+  Eye,
 } from "lucide-react";
 import {
   Dialog,
@@ -78,6 +80,7 @@ export default function SettlementSummary({
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+  const [showBalancedPeople, setShowBalancedPeople] = useState(false);
 
   const transactionsToDisplay = simplifySettlement
     ? simplifiedTransactions
@@ -184,6 +187,28 @@ export default function SettlementSummary({
 
     return balances;
   }, [allExpenses, settlementPayments, people]);
+
+  // Filter out balanced people if toggle is off
+  const filteredPeople = useMemo(() => {
+    if (showBalancedPeople) {
+      return people;
+    }
+    return people.filter(person => {
+      const balance = personBalances[person.id];
+      return balance && Math.abs(balance.netBalance) > 0.01;
+    });
+  }, [people, personBalances, showBalancedPeople]);
+
+  const filteredPersonBalances = useMemo(() => {
+    if (showBalancedPeople) {
+      return personBalances;
+    }
+    const filtered: typeof personBalances = {};
+    filteredPeople.forEach(person => {
+      filtered[person.id] = personBalances[person.id];
+    });
+    return filtered;
+  }, [personBalances, filteredPeople, showBalancedPeople]);
 
   const unpaidSimplifiedTransactions = useMemo(() => {
     return simplifiedTransactions.filter((txn) => {
@@ -379,25 +404,49 @@ export default function SettlementSummary({
             </div>
           </DialogHeader>
 
+          {/* Toggle for balanced people */}
+          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border">
+            <div className="flex items-center space-x-3">
+              {showBalancedPeople ? (
+                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              )}
+              <Label htmlFor="show-balanced" className="text-sm font-medium cursor-pointer">
+                Show balanced people
+              </Label>
+              {!showBalancedPeople && people.length - filteredPeople.length > 0 && (
+                <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                  {people.length - filteredPeople.length} hidden
+                </span>
+              )}
+            </div>
+            <Switch
+              id="show-balanced"
+              checked={showBalancedPeople}
+              onCheckedChange={setShowBalancedPeople}
+            />
+          </div>
+
           <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
             <div className="space-y-4 sm:space-y-6 pt-2">
               <Step1BalanceOverview
-                personBalances={personBalances}
-                people={people}
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
               />
 
               <Step2DirectDebtAnalysis
                 allExpenses={allExpenses}
-                personBalances={personBalances}
-                people={people}
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
                 peopleMap={peopleMap}
               />
 
               <Step3SimplificationProcess
                 pairwiseTransactions={pairwiseTransactions}
                 unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
-                personBalances={personBalances}
-                people={people}
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
                 peopleMap={peopleMap}
               />
             </div>
