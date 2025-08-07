@@ -343,18 +343,31 @@ export default function SettlementSummary({
                             {formatCurrency(txn.amount)}
                           </span>
                           <div className="flex-shrink-0 flex justify-center mt-1 sm:mt-0 col-span-1 sm:col-span-1">
-                            {userRole === "admin" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleInternalMarkAsPaid(txn)}
-                                disabled={isLoading}
-                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
-                              >
-                                <CheckCircle2 className="mr-1 h-4 w-4" />
-                                Mark as Paid
-                              </Button>
-                            )}
+                            {(() => {
+                              const visiblePeopleIds = new Set(filteredPeople.map(p => p.id));
+                              const hasBalancedPerson = !visiblePeopleIds.has(txn.from) || !visiblePeopleIds.has(txn.to);
+                              
+                              if (hasBalancedPerson) {
+                                return (
+                                  <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+                                    balanced person
+                                  </div>
+                                );
+                              }
+                              
+                              return userRole === "admin" ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleInternalMarkAsPaid(txn)}
+                                  disabled={isLoading}
+                                  className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                                >
+                                  <CheckCircle2 className="mr-1 h-4 w-4" />
+                                  Mark as Paid
+                                </Button>
+                              ) : null;
+                            })()}
                           </div>
                         </div>
                       </Card>
