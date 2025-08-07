@@ -260,15 +260,6 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {showBackButton && (
-        <style dangerouslySetInnerHTML={{
-          __html: `
-            [data-radix-dialog-content] > button[data-radix-dialog-close] {
-              display: none !important;
-            }
-          `
-        }} />
-      )}
       <DialogContent 
         className="max-h-[90vh] overflow-y-auto no-scrollbar relative"
       >
@@ -285,7 +276,7 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           <Button
             variant="outline"
             size="icon"
-            className="absolute top-4 right-4 z-[100] bg-background hover:bg-accent border-2 border-primary/20 shadow-lg"
+            className="absolute top-4 right-4 z-[100] bg-background hover:bg-accent border-2 border-primary shadow-lg"
             title="Back to Step 2"
             onClick={onBack}
           >
