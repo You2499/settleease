@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   Card,
   CardContent,
@@ -8,12 +8,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { FileText, Info, Calculator, DollarSign, CreditCard, Utensils, PartyPopper, User } from "lucide-react";
+import {
+  FileText,
+  Info,
+  Calculator,
+  DollarSign,
+  CreditCard,
+  Utensils,
+  PartyPopper,
+  User,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settleease/utils";
-import type { 
-  Expense, 
-  Person 
-} from "@/lib/settleease/types";
+import type { Expense, Person } from "@/lib/settleease/types";
 
 interface PersonBalance {
   totalPaid: number;
@@ -36,6 +45,20 @@ export default function Step2DirectDebtAnalysis({
   people,
   peopleMap,
 }: Step2DirectDebtAnalysisProps) {
+  const [expandedPersons, setExpandedPersons] = useState<Set<string>>(
+    new Set()
+  );
+
+  const togglePersonExpansion = (personId: string) => {
+    const newExpanded = new Set(expandedPersons);
+    if (newExpanded.has(personId)) {
+      newExpanded.delete(personId);
+    } else {
+      newExpanded.add(personId);
+    }
+    setExpandedPersons(newExpanded);
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -51,21 +74,26 @@ export default function Step2DirectDebtAnalysis({
         <div className="space-y-4">
           {/* Show each person's expense breakdown in compact format */}
           {Object.entries(personBalances)
-            .sort(([,a], [,b]) => Math.abs(b.netBalance) - Math.abs(a.netBalance))
+            .sort(
+              ([, a], [, b]) => Math.abs(b.netBalance) - Math.abs(a.netBalance)
+            )
             .map(([personId, balance]) => {
-              const person = people.find(p => p.id === personId);
+              const person = people.find((p) => p.id === personId);
               if (!person) return null;
-              
+
               const isCreditor = balance.netBalance > 0.01;
               const isDebtor = balance.netBalance < -0.01;
 
               // Get expenses where this person was involved
-              const relevantExpenses = allExpenses.filter(expense => {
-                const wasPayer = Array.isArray(expense.paid_by) && 
-                  expense.paid_by.some(p => p.personId === personId);
-                const hadShare = Array.isArray(expense.shares) && 
-                  expense.shares.some(s => s.personId === personId);
-                const hadCelebration = expense.celebration_contribution?.personId === personId;
+              const relevantExpenses = allExpenses.filter((expense) => {
+                const wasPayer =
+                  Array.isArray(expense.paid_by) &&
+                  expense.paid_by.some((p) => p.personId === personId);
+                const hadShare =
+                  Array.isArray(expense.shares) &&
+                  expense.shares.some((s) => s.personId === personId);
+                const hadCelebration =
+                  expense.celebration_contribution?.personId === personId;
                 return wasPayer || hadShare || hadCelebration;
               });
 
@@ -81,26 +109,30 @@ export default function Step2DirectDebtAnalysis({
                   }`}
                 >
                   {/* Status Badge */}
-                  <div className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                    isCreditor
-                      ? "bg-green-500 text-white"
-                      : isDebtor
-                      ? "bg-red-500 text-white"
-                      : "bg-gray-500 text-white"
-                  }`}>
+                  <div
+                    className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                      isCreditor
+                        ? "bg-green-500 text-white"
+                        : isDebtor
+                        ? "bg-red-500 text-white"
+                        : "bg-gray-500 text-white"
+                    }`}
+                  >
                     {isCreditor ? "RECEIVES" : isDebtor ? "PAYS" : "BALANCED"}
                   </div>
 
                   {/* Person Header - Compact */}
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-lg ${
-                        isCreditor
-                          ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                          : isDebtor
-                          ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                          : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
-                      }`}>
+                      <div
+                        className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-lg ${
+                          isCreditor
+                            ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                            : isDebtor
+                            ? "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                            : "bg-gray-200 text-gray-800 dark:bg-gray-800 dark:text-gray-200"
+                        }`}
+                      >
                         {person.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
@@ -108,162 +140,210 @@ export default function Step2DirectDebtAnalysis({
                           {person.name}
                         </h3>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {relevantExpenses.length} expense{relevantExpenses.length !== 1 ? 's' : ''}
+                          {relevantExpenses.length} expense
+                          {relevantExpenses.length !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`text-2xl font-bold ${
-                        isCreditor
-                          ? "text-green-700 dark:text-green-300"
-                          : isDebtor
-                          ? "text-red-700 dark:text-red-300"
-                          : "text-gray-700 dark:text-gray-300"
-                      }`}>
+                      <div
+                        className={`text-2xl font-bold ${
+                          isCreditor
+                            ? "text-green-700 dark:text-green-300"
+                            : isDebtor
+                            ? "text-red-700 dark:text-red-300"
+                            : "text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
                         {isCreditor ? "+" : isDebtor ? "-" : ""}
                         {formatCurrency(Math.abs(balance.netBalance))}
                       </div>
                       <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {isCreditor ? "should receive" : isDebtor ? "should pay" : "all balanced"}
+                        {isCreditor
+                          ? "should receive"
+                          : isDebtor
+                          ? "should pay"
+                          : "all balanced"}
                       </div>
                     </div>
                   </div>
 
-                  {/* Compact Expense Breakdown */}
+                  {/* Collapsible Expense Breakdown */}
                   <div className="space-y-3">
-                    <h4 className="font-semibold text-gray-900 dark:text-gray-100 flex items-center text-sm">
+                    <Button
+                      variant="ghost"
+                      onClick={() => togglePersonExpansion(personId)}
+                      className="w-full justify-start p-0 h-auto font-semibold text-gray-900 dark:text-gray-100 hover:bg-transparent"
+                    >
+                      {expandedPersons.has(personId) ? (
+                        <ChevronDown className="w-4 h-4 mr-2" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 mr-2" />
+                      )}
                       <Calculator className="w-4 h-4 mr-2" />
-                      Expense Breakdown
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 gap-2">
-                      {relevantExpenses.map((expense) => {
-                        // Calculate this person's involvement in this expense
-                        const amountPaid = Array.isArray(expense.paid_by) 
-                          ? expense.paid_by.find(p => p.personId === personId)?.amount || 0
-                          : 0;
-                        
-                        const shareAmount = Array.isArray(expense.shares)
-                          ? expense.shares.find(s => s.personId === personId)?.amount || 0
-                          : 0;
-                        
-                        const celebrationAmount = expense.celebration_contribution?.personId === personId
-                          ? expense.celebration_contribution.amount || 0
-                          : 0;
-                        
-                        const totalOwed = shareAmount + celebrationAmount;
-                        const netForThisExpense = amountPaid - totalOwed;
-                        
-                        // Skip if person had no involvement
-                        if (amountPaid === 0 && totalOwed === 0) return null;
+                      Expense Breakdown ({relevantExpenses.length} expenses)
+                    </Button>
 
-                        // Find who paid for this expense
-                        const payers = Array.isArray(expense.paid_by) 
-                          ? expense.paid_by.map(p => peopleMap[p.personId]).filter(Boolean)
-                          : [];
+                    {expandedPersons.has(personId) && (
+                      <div className="grid grid-cols-1 gap-2">
+                        {relevantExpenses.map((expense) => {
+                          // Calculate this person's involvement in this expense
+                          const amountPaid = Array.isArray(expense.paid_by)
+                            ? expense.paid_by.find(
+                                (p) => p.personId === personId
+                              )?.amount || 0
+                            : 0;
 
-                        return (
-                          <div
-                            key={expense.id}
-                            className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div className="flex-1 min-w-0">
-                                <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
-                                  {expense.description}
-                                </h5>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                  <div>
-                                    {expense.created_at 
-                                      ? new Date(expense.created_at).toLocaleDateString()
-                                      : "No date"} • Total: {formatCurrency(expense.total_amount)}
-                                  </div>
-                                  {payers.length > 0 && (
-                                    <div className="flex items-center gap-1">
-                                      <User className="w-3 h-3" />
-                                      <span>Paid by: {payers.join(", ")}</span>
+                          const shareAmount = Array.isArray(expense.shares)
+                            ? expense.shares.find(
+                                (s) => s.personId === personId
+                              )?.amount || 0
+                            : 0;
+
+                          const celebrationAmount =
+                            expense.celebration_contribution?.personId ===
+                            personId
+                              ? expense.celebration_contribution.amount || 0
+                              : 0;
+
+                          const totalOwed = shareAmount + celebrationAmount;
+                          const netForThisExpense = amountPaid - totalOwed;
+
+                          // Skip if person had no involvement
+                          if (amountPaid === 0 && totalOwed === 0) return null;
+
+                          // Find who paid for this expense
+                          const payers = Array.isArray(expense.paid_by)
+                            ? expense.paid_by
+                                .map((p) => peopleMap[p.personId])
+                                .filter(Boolean)
+                            : [];
+
+                          return (
+                            <div
+                              key={expense.id}
+                              className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex-1 min-w-0">
+                                  <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                                    {expense.description}
+                                  </h5>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                    <div>
+                                      {expense.created_at
+                                        ? new Date(
+                                            expense.created_at
+                                          ).toLocaleDateString()
+                                        : "No date"}{" "}
+                                      • Total:{" "}
+                                      {formatCurrency(expense.total_amount)}
                                     </div>
-                                  )}
+                                    {payers.length > 0 && (
+                                      <div className="flex items-center gap-1">
+                                        <User className="w-3 h-3" />
+                                        <span>
+                                          Paid by: {payers.join(", ")}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                              <div className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
-                                netForThisExpense > 0.01
-                                  ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
-                                  : netForThisExpense < -0.01
-                                  ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-                                  : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
-                              }`}>
-                                {netForThisExpense > 0.01 ? "+" : netForThisExpense < -0.01 ? "-" : ""}
-                                {formatCurrency(Math.abs(netForThisExpense))}
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-1 text-xs">
-                              {amountPaid > 0 && (
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                    <CreditCard className="w-3 h-3" />
-                                    Amount paid:
-                                  </span>
-                                  <span className="font-medium text-green-600 dark:text-green-400">
-                                    +{formatCurrency(amountPaid)}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {shareAmount > 0 && (
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                    <Utensils className="w-3 h-3" />
-                                    Share owed:
-                                  </span>
-                                  <span className="font-medium text-red-600 dark:text-red-400">
-                                    -{formatCurrency(shareAmount)}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              {celebrationAmount > 0 && (
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                    <PartyPopper className="w-3 h-3" />
-                                    Celebration:
-                                  </span>
-                                  <span className="font-medium text-red-600 dark:text-red-400">
-                                    -{formatCurrency(celebrationAmount)}
-                                  </span>
-                                </div>
-                              )}
-                              
-                              <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
-                                <span className="font-medium text-gray-800 dark:text-gray-200">
-                                  Net for this expense:
-                                </span>
-                                <span className={`font-bold ${
-                                  netForThisExpense > 0.01
-                                    ? "text-green-700 dark:text-green-300"
+                                <div
+                                  className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
+                                    netForThisExpense > 0.01
+                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+                                      : netForThisExpense < -0.01
+                                      ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                      : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
+                                  }`}
+                                >
+                                  {netForThisExpense > 0.01
+                                    ? "+"
                                     : netForThisExpense < -0.01
-                                    ? "text-red-700 dark:text-red-300"
-                                    : "text-gray-700 dark:text-gray-300"
-                                }`}>
-                                  {netForThisExpense > 0.01 ? "+" : netForThisExpense < -0.01 ? "-" : ""}
+                                    ? "-"
+                                    : ""}
                                   {formatCurrency(Math.abs(netForThisExpense))}
-                                </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 text-xs">
+                                {amountPaid > 0 && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                      <CreditCard className="w-3 h-3" />
+                                      Amount paid:
+                                    </span>
+                                    <span className="font-medium text-green-600 dark:text-green-400">
+                                      +{formatCurrency(amountPaid)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {shareAmount > 0 && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                      <Utensils className="w-3 h-3" />
+                                      Share owed:
+                                    </span>
+                                    <span className="font-medium text-red-600 dark:text-red-400">
+                                      -{formatCurrency(shareAmount)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                {celebrationAmount > 0 && (
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                      <PartyPopper className="w-3 h-3" />
+                                      Celebration:
+                                    </span>
+                                    <span className="font-medium text-red-600 dark:text-red-400">
+                                      -{formatCurrency(celebrationAmount)}
+                                    </span>
+                                  </div>
+                                )}
+
+                                <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
+                                  <span className="font-medium text-gray-800 dark:text-gray-200">
+                                    Net for this expense:
+                                  </span>
+                                  <span
+                                    className={`font-bold ${
+                                      netForThisExpense > 0.01
+                                        ? "text-green-700 dark:text-green-300"
+                                        : netForThisExpense < -0.01
+                                        ? "text-red-700 dark:text-red-300"
+                                        : "text-gray-700 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {netForThisExpense > 0.01
+                                      ? "+"
+                                      : netForThisExpense < -0.01
+                                      ? "-"
+                                      : ""}
+                                    {formatCurrency(
+                                      Math.abs(netForThisExpense)
+                                    )}
+                                  </span>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    )}
 
                     {/* Final Calculation Summary - Compact */}
-                    <div className={`mt-4 p-3 rounded-lg border-2 ${
-                      isCreditor
-                        ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
-                        : isDebtor
-                        ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
-                        : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
-                    }`}>
+                    <div
+                      className={`mt-4 p-3 rounded-lg border-2 ${
+                        isCreditor
+                          ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
+                          : isDebtor
+                          ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
+                          : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
+                      }`}
+                    >
                       <h5 className="font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center text-sm">
                         <DollarSign className="w-4 h-4 mr-2" />
                         Final Calculation
@@ -281,24 +361,34 @@ export default function Step2DirectDebtAnalysis({
                             -{formatCurrency(balance.totalOwed)}
                           </span>
                         </div>
-                        {(balance.settledAsDebtor > 0 || balance.settledAsCreditor > 0) && (
+                        {(balance.settledAsDebtor > 0 ||
+                          balance.settledAsCreditor > 0) && (
                           <div className="flex justify-between items-center">
                             <span>Net settlements:</span>
                             <span className="font-medium text-blue-600 dark:text-blue-400">
-                              {(balance.settledAsDebtor - balance.settledAsCreditor) >= 0 ? "+" : ""}
-                              {formatCurrency(balance.settledAsDebtor - balance.settledAsCreditor)}
+                              {balance.settledAsDebtor -
+                                balance.settledAsCreditor >=
+                              0
+                                ? "+"
+                                : ""}
+                              {formatCurrency(
+                                balance.settledAsDebtor -
+                                  balance.settledAsCreditor
+                              )}
                             </span>
                           </div>
                         )}
                         <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600">
                           <span className="font-bold">Final Balance:</span>
-                          <span className={`font-bold text-lg ${
-                            isCreditor
-                              ? "text-green-700 dark:text-green-300"
-                              : isDebtor
-                              ? "text-red-700 dark:text-red-300"
-                              : "text-gray-700 dark:text-gray-300"
-                          }`}>
+                          <span
+                            className={`font-bold text-lg ${
+                              isCreditor
+                                ? "text-green-700 dark:text-green-300"
+                                : isDebtor
+                                ? "text-red-700 dark:text-red-300"
+                                : "text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
                             {isCreditor ? "+" : isDebtor ? "-" : ""}
                             {formatCurrency(Math.abs(balance.netBalance))}
                           </span>
@@ -320,15 +410,20 @@ export default function Step2DirectDebtAnalysis({
                 </div>
                 <div className="text-sm text-blue-800 dark:text-blue-200 space-y-2">
                   <p>
-                    This shows exactly how each person's balance was calculated from individual expenses.
+                    This shows exactly how each person's balance was calculated
+                    from individual expenses.
                   </p>
                   <p>
-                    <strong>Green amounts</strong> show money paid, <strong>red amounts</strong> show money owed, 
-                    and <strong>blue amounts</strong> show settlement payments already made.
+                    <strong>Green amounts</strong> show money paid,{" "}
+                    <strong>red amounts</strong> show money owed, and{" "}
+                    <strong>blue amounts</strong> show settlement payments
+                    already made.
                   </p>
                   <p>
-                    The final balance determines whether someone should <strong>pay</strong> (red), 
-                    <strong>receive</strong> (green), or is <strong>balanced</strong> (gray).
+                    The final balance determines whether someone should{" "}
+                    <strong>pay</strong> (red),
+                    <strong>receive</strong> (green), or is{" "}
+                    <strong>balanced</strong> (gray).
                   </p>
                 </div>
               </div>

@@ -74,7 +74,14 @@ export default function Step3SimplificationProcess({
 }: Step3SimplificationProcessProps) {
   // Use all pairwise transactions as they represent direct debt relationships
   // These are the actual "who owes whom" relationships from expenses
-  const activeDirectDebts = pairwiseTransactions.filter((txn) => txn.amount > 0.01);
+  const activeDirectDebts = pairwiseTransactions
+    .filter((txn) => txn.amount > 0.01)
+    .sort((a, b) => {
+      // Sort by debtor name first, then by creditor name
+      const debtorComparison = (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '');
+      if (debtorComparison !== 0) return debtorComparison;
+      return (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || '');
+    });
 
   // Calculate intermediate debt relationships
   const { debtors, creditors } = calculateIntermediateDebts(
@@ -127,7 +134,7 @@ export default function Step3SimplificationProcess({
               </div>
             </div>
 
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-2">
               {activeDirectDebts.map((txn, i) => (
                 <div
                   key={i}
