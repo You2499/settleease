@@ -19,23 +19,23 @@ import {
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { CalculatedTransaction } from "@/lib/settleease/types";
 
-interface Step3SettlementOptionsProps {
+interface Step4SettlementOptionsProps {
   pairwiseTransactions: CalculatedTransaction[];
   unpaidSimplifiedTransactions: CalculatedTransaction[];
   peopleMap: Record<string, string>;
 }
 
-export default function Step3SettlementOptions({
+export default function Step4SettlementOptions({
   pairwiseTransactions,
   unpaidSimplifiedTransactions,
   peopleMap,
-}: Step3SettlementOptionsProps) {
+}: Step4SettlementOptionsProps) {
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <ArrowRight className="mr-2 h-5 w-5 text-blue-600" />
-          Step 3: Choose Your Settlement Method
+          Step 4: Choose Your Settlement Method
         </CardTitle>
         <CardDescription className="text-sm">
           Two approaches to settle all debts - same final result, different paths

@@ -46,7 +46,8 @@ import type {
 import PerPersonSettlementDetails from "./PerPersonSettlementDetails";
 import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
 import Step2DirectDebtAnalysis from "./settlement-steps/Step2DirectDebtAnalysis";
-import Step3SettlementOptions from "./settlement-steps/Step3SettlementOptions";
+import Step3SimplificationProcess from "./settlement-steps/Step3SimplificationProcess";
+import Step4SettlementOptions from "./settlement-steps/Step4SettlementOptions";
 import TrustSection from "./settlement-steps/TrustSection";
 
 interface SettlementSummaryProps {
@@ -368,38 +369,48 @@ export default function SettlementSummary({
         </CardContent>
       </Tabs>
 
-      {/* Modular Settlement Explanation Modal */}
+      {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl">
-          <DialogHeader className="pb-4 border-b">
-            <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-              <Calculator className="mr-2 h-5 w-5" />
+        <DialogContent className="max-h-[95vh] w-[95vw] max-w-6xl overflow-hidden p-0">
+          <DialogHeader className="px-4 sm:px-6 py-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <DialogTitle className="text-lg sm:text-xl md:text-2xl text-primary flex items-center">
+              <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               How Settlement Works - Simple & Transparent
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-6 pt-4">
-            <Step1BalanceOverview 
-              personBalances={personBalances}
-              people={people}
-            />
+          <ScrollArea className="flex-1 px-4 sm:px-6">
+            <div className="space-y-4 sm:space-y-6 py-4">
+              <Step1BalanceOverview 
+                personBalances={personBalances}
+                people={people}
+              />
 
-            <Step2DirectDebtAnalysis
-              pairwiseTransactions={pairwiseTransactions}
-              allExpenses={allExpenses}
-              settlementPayments={settlementPayments}
-              personBalances={personBalances}
-              peopleMap={peopleMap}
-            />
+              <Step2DirectDebtAnalysis
+                allExpenses={allExpenses}
+                settlementPayments={settlementPayments}
+                personBalances={personBalances}
+                people={people}
+                peopleMap={peopleMap}
+              />
 
-            <Step3SettlementOptions
-              pairwiseTransactions={pairwiseTransactions}
-              unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
-              peopleMap={peopleMap}
-            />
+              <Step3SimplificationProcess
+                pairwiseTransactions={pairwiseTransactions}
+                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                personBalances={personBalances}
+                people={people}
+                peopleMap={peopleMap}
+              />
 
-            <TrustSection />
-          </div>
+              <Step4SettlementOptions
+                pairwiseTransactions={pairwiseTransactions}
+                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                peopleMap={peopleMap}
+              />
+
+              <TrustSection />
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </Card>
