@@ -50,7 +50,12 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName, categories, showBackButton = false, onBack }: ExpenseDetailModalProps) {
-  if (!expense) return null;
+  console.log('ExpenseDetailModal render:', { expense: !!expense, isOpen, showBackButton });
+  
+  if (!expense) {
+    console.log('ExpenseDetailModal: No expense provided');
+    return null;
+  }
 
   const categoryObj = categories.find(cat => cat.name === expense.category);
   const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
@@ -260,13 +265,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent 
-        className="max-h-[90vh] overflow-y-auto no-scrollbar relative"
-      >
+      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
         <Button
           variant="ghost"
           size="icon"
-          className={`absolute top-4 z-10 ${showBackButton ? 'right-16' : 'right-12'}`}
+          className="absolute top-4 right-12 z-10"
           title="Copy for WhatsApp"
           onClick={handleCopy}
         >
@@ -276,22 +279,23 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
           <Button
             variant="outline"
             size="icon"
-            className="absolute top-4 right-4 z-[100] bg-background hover:bg-accent border-2 border-primary shadow-lg"
+            className="absolute top-4 right-4 z-50 bg-background hover:bg-accent border border-border shadow-sm"
             title="Back to Step 2"
             onClick={onBack}
           >
-            <ArrowLeft className="h-4 w-4 text-primary" />
+            <ArrowLeft className="h-4 w-4" />
           </Button>
         )}
-        <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
-          <div className="flex items-center">
-            <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-              Expense Details
-            </DialogTitle>
-          </div>
+        <DialogHeader>
+          <DialogTitle>Expense Details</DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0"> {/* Adjusted pt-0 here */}
+        <div className="p-4">
+          <p>Modal is working! Expense: {expense.description}</p>
+          <p>Show back button: {showBackButton ? 'Yes' : 'No'}</p>
+        </div>
+        
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0 hidden"> {/* Temporarily hidden */}
           <div className="space-y-4 sm:space-y-6 pt-2"> 
             
             <Card>
