@@ -72,12 +72,9 @@ export default function Step3SimplificationProcess({
   people,
   peopleMap,
 }: Step3SimplificationProcessProps) {
-  // Filter out transactions where people are already balanced
-  const activeDirectDebts = pairwiseTransactions.filter((txn) => {
-    const debtorBalance = personBalances[txn.from]?.netBalance || 0;
-    const creditorBalance = personBalances[txn.to]?.netBalance || 0;
-    return debtorBalance < -0.01 && creditorBalance > 0.01;
-  });
+  // Use all pairwise transactions as they represent direct debt relationships
+  // These are the actual "who owes whom" relationships from expenses
+  const activeDirectDebts = pairwiseTransactions.filter((txn) => txn.amount > 0.01);
 
   // Calculate intermediate debt relationships
   const { debtors, creditors } = calculateIntermediateDebts(
