@@ -140,8 +140,11 @@ export default function Step2DirectDebtAnalysis({
                           {person.name}
                         </h3>
                         <p className="text-xs text-gray-600 dark:text-gray-400">
-                          {relevantExpenses.length} expense
-                          {relevantExpenses.length !== 1 ? "s" : ""}
+                          {isCreditor
+                            ? "should receive"
+                            : isDebtor
+                            ? "should pay"
+                            : "all balanced"}
                         </p>
                       </div>
                     </div>
@@ -158,13 +161,6 @@ export default function Step2DirectDebtAnalysis({
                         {isCreditor ? "+" : isDebtor ? "-" : ""}
                         {formatCurrency(Math.abs(balance.netBalance))}
                       </div>
-                      <div className="text-xs text-gray-600 dark:text-gray-400">
-                        {isCreditor
-                          ? "should receive"
-                          : isDebtor
-                          ? "should pay"
-                          : "all balanced"}
-                      </div>
                     </div>
                   </div>
 
@@ -173,7 +169,13 @@ export default function Step2DirectDebtAnalysis({
                     <Button
                       variant="ghost"
                       onClick={() => togglePersonExpansion(personId)}
-                      className="w-full justify-start p-0 h-auto font-semibold text-gray-900 dark:text-gray-100 hover:bg-transparent"
+                      className={`w-full justify-start p-2 h-auto font-semibold rounded-md transition-colors ${
+                        isCreditor
+                          ? "text-green-800 dark:text-green-200 hover:bg-green-200/50 dark:hover:bg-green-800/30"
+                          : isDebtor
+                          ? "text-red-800 dark:text-red-200 hover:bg-red-200/50 dark:hover:bg-red-800/30"
+                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-800/30"
+                      }`}
                     >
                       {expandedPersons.has(personId) ? (
                         <ChevronDown className="w-4 h-4 mr-2" />
@@ -181,140 +183,87 @@ export default function Step2DirectDebtAnalysis({
                         <ChevronRight className="w-4 h-4 mr-2" />
                       )}
                       <Calculator className="w-4 h-4 mr-2" />
-                      Expense Breakdown ({relevantExpenses.length} expenses)
+                      Expense Breakdown
                     </Button>
 
                     {expandedPersons.has(personId) && (
-                      <div className="grid grid-cols-1 gap-2">
-                        {relevantExpenses.map((expense) => {
-                          // Calculate this person's involvement in this expense
-                          const amountPaid = Array.isArray(expense.paid_by)
-                            ? expense.paid_by.find(
-                                (p) => p.personId === personId
-                              )?.amount || 0
-                            : 0;
-
-                          const shareAmount = Array.isArray(expense.shares)
-                            ? expense.shares.find(
-                                (s) => s.personId === personId
-                              )?.amount || 0
-                            : 0;
-
-                          const celebrationAmount =
-                            expense.celebration_contribution?.personId ===
-                            personId
-                              ? expense.celebration_contribution.amount || 0
+                      <div className="space-y-3">
+                        <div className="text-xs text-gray-600 dark:text-gray-400 font-medium px-2">
+                          {relevantExpenses.length} expense
+                          {relevantExpenses.length !== 1 ? "s" : ""} found
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                          {relevantExpenses.map((expense) => {
+                            // Calculate this person's involvement in this expense
+                            const amountPaid = Array.isArray(expense.paid_by)
+                              ? expense.paid_by.find(
+                                  (p) => p.personId === personId
+                                )?.amount || 0
                               : 0;
 
-                          const totalOwed = shareAmount + celebrationAmount;
-                          const netForThisExpense = amountPaid - totalOwed;
+                            const shareAmount = Array.isArray(expense.shares)
+                              ? expense.shares.find(
+                                  (s) => s.personId === personId
+                                )?.amount || 0
+                              : 0;
 
-                          // Skip if person had no involvement
-                          if (amountPaid === 0 && totalOwed === 0) return null;
+                            const celebrationAmount =
+                              expense.celebration_contribution?.personId ===
+                              personId
+                                ? expense.celebration_contribution.amount || 0
+                                : 0;
 
-                          // Find who paid for this expense
-                          const payers = Array.isArray(expense.paid_by)
-                            ? expense.paid_by
-                                .map((p) => peopleMap[p.personId])
-                                .filter(Boolean)
-                            : [];
+                            const totalOwed = shareAmount + celebrationAmount;
+                            const netForThisExpense = amountPaid - totalOwed;
 
-                          return (
-                            <div
-                              key={expense.id}
-                              className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
-                            >
-                              <div className="flex justify-between items-start mb-2">
-                                <div className="flex-1 min-w-0">
-                                  <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
-                                    {expense.description}
-                                  </h5>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                                    <div>
-                                      {expense.created_at
-                                        ? new Date(
-                                            expense.created_at
-                                          ).toLocaleDateString()
-                                        : "No date"}{" "}
-                                      • Total:{" "}
-                                      {formatCurrency(expense.total_amount)}
-                                    </div>
-                                    {payers.length > 0 && (
-                                      <div className="flex items-center gap-1">
-                                        <User className="w-3 h-3" />
-                                        <span>
-                                          Paid by: {payers.join(", ")}
-                                        </span>
+                            // Skip if person had no involvement
+                            if (amountPaid === 0 && totalOwed === 0)
+                              return null;
+
+                            // Find who paid for this expense
+                            const payers = Array.isArray(expense.paid_by)
+                              ? expense.paid_by
+                                  .map((p) => peopleMap[p.personId])
+                                  .filter(Boolean)
+                              : [];
+
+                            return (
+                              <div
+                                key={expense.id}
+                                className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                              >
+                                <div className="flex justify-between items-start mb-2">
+                                  <div className="flex-1 min-w-0">
+                                    <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                                      {expense.description}
+                                    </h5>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                                      <div>
+                                        {expense.created_at
+                                          ? new Date(
+                                              expense.created_at
+                                            ).toLocaleDateString()
+                                          : "No date"}{" "}
+                                        • Total:{" "}
+                                        {formatCurrency(expense.total_amount)}
                                       </div>
-                                    )}
+                                      {payers.length > 0 && (
+                                        <div className="flex items-center gap-1">
+                                          <User className="w-3 h-3" />
+                                          <span>
+                                            Paid by: {payers.join(", ")}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                                <div
-                                  className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
-                                    netForThisExpense > 0.01
-                                      ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
-                                      : netForThisExpense < -0.01
-                                      ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-                                      : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
-                                  }`}
-                                >
-                                  {netForThisExpense > 0.01
-                                    ? "+"
-                                    : netForThisExpense < -0.01
-                                    ? "-"
-                                    : ""}
-                                  {formatCurrency(Math.abs(netForThisExpense))}
-                                </div>
-                              </div>
-
-                              <div className="space-y-1 text-xs">
-                                {amountPaid > 0 && (
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                      <CreditCard className="w-3 h-3" />
-                                      Amount paid:
-                                    </span>
-                                    <span className="font-medium text-green-600 dark:text-green-400">
-                                      +{formatCurrency(amountPaid)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {shareAmount > 0 && (
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                      <Utensils className="w-3 h-3" />
-                                      Share owed:
-                                    </span>
-                                    <span className="font-medium text-red-600 dark:text-red-400">
-                                      -{formatCurrency(shareAmount)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {celebrationAmount > 0 && (
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                      <PartyPopper className="w-3 h-3" />
-                                      Celebration:
-                                    </span>
-                                    <span className="font-medium text-red-600 dark:text-red-400">
-                                      -{formatCurrency(celebrationAmount)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
-                                  <span className="font-medium text-gray-800 dark:text-gray-200">
-                                    Net for this expense:
-                                  </span>
-                                  <span
-                                    className={`font-bold ${
+                                  <div
+                                    className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
                                       netForThisExpense > 0.01
-                                        ? "text-green-700 dark:text-green-300"
+                                        ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
                                         : netForThisExpense < -0.01
-                                        ? "text-red-700 dark:text-red-300"
-                                        : "text-gray-700 dark:text-gray-300"
+                                        ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                        : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
                                     }`}
                                   >
                                     {netForThisExpense > 0.01
@@ -325,12 +274,74 @@ export default function Step2DirectDebtAnalysis({
                                     {formatCurrency(
                                       Math.abs(netForThisExpense)
                                     )}
-                                  </span>
+                                  </div>
+                                </div>
+
+                                <div className="space-y-1 text-xs">
+                                  {amountPaid > 0 && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <CreditCard className="w-3 h-3" />
+                                        Amount paid:
+                                      </span>
+                                      <span className="font-medium text-green-600 dark:text-green-400">
+                                        +{formatCurrency(amountPaid)}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {shareAmount > 0 && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <Utensils className="w-3 h-3" />
+                                        Share owed:
+                                      </span>
+                                      <span className="font-medium text-red-600 dark:text-red-400">
+                                        -{formatCurrency(shareAmount)}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  {celebrationAmount > 0 && (
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                        <PartyPopper className="w-3 h-3" />
+                                        Celebration:
+                                      </span>
+                                      <span className="font-medium text-red-600 dark:text-red-400">
+                                        -{formatCurrency(celebrationAmount)}
+                                      </span>
+                                    </div>
+                                  )}
+
+                                  <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
+                                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                                      Net for this expense:
+                                    </span>
+                                    <span
+                                      className={`font-bold ${
+                                        netForThisExpense > 0.01
+                                          ? "text-green-700 dark:text-green-300"
+                                          : netForThisExpense < -0.01
+                                          ? "text-red-700 dark:text-red-300"
+                                          : "text-gray-700 dark:text-gray-300"
+                                      }`}
+                                    >
+                                      {netForThisExpense > 0.01
+                                        ? "+"
+                                        : netForThisExpense < -0.01
+                                        ? "-"
+                                        : ""}
+                                      {formatCurrency(
+                                        Math.abs(netForThisExpense)
+                                      )}
+                                    </span>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
                       </div>
                     )}
 
