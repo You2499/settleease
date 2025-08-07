@@ -40,6 +40,7 @@ export default function DashboardView({
 }: DashboardViewProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
 
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
     if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
@@ -243,6 +244,18 @@ export default function DashboardView({
   const handleExpenseCardClick = (expense: Expense) => {
     setSelectedExpenseForModal(expense);
     setIsExpenseModalOpen(true);
+    setExpenseModalOpenedFromStep2(false);
+  };
+
+  const handleExpenseClickFromStep2 = (expense: Expense) => {
+    setSelectedExpenseForModal(expense);
+    setIsExpenseModalOpen(true);
+    setExpenseModalOpenedFromStep2(true);
+  };
+
+  const handleBackFromExpenseModal = () => {
+    setIsExpenseModalOpen(false);
+    setExpenseModalOpenedFromStep2(false);
   };
   
   if (people.length === 0 && expenses.length === 0) {
@@ -281,6 +294,7 @@ export default function DashboardView({
         onMarkAsPaid={handleMarkAsPaid}
         onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
         onViewExpenseDetails={handleExpenseCardClick}
+        onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
         userRole={userRole} 
       />
       <div className="flex-1 flex flex-col">
@@ -300,6 +314,8 @@ export default function DashboardView({
           peopleMap={peopleMap}
           getCategoryIconFromName={getCategoryIconFromName}
           categories={dynamicCategories}
+          showBackButton={expenseModalOpenedFromStep2}
+          onBack={handleBackFromExpenseModal}
         />
       )}
     </div>

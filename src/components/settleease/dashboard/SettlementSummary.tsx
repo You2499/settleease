@@ -60,6 +60,7 @@ interface SettlementSummaryProps {
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void;
+  onViewExpenseDetailsFromStep2?: (expense: Expense) => void;
   userRole: UserRole;
 }
 
@@ -73,6 +74,7 @@ export default function SettlementSummary({
   onMarkAsPaid,
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
+  onViewExpenseDetailsFromStep2,
   userRole,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<"overview" | "person">("overview");
@@ -440,6 +442,7 @@ export default function SettlementSummary({
                 personBalances={filteredPersonBalances}
                 people={filteredPeople}
                 peopleMap={peopleMap}
+                onExpenseClick={onViewExpenseDetailsFromStep2}
               />
 
               <Step3SimplificationProcess

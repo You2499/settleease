@@ -19,6 +19,7 @@ import {
   User,
   ChevronDown,
   ChevronRight,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/settleease/utils";
@@ -37,6 +38,7 @@ interface Step2DirectDebtAnalysisProps {
   personBalances: Record<string, PersonBalance>;
   people: Person[];
   peopleMap: Record<string, string>;
+  onExpenseClick?: (expense: Expense) => void;
 }
 
 export default function Step2DirectDebtAnalysis({
@@ -44,6 +46,7 @@ export default function Step2DirectDebtAnalysis({
   personBalances,
   people,
   peopleMap,
+  onExpenseClick,
 }: Step2DirectDebtAnalysisProps) {
   const [expandedPersons, setExpandedPersons] = useState<Set<string>>(
     new Set()
@@ -230,12 +233,20 @@ export default function Step2DirectDebtAnalysis({
                             return (
                               <div
                                 key={expense.id}
-                                className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                                className={`p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${
+                                  onExpenseClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors' : ''
+                                }`}
+                                onClick={() => onExpenseClick?.(expense)}
                               >
                                 <div className="flex justify-between items-start mb-2">
                                   <div className="flex-1 min-w-0">
-                                    <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
+                                    <h5 className={`font-medium text-gray-900 dark:text-gray-100 truncate text-sm ${
+                                      onExpenseClick ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''
+                                    }`}>
                                       {expense.description}
+                                      {onExpenseClick && (
+                                        <Eye className="inline ml-1 h-3 w-3 text-blue-500 dark:text-blue-400" />
+                                      )}
                                     </h5>
                                     <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
                                       <div>

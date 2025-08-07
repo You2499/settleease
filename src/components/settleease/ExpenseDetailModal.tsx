@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy, Calendar } from 'lucide-react';
+import { Info, User, PartyPopper, Users, Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, Coins, CreditCard, ListTree, Settings2, Copy, Calendar, ArrowLeft } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, ExpenseItemDetail, PayerShare, CelebrationContribution, PersonItemShareDetails, PersonAggregatedItemShares, Category } from '@/lib/settleease/types';
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ interface ExpenseDetailModalProps {
   peopleMap: Record<string, string>;
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   categories: Category[];
+  showBackButton?: boolean;
+  onBack?: () => void;
 }
 
 // WhatsApp SVG as a React component
@@ -47,7 +49,7 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName, categories }: ExpenseDetailModalProps) {
+export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peopleMap, getCategoryIconFromName, categories, showBackButton = false, onBack }: ExpenseDetailModalProps) {
   if (!expense) return null;
 
   const categoryObj = categories.find(cat => cat.name === expense.category);
@@ -257,8 +259,11 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
+    <Dialog open={isOpen} onOpenChange={showBackButton ? () => {} : onOpenChange}>
+      <DialogContent className={`max-h-[90vh] overflow-y-auto no-scrollbar ${showBackButton ? '[&>button]:hidden' : ''}`}
+        onInteractOutside={showBackButton ? (e) => e.preventDefault() : undefined}
+        onEscapeKeyDown={showBackButton ? (e) => e.preventDefault() : undefined}
+      >
         <Button
           variant="ghost"
           size="icon"
@@ -268,6 +273,17 @@ export default function ExpenseDetailModal({ expense, isOpen, onOpenChange, peop
         >
           <WhatsAppIcon />
         </Button>
+        {showBackButton && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-10"
+            title="Back"
+            onClick={onBack}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
         <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between"> 
           <div className="flex items-center">
             <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
