@@ -71,6 +71,7 @@ export interface SettlementPayment {
   settled_at: string; // ISO date string
   marked_by_user_id: string; // FK to auth.users.id
   notes?: string;
+  status: string; // Status of the payment (default: 'pending')
 }
 
 // Used for displaying calculated settlements

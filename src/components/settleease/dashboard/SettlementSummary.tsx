@@ -38,6 +38,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/settleease/utils";
+import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
 import type {
   Person,
   Expense,
@@ -173,14 +174,10 @@ export default function SettlementSummary({
       }
     });
 
-    // Calculate net balances
+    // Use the centralized net balance calculation for consistency
+    const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
     Object.keys(balances).forEach((personId) => {
-      const person = balances[personId];
-      person.netBalance =
-        person.totalPaid -
-        person.totalOwed +
-        person.settledAsDebtor -
-        person.settledAsCreditor;
+      balances[personId].netBalance = netBalances[personId] || 0;
     });
 
     return balances;
