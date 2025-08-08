@@ -48,3 +48,8 @@ firebase-debug.log
 .genkit/
 .genkit-cache/
 genkit.log 
+
+# Lucide Icons (downloaded during build - 1,628+ files)
+# These are downloaded fresh from GitHub during the prebuild step
+/lucide-icons/
+/src/lib/lucide-icons-metadata.json
