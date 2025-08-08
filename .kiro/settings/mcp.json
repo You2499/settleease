@@ -13,7 +13,9 @@
       "disabled": false,
       "autoApprove": [
         "list_tables",
-        "execute_sql"
+        "execute_sql",
+        "list_extensions",
+        "list_migrations"
       ]
     }
   }

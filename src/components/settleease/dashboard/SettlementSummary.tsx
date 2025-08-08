@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Badge } from "@/components/ui/badge";
 import {
   ArrowRight,
   Users,
@@ -50,6 +51,7 @@ import PerPersonSettlementDetails from "./PerPersonSettlementDetails";
 import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
 import Step2DirectDebtAnalysis from "./settlement-steps/Step2DirectDebtAnalysis";
 import Step3SimplificationProcess from "./settlement-steps/Step3SimplificationProcess";
+import AlgorithmVerification from "./AlgorithmVerification";
 
 interface SettlementSummaryProps {
   simplifiedTransactions: CalculatedTransaction[];
@@ -445,7 +447,7 @@ export default function SettlementSummary({
 
       {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-6xl">
           <DialogHeader className="pb-3 border-b flex flex-row items-center justify-between">
             <div className="flex items-center">
               <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
@@ -455,58 +457,78 @@ export default function SettlementSummary({
             </div>
           </DialogHeader>
 
-          {/* Toggle for balanced people */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border">
-            <div className="flex items-center space-x-3">
-              {showBalancedPeople ? (
-                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              )}
-              <Label
-                htmlFor="show-balanced"
-                className="text-sm font-medium cursor-pointer"
-              >
-                Show balanced people
-              </Label>
-              {!showBalancedPeople &&
-                people.length - filteredPeople.length > 0 && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-                    {people.length - filteredPeople.length} hidden
-                  </span>
-                )}
-            </div>
-            <Switch
-              id="show-balanced"
-              checked={showBalancedPeople}
-              onCheckedChange={setShowBalancedPeople}
-            />
-          </div>
+          <Tabs defaultValue="how-it-works" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="how-it-works">How it Works</TabsTrigger>
+              <TabsTrigger value="verify-algorithm">Verify Algorithm</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="how-it-works" className="mt-4">
+              {/* Toggle for balanced people */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4">
+                <div className="flex items-center space-x-3">
+                  {showBalancedPeople ? (
+                    <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  ) : (
+                    <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  )}
+                  <Label
+                    htmlFor="show-balanced"
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    Show balanced people
+                  </Label>
+                  {!showBalancedPeople &&
+                    people.length - filteredPeople.length > 0 && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                        {people.length - filteredPeople.length} hidden
+                      </span>
+                    )}
+                </div>
+                <Switch
+                  id="show-balanced"
+                  checked={showBalancedPeople}
+                  onCheckedChange={setShowBalancedPeople}
+                />
+              </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-            <div className="space-y-4 sm:space-y-6 pt-2">
-              <Step1BalanceOverview
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
-              />
+              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
+                <div className="space-y-4 sm:space-y-6 pt-2">
+                  <Step1BalanceOverview
+                    personBalances={filteredPersonBalances}
+                    people={filteredPeople}
+                  />
 
-              <Step2DirectDebtAnalysis
-                allExpenses={allExpenses}
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
+                  <Step2DirectDebtAnalysis
+                    allExpenses={allExpenses}
+                    personBalances={filteredPersonBalances}
+                    people={filteredPeople}
+                    peopleMap={peopleMap}
+                    onExpenseClick={onViewExpenseDetailsFromStep2}
+                  />
+
+                  <Step3SimplificationProcess
+                    pairwiseTransactions={pairwiseTransactions}
+                    unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                    personBalances={filteredPersonBalances}
+                    people={filteredPeople}
+                    peopleMap={peopleMap}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="verify-algorithm" className="mt-4">
+              <AlgorithmVerification
+                people={people}
+                expenses={allExpenses}
+                settlementPayments={settlementPayments}
                 peopleMap={peopleMap}
-                onExpenseClick={onViewExpenseDetailsFromStep2}
+                uiSimplifiedTransactions={simplifiedTransactions}
+                uiPairwiseTransactions={pairwiseTransactions}
               />
-
-              <Step3SimplificationProcess
-                pairwiseTransactions={pairwiseTransactions}
-                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
-                peopleMap={peopleMap}
-              />
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </Card>
