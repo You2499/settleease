@@ -15,9 +15,12 @@ import type {
 } from "./types";
 import { generateDebugReportText } from "./testUtils";
 import { runAllTests } from "./testRunner";
-import SummaryStats from "./SummaryStats";
-import DebugPanel from "./DebugPanel";
-import TestResults from "./TestResults";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Bug, EyeOff, Eye } from "lucide-react";
+import VerificationOverview from "./VerificationOverview";
+import VerificationResults from "./VerificationResults";
+import VerificationDebug from "./VerificationDebug";
 
 export default function AlgorithmVerification({
   people,
@@ -122,73 +125,103 @@ export default function AlgorithmVerification({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
+      {/* Control Panel - Mobile Responsive */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-4">
         <div className="flex items-center space-x-3">
-          <Calculator className="h-6 w-6 text-primary" />
+          <Calculator className="w-5 h-5 text-primary" />
           <div>
-            <h3 className="text-lg font-semibold">Algorithm Verification</h3>
-            <p className="text-sm text-muted-foreground">
-              Comprehensive testing of expense sharing algorithms using live
-              data
+            <Label className="text-sm font-medium">Algorithm Verification</Label>
+            <p className="text-xs text-muted-foreground">
+              Test all calculations with live data
             </p>
           </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={runTests}
-            disabled={isRunning}
-            className="flex items-center space-x-2"
-          >
-            {isRunning ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-            <span>{isRunning ? "Running..." : "Run Tests"}</span>
-          </Button>
+        
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
+          {/* Debug Mode Toggle */}
+          {lastRunTime && (
+            <div className="flex items-center space-x-2">
+              {showDebugMode ? (
+                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              ) : (
+                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+              )}
+              <Label
+                htmlFor="debug-mode"
+                className="text-sm font-medium cursor-pointer"
+              >
+                Debug mode
+              </Label>
+              <Switch
+                id="debug-mode"
+                checked={showDebugMode}
+                onCheckedChange={setShowDebugMode}
+              />
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={runTests}
+              disabled={isRunning}
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              {isRunning ? (
+                <RefreshCw className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">{isRunning ? "Running..." : "Run Tests"}</span>
+              <span className="sm:hidden">{isRunning ? "..." : "Test"}</span>
+            </Button>
 
-          {/* Quick data export for debugging */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportLiveData}
-            className="flex items-center space-x-1"
-            title="Export live data for debugging"
-          >
-            <Database className="h-4 w-4" />
-            <span>Export Data</span>
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportLiveData}
+              className="flex items-center space-x-1"
+              title="Export live data for debugging"
+            >
+              <Database className="h-4 w-4" />
+              <span className="hidden sm:inline">Export</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <SummaryStats
-        people={people}
-        expenses={expenses}
-        settlementPayments={settlementPayments}
-        peopleMap={peopleMap}
-        uiSimplifiedTransactions={uiSimplifiedTransactions}
-        uiPairwiseTransactions={uiPairwiseTransactions}
-        testResults={testResults}
-      />
-
-      {/* Debug Panel */}
-      {lastRunTime && (
-        <DebugPanel
-          debugReport={debugReport}
-          showDebugMode={showDebugMode}
-          setShowDebugMode={setShowDebugMode}
-          peopleMap={peopleMap}
-          onCopyReport={copyDebugReport}
-          onDownloadReport={downloadDebugReport}
-          onExportData={exportLiveData}
+      {/* Content Area with Mobile-Responsive Spacing */}
+      <div className="space-y-4 sm:space-y-6">
+        {/* Step 1: System Overview */}
+        <VerificationOverview
+          people={people}
+          expenses={expenses}
+          settlementPayments={settlementPayments}
+          testResults={testResults}
         />
-      )}
 
-      {/* Test Results */}
-      <TestResults testResults={testResults} showDebugMode={showDebugMode} />
+        {/* Step 2: Test Results */}
+        {testResults.length > 0 && (
+          <VerificationResults
+            testResults={testResults}
+            showDebugMode={showDebugMode}
+            lastRunTime={lastRunTime}
+          />
+        )}
+
+        {/* Step 3: Debug Information */}
+        {showDebugMode && debugReport && (
+          <VerificationDebug
+            debugReport={debugReport}
+            peopleMap={peopleMap}
+            onCopyReport={copyDebugReport}
+            onDownloadReport={downloadDebugReport}
+            onExportData={exportLiveData}
+          />
+        )}
+      </div>
     </div>
   );
 }
