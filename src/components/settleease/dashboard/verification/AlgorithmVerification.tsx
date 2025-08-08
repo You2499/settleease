@@ -126,9 +126,9 @@ export default function AlgorithmVerification({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div>
       {/* Control Panel - Mobile Responsive */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-4 flex-shrink-0">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-4">
         <div className="flex items-center space-x-3">
           <Calculator className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
           <div>
@@ -183,36 +183,34 @@ export default function AlgorithmVerification({
       </div>
 
       {/* Content Area with Mobile-Responsive Spacing */}
-      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-        <div className="space-y-4 sm:space-y-6 pb-4">
-          {/* Step 1: System Overview */}
-          <VerificationOverview
-            people={people}
-            expenses={expenses}
-            settlementPayments={settlementPayments}
+      <div className="space-y-4 sm:space-y-6">
+        {/* Step 1: System Overview */}
+        <VerificationOverview
+          people={people}
+          expenses={expenses}
+          settlementPayments={settlementPayments}
+          testResults={testResults}
+        />
+
+        {/* Step 2: Test Results */}
+        {testResults.length > 0 && (
+          <VerificationResults
             testResults={testResults}
+            showDebugMode={showDebugMode}
+            lastRunTime={lastRunTime}
           />
+        )}
 
-          {/* Step 2: Test Results */}
-          {testResults.length > 0 && (
-            <VerificationResults
-              testResults={testResults}
-              showDebugMode={showDebugMode}
-              lastRunTime={lastRunTime}
-            />
-          )}
-
-          {/* Step 3: Debug Information */}
-          {showDebugMode && debugReport && (
-            <VerificationDebug
-              debugReport={debugReport}
-              peopleMap={peopleMap}
-              onCopyReport={copyDebugReport}
-              onDownloadReport={downloadDebugReport}
-              onExportData={exportLiveData}
-            />
-          )}
-        </div>
+        {/* Step 3: Debug Information */}
+        {showDebugMode && debugReport && (
+          <VerificationDebug
+            debugReport={debugReport}
+            peopleMap={peopleMap}
+            onCopyReport={copyDebugReport}
+            onDownloadReport={downloadDebugReport}
+            onExportData={exportLiveData}
+          />
+        )}
       </div>
     </div>
   );

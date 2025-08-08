@@ -447,8 +447,8 @@ export default function SettlementSummary({
 
       {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] max-w-6xl flex flex-col">
-          <DialogHeader className="pb-3 border-b flex-shrink-0">
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-6xl">
+          <DialogHeader className="pb-3 border-b">
             <div className="flex items-center">
               <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
                 <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
@@ -457,15 +457,15 @@ export default function SettlementSummary({
             </div>
           </DialogHeader>
 
-          <Tabs defaultValue="how-it-works" className="w-full flex flex-col flex-1 min-h-0">
-            <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+          <Tabs defaultValue="how-it-works" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="how-it-works">How it Works</TabsTrigger>
               <TabsTrigger value="verify-algorithm">Verify Algorithm</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="how-it-works" className="mt-4 flex-1 min-h-0 flex flex-col">
+            <TabsContent value="how-it-works" className="mt-4">
               {/* Toggle for balanced people */}
-              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 flex-shrink-0">
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4">
                 <div className="flex items-center space-x-3">
                   {showBalancedPeople ? (
                     <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
@@ -492,43 +492,39 @@ export default function SettlementSummary({
                 />
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-                <div className="space-y-4 sm:space-y-6 pb-4">
-                  <Step1BalanceOverview
-                    personBalances={filteredPersonBalances}
-                    people={filteredPeople}
-                  />
+              <div className="space-y-4 sm:space-y-6">
+                <Step1BalanceOverview
+                  personBalances={filteredPersonBalances}
+                  people={filteredPeople}
+                />
 
-                  <Step2DirectDebtAnalysis
-                    allExpenses={allExpenses}
-                    personBalances={filteredPersonBalances}
-                    people={filteredPeople}
-                    peopleMap={peopleMap}
-                    onExpenseClick={onViewExpenseDetailsFromStep2}
-                  />
+                <Step2DirectDebtAnalysis
+                  allExpenses={allExpenses}
+                  personBalances={filteredPersonBalances}
+                  people={filteredPeople}
+                  peopleMap={peopleMap}
+                  onExpenseClick={onViewExpenseDetailsFromStep2}
+                />
 
-                  <Step3SimplificationProcess
-                    pairwiseTransactions={pairwiseTransactions}
-                    unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
-                    personBalances={filteredPersonBalances}
-                    people={filteredPeople}
-                    peopleMap={peopleMap}
-                  />
-                </div>
+                <Step3SimplificationProcess
+                  pairwiseTransactions={pairwiseTransactions}
+                  unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                  personBalances={filteredPersonBalances}
+                  people={filteredPeople}
+                  peopleMap={peopleMap}
+                />
               </div>
             </TabsContent>
             
-            <TabsContent value="verify-algorithm" className="mt-4 flex-1 min-h-0 flex flex-col">
-              <div className="flex-1 min-h-0">
-                <AlgorithmVerification
-                  people={people}
-                  expenses={allExpenses}
-                  settlementPayments={settlementPayments}
-                  peopleMap={peopleMap}
-                  uiSimplifiedTransactions={simplifiedTransactions}
-                  uiPairwiseTransactions={pairwiseTransactions}
-                />
-              </div>
+            <TabsContent value="verify-algorithm" className="mt-4">
+              <AlgorithmVerification
+                people={people}
+                expenses={allExpenses}
+                settlementPayments={settlementPayments}
+                peopleMap={peopleMap}
+                uiSimplifiedTransactions={simplifiedTransactions}
+                uiPairwiseTransactions={pairwiseTransactions}
+              />
             </TabsContent>
           </Tabs>
         </DialogContent>
