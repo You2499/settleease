@@ -20,6 +20,7 @@ import {
   ChevronRight,
   Info,
 } from "lucide-react";
+import TestDetailRenderer from "./TestDetailRenderer";
 import type { TestResult } from "./types";
 
 interface VerificationResultsProps {
@@ -168,13 +169,19 @@ export default function VerificationResults({
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="text-right">
-                      <div className="flex gap-1 text-xs">
-                        <span className="text-green-600 font-medium">{categoryStats.pass}✓</span>
+                      <div className="flex gap-1 text-xs items-center">
+                        <span className="text-green-600 font-medium flex items-center gap-1">
+                          {categoryStats.pass}<CheckCircle2 className="h-3 w-3" />
+                        </span>
                         {categoryStats.warning > 0 && (
-                          <span className="text-yellow-600 font-medium">{categoryStats.warning}⚠</span>
+                          <span className="text-yellow-600 font-medium flex items-center gap-1">
+                            {categoryStats.warning}<AlertTriangle className="h-3 w-3" />
+                          </span>
                         )}
                         {categoryStats.fail > 0 && (
-                          <span className="text-red-600 font-medium">{categoryStats.fail}✗</span>
+                          <span className="text-red-600 font-medium flex items-center gap-1">
+                            {categoryStats.fail}<XCircle className="h-3 w-3" />
+                          </span>
                         )}
                       </div>
                     </div>
@@ -237,9 +244,9 @@ export default function VerificationResults({
                                       TEST RESULTS:
                                     </div>
                                     {result.details.map((detail, index) => (
-                                      <p key={index} className="text-xs sm:text-sm font-mono break-words text-gray-800 dark:text-gray-200">
-                                        {detail}
-                                      </p>
+                                      <div key={index} className="mb-1">
+                                        <TestDetailRenderer detail={detail} />
+                                      </div>
                                     ))}
                                   </div>
                                 )}

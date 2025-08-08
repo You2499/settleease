@@ -4,7 +4,11 @@ import {
   calculatePairwiseTransactions,
 } from "@/lib/settleease/settlementCalculations";
 import { formatCurrency } from "@/lib/settleease/utils";
-import type { Person, Expense, SettlementPayment } from "@/lib/settleease/types";
+import type {
+  Person,
+  Expense,
+  SettlementPayment,
+} from "@/lib/settleease/types";
 import type { TestResult, DebugReport } from "./types";
 import {
   generateTestData,
@@ -70,7 +74,10 @@ export const runAllTests = async (
             balances: Object.fromEntries(people.map((p) => [p.id, 0])),
           },
           { step: "Process expenses", expenseCount: expenses.length },
-          { step: "Process settlements", settlementCount: settlementPayments.length },
+          {
+            step: "Process settlements",
+            settlementCount: settlementPayments.length,
+          },
           { step: "Final balances", balances: balances },
           { step: "Balance sum", sum: balanceSum },
         ],
@@ -101,20 +108,20 @@ export const runAllTests = async (
       if (Math.abs(totalPaid - expense.total_amount) > 0.01) {
         expenseIntegrityPassed = false;
         expenseDetails.push(
-          `❌ ${expense.description}: Paid ${formatCurrency(
+          `FAIL ${expense.description}: Paid ${formatCurrency(
             totalPaid
           )} ≠ Total ${formatCurrency(expense.total_amount)}`
         );
       } else if (Math.abs(expectedTotal - expense.total_amount) > 0.01) {
         expenseIntegrityPassed = false;
         expenseDetails.push(
-          `❌ ${expense.description}: Shares+Celebration ${formatCurrency(
+          `FAIL ${expense.description}: Shares+Celebration ${formatCurrency(
             expectedTotal
           )} ≠ Total ${formatCurrency(expense.total_amount)}`
         );
       } else {
         expenseDetails.push(
-          `✅ ${expense.description}: All amounts balanced`
+          `PASS ${expense.description}: All amounts balanced`
         );
       }
     }
@@ -130,8 +137,7 @@ export const runAllTests = async (
       executionTime: test2Time,
     });
 
-    // Test 3: Settlement Algorithm Consistency
-    const test3Start = Date.now();
+    // Calculate transactions for later tests
     const simplifiedTxns = calculateSimplifiedTransactions(
       people,
       expenses,
@@ -142,37 +148,6 @@ export const runAllTests = async (
       expenses,
       settlementPayments
     );
-
-    const simplifiedTotal = simplifiedTxns.reduce(
-      (sum, txn) => sum + txn.amount,
-      0
-    );
-    const pairwiseTotal = pairwiseTxns.reduce((sum, txn) => sum + txn.amount, 0);
-
-    const test3Time = Date.now() - test3Start;
-    results.push({
-      id: "settlement-consistency",
-      name: "Settlement Algorithm Consistency",
-      description:
-        "Verifies that simplified and pairwise settlements handle the same total debt",
-      status:
-        Math.abs(simplifiedTotal - pairwiseTotal) < 0.01 ? "pass" : "warning",
-      details: [
-        `Simplified transactions: ${
-          simplifiedTxns.length
-        } totaling ${formatCurrency(simplifiedTotal)}`,
-        `Pairwise transactions: ${
-          pairwiseTxns.length
-        } totaling ${formatCurrency(pairwiseTotal)}`,
-        `Difference: ${formatCurrency(
-          Math.abs(simplifiedTotal - pairwiseTotal)
-        )}`,
-        `Efficiency gain: ${
-          pairwiseTxns.length - simplifiedTxns.length
-        } fewer transactions`,
-      ],
-      executionTime: test3Time,
-    });
 
     // Test 4: Itemwise Split Accuracy
     const test4Start = Date.now();
@@ -190,21 +165,19 @@ export const runAllTests = async (
         0
       );
       const sharesTotal =
-        expense.shares?.reduce(
-          (sum, share) => sum + Number(share.amount),
-          0
-        ) || 0;
+        expense.shares?.reduce((sum, share) => sum + Number(share.amount), 0) ||
+        0;
 
       if (Math.abs(itemsTotal - sharesTotal) > 0.01) {
         itemwiseAccurate = false;
         itemwiseDetails.push(
-          `❌ ${expense.description}: Items total ${formatCurrency(
+          `FAIL ${expense.description}: Items total ${formatCurrency(
             itemsTotal
           )} ≠ Shares total ${formatCurrency(sharesTotal)}`
         );
       } else {
         itemwiseDetails.push(
-          `✅ ${expense.description}: Items and shares match perfectly`
+          `PASS ${expense.description}: Items and shares match perfectly`
         );
       }
 
@@ -214,7 +187,7 @@ export const runAllTests = async (
         const expectedSharePerPerson = Number(item.price) / itemSharers;
 
         itemwiseDetails.push(
-          `  📋 ${item.name}: ${formatCurrency(
+          `  ITEM ${item.name}: ${formatCurrency(
             item.price
           )} ÷ ${itemSharers} = ${formatCurrency(expectedSharePerPerson)} each`
         );
@@ -252,7 +225,7 @@ export const runAllTests = async (
       if (Math.abs(totalPaid - expense.total_amount) > 0.01) {
         multiPayerCorrect = false;
         multiPayerDetails.push(
-          `❌ ${expense.description}: Multiple payers total ${formatCurrency(
+          `FAIL ${expense.description}: Multiple payers total ${formatCurrency(
             totalPaid
           )} ≠ Expense total ${formatCurrency(expense.total_amount)}`
         );
@@ -266,7 +239,7 @@ export const runAllTests = async (
           )
           .join(", ");
         multiPayerDetails.push(
-          `✅ ${expense.description}: ${payerBreakdown}`
+          `PASS ${expense.description}: ${payerBreakdown}`
         );
       }
     }
@@ -291,15 +264,14 @@ export const runAllTests = async (
     const celebrationDetails: string[] = [];
 
     const celebrationExpenses = expenses.filter(
-      (e) =>
-        e.celebration_contribution && e.celebration_contribution.amount > 0
+      (e) => e.celebration_contribution && e.celebration_contribution.amount > 0
     );
     for (const expense of celebrationExpenses) {
       const contrib = expense.celebration_contribution!;
       const contributorName = peopleMap[contrib.personId] || contrib.personId;
 
       celebrationDetails.push(
-        `🎉 ${
+        `CELEBRATION ${
           expense.description
         }: ${contributorName} contributes extra ${formatCurrency(
           contrib.amount
@@ -310,7 +282,7 @@ export const runAllTests = async (
       const contributorBalance = balances[contrib.personId];
       if (contributorBalance !== undefined) {
         celebrationDetails.push(
-          `  💰 ${contributorName}'s net balance: ${formatCurrency(
+          `  BALANCE ${contributorName}'s net balance: ${formatCurrency(
             contributorBalance
           )}`
         );
@@ -355,10 +327,10 @@ export const runAllTests = async (
       const amount = Number(settlement.amount_settled);
 
       settlementDetails.push(
-        `💸 ${debtorName} → ${creditorName}: ${formatCurrency(amount)}`
+        `${debtorName} → ${creditorName}: ${formatCurrency(amount)}`
       );
 
-      // Check impact on balances
+      // Check impact on balances - settlements should reduce debtor's debt and creditor's credit
       const debtorBalanceChange =
         balancesWithSettlements[settlement.debtor_id] -
         balancesWithoutSettlements[settlement.debtor_id];
@@ -366,16 +338,27 @@ export const runAllTests = async (
         balancesWithSettlements[settlement.creditor_id] -
         balancesWithoutSettlements[settlement.creditor_id];
 
+      // For settlements: debtor balance should increase (less negative), creditor balance should decrease (less positive)
       if (
         Math.abs(debtorBalanceChange - amount) > 0.01 ||
         Math.abs(creditorBalanceChange + amount) > 0.01
       ) {
         settlementImpactCorrect = false;
         settlementDetails.push(
-          `  ❌ Balance changes don't match settlement amount`
+          `  Balance changes don't match settlement amount`
+        );
+        settlementDetails.push(
+          `  Debtor change: ${formatCurrency(
+            debtorBalanceChange
+          )}, Expected: ${formatCurrency(amount)}`
+        );
+        settlementDetails.push(
+          `  Creditor change: ${formatCurrency(
+            creditorBalanceChange
+          )}, Expected: ${formatCurrency(-amount)}`
         );
       } else {
-        settlementDetails.push(`  ✅ Balances updated correctly`);
+        settlementDetails.push(`  Balances updated correctly`);
       }
     }
 
@@ -401,87 +384,164 @@ export const runAllTests = async (
     // This is the MOST IMPORTANT test - verifies what users see matches actual calculations
     if (uiSimplifiedTransactions && uiPairwiseTransactions) {
       // Compare UI-displayed simplified transactions with fresh calculations
-      const freshSimplified = calculateSimplifiedTransactions(people, expenses, settlementPayments);
-      const freshPairwise = calculatePairwiseTransactions(people, expenses, settlementPayments);
+      const freshSimplified = calculateSimplifiedTransactions(
+        people,
+        expenses,
+        settlementPayments
+      );
+      const freshPairwise = calculatePairwiseTransactions(
+        people,
+        expenses,
+        settlementPayments
+      );
 
-      uiConsistencyDetails.push(`🔍 CRITICAL: Verifying UI matches actual calculations`);
-      
+      uiConsistencyDetails.push(
+        `CRITICAL: Verifying UI matches actual calculations`
+      );
+
       // Check simplified transactions count
       if (uiSimplifiedTransactions.length !== freshSimplified.length) {
         uiConsistencyPassed = false;
-        uiConsistencyDetails.push(`❌ Simplified transaction count mismatch: UI shows ${uiSimplifiedTransactions.length}, should be ${freshSimplified.length}`);
+        uiConsistencyDetails.push(
+          `FAIL Simplified transaction count mismatch: UI shows ${uiSimplifiedTransactions.length}, should be ${freshSimplified.length}`
+        );
       } else {
-        uiConsistencyDetails.push(`✅ Simplified transaction count matches: ${freshSimplified.length}`);
+        uiConsistencyDetails.push(
+          `PASS Simplified transaction count matches: ${freshSimplified.length}`
+        );
       }
 
       // Check pairwise transactions count
       if (uiPairwiseTransactions.length !== freshPairwise.length) {
         uiConsistencyPassed = false;
-        uiConsistencyDetails.push(`❌ Pairwise transaction count mismatch: UI shows ${uiPairwiseTransactions.length}, should be ${freshPairwise.length}`);
+        uiConsistencyDetails.push(
+          `FAIL Pairwise transaction count mismatch: UI shows ${uiPairwiseTransactions.length}, should be ${freshPairwise.length}`
+        );
       } else {
-        uiConsistencyDetails.push(`✅ Pairwise transaction count matches: ${freshPairwise.length}`);
+        uiConsistencyDetails.push(
+          `PASS Pairwise transaction count matches: ${freshPairwise.length}`
+        );
       }
 
       // Check simplified transaction amounts
-      const uiSimplifiedTotal = uiSimplifiedTransactions.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-      const freshSimplifiedTotal = freshSimplified.reduce((sum, txn) => sum + txn.amount, 0);
-      
+      const uiSimplifiedTotal = uiSimplifiedTransactions.reduce(
+        (sum, txn) => sum + (txn.amount || 0),
+        0
+      );
+      const freshSimplifiedTotal = freshSimplified.reduce(
+        (sum, txn) => sum + txn.amount,
+        0
+      );
+
       if (Math.abs(uiSimplifiedTotal - freshSimplifiedTotal) > 0.01) {
         uiConsistencyPassed = false;
-        uiConsistencyDetails.push(`❌ Simplified total mismatch: UI shows ${formatCurrency(uiSimplifiedTotal)}, should be ${formatCurrency(freshSimplifiedTotal)}`);
+        uiConsistencyDetails.push(
+          `FAIL Simplified total mismatch: UI shows ${formatCurrency(
+            uiSimplifiedTotal
+          )}, should be ${formatCurrency(freshSimplifiedTotal)}`
+        );
       } else {
-        uiConsistencyDetails.push(`✅ Simplified transaction totals match: ${formatCurrency(freshSimplifiedTotal)}`);
+        uiConsistencyDetails.push(
+          `PASS Simplified transaction totals match: ${formatCurrency(
+            freshSimplifiedTotal
+          )}`
+        );
       }
 
       // Check pairwise transaction amounts
-      const uiPairwiseTotal = uiPairwiseTransactions.reduce((sum, txn) => sum + (txn.amount || 0), 0);
-      const freshPairwiseTotal = freshPairwise.reduce((sum, txn) => sum + txn.amount, 0);
-      
+      const uiPairwiseTotal = uiPairwiseTransactions.reduce(
+        (sum, txn) => sum + (txn.amount || 0),
+        0
+      );
+      const freshPairwiseTotal = freshPairwise.reduce(
+        (sum, txn) => sum + txn.amount,
+        0
+      );
+
       if (Math.abs(uiPairwiseTotal - freshPairwiseTotal) > 0.01) {
         uiConsistencyPassed = false;
-        uiConsistencyDetails.push(`❌ Pairwise total mismatch: UI shows ${formatCurrency(uiPairwiseTotal)}, should be ${formatCurrency(freshPairwiseTotal)}`);
+        uiConsistencyDetails.push(
+          `FAIL Pairwise total mismatch: UI shows ${formatCurrency(
+            uiPairwiseTotal
+          )}, should be ${formatCurrency(freshPairwiseTotal)}`
+        );
       } else {
-        uiConsistencyDetails.push(`✅ Pairwise transaction totals match: ${formatCurrency(freshPairwiseTotal)}`);
+        uiConsistencyDetails.push(
+          `PASS Pairwise transaction totals match: ${formatCurrency(
+            freshPairwiseTotal
+          )}`
+        );
       }
 
       // Detailed transaction-by-transaction comparison
-      uiConsistencyDetails.push(`📋 Detailed UI vs Calculation comparison:`);
-      
+      uiConsistencyDetails.push(
+        `DETAIL Detailed UI vs Calculation comparison:`
+      );
+
       // Compare each simplified transaction
-      for (let i = 0; i < Math.max(uiSimplifiedTransactions.length, freshSimplified.length); i++) {
+      for (
+        let i = 0;
+        i < Math.max(uiSimplifiedTransactions.length, freshSimplified.length);
+        i++
+      ) {
         const uiTxn = uiSimplifiedTransactions[i];
         const freshTxn = freshSimplified[i];
-        
+
         if (!uiTxn && freshTxn) {
           uiConsistencyPassed = false;
-          uiConsistencyDetails.push(`❌ Missing UI transaction: ${peopleMap[freshTxn.from]} → ${peopleMap[freshTxn.to]}: ${formatCurrency(freshTxn.amount)}`);
+          uiConsistencyDetails.push(
+            `FAIL Missing UI transaction: ${peopleMap[freshTxn.from]} → ${
+              peopleMap[freshTxn.to]
+            }: ${formatCurrency(freshTxn.amount)}`
+          );
         } else if (uiTxn && !freshTxn) {
           uiConsistencyPassed = false;
-          uiConsistencyDetails.push(`❌ Extra UI transaction: ${peopleMap[uiTxn.from]} → ${peopleMap[uiTxn.to]}: ${formatCurrency(uiTxn.amount)}`);
+          uiConsistencyDetails.push(
+            `FAIL Extra UI transaction: ${peopleMap[uiTxn.from]} → ${
+              peopleMap[uiTxn.to]
+            }: ${formatCurrency(uiTxn.amount)}`
+          );
         } else if (uiTxn && freshTxn) {
-          const amountMatch = Math.abs((uiTxn.amount || 0) - freshTxn.amount) < 0.01;
+          const amountMatch =
+            Math.abs((uiTxn.amount || 0) - freshTxn.amount) < 0.01;
           const fromMatch = uiTxn.from === freshTxn.from;
           const toMatch = uiTxn.to === freshTxn.to;
-          
+
           if (!amountMatch || !fromMatch || !toMatch) {
             uiConsistencyPassed = false;
-            uiConsistencyDetails.push(`❌ Transaction mismatch: UI(${peopleMap[uiTxn.from]} → ${peopleMap[uiTxn.to]}: ${formatCurrency(uiTxn.amount)}) vs Calc(${peopleMap[freshTxn.from]} → ${peopleMap[freshTxn.to]}: ${formatCurrency(freshTxn.amount)})`);
+            uiConsistencyDetails.push(
+              `FAIL Transaction mismatch: UI(${peopleMap[uiTxn.from]} → ${
+                peopleMap[uiTxn.to]
+              }: ${formatCurrency(uiTxn.amount)}) vs Calc(${
+                peopleMap[freshTxn.from]
+              } → ${peopleMap[freshTxn.to]}: ${formatCurrency(
+                freshTxn.amount
+              )})`
+            );
           } else {
-            uiConsistencyDetails.push(`✅ Transaction matches: ${peopleMap[freshTxn.from]} → ${peopleMap[freshTxn.to]}: ${formatCurrency(freshTxn.amount)}`);
+            uiConsistencyDetails.push(
+              `PASS Transaction matches: ${peopleMap[freshTxn.from]} → ${
+                peopleMap[freshTxn.to]
+              }: ${formatCurrency(freshTxn.amount)}`
+            );
           }
         }
       }
-
     } else {
-      uiConsistencyDetails.push(`⚠️ UI transaction data not provided - cannot verify UI consistency`);
-      uiConsistencyDetails.push(`📝 To enable this critical test, pass uiSimplifiedTransactions and uiPairwiseTransactions`);
+      uiConsistencyDetails.push(
+        `WARNING UI transaction data not provided - cannot verify UI consistency`
+      );
+      uiConsistencyDetails.push(
+        `NOTE To enable this critical test, pass uiSimplifiedTransactions and uiPairwiseTransactions`
+      );
     }
 
     const test8Time = Date.now() - test8Start;
     results.push({
       id: "ui-calculation-consistency",
       name: "UI-Calculation Consistency (CRITICAL)",
-      description: "Verifies that what users see in the UI exactly matches fresh algorithm calculations",
+      description:
+        "Verifies that what users see in the UI exactly matches fresh algorithm calculations",
       status: uiConsistencyPassed ? "pass" : "fail",
       details: uiConsistencyDetails,
       executionTime: test8Time,
@@ -489,44 +549,99 @@ export const runAllTests = async (
         inputData: {
           uiSimplifiedCount: uiSimplifiedTransactions?.length || 0,
           uiPairwiseCount: uiPairwiseTransactions?.length || 0,
-          freshSimplifiedCount: calculateSimplifiedTransactions(people, expenses, settlementPayments).length,
-          freshPairwiseCount: calculatePairwiseTransactions(people, expenses, settlementPayments).length,
+          freshSimplifiedCount: calculateSimplifiedTransactions(
+            people,
+            expenses,
+            settlementPayments
+          ).length,
+          freshPairwiseCount: calculatePairwiseTransactions(
+            people,
+            expenses,
+            settlementPayments
+          ).length,
         },
         calculationSteps: [
-          { step: "Get UI transactions", uiSimplified: uiSimplifiedTransactions?.length, uiPairwise: uiPairwiseTransactions?.length },
-          { step: "Calculate fresh transactions", freshSimplified: calculateSimplifiedTransactions(people, expenses, settlementPayments).length },
-          { step: "Compare counts and amounts", result: uiConsistencyPassed ? "match" : "mismatch" },
+          {
+            step: "Get UI transactions",
+            uiSimplified: uiSimplifiedTransactions?.length,
+            uiPairwise: uiPairwiseTransactions?.length,
+          },
+          {
+            step: "Calculate fresh transactions",
+            freshSimplified: calculateSimplifiedTransactions(
+              people,
+              expenses,
+              settlementPayments
+            ).length,
+          },
+          {
+            step: "Compare counts and amounts",
+            result: uiConsistencyPassed ? "match" : "mismatch",
+          },
         ],
         expectedOutput: { uiMatchesCalculations: true },
         actualOutput: { uiMatchesCalculations: uiConsistencyPassed },
-        errorDetails: uiConsistencyPassed ? undefined : "UI-displayed values don't match fresh calculations - users may be seeing incorrect data!",
+        errorDetails: uiConsistencyPassed
+          ? undefined
+          : "UI-displayed values don't match fresh calculations - users may be seeing incorrect data!",
       },
     });
 
     // Test 9: Synthetic Data Test
     const test9Start = Date.now();
-    const { testPeople, testExpenses, testSettlements } = generateTestData();
+    let syntheticTestPassed = true;
+    const syntheticDetails: string[] = [];
 
-    const syntheticBalances = calculateNetBalances(
-      testPeople,
-      testExpenses,
-      testSettlements
-    );
-    const syntheticSum = Object.values(syntheticBalances).reduce(
-      (sum, balance) => sum + (balance as number),
-      0
-    );
+    try {
+      const { testPeople, testExpenses, testSettlements } = generateTestData();
 
-    const syntheticSimplified = calculateSimplifiedTransactions(
-      testPeople,
-      testExpenses,
-      testSettlements
-    );
-    const syntheticPairwise = calculatePairwiseTransactions(
-      testPeople,
-      testExpenses,
-      testSettlements
-    );
+      const syntheticBalances = calculateNetBalances(
+        testPeople,
+        testExpenses,
+        testSettlements
+      );
+      const syntheticSum = Object.values(syntheticBalances).reduce(
+        (sum, balance) => sum + (balance as number),
+        0
+      );
+
+      const syntheticSimplified = calculateSimplifiedTransactions(
+        testPeople,
+        testExpenses,
+        testSettlements
+      );
+      const syntheticPairwise = calculatePairwiseTransactions(
+        testPeople,
+        testExpenses,
+        testSettlements
+      );
+
+      syntheticDetails.push(
+        `Generated ${testExpenses.length} test expenses with various split methods`
+      );
+      syntheticDetails.push(
+        `Balance conservation: ${formatCurrency(syntheticSum)}`
+      );
+      syntheticDetails.push(
+        `Simplified transactions: ${syntheticSimplified.length}`
+      );
+      syntheticDetails.push(
+        `Pairwise transactions: ${syntheticPairwise.length}`
+      );
+      syntheticDetails.push(
+        `Test scenarios: Equal split, Itemwise, Multiple payers, Celebrations`
+      );
+
+      if (Math.abs(syntheticSum) >= 0.01) {
+        syntheticTestPassed = false;
+        syntheticDetails.push(
+          `Balance conservation failed: ${formatCurrency(syntheticSum)}`
+        );
+      }
+    } catch (error) {
+      syntheticTestPassed = false;
+      syntheticDetails.push(`Test generation failed: ${String(error)}`);
+    }
 
     const test9Time = Date.now() - test9Start;
     results.push({
@@ -534,14 +649,8 @@ export const runAllTests = async (
       name: "Synthetic Data Validation",
       description:
         "Tests algorithms with generated test data covering all scenarios",
-      status: Math.abs(syntheticSum) < 0.01 ? "pass" : "fail",
-      details: [
-        `Generated ${testExpenses.length} test expenses with various split methods`,
-        `Balance conservation: ${formatCurrency(syntheticSum)}`,
-        `Simplified transactions: ${syntheticSimplified.length}`,
-        `Pairwise transactions: ${syntheticPairwise.length}`,
-        `Test scenarios: Equal split, Itemwise, Multiple payers, Celebrations`,
-      ],
+      status: syntheticTestPassed ? "pass" : "fail",
+      details: syntheticDetails,
       executionTime: test9Time,
     });
 

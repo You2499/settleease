@@ -3,7 +3,13 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bug, Copy, Download, Database } from "lucide-react";
+import { Bug, Copy, Download, Database, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { DebugReport } from "./types";
 import { generateDebugReportText } from "./testUtils";
@@ -64,16 +70,24 @@ export default function DebugPanel({
             <Download className="h-4 w-4" />
             <span>Download</span>
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onExportData}
-            className="flex items-center space-x-1"
-            title="Export live data for debugging"
-          >
-            <Database className="h-4 w-4" />
-            <span>Export Data</span>
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onExportData}
+                  className="flex items-center space-x-1"
+                >
+                  <Database className="h-4 w-4" />
+                  <span>Export Data</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Export live data for debugging</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -145,7 +159,7 @@ export default function DebugPanel({
           {debugReport.failureAnalysis && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-md">
               <h5 className="font-medium text-red-900 dark:text-red-100 mb-2">
-                ⚠️ Issues Detected
+                Issues Detected
               </h5>
               <div className="space-y-2 text-sm">
                 {debugReport.failureAnalysis.criticalFailures.length > 0 && (
@@ -185,11 +199,14 @@ export default function DebugPanel({
             </div>
           )}
 
-          <div className="text-xs text-muted-foreground">
-            💡 <strong>For Support:</strong> If tests are failing, copy or
-            download this debug report and share it for technical assistance.
-            The report contains all necessary data to diagnose and fix algorithm
-            issues.
+          <div className="text-xs text-muted-foreground flex items-start gap-2">
+            <Info className="w-3 h-3 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <strong>For Support:</strong> If tests are failing, copy or
+              download this debug report and share it for technical assistance.
+              The report contains all necessary data to diagnose and fix algorithm
+              issues.
+            </div>
           </div>
         </Card>
       )}

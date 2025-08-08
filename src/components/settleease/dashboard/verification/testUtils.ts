@@ -133,7 +133,7 @@ export const generateFailureAnalysis = (results: TestResult[]) => {
   
   if (failures.length === 0 && warnings.length === 0) return undefined;
 
-  const criticalFailures = failures.map(f => `${f.name}: ${f.details.find(d => d.includes("❌")) || "Unknown error"}`);
+  const criticalFailures = failures.map(f => `${f.name}: ${f.details.find(d => d.includes("FAIL")) || "Unknown error"}`);
   
   const potentialCauses = [];
   const recommendedActions = [];

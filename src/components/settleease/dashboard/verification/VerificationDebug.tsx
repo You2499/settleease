@@ -389,8 +389,9 @@ export default function VerificationDebug({
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                 <div>
-                  <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                    💡 For Technical Support
+                  <div className="font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    For Technical Support
                   </div>
                   <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
                     <p>
