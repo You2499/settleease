@@ -83,9 +83,9 @@ export const generateTestData = () => {
     {
       id: "exp-4",
       description: "Birthday Party",
-      total_amount: 1500,
+      total_amount: 1700, // 1500 + 200 celebration contribution
       category: "Food",
-      paid_by: [{ personId: "test-4", amount: 1500 }],
+      paid_by: [{ personId: "test-4", amount: 1700 }],
       split_method: "equal",
       shares: [
         { personId: "test-1", amount: 375 },
