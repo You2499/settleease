@@ -106,7 +106,7 @@ export default function Step3SimplificationProcess({
   );
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <Zap className="mr-2 h-5 w-5 text-purple-600" />
@@ -118,7 +118,7 @@ export default function Step3SimplificationProcess({
           internal simplification and algorithmic optimization
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-x-hidden">
         <div className="space-y-6">
           {/* Before: Direct Debts */}
           <div className="relative p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 rounded-xl border-2 border-red-300 dark:border-red-700">
@@ -166,37 +166,37 @@ export default function Step3SimplificationProcess({
                 return (
                   <div
                     key={i}
-                    className="relative flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm"
+                    className="relative flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm gap-2 sm:gap-0"
                   >
                     {/* Balanced indicator pill */}
                     {hasBalancedPerson && (
-                      <div className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+                      <div className="absolute -top-1 -right-1 px-2 py-0.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm whitespace-nowrap">
                         balanced person
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-red-800 dark:text-red-200">
                           {peopleMap[txn.from]?.charAt(0) || "?"}
                         </span>
                       </div>
-                      <ArrowRight className="w-4 h-4 text-gray-400" />
-                      <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
+                      <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-green-800 dark:text-green-200">
                           {peopleMap[txn.to]?.charAt(0) || "?"}
                         </span>
                       </div>
-                      <div className="text-sm">
-                        <span className="font-medium">{peopleMap[txn.from]}</span>
+                      <div className="text-sm min-w-0">
+                        <span className="font-medium truncate">{peopleMap[txn.from]}</span>
                         <span className="text-gray-600 dark:text-gray-400">
                           {" "}
                           owes{" "}
                         </span>
-                        <span className="font-medium">{peopleMap[txn.to]}</span>
+                        <span className="font-medium truncate">{peopleMap[txn.to]}</span>
                       </div>
                     </div>
-                    <div className="font-bold text-red-600 dark:text-red-400">
+                    <div className="font-bold text-red-600 dark:text-red-400 flex-shrink-0 self-end sm:self-center">
                       {formatCurrency(txn.amount)}
                     </div>
                   </div>
@@ -340,30 +340,30 @@ export default function Step3SimplificationProcess({
               {filteredUnpaidSimplifiedTransactions.map((txn, i) => (
                 <div
                   key={i}
-                  className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm gap-2 sm:gap-0"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-bold text-red-800 dark:text-red-200">
                         {peopleMap[txn.from]?.charAt(0) || "?"}
                       </span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-gray-400" />
-                    <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
+                    <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
                       <span className="text-xs font-bold text-green-800 dark:text-green-200">
                         {peopleMap[txn.to]?.charAt(0) || "?"}
                       </span>
                     </div>
-                    <div className="text-sm">
-                      <span className="font-medium">{peopleMap[txn.from]}</span>
+                    <div className="text-sm min-w-0">
+                      <span className="font-medium truncate">{peopleMap[txn.from]}</span>
                       <span className="text-gray-600 dark:text-gray-400">
                         {" "}
                         pays{" "}
                       </span>
-                      <span className="font-medium">{peopleMap[txn.to]}</span>
+                      <span className="font-medium truncate">{peopleMap[txn.to]}</span>
                     </div>
                   </div>
-                  <div className="font-bold text-green-600 dark:text-green-400">
+                  <div className="font-bold text-green-600 dark:text-green-400 flex-shrink-0 self-end sm:self-center">
                     {formatCurrency(txn.amount)}
                   </div>
                 </div>

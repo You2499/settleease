@@ -63,7 +63,7 @@ export default function Step2DirectDebtAnalysis({
   };
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <FileText className="mr-2 h-5 w-5 text-orange-600" />
@@ -73,7 +73,7 @@ export default function Step2DirectDebtAnalysis({
           See exactly which expenses contributed to each person's balance
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-x-hidden">
         <div className="space-y-4">
           {/* Show each person's expense breakdown in compact format */}
           {Object.entries(personBalances)
@@ -238,7 +238,7 @@ export default function Step2DirectDebtAnalysis({
                                 }`}
                                 onClick={() => onExpenseClick?.(expense)}
                               >
-                                <div className="flex justify-between items-start mb-2">
+                                <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
                                   <div className="flex-1 min-w-0">
                                     <h5 className={`font-medium text-gray-900 dark:text-gray-100 truncate text-sm ${
                                       onExpenseClick ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''
@@ -260,8 +260,8 @@ export default function Step2DirectDebtAnalysis({
                                       </div>
                                       {payers.length > 0 && (
                                         <div className="flex items-center gap-1">
-                                          <User className="w-3 h-3" />
-                                          <span>
+                                          <User className="w-3 h-3 flex-shrink-0" />
+                                          <span className="truncate">
                                             Paid by: {payers.join(", ")}
                                           </span>
                                         </div>
@@ -269,7 +269,7 @@ export default function Step2DirectDebtAnalysis({
                                     </div>
                                   </div>
                                   <div
-                                    className={`text-right ml-3 px-2 py-1 rounded text-xs font-bold ${
+                                    className={`text-right sm:ml-3 px-2 py-1 rounded text-xs font-bold flex-shrink-0 self-end sm:self-start ${
                                       netForThisExpense > 0.01
                                         ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
                                         : netForThisExpense < -0.01
@@ -290,43 +290,43 @@ export default function Step2DirectDebtAnalysis({
 
                                 <div className="space-y-1 text-xs">
                                   {amountPaid > 0 && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                        <CreditCard className="w-3 h-3" />
-                                        Amount paid:
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
+                                        <CreditCard className="w-3 h-3 flex-shrink-0" />
+                                        <span className="truncate">Amount paid:</span>
                                       </span>
-                                      <span className="font-medium text-green-600 dark:text-green-400">
+                                      <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0">
                                         +{formatCurrency(amountPaid)}
                                       </span>
                                     </div>
                                   )}
 
                                   {shareAmount > 0 && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                        <Utensils className="w-3 h-3" />
-                                        Share owed:
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
+                                        <Utensils className="w-3 h-3 flex-shrink-0" />
+                                        <span className="truncate">Share owed:</span>
                                       </span>
-                                      <span className="font-medium text-red-600 dark:text-red-400">
+                                      <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
                                         -{formatCurrency(shareAmount)}
                                       </span>
                                     </div>
                                   )}
 
                                   {celebrationAmount > 0 && (
-                                    <div className="flex justify-between items-center">
-                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                        <PartyPopper className="w-3 h-3" />
-                                        Celebration:
+                                    <div className="flex justify-between items-center gap-2">
+                                      <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
+                                        <PartyPopper className="w-3 h-3 flex-shrink-0" />
+                                        <span className="truncate">Celebration:</span>
                                       </span>
-                                      <span className="font-medium text-red-600 dark:text-red-400">
+                                      <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
                                         -{formatCurrency(celebrationAmount)}
                                       </span>
                                     </div>
                                   )}
 
-                                  <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700">
-                                    <span className="font-medium text-gray-800 dark:text-gray-200">
+                                  <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700 gap-2">
+                                    <span className="font-medium text-gray-800 dark:text-gray-200 min-w-0 flex-1">
                                       Net for this expense:
                                     </span>
                                     <span
@@ -371,23 +371,23 @@ export default function Step2DirectDebtAnalysis({
                         Final Calculation
                       </h5>
                       <div className="space-y-1 text-xs">
-                        <div className="flex justify-between items-center">
-                          <span>Total paid:</span>
-                          <span className="font-medium text-green-600 dark:text-green-400">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="min-w-0 flex-1">Total paid:</span>
+                          <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0">
                             +{formatCurrency(balance.totalPaid)}
                           </span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span>Total owed:</span>
-                          <span className="font-medium text-red-600 dark:text-red-400">
+                        <div className="flex justify-between items-center gap-2">
+                          <span className="min-w-0 flex-1">Total owed:</span>
+                          <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
                             -{formatCurrency(balance.totalOwed)}
                           </span>
                         </div>
                         {(balance.settledAsDebtor > 0 ||
                           balance.settledAsCreditor > 0) && (
-                          <div className="flex justify-between items-center">
-                            <span>Net settlements:</span>
-                            <span className="font-medium text-blue-600 dark:text-blue-400">
+                          <div className="flex justify-between items-center gap-2">
+                            <span className="min-w-0 flex-1">Net settlements:</span>
+                            <span className="font-medium text-blue-600 dark:text-blue-400 flex-shrink-0">
                               {balance.settledAsDebtor -
                                 balance.settledAsCreditor >=
                               0
@@ -400,7 +400,7 @@ export default function Step2DirectDebtAnalysis({
                             </span>
                           </div>
                         )}
-                        <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600">
+                        <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600 gap-2">
                           <span className="font-bold">Final Balance:</span>
                           <span
                             className={`font-bold text-lg ${

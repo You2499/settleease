@@ -52,7 +52,6 @@ import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
 import Step2DirectDebtAnalysis from "./settlement-steps/Step2DirectDebtAnalysis";
 import Step3SimplificationProcess from "./settlement-steps/Step3SimplificationProcess";
 
-
 interface SettlementSummaryProps {
   simplifiedTransactions: CalculatedTransaction[];
   pairwiseTransactions: CalculatedTransaction[];
@@ -177,7 +176,11 @@ export default function SettlementSummary({
     });
 
     // Use the centralized net balance calculation for consistency
-    const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
+    const netBalances = calculateNetBalances(
+      people,
+      allExpenses,
+      settlementPayments
+    );
     Object.keys(balances).forEach((personId) => {
       balances[personId].netBalance = netBalances[personId] || 0;
     });
@@ -324,36 +327,40 @@ export default function SettlementSummary({
                   {transactionsToDisplay.map((txn, i) => (
                     <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
                       <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
-                        <div className="grid grid-cols-1 sm:grid-cols-5 items-center gap-1.5">
-                          <div className="col-span-1 sm:col-span-3">
-                            <div className="grid grid-cols-3 items-center w-full">
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-left px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-start">
+                        <div className="flex flex-col sm:grid sm:grid-cols-5 items-start sm:items-center gap-2 sm:gap-1.5">
+                          <div className="col-span-1 sm:col-span-3 w-full">
+                            <div className="flex items-center justify-between sm:grid sm:grid-cols-3 w-full">
+                              <span className="truncate font-medium text-foreground text-base sm:text-sm px-1 min-w-0 flex-1 sm:col-span-1 sm:justify-self-start">
                                 {peopleMap[txn.from] || "Unknown"}
                               </span>
-                              <span className="flex items-center justify-center w-5 mx-1 col-span-1 justify-self-center">
+                              <span className="flex items-center justify-center w-5 mx-1 flex-shrink-0 sm:col-span-1 sm:justify-self-center">
                                 <ArrowRight className="text-accent w-4 h-4" />
                               </span>
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm text-right px-1 min-w-[80px] sm:min-w-[110px] max-w-[140px] col-span-1 justify-self-center">
+                              <span className="truncate font-medium text-foreground text-base sm:text-sm px-1 min-w-0 flex-1 text-right sm:text-left sm:col-span-1 sm:justify-self-center">
                                 {peopleMap[txn.to] || "Unknown"}
                               </span>
                             </div>
                           </div>
-                          <span className="text-right font-bold text-green-700 text-base sm:text-lg mt-1 sm:mt-0 col-span-1 sm:col-span-1 flex justify-end">
+                          <span className="font-bold text-green-700 text-base sm:text-lg col-span-1 sm:col-span-1 self-end sm:self-center sm:text-right w-full sm:w-auto">
                             {formatCurrency(txn.amount)}
                           </span>
-                          <div className="flex-shrink-0 flex justify-center mt-1 sm:mt-0 col-span-1 sm:col-span-1">
+                          <div className="flex-shrink-0 flex justify-center col-span-1 sm:col-span-1 w-full sm:w-auto">
                             {(() => {
-                              const visiblePeopleIds = new Set(filteredPeople.map(p => p.id));
-                              const hasBalancedPerson = !visiblePeopleIds.has(txn.from) || !visiblePeopleIds.has(txn.to);
-                              
+                              const visiblePeopleIds = new Set(
+                                filteredPeople.map((p) => p.id)
+                              );
+                              const hasBalancedPerson =
+                                !visiblePeopleIds.has(txn.from) ||
+                                !visiblePeopleIds.has(txn.to);
+
                               if (hasBalancedPerson) {
                                 return (
-                                  <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+                                  <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm whitespace-nowrap">
                                     balanced person
                                   </div>
                                 );
                               }
-                              
+
                               return userRole === "admin" ? (
                                 <Button
                                   size="sm"
@@ -392,10 +399,10 @@ export default function SettlementSummary({
             value="person"
             className="mt-0 flex-1 flex flex-col min-h-0 space-y-3"
           >
-            <div className="flex flex-col sm:grid sm:grid-cols-2 gap-3 sm:gap-4 items-center bg-muted/50 px-3 py-2 rounded-md">
+            <div className="flex flex-col gap-3 bg-muted/50 px-3 py-2 rounded-md">
               <Label
                 htmlFor="person-select"
-                className="text-xs sm:text-sm font-medium text-left sm:text-right"
+                className="text-xs sm:text-sm font-medium"
               >
                 View settlement details for:
               </Label>
@@ -406,7 +413,7 @@ export default function SettlementSummary({
               >
                 <SelectTrigger
                   id="person-select"
-                  className="h-9 text-xs sm:text-sm"
+                  className="h-9 text-xs sm:text-sm w-full"
                 >
                   <SelectValue placeholder="Select Person..." />
                 </SelectTrigger>
@@ -447,7 +454,7 @@ export default function SettlementSummary({
 
       {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-6xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-6xl w-[95vw] sm:w-full">
           <DialogHeader className="pb-3 border-b">
             <div className="flex items-center">
               <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
@@ -458,22 +465,22 @@ export default function SettlementSummary({
           </DialogHeader>
 
           {/* Toggle for balanced people */}
-          <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4">
-            <div className="flex items-center space-x-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-0">
+            <div className="flex items-center space-x-3 min-w-0 flex-1">
               {showBalancedPeople ? (
-                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
               ) : (
-                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
               )}
               <Label
                 htmlFor="show-balanced"
-                className="text-sm font-medium cursor-pointer"
+                className="text-sm font-medium cursor-pointer truncate"
               >
                 Show balanced people
               </Label>
               {!showBalancedPeople &&
                 people.length - filteredPeople.length > 0 && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                     {people.length - filteredPeople.length} hidden
                   </span>
                 )}
@@ -482,30 +489,37 @@ export default function SettlementSummary({
               id="show-balanced"
               checked={showBalancedPeople}
               onCheckedChange={setShowBalancedPeople}
+              className="flex-shrink-0"
             />
           </div>
 
-          <div className="space-y-4 sm:space-y-6">
-            <Step1BalanceOverview
-              personBalances={filteredPersonBalances}
-              people={filteredPeople}
-            />
+          <div className="space-y-4 sm:space-y-6 overflow-x-hidden min-w-0">
+            <div className="min-w-0">
+              <Step1BalanceOverview
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
+              />
+            </div>
 
-            <Step2DirectDebtAnalysis
-              allExpenses={allExpenses}
-              personBalances={filteredPersonBalances}
-              people={filteredPeople}
-              peopleMap={peopleMap}
-              onExpenseClick={onViewExpenseDetailsFromStep2}
-            />
+            <div className="min-w-0">
+              <Step2DirectDebtAnalysis
+                allExpenses={allExpenses}
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
+                peopleMap={peopleMap}
+                onExpenseClick={onViewExpenseDetailsFromStep2}
+              />
+            </div>
 
-            <Step3SimplificationProcess
-              pairwiseTransactions={pairwiseTransactions}
-              unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
-              personBalances={filteredPersonBalances}
-              people={filteredPeople}
-              peopleMap={peopleMap}
-            />
+            <div className="min-w-0">
+              <Step3SimplificationProcess
+                pairwiseTransactions={pairwiseTransactions}
+                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                personBalances={filteredPersonBalances}
+                people={filteredPeople}
+                peopleMap={peopleMap}
+              />
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -30,7 +30,7 @@ export default function Step1BalanceOverview({
   people,
 }: Step1BalanceOverviewProps) {
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <Users className="mr-2 h-5 w-5 text-green-600" />
@@ -40,7 +40,7 @@ export default function Step1BalanceOverview({
           Based on all expenses and what each person paid vs. their share
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-x-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Object.entries(personBalances)
             .map(([personId, balance]) => {

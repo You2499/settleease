@@ -246,7 +246,7 @@ export default function PerPersonSettlementDetails({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Step 1: Person Overview */}
       <Card>
         <CardHeader className="pb-3">
@@ -281,12 +281,12 @@ export default function PerPersonSettlementDetails({
           </div>
 
           {/* Financial Summary Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            <div className="bg-green-50 dark:bg-green-950/20 p-3 sm:p-4 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
-                <div>
-                  <p className="text-sm sm:text-lg font-bold text-green-900 dark:text-green-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-green-50 dark:bg-green-950/20 p-3 sm:p-4 rounded-xl border-2 border-green-300 dark:border-green-700 shadow-sm min-w-0">
+              <div className="flex items-center space-x-2 min-w-0">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-green-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-lg font-bold text-green-900 dark:text-green-100 truncate">
                     {formatCurrency(personSummary.totalPaid)}
                   </p>
                   <p className="text-xs sm:text-sm text-green-700 dark:text-green-300">
@@ -296,11 +296,11 @@ export default function PerPersonSettlementDetails({
               </div>
             </div>
 
-            <div className="bg-orange-50 dark:bg-orange-950/20 p-3 sm:p-4 rounded-xl border-2 border-orange-300 dark:border-orange-700 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600" />
-                <div>
-                  <p className="text-sm sm:text-lg font-bold text-orange-900 dark:text-orange-100">
+            <div className="bg-orange-50 dark:bg-orange-950/20 p-3 sm:p-4 rounded-xl border-2 border-orange-300 dark:border-orange-700 shadow-sm min-w-0">
+              <div className="flex items-center space-x-2 min-w-0">
+                <Receipt className="h-4 w-4 sm:h-5 sm:w-5 text-orange-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-lg font-bold text-orange-900 dark:text-orange-100 truncate">
                     {formatCurrency(personSummary.totalOwed)}
                   </p>
                   <p className="text-xs sm:text-sm text-orange-700 dark:text-orange-300">
@@ -310,11 +310,11 @@ export default function PerPersonSettlementDetails({
               </div>
             </div>
 
-            <div className="bg-purple-50 dark:bg-purple-950/20 p-3 sm:p-4 rounded-xl border-2 border-purple-300 dark:border-purple-700 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <Handshake className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600" />
-                <div>
-                  <p className="text-sm sm:text-lg font-bold text-purple-900 dark:text-purple-100">
+            <div className="bg-purple-50 dark:bg-purple-950/20 p-3 sm:p-4 rounded-xl border-2 border-purple-300 dark:border-purple-700 shadow-sm min-w-0">
+              <div className="flex items-center space-x-2 min-w-0">
+                <Handshake className="h-4 w-4 sm:h-5 sm:w-5 text-purple-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-lg font-bold text-purple-900 dark:text-purple-100 truncate">
                     {formatCurrency(personSummary.totalSettledAsDebtor)}
                   </p>
                   <p className="text-xs sm:text-sm text-purple-700 dark:text-purple-300">
@@ -324,11 +324,11 @@ export default function PerPersonSettlementDetails({
               </div>
             </div>
 
-            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-sm">
-              <div className="flex items-center space-x-2">
-                <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                <div>
-                  <p className="text-sm sm:text-lg font-bold text-blue-900 dark:text-blue-100">
+            <div className="bg-blue-50 dark:bg-blue-950/20 p-3 sm:p-4 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-sm min-w-0">
+              <div className="flex items-center space-x-2 min-w-0">
+                <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 flex-shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm sm:text-lg font-bold text-blue-900 dark:text-blue-100 truncate">
                     {formatCurrency(Math.abs(personSummary.netBalance))}
                   </p>
                   <p className="text-xs sm:text-sm text-blue-700 dark:text-blue-300">
@@ -710,22 +710,22 @@ export default function PerPersonSettlementDetails({
                             key={i}
                             className="bg-red-50 dark:bg-red-950/20 p-3 border-red-200 dark:border-red-800"
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <ArrowRight className="h-4 w-4 text-red-600" />
-                                <span className="text-sm">
-                                  Pay <strong>{peopleMap[debt.to]}</strong>:{" "}
-                                  {formatCurrency(debt.amount)}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                <ArrowRight className="h-4 w-4 text-red-600 flex-shrink-0" />
+                                <span className="text-sm min-w-0">
+                                  Pay <strong className="truncate">{peopleMap[debt.to]}</strong>:{" "}
+                                  <span className="font-semibold">{formatCurrency(debt.amount)}</span>
                                 </span>
                               </div>
-                              <div className="flex space-x-2">
+                              <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() =>
                                     handleViewRelevantExpenses(debt, "debt")
                                   }
-                                  className="text-xs"
+                                  className="text-xs flex-1 sm:flex-none"
                                 >
                                   <ExternalLink className="mr-1 h-4 w-4" />
                                   Expenses
@@ -737,7 +737,7 @@ export default function PerPersonSettlementDetails({
                                       handleInternalMarkAsPaid(debt)
                                     }
                                     disabled={isLoadingParent}
-                                    className="text-xs bg-green-600 hover:bg-green-700 text-white"
+                                    className="text-xs bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
                                   >
                                     <CheckCircle2 className="mr-1 h-4 w-4" />
                                     Mark Paid
@@ -762,12 +762,12 @@ export default function PerPersonSettlementDetails({
                             key={i}
                             className="bg-green-50 dark:bg-green-950/20 p-3 border-green-200 dark:border-green-800"
                           >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center space-x-2">
-                                <ArrowRight className="h-4 w-4 text-green-600 rotate-180" />
-                                <span className="text-sm">
-                                  <strong>{peopleMap[credit.from]}</strong> will
-                                  pay: {formatCurrency(credit.amount)}
+                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                              <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                <ArrowRight className="h-4 w-4 text-green-600 rotate-180 flex-shrink-0" />
+                                <span className="text-sm min-w-0">
+                                  <strong className="truncate">{peopleMap[credit.from]}</strong> will
+                                  pay: <span className="font-semibold">{formatCurrency(credit.amount)}</span>
                                 </span>
                               </div>
                               <Button
@@ -776,7 +776,7 @@ export default function PerPersonSettlementDetails({
                                 onClick={() =>
                                   handleViewRelevantExpenses(credit, "credit")
                                 }
-                                className="text-xs"
+                                className="text-xs w-full sm:w-auto flex-shrink-0"
                               >
                                 <ExternalLink className="mr-1 h-4 w-4" />
                                 Expenses
