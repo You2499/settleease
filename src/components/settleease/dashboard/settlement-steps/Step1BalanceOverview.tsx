@@ -40,8 +40,8 @@ export default function Step1BalanceOverview({
           Based on all expenses and what each person paid vs. their share
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0 overflow-x-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <CardContent className="pt-2 overflow-x-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-2">
           {Object.entries(personBalances)
             .map(([personId, balance]) => {
               const person = people.find((p) => p.id === personId);
@@ -83,7 +83,7 @@ export default function Step1BalanceOverview({
                 >
                   {/* Status Badge */}
                   <div
-                    className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                    className={`absolute -top-1 -right-1 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10 ${
                       isCreditor
                         ? "bg-green-500 text-white"
                         : isDebtor
@@ -91,11 +91,7 @@ export default function Step1BalanceOverview({
                         : "bg-gray-500 text-white"
                     }`}
                   >
-                    {isCreditor
-                      ? "RECEIVES"
-                      : isDebtor
-                      ? "PAYS"
-                      : "BALANCED"}
+                    {isCreditor ? "RECEIVES" : isDebtor ? "PAYS" : "BALANCED"}
                   </div>
 
                   {/* Person Header */}
@@ -116,14 +112,20 @@ export default function Step1BalanceOverview({
                         <h3 className="font-bold text-gray-900 dark:text-gray-100">
                           {person.name}
                         </h3>
-                        <p className={`text-sm font-medium ${
-                          isCreditor
-                            ? "text-green-700 dark:text-green-300"
+                        <p
+                          className={`text-sm font-medium ${
+                            isCreditor
+                              ? "text-green-700 dark:text-green-300"
+                              : isDebtor
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-gray-600 dark:text-gray-400"
+                          }`}
+                        >
+                          {isCreditor
+                            ? "should receive"
                             : isDebtor
-                            ? "text-red-700 dark:text-red-300"
-                            : "text-gray-600 dark:text-gray-400"
-                        }`}>
-                          {isCreditor ? "should receive" : isDebtor ? "should pay" : "all balanced"}
+                            ? "should pay"
+                            : "all balanced"}
                         </p>
                       </div>
                     </div>
@@ -144,60 +146,80 @@ export default function Step1BalanceOverview({
                   </div>
 
                   {/* Calculation Breakdown */}
-                  <div className={`flex-1 p-3 rounded-lg border-2 flex flex-col justify-between ${
-                    isCreditor
-                      ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
-                      : isDebtor
-                      ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
-                      : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
-                  }`}>
+                  <div
+                    className={`flex-1 p-3 rounded-lg border-2 flex flex-col justify-between ${
+                      isCreditor
+                        ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
+                        : isDebtor
+                        ? "bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700"
+                        : "bg-gray-100 dark:bg-gray-900/30 border-gray-300 dark:border-gray-700"
+                    }`}
+                  >
                     <div className="space-y-1 text-xs flex-1">
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Total paid:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Total paid:
+                        </span>
                         <span className="font-medium text-green-600 dark:text-green-400">
                           +{formatCurrency(balance.totalPaid)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Total owed:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Total owed:
+                        </span>
                         <span className="font-medium text-red-600 dark:text-red-400">
                           -{formatCurrency(balance.totalOwed)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Net settlements:</span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          Net settlements:
+                        </span>
                         <span className="font-medium text-blue-600 dark:text-blue-400">
-                          {(balance.settledAsDebtor - balance.settledAsCreditor) >= 0 ? "+" : ""}
-                          {formatCurrency(balance.settledAsDebtor - balance.settledAsCreditor)}
+                          {balance.settledAsDebtor -
+                            balance.settledAsCreditor >=
+                          0
+                            ? "+"
+                            : ""}
+                          {formatCurrency(
+                            balance.settledAsDebtor - balance.settledAsCreditor
+                          )}
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Final Balance - Always at bottom */}
                     <div className="pt-2 border-t-2 border-gray-300 dark:border-gray-600">
                       <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-800 dark:text-gray-200 text-xs">Net Balance:</span>
-                        <span className={`font-bold text-lg ${
-                          isCreditor
-                            ? "text-green-700 dark:text-green-300"
-                            : isDebtor
-                            ? "text-red-700 dark:text-red-300"
-                            : "text-gray-700 dark:text-gray-300"
-                        }`}>
+                        <span className="font-bold text-gray-800 dark:text-gray-200 text-xs">
+                          Net Balance:
+                        </span>
+                        <span
+                          className={`font-bold text-lg ${
+                            isCreditor
+                              ? "text-green-700 dark:text-green-300"
+                              : isDebtor
+                              ? "text-red-700 dark:text-red-300"
+                              : "text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
                           {isCreditor ? "+" : isDebtor ? "-" : ""}
                           {formatCurrency(Math.abs(balance.netBalance))}
                         </span>
                       </div>
-                      
+
                       {/* Status indicator */}
                       <div className="mt-1 flex items-center justify-center">
-                        <div className={`flex items-center gap-2 text-sm font-medium ${
-                          isBalanced 
-                            ? "text-gray-600 dark:text-gray-400"
-                            : isCreditor
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-red-700 dark:text-red-300"
-                        }`}>
+                        <div
+                          className={`flex items-center gap-2 text-sm font-medium ${
+                            isBalanced
+                              ? "text-gray-600 dark:text-gray-400"
+                              : isCreditor
+                              ? "text-green-700 dark:text-green-300"
+                              : "text-red-700 dark:text-red-300"
+                          }`}
+                        >
                           {isBalanced ? (
                             <>
                               <CheckCircle2 className="w-4 h-4" />
@@ -227,11 +249,13 @@ export default function Step1BalanceOverview({
               </div>
               <div className="text-sm text-green-800 dark:text-green-200 space-y-2">
                 <p>
-                  Each person's net balance is calculated as: <strong>Total Paid - Total Owed</strong>
+                  Each person's net balance is calculated as:{" "}
+                  <strong>Total Paid - Total Owed</strong>
                 </p>
                 <p>
-                  <strong>Green (Receives)</strong> means they paid more than their share, 
-                  <strong> Red (Pays)</strong> means they owe money, and 
+                  <strong>Green (Receives)</strong> means they paid more than
+                  their share,
+                  <strong> Red (Pays)</strong> means they owe money, and
                   <strong> Gray (Balanced)</strong> means they're even.
                 </p>
               </div>

@@ -73,8 +73,8 @@ export default function Step2DirectDebtAnalysis({
           See exactly which expenses contributed to each person's balance
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0 overflow-x-hidden">
-        <div className="space-y-4">
+      <CardContent className="pt-2 overflow-x-hidden">
+        <div className="space-y-4 p-2">
           {/* Show each person's expense breakdown in compact format */}
           {Object.entries(personBalances)
             .sort(
@@ -113,7 +113,7 @@ export default function Step2DirectDebtAnalysis({
                 >
                   {/* Status Badge */}
                   <div
-                    className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
+                    className={`absolute -top-1 -right-1 px-3 py-1 rounded-full text-xs font-bold shadow-sm z-10 ${
                       isCreditor
                         ? "bg-green-500 text-white"
                         : isDebtor

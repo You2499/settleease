@@ -118,11 +118,11 @@ export default function Step3SimplificationProcess({
           internal simplification and algorithmic optimization
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0 overflow-x-hidden">
-        <div className="space-y-6">
+      <CardContent className="pt-2 overflow-x-hidden">
+        <div className="space-y-6 p-2">
           {/* Before: Direct Debts */}
           <div className="relative p-4 bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 rounded-xl border-2 border-red-300 dark:border-red-700">
-            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white shadow-sm">
+            <div className="absolute -top-1 -right-1 px-3 py-1 rounded-full text-xs font-bold bg-red-500 text-white shadow-sm z-10">
               BEFORE
             </div>
 
@@ -223,7 +223,7 @@ export default function Step3SimplificationProcess({
 
           {/* Intermediate: Simplified Debt Structure */}
           <div className="relative p-4 bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950/30 dark:to-indigo-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-700">
-            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm">
+            <div className="absolute -top-1 -right-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm z-10">
               INTERMEDIATE
             </div>
 
@@ -308,7 +308,7 @@ export default function Step3SimplificationProcess({
 
           {/* After: Optimized Payments */}
           <div className="relative p-4 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 rounded-xl border-2 border-green-300 dark:border-green-700">
-            <div className="absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-sm">
+            <div className="absolute -top-1 -right-1 px-3 py-1 rounded-full text-xs font-bold bg-green-500 text-white shadow-sm z-10">
               AFTER
             </div>
 
