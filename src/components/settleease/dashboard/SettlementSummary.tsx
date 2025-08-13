@@ -63,6 +63,9 @@ interface SettlementSummaryProps {
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void;
   onViewExpenseDetailsFromStep2?: (expense: Expense) => void;
+
+  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  categories: any[];
   userRole: UserRole;
 }
 
@@ -77,6 +80,8 @@ export default function SettlementSummary({
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
   onViewExpenseDetailsFromStep2,
+  getCategoryIconFromName,
+  categories,
   userRole,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<"overview" | "person">("overview");
@@ -438,6 +443,8 @@ export default function SettlementSummary({
                 onMarkAsPaid={onMarkAsPaid}
                 onUnmarkSettlementPayment={onUnmarkSettlementPayment}
                 onViewExpenseDetails={onViewExpenseDetails}
+                getCategoryIconFromName={getCategoryIconFromName}
+                categories={categories}
                 isLoadingParent={isLoading}
                 setIsLoadingParent={setIsLoading}
                 userRole={userRole}

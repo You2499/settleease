@@ -153,6 +153,8 @@ export default function DashboardView({
         onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
         onViewExpenseDetails={handleExpenseCardClick}
         onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
+        getCategoryIconFromName={getCategoryIconFromName}
+        categories={dynamicCategories}
         userRole={userRole} 
       />
       <div className="flex-1 flex flex-col">

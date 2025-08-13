@@ -144,7 +144,7 @@ export default function RelevantExpensesModal({
                         return (
                           <Card 
                             key={expense.id}
-                            className="bg-secondary/20 hover:bg-secondary/40 transition-colors cursor-pointer shadow-sm border"
+                            className="bg-secondary/20 cursor-pointer shadow-sm border"
                             onClick={() => onExpenseClick(expense)}
                           >
                             <CardContent className="p-4">

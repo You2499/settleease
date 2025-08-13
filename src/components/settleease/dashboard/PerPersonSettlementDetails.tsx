@@ -10,6 +10,7 @@ import type {
   UserRole,
 } from "@/lib/settleease/types";
 import RelevantExpensesModal from "./RelevantExpensesModal";
+import ExpenseDetailModal from "../ExpenseDetailModal";
 import PersonBalanceOverview from "./person-settlement/PersonBalanceOverview";
 import PersonExpenseBreakdown from "./person-settlement/PersonExpenseBreakdown";
 import PersonSettlementStatus from "./person-settlement/PersonSettlementStatus";
@@ -25,6 +26,11 @@ interface PerPersonSettlementDetailsProps {
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void;
+
+  getCategoryIconFromName: (
+    categoryName: string
+  ) => React.FC<React.SVGProps<SVGSVGElement>>;
+  categories: any[];
   isLoadingParent: boolean;
   setIsLoadingParent: (loading: boolean) => void;
   userRole: UserRole;
@@ -40,6 +46,9 @@ export default function PerPersonSettlementDetails({
   onMarkAsPaid,
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
+
+  getCategoryIconFromName,
+  categories,
   isLoadingParent,
   setIsLoadingParent,
   userRole,
@@ -48,6 +57,10 @@ export default function PerPersonSettlementDetails({
   const [isRelevantExpensesModalOpen, setIsRelevantExpensesModalOpen] =
     useState(false);
   const [modalTitle, setModalTitle] = useState("");
+  const [selectedExpenseFromModal, setSelectedExpenseFromModal] =
+    useState<Expense | null>(null);
+  const [isExpenseDetailFromModalOpen, setIsExpenseDetailFromModalOpen] =
+    useState(false);
 
   // Calculate person's financial summary
   const personSummary = useMemo(() => {
@@ -218,6 +231,12 @@ export default function PerPersonSettlementDetails({
     setIsLoadingParent(false);
   };
 
+  const handleBackFromExpenseModal = () => {
+    setIsExpenseDetailFromModalOpen(false);
+    setSelectedExpenseFromModal(null);
+    // RelevantExpensesModal stays open
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6 overflow-x-hidden">
       {/* Step 1: Person Balance Overview */}
@@ -265,12 +284,26 @@ export default function PerPersonSettlementDetails({
         onOpenChange={setIsRelevantExpensesModalOpen}
         expensesToList={relevantExpenses}
         onExpenseClick={(expense) => {
-          setIsRelevantExpensesModalOpen(false);
-          onViewExpenseDetails(expense);
+          setSelectedExpenseFromModal(expense);
+          setIsExpenseDetailFromModalOpen(true);
         }}
         modalTitle={modalTitle}
         peopleMap={peopleMap}
       />
+
+      {/* ExpenseDetailModal with back button when opened from RelevantExpensesModal */}
+      {selectedExpenseFromModal && (
+        <ExpenseDetailModal
+          isOpen={isExpenseDetailFromModalOpen}
+          onOpenChange={setIsExpenseDetailFromModalOpen}
+          expense={selectedExpenseFromModal}
+          peopleMap={peopleMap}
+          getCategoryIconFromName={getCategoryIconFromName}
+          categories={categories}
+          showBackButton={true}
+          onBack={handleBackFromExpenseModal}
+        />
+      )}
     </div>
   );
 }
