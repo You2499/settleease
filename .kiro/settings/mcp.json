@@ -15,7 +15,8 @@
         "list_tables",
         "execute_sql",
         "list_extensions",
-        "list_migrations"
+        "list_migrations",
+        "apply_migration"
       ]
     }
   }

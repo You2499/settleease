@@ -1,197 +1,168 @@
 # SettleEase
 
-SettleEase is a comprehensive, self-hostable expense management and settlement application designed to simplify group finances. It provides a detailed and user-friendly interface for tracking shared expenses, calculating settlements, and visualizing financial data. Built with Next.js and Supabase, SettleEase offers real-time data synchronization and a robust set of features for transparent and efficient financial management among groups.
+A comprehensive expense management and settlement application designed to simplify group finances. Track shared expenses, calculate settlements, and visualize financial data with real-time synchronization.
 
 ## Features
 
-- **Real-Time Expense Tracking**: Expenses are updated in real-time for all users, ensuring everyone has the most current information.
+- **Real-Time Expense Tracking**: Live updates across all connected users
 - **Flexible Expense Splitting**:
-    - **Equal Split**: Divide expenses equally among all participants.
-    - **Unequal Split**: Manually enter different amounts for each person.
-    - **Itemized Split**: Assign specific items to individuals from a single bill.
-- **Centralized Dashboard**: Get an at-a-glance overview of who owes whom, recent expenses, and overall group balances.
-- **Detailed Analytics**: Visualize your group's spending habits with a variety of charts and tables:
-    - Monthly Spending Trends
-    - Spending by Category (Pie Chart)
-    - Expense Distribution Analysis
-    - Share vs. Paid Comparisons
-    - Spending by Day of the Week
-    - Top Expenses
-- **User & Category Management**: Easily add, remove, or edit people and expense categories.
-- **Settlement Tracking**: Log payments between users to settle debts and keep balances accurate.
-- **Authentication**: Secure user authentication is handled by Supabase Auth.
+  - Equal split among participants
+  - Unequal split with custom amounts
+  - Itemized split for detailed bill breakdown
+- **Smart Settlement Calculation**: Optimized debt settlement algorithm
+- **Comprehensive Analytics**: Visual insights into spending patterns
+- **User & Category Management**: Easy management of people and expense categories
+- **Settlement Tracking**: Log payments to keep balances accurate
+- **Secure Authentication**: Powered by Supabase Auth
 
 ## Technology Stack
 
-- **Framework**: [Next.js](https://nextjs.org/) 15
-- **Backend & Database**: [Supabase](https://supabase.com/)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/) & [Shadcn/UI](https://ui.shadcn.com/)
-- **Data Visualization**: [Recharts](https://recharts.org/)
-- **Forms**: [React Hook Form](https://react-hook-form.com/)
-- **AI (Optional)**: [Google Genkit](https://firebase.google.com/docs/genkit) for potential future AI-powered features.
+- **Frontend**: Next.js 15 with TypeScript
+- **Backend**: Supabase (PostgreSQL + Real-time)
+- **UI**: Tailwind CSS + Shadcn/UI components
+- **Charts**: Recharts for data visualization
+- **Icons**: Lucide React
 
-## Architecture
-
-SettleEase is a single-page application (SPA) built with Next.js. The entire user interface is rendered from a single page (`src/app/page.tsx`), and client-side state management (using React Hooks) controls which view is displayed. Data is fetched from a Supabase PostgreSQL database, and Supabase's real-time capabilities are used to keep all connected clients synchronized.
-
-## Project Structure
-
-Here is a high-level overview of the most important files and directories:
-
-```
-.
-├── src/
-│   ├── app/
-│   │   ├── page.tsx        # Main application component, handles state and logic
-│   │   └── layout.tsx      # Root layout for the application
-│   ├── components/
-│   |   ├── settleease/     # Core application components (Tabs, Modals, Views)
-│   |   └── ui/             # Reusable UI components from Shadcn/UI
-│   ├── lib/
-│   │   ├── settleease/     # Supabase client, types, and utility functions
-│   │   └── utils.ts        # General utility functions
-│   └── hooks/
-│       ├── use-toast.ts    # Custom hook for displaying toast notifications
-│       └── use-mobile.tsx  # Custom hook to detect mobile devices
-├── supabase/               # (You will create this for migrations)
-├── public/                 # Static assets
-└── package.json            # Project dependencies and scripts
-```
-
-## Getting Started: Replicating SettleEase
-
-Follow these instructions to set up your own instance of SettleEase.
+## Quick Start
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v20 or later)
-- [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-- [Git](https://git-scm.com/)
-- A [Supabase](https://supabase.com/) account (free tier is sufficient)
+- Node.js 18+
+- A Supabase account
 
-### 1. Set Up Your Supabase Project
+### 1. Database Setup
 
-1.  **Create a new Supabase project**:
-    - Go to the [Supabase Dashboard](https://app.supabase.io/).
-    - Click "New project" and give it a name (e.g., "SettleEase").
-    - Save your **Project URL** and **`anon` key**. You will need these later.
+Create a new Supabase project and run this SQL:
 
-2.  **Set up the database schema**:
-    - In your Supabase project, go to the "SQL Editor".
-    - Click "New query".
-    - You will need to create the necessary tables. Since the schema is not provided in the repository, here is a basic schema based on the application's code. Execute these SQL commands one by one:
+```sql
+-- People table
+CREATE TABLE public.people (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-    ```sql
-    -- Create People Table
-    CREATE TABLE public.people (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT now()
-    );
+-- Categories table
+CREATE TABLE public.categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL UNIQUE,
+    icon_name TEXT,
+    rank INTEGER DEFAULT 0,
+    created_at TIMESTAMPTZ DEFAULT now()
+);
 
-    -- Create Categories Table
-    CREATE TABLE public.categories (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        name TEXT NOT NULL,
-        icon TEXT,
-        rank INT,
-        created_at TIMESTAMPTZ DEFAULT now()
-    );
+-- Expenses table
+CREATE TABLE public.expenses (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    description TEXT NOT NULL,
+    total_amount NUMERIC NOT NULL,
+    category TEXT REFERENCES public.categories(name),
+    paid_by JSONB,
+    split_method TEXT NOT NULL,
+    shares JSONB,
+    items JSONB,
+    celebration_contribution JSONB,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-    -- Create Expenses Table
-    CREATE TABLE public.expenses (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        description TEXT NOT NULL,
-        amount NUMERIC(10, 2) NOT NULL,
-        category_id UUID REFERENCES public.categories(id),
-        paid_by UUID REFERENCES public.people(id),
-        split_method TEXT NOT NULL, -- 'equal', 'unequal', 'itemwise'
-        shares JSONB, -- For unequal and itemwise splits
-        created_at TIMESTAMPTZ DEFAULT now()
-    );
+-- Settlement payments table
+CREATE TABLE public.settlement_payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    debtor_id UUID REFERENCES public.people(id),
+    creditor_id UUID REFERENCES public.people(id),
+    amount_settled NUMERIC NOT NULL,
+    settled_at TIMESTAMPTZ DEFAULT now(),
+    marked_by_user_id UUID REFERENCES auth.users(id),
+    notes TEXT,
+    status TEXT DEFAULT 'pending'
+);
 
-    -- Create Settlement Payments Table
-    CREATE TABLE public.settlement_payments (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        from_person_id UUID REFERENCES public.people(id),
-        to_person_id UUID REFERENCES public.people(id),
-        amount NUMERIC(10, 2) NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT now()
-    );
-    
-    -- Create User Profiles Table (for roles)
-    CREATE TABLE public.user_profiles (
-      user_id UUID PRIMARY KEY REFERENCES auth.users(id),
-      role TEXT DEFAULT 'user'
-    );
-    
-    -- Function to create a user profile on new user signup
-    CREATE OR REPLACE FUNCTION public.handle_new_user()
-    RETURNS TRIGGER AS $$
-    BEGIN
-      INSERT INTO public.user_profiles (user_id, role)
-      VALUES (new.id, 'user');
-      RETURN new;
-    END;
-    $$ LANGUAGE plpgsql SECURITY DEFINER;
+-- User profiles table
+CREATE TABLE public.user_profiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE REFERENCES auth.users(id),
+    role TEXT DEFAULT 'user',
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-    -- Trigger to call the function on new user signup
-    CREATE TRIGGER on_auth_user_created
-      AFTER INSERT ON auth.users
-      FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+-- Auto-create user profile on signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.user_profiles (user_id, role)
+  VALUES (new.id, 'user');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
-    ```
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+```
 
-3.  **Enable Row Level Security (RLS)**:
-    - For simplicity in a self-hosted setup, you can leave RLS disabled. For a production environment with multiple users who shouldn't see each other's data, you would need to define RLS policies. The provided schema assumes a single group of users with access to all data.
+### 2. Application Setup
 
-### 2. Set Up the Application Locally
+```bash
+# Clone the repository
+git clone <your-repo-url>
+cd settleease
 
-1.  **Clone the repository**:
-    ```bash
-    git clone <repository-url>
-    cd settleease
-    ```
+# Install dependencies
+npm install
 
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+# Create environment file
+cp .env.example .env.local
 
-3.  **Create an environment file**:
-    - Create a new file named `.env.local` in the root of the project.
-    - Add your Supabase credentials to this file:
+# Add your Supabase credentials to .env.local
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-    ```
-    NEXT_PUBLIC_SUPABASE_URL=YOUR_SUPABASE_PROJECT_URL
-    NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
-    ```
+# Run development server
+npm run dev
+```
 
-    - Replace `YOUR_SUPABASE_PROJECT_URL` and `YOUR_SUPABASE_ANON_KEY` with the values from your Supabase project.
+Visit `http://localhost:3000` to start using SettleEase.
 
-4.  **Run the development server**:
-    ```bash
-    npm run dev
-    ```
+## Project Structure
 
-    The application should now be running at [http://localhost:9002](http://localhost:9002).
+```
+src/
+├── app/                    # Next.js app directory
+├── components/
+│   ├── settleease/        # Core application components
+│   └── ui/                # Reusable UI components
+├── lib/
+│   └── settleease/        # Types, utilities, and constants
+└── hooks/                 # Custom React hooks
+```
 
-### 3. Hosting Your SettleEase Instance
+## Deployment
 
-You can host your SettleEase application on any platform that supports Next.js, such as [Vercel](https://vercel.com/) or [Netlify](https://www.netlify.com/).
+### Vercel (Recommended)
 
-#### Deploying with Vercel (Recommended)
+1. Push your code to GitHub
+2. Connect your repository to Vercel
+3. Add environment variables in Vercel dashboard
+4. Deploy automatically
 
-1.  **Push your code to a Git repository** (e.g., GitHub, GitLab).
-2.  **Import your project into Vercel**:
-    - Go to your [Vercel Dashboard](https://vercel.com/dashboard).
-    - Click "Add New..." -> "Project".
-    - Import your Git repository.
-3.  **Configure Environment Variables**:
-    - In the Vercel project settings, go to "Environment Variables".
-    - Add the `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` with the values from your Supabase project.
-4.  **Deploy**:
-    - Vercel will automatically detect that it's a Next.js project and build and deploy it.
+### Other Platforms
 
-Once deployed, you will have your own live instance of SettleEase.
+SettleEase works on any platform supporting Next.js:
+
+- Netlify
+- Railway
+- DigitalOcean App Platform
+- Self-hosted with Docker
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+MIT License - see LICENSE file for details

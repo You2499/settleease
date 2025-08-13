@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # Dependencies
 /node_modules
 /.pnp
@@ -15,11 +13,7 @@
 # Production
 /build
 
-# Misc
-.DS_Store
-*.pem
-
-# Local Environment Variables
+# Environment variables
 .env.local
 .env.development.local
 .env.test.local
@@ -31,6 +25,16 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.pem
+
 # Editor directories and files
 .idea
 .vscode
@@ -40,16 +44,6 @@ pnpm-debug.log*
 *.sln
 *.sw?
 
-# Firebase
-.firebase
-firebase-debug.log
-
-# Genkit
-.genkit/
-.genkit-cache/
-genkit.log 
-
-# Lucide Icons (downloaded during build - 1,628+ files)
-# These are downloaded fresh from GitHub during the prebuild step
+# Lucide Icons (downloaded during build)
 /lucide-icons/
 /src/lib/lucide-icons-metadata.json

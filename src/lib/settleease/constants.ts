@@ -1,5 +1,4 @@
-import { Utensils, Car, ShoppingCart, PartyPopper, Lightbulb, Settings2, FileText, Home, Briefcase, Gift, Heart, Plane, Coffee, Zap, Pizza, Beer, Dumbbell, BookOpen, Film, Music, Globe, Palette, Sprout, Smile, Package, Building, Coins, Handshake, Cigarette } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+// Database table names
 
 export const PEOPLE_TABLE = 'people';
 export const EXPENSES_TABLE = 'expenses';
