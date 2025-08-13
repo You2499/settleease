@@ -131,7 +131,7 @@ export default function PersonExpenseBreakdown({
                 {personExpenses.length} expense
                 {personExpenses.length !== 1 ? "s" : ""} found
               </div>
-              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto">
+              <div className="grid grid-cols-1 gap-2">
                 {personExpenses.map((expense) => {
                   // Calculate this person's involvement in this expense
                   const amountPaid = Array.isArray(expense.paid_by)
