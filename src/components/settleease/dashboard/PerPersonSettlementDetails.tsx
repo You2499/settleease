@@ -34,6 +34,7 @@ interface PerPersonSettlementDetailsProps {
   isLoadingParent: boolean;
   setIsLoadingParent: (loading: boolean) => void;
   userRole: UserRole;
+  onOpenHowItWorksModal: () => void;
 }
 
 export default function PerPersonSettlementDetails({
@@ -52,6 +53,7 @@ export default function PerPersonSettlementDetails({
   isLoadingParent,
   setIsLoadingParent,
   userRole,
+  onOpenHowItWorksModal,
 }: PerPersonSettlementDetailsProps) {
   const [relevantExpenses, setRelevantExpenses] = useState<Expense[]>([]);
   const [isRelevantExpensesModalOpen, setIsRelevantExpensesModalOpen] =
@@ -267,6 +269,7 @@ export default function PerPersonSettlementDetails({
         isLoadingParent={isLoadingParent}
         onMarkAsPaid={handleInternalMarkAsPaid}
         onViewRelevantExpenses={handleViewRelevantExpenses}
+        onOpenHowItWorksModal={onOpenHowItWorksModal}
       />
 
       {/* Payment History (if any) */}

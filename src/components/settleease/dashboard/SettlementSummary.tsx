@@ -448,6 +448,7 @@ export default function SettlementSummary({
                 isLoadingParent={isLoading}
                 setIsLoadingParent={setIsLoading}
                 userRole={userRole}
+                onOpenHowItWorksModal={() => setIsInfoModalOpen(true)}
               />
             ) : (
               <div className="text-sm text-muted-foreground p-3 text-center min-h-[100px] flex items-center justify-center">
