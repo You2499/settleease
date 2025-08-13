@@ -1,32 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import { CreditCard, AlertTriangle, Users, Settings2, PartyPopper, Wallet, Info, FileText, Scale, Calendar as CalendarIcon } from 'lucide-react';
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-
-import { toast } from "@/hooks/use-toast";
+import { CreditCard, AlertTriangle, Users, Wallet } from 'lucide-react';
 
 import PayerInputSection from './addexpense/PayerInputSection';
 import SplitMethodSelector from './addexpense/SplitMethodSelector';
 import EqualSplitSection from './addexpense/EqualSplitSection';
 import UnequalSplitSection from './addexpense/UnequalSplitSection';
 import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
+import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
+import CelebrationSection from './addexpense/CelebrationSection';
+import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
+import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 
-import { EXPENSES_TABLE, AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
-import { formatCurrency } from '@/lib/settleease/utils';
-import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory, CelebrationContribution } from '@/lib/settleease/types';
-import * as LucideIcons from 'lucide-react';
+import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -93,6 +84,33 @@ export default function AddExpenseTab({
 
   const defaultItemCategory = useMemo(() => category || (dynamicCategories.length > 0 ? dynamicCategories[0].name : ''), [category, dynamicCategories]);
 
+  const { handleSubmitExpense } = useExpenseFormLogic({
+    db,
+    supabaseInitializationError,
+    onExpenseAdded,
+  });
+
+  const onSubmit = () => {
+    handleSubmitExpense(
+      description,
+      totalAmount,
+      category,
+      expenseDate,
+      payers,
+      splitMethod,
+      selectedPeopleEqual,
+      unequalShares,
+      items,
+      isMultiplePayers,
+      isCelebrationMode,
+      celebrationPayerId,
+      actualCelebrationAmount,
+      amountToSplit,
+      expenseToEdit,
+      defaultItemCategory,
+      setIsLoading
+    );
+  };
 
   useEffect(() => {
     if (!expenseToEdit) {
@@ -111,19 +129,16 @@ export default function AddExpenseTab({
       
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
           setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
-          // This correctly handles single payer (paid_by.length === 1) and multiple payers
           setPayers(expenseToEdit.paid_by.map(p => ({ 
-            id: p.personId + Date.now().toString() + Math.random().toString(), // unique ID for React key
+            id: p.personId + Date.now().toString() + Math.random().toString(),
             personId: p.personId, 
             amount: p.amount.toString() 
           })));
       } else { 
-        // This case means expenseToEdit.paid_by is empty or not an array.
-        // For an existing expense, this is unusual but we'll default to single payer view.
         setIsMultiplePayers(false);
         setPayers([{ 
           id: Date.now().toString(), 
-          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''), // Fallback if paid_by is missing
+          personId: defaultPayerId || (people.length > 0 ? people[0].id : ''),
           amount: expenseToEdit.total_amount.toString() 
         }]);
       }
@@ -170,7 +185,7 @@ export default function AddExpenseTab({
       // Resetting form for a new expense
       setDescription('');
       setTotalAmount(''); 
-      setCategory(dynamicCategories[0]?.name || ''); // Set to first available dynamic category or empty
+      setCategory(dynamicCategories[0]?.name || '');
       setExpenseDate(new Date());
       setIsMultiplePayers(false);
       setSplitMethod('equal');
@@ -180,7 +195,7 @@ export default function AddExpenseTab({
       setCelebrationAmountInput('');
 
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]); // Amount is initially empty for new expense
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
@@ -210,17 +225,15 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]); // Removed defaultItemCategory
-
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
 
   // Effect to manage payer amount(s) based on totalAmount and isMultiplePayers
   useEffect(() => {
     if (!isMultiplePayers) {
       const currentPayer = payers[0];
-      const expectedAmount = totalAmount; // For single payer, amount is totalAmount
+      const expectedAmount = totalAmount;
 
       if (expenseToEdit) {
-        // We are editing an expense.
         const personIdToUse = currentPayer?.personId || 
                               (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
 
@@ -232,7 +245,6 @@ export default function AddExpenseTab({
           }]);
         }
       } else {
-        // This is a new expense.
         const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
         if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
           setPayers([{
@@ -243,7 +255,6 @@ export default function AddExpenseTab({
         }
       }
     } else {
-      // Logic for multiple payers (e.g., ensure a default row if payers array is empty)
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       if (payers.length === 0 && firstPayerPersonId) {
            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
@@ -254,7 +265,6 @@ export default function AddExpenseTab({
       }
     }
   }, [totalAmount, isMultiplePayers, defaultPayerId, people, expenseToEdit]);
-
 
   useEffect(() => {
     if (expenseToEdit) return; 
@@ -272,8 +282,7 @@ export default function AddExpenseTab({
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 ) {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id), categoryName: defaultItemCategory }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares, defaultItemCategory]); 
-
+  }, [splitMethod, people, expenseToEdit, items, unequalShares, defaultItemCategory]);
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -306,15 +315,12 @@ export default function AddExpenseTab({
     const firstPayerPersonId = payers[0]?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
     if (goingToMultiple) {
-      // When switching to multiple, if there was a single payer with amount, use that amount for the first row.
       const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: firstPayerAmount }]);
     } else {
-      // When switching to single, set amount to totalAmount. Retain selected person if possible.
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
     }
   };
-
 
   const handleEqualSplitChange = (personId: string) => {
     setSelectedPeopleEqual(prev =>
@@ -349,177 +355,6 @@ export default function AddExpenseTab({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const validateForm = useCallback(() => {
-    if (!description.trim()) { toast({ title: "Validation Error", description: "Description cannot be empty.", variant: "destructive" }); return false; }
-    const originalTotalAmountNum = parseFloat(totalAmount);
-    if (isNaN(originalTotalAmountNum) || originalTotalAmountNum <= 0) { toast({ title: "Validation Error", description: "Total Bill Amount must be a positive number.", variant: "destructive" }); return false; }
-    if (!category) { toast({ title: "Validation Error", description: "Category must be selected.", variant: "destructive" }); return false; }
-
-    if (isCelebrationMode) {
-      if (!celebrationPayerId) { toast({ title: "Validation Error", description: "Celebratory payer must be selected.", variant: "destructive" }); return false; }
-      if (actualCelebrationAmount <= 0) { toast({ title: "Validation Error", description: "Celebration contribution amount must be positive.", variant: "destructive" }); return false; }
-      if (actualCelebrationAmount > originalTotalAmountNum) { toast({ title: "Validation Error", description: "Celebration contribution cannot exceed total bill amount.", variant: "destructive" }); return false; }
-    }
-
-    if (payers.some(p => !p.personId)) { toast({ title: "Validation Error", description: "Each payer must be selected.", variant: "destructive" }); return false; }
-    const totalPaidByPayers = payers.reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0);
-    if (Math.abs(totalPaidByPayers - originalTotalAmountNum) > 0.001) { 
-      toast({ title: "Validation Error", description: `Total paid by payers (${formatCurrency(totalPaidByPayers)}) does not match the total bill amount (${formatCurrency(originalTotalAmountNum)}).`, variant: "destructive" }); return false;
-    }
-    if (isMultiplePayers && payers.some(p => (parseFloat(p.amount) || 0) <= 0)) {
-        if (payers.length > 1 || (payers.length ===1 && parseFloat(payers[0].amount || "0") <=0 )) { 
-             toast({ title: "Validation Error", description: "Each payer's amount must be positive if listed.", variant: "destructive" }); return false;
-        }
-    }
-    if (!isMultiplePayers && payers.length === 1 && (parseFloat(payers[0].amount) || 0) <= 0 && originalTotalAmountNum > 0) {
-        toast({ title: "Validation Error", description: "Payer amount must be positive.", variant: "destructive" }); return false;
-    }
-
-    const currentAmountToSplit = amountToSplit; 
-
-    if (splitMethod === 'equal' && selectedPeopleEqual.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one person must be selected for equal split if there's an amount to split.", variant: "destructive" }); return false; }
-    if (splitMethod === 'unequal') {
-      const sumUnequal = Object.values(unequalShares).reduce((sum, val) => sum + (parseFloat(val) || 0), 0);
-      if (Math.abs(sumUnequal - currentAmountToSplit) > 0.001) { toast({ title: "Validation Error", description: `Sum of unequal shares (${formatCurrency(sumUnequal)}) must equal amount to split (${formatCurrency(currentAmountToSplit)}).`, variant: "destructive" }); return false; }
-      if (Object.values(unequalShares).some(val => parseFloat(val || "0") < 0)) { toast({ title: "Validation Error", description: "Unequal shares cannot be negative.", variant: "destructive" }); return false; }
-    }
-    if (splitMethod === 'itemwise') {
-      if (items.length === 0 && currentAmountToSplit > 0.001) { toast({ title: "Validation Error", description: "At least one item must be added for itemwise split if there's an amount to split.", variant: "destructive" }); return false; }
-      if (items.some(item => !item.name.trim() || isNaN(parseFloat(item.price as string)) || parseFloat(item.price as string) <= 0 || item.sharedBy.length === 0 || !item.categoryName) && currentAmountToSplit > 0.001) {
-        toast({ title: "Validation Error", description: "Each item must have a name, positive price, a selected category, and be shared by at least one person if there's an amount to split.", variant: "destructive" }); return false;
-      }
-      const sumItemsOriginalPrices = items.reduce((sum, item) => sum + (parseFloat(item.price as string) || 0), 0);
-
-      if (Math.abs(sumItemsOriginalPrices - originalTotalAmountNum) > 0.001) {
-        toast({ title: "Validation Error", description: `Sum of item prices (${formatCurrency(sumItemsOriginalPrices)}) must equal the total bill amount (${formatCurrency(originalTotalAmountNum)}) before celebration contributions.`, variant: "destructive" }); return false;
-      }
-    }
-    return true;
-  }, [description, totalAmount, category, payers, splitMethod, selectedPeopleEqual, unequalShares, items, isMultiplePayers, isCelebrationMode, celebrationPayerId, actualCelebrationAmount, amountToSplit]);
-
-  const handleSubmitExpense = async () => {
-    if (!validateForm()) return;
-
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Database Error", description: `Supabase client not available. ${supabaseInitializationError || ''}`, variant: "destructive" });
-      return;
-    }
-
-    setIsLoading(true);
-
-    const originalTotalAmountNum = parseFloat(totalAmount);
-
-    const finalPayers = payers
-        .filter(p => p.personId && parseFloat(p.amount) > 0) 
-        .map(p => ({ personId: p.personId, amount: parseFloat(p.amount) }));
-
-    if (finalPayers.length === 0 && originalTotalAmountNum > 0) {
-        toast({ title: "Validation Error", description: "At least one valid payer with a positive amount is required.", variant: "destructive" });
-        setIsLoading(false);
-        return;
-    }
-    
-    let celebrationContributionPayload: CelebrationContribution | null = null;
-    if (isCelebrationMode && celebrationPayerId && actualCelebrationAmount > 0) {
-        celebrationContributionPayload = { personId: celebrationPayerId, amount: actualCelebrationAmount };
-    }
-    
-    const finalAmountEffectivelySplit = amountToSplit; 
-
-    let calculatedShares: { personId: string; amount: number; }[] = [];
-    let expenseItemsPayload: ExpenseItemDetail[] | null = null;
-
-    if (finalAmountEffectivelySplit < 0.001 && splitMethod !== 'itemwise') { 
-        calculatedShares = []; 
-    } else if (splitMethod === 'equal') {
-      const shareAmount = selectedPeopleEqual.length > 0 ? finalAmountEffectivelySplit / selectedPeopleEqual.length : 0;
-      calculatedShares = selectedPeopleEqual.map(personId => ({ personId, amount: shareAmount }));
-    } else if (splitMethod === 'unequal') {
-      calculatedShares = Object.entries(unequalShares)
-        .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0) 
-        .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
-    } else if (splitMethod === 'itemwise') {
-      expenseItemsPayload = items.map(item => ({
-        id: item.id, 
-        name: item.name,
-        price: parseFloat(item.price as string), 
-        sharedBy: item.sharedBy,
-        categoryName: item.categoryName || defaultItemCategory, 
-      }));
-
-      const itemwiseSharesMap: Record<string, number> = {};
-      const sumOfOriginalItemPrices = expenseItemsPayload.reduce((sum, item) => sum + Number(item.price), 0);
-      
-      const reductionFactor = (sumOfOriginalItemPrices > 0.001 && finalAmountEffectivelySplit >= 0) 
-        ? (finalAmountEffectivelySplit / sumOfOriginalItemPrices) 
-        : (sumOfOriginalItemPrices === 0 && finalAmountEffectivelySplit === 0 ? 1 : 0);
-
-
-      items.forEach(item => {
-        const originalItemPrice = parseFloat(item.price as string);
-        const adjustedItemPriceToSplit = originalItemPrice * reductionFactor;
-
-        if (item.sharedBy.length > 0) {
-            const pricePerPersonForItem = adjustedItemPriceToSplit / item.sharedBy.length;
-            item.sharedBy.forEach(personId => {
-            itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPersonForItem;
-            });
-        }
-      });
-      calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({ personId, amount: Math.max(0, amount) })); 
-    }
-
-    try {
-      const commonPayload = {
-        description,
-        total_amount: originalTotalAmountNum, 
-        category,
-        paid_by: finalPayers,
-        split_method: splitMethod,
-        shares: calculatedShares, 
-        items: splitMethod === 'itemwise' ? expenseItemsPayload : null,
-        celebration_contribution: celebrationContributionPayload,
-      };
-
-      let errorPayload: any = null;
-      if (expenseToEdit && expenseToEdit.id) {
-        const { error } = await db
-          .from(EXPENSES_TABLE)
-          .update({ ...commonPayload, created_at: expenseDate?.toISOString(), updated_at: new Date().toISOString() })
-          .eq('id', expenseToEdit.id)
-          .select();
-        errorPayload = error;
-        if (!error) toast({ title: "Expense Updated", description: `${description} has been updated successfully.` });
-      } else {
-        const { error } = await db
-          .from(EXPENSES_TABLE)
-          .insert([{ ...commonPayload, created_at: expenseDate?.toISOString() }])
-          .select();
-        errorPayload = error;
-        if (!error) toast({ title: "Expense Added", description: `${description} has been added successfully.` });
-      }
-
-      if (errorPayload) throw errorPayload;
-      
-      onExpenseAdded(); 
-      if (!expenseToEdit) { 
-        // Fields are reset by the main useEffect if not editing
-      }
-    } catch (error: any) {
-      let errorMessage = "An unknown error occurred while saving the expense.";
-      
-      if (error && typeof error.message === 'string') {
-        errorMessage = error.message;
-      } else if (typeof error === 'string') {
-        errorMessage = error;
-      }
-      console.error("Error saving expense:", errorMessage, error);
-      toast({ title: "Save Error", description: `Could not save expense: ${errorMessage}`, variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
@@ -556,7 +391,8 @@ export default function AddExpenseTab({
     <Card className="shadow-xl rounded-lg h-full flex flex-col">
       <CardHeader className="p-4 sm:p-6 pb-4 border-b">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <CreditCard className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
+          <CreditCard className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          {expenseToEdit ? 'Edit Expense' : 'Add New Expense'}
         </CardTitle>
         <CardDescription className="text-xs sm:text-sm">
           {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
@@ -564,210 +400,93 @@ export default function AddExpenseTab({
       </CardHeader>
       
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 pt-4 sm:pt-6">
-        
-        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-          <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Bill Information</h3>
-          <div className="space-y-3 sm:space-y-4">
-            <div>
-              <Label htmlFor="description" className="text-sm sm:text-base">Description</Label>
-              <Input id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="e.g., Dinner, Groceries" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <div>
-                <Label htmlFor="totalAmount" className="text-sm sm:text-base">Total Bill Amount</Label>
-                <Input id="totalAmount" type="number" value={totalAmount} onChange={e => setTotalAmount(e.target.value)} placeholder="e.g., 100.00" className="mt-1 text-sm sm:text-base h-10 sm:h-11" />
-              </div>
-              <div>
-                <Label htmlFor="category" className="text-sm sm:text-base">Main Category</Label>
-                <Select value={category} onValueChange={setCategory} disabled={dynamicCategories.length === 0}>
-                  <SelectTrigger id="category" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
-                    <SelectValue placeholder="Select main category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dynamicCategories.map(cat => {
-                        const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
-                        return (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          <div className="flex items-center">
-                            <IconComponent className="mr-2 h-4 w-4" />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                        );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <div>
-                <Label htmlFor="expenseDate" className="text-sm sm:text-base">Expense Date</Label>
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                    <PopoverTrigger asChild>
-                        <Button
-                        variant={"outline"}
-                        className={cn(
-                            "w-full justify-start text-left font-normal mt-1 text-sm sm:text-base h-10 sm:h-11",
-                            !expenseDate && "text-muted-foreground"
-                        )}
-                        >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                        <Calendar
-                        mode="single"
-                        selected={expenseDate}
-                        onSelect={(date) => {
-                            setExpenseDate(date);
-                            if (date) setCalendarOpen(false);
-                        }}
-                        initialFocus
-                        />
-                    </PopoverContent>
-                </Popover>
-            </div>
-            {(parseFloat(totalAmount) || 0) > 0 && (
-              <div className="p-3 bg-muted/50 border-dashed border-primary/50 rounded-md">
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <div className="flex items-center text-muted-foreground">
-                          <Wallet className="mr-2 h-4 w-4"/>
-                          <span>Amount to be Split:</span>
-                      </div>
-                      <span className="font-bold text-md sm:text-lg text-primary">{formatCurrency(amountToSplit)}</span>
-                  </div>
-                  {isCelebrationMode && actualCelebrationAmount > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1 text-right">
-                          (After {formatCurrency(actualCelebrationAmount)} contribution by {peopleMap[celebrationPayerId] || 'Payer'})
-                      </p>
-                  )}
-              </div>
-            )}
-          </div>
-        </div>
-        
-        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Users className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />Who Paid?</h3>
-            <PayerInputSection
-                isMultiplePayers={isMultiplePayers}
-                onToggleMultiplePayers={handleToggleMultiplePayers}
-                payers={payers}
-                people={people}
-                defaultPayerId={defaultPayerId}
-                handlePayerChange={handlePayerChange}
-                addPayer={addPayer}
-                removePayer={removePayer}
-                expenseToEdit={expenseToEdit}
-            />
-        </div>
-        
-        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-                <h3 className="text-md sm:text-lg font-semibold flex items-center text-primary">
-                    <PartyPopper className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />Special Contribution
-                </h3>
-                <Checkbox
-                    id="celebrationMode"
-                    checked={isCelebrationMode}
-                    onCheckedChange={(checked) => {
-                        const newIsCelebrationMode = !!checked;
-                        setIsCelebrationMode(newIsCelebrationMode);
-                        if (!newIsCelebrationMode) {
-                        setCelebrationPayerId('');
-                        setCelebrationAmountInput('');
-                        } else if (people.length > 0 && !celebrationPayerId) {
-                        setCelebrationPayerId(defaultPayerId || people[0].id);
-                        }
-                    }}
-                    className="h-5 w-5"
-                    aria-label="Toggle celebration contribution mode"
-                />
-            </div>
-            {isCelebrationMode && (
-                <div className="p-3 sm:p-4 bg-accent/10 shadow-inner space-y-3 sm:space-y-4 mt-2 border border-accent/30 rounded-md">
-                <div className="text-xs flex items-start text-muted-foreground">
-                    <Info size={16} className="mr-2 mt-0.5 shrink-0 text-accent" />
-                    <span>A celebration contribution means one person covers a part of the bill as a treat. This amount is subtracted *before* splitting the remaining cost.</span>
-                </div>
-                <div>
-                    <Label htmlFor="celebrationPayer" className="text-sm sm:text-base">Who is treating?</Label>
-                    <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId} disabled={people.length === 0}>
-                    <SelectTrigger id="celebrationPayer" className="mt-1 text-sm sm:text-base h-10 sm:h-11">
-                        <SelectValue placeholder="Select who is contributing" />
-                    </SelectTrigger>
-                    <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                    </Select>
-                </div>
-                <div>
-                    <Label htmlFor="celebrationAmount" className="text-sm sm:text-base">Contribution Amount</Label>
-                    <Input
-                    id="celebrationAmount"
-                    type="number"
-                    value={celebrationAmountInput}
-                    onChange={e => setCelebrationAmountInput(e.target.value)}
-                    placeholder="Amount they are covering"
-                    className="mt-1 text-sm sm:text-base h-10 sm:h-11"
-                    />
-                    <div className="flex space-x-1 sm:space-x-2 mt-2 flex-wrap gap-1">
-                    {[10, 25, 50, 100].map(perc => (
-                        <Button
-                        key={perc}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            const currentTotalNum = parseFloat(totalAmount) || 0;
-                            if (currentTotalNum > 0) {
-                            setCelebrationAmountInput(((currentTotalNum * perc) / 100).toFixed(2));
-                            } else {
-                            setCelebrationAmountInput('0.00');
-                            }
-                        }}
-                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
-                        >
-                        {perc}% of Bill
-                        </Button>
-                    ))}
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCelebrationAmountInput(totalAmount)}
-                        className="text-xs px-2 sm:px-2.5 py-1 sm:py-1.5 h-auto"
-                        disabled={!totalAmount || parseFloat(totalAmount) <=0}
-                        >
-                        Full Bill Amount
-                        </Button>
-                    </div>
-                </div>
-                </div>
-            )}
-            {!isCelebrationMode && (
-                <p className="text-xs sm:text-sm text-muted-foreground">Toggle the switch on the right if someone is treating for a portion of this bill.</p>
-            )}
-        </div>
+        <SettleEaseErrorBoundary componentName="Expense Basic Info" size="medium">
+          <ExpenseBasicInfo
+            description={description}
+            setDescription={setDescription}
+            totalAmount={totalAmount}
+            setTotalAmount={setTotalAmount}
+            category={category}
+            setCategory={setCategory}
+            expenseDate={expenseDate}
+            setExpenseDate={setExpenseDate}
+            calendarOpen={calendarOpen}
+            setCalendarOpen={setCalendarOpen}
+            dynamicCategories={dynamicCategories}
+          />
+        </SettleEaseErrorBoundary>
 
-        <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary"><Scale className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />How to Split the Cost?</h3>
-            <div className="space-y-3 sm:space-y-4">
+        <SettleEaseErrorBoundary componentName="Celebration Section" size="medium">
+          <CelebrationSection
+            isCelebrationMode={isCelebrationMode}
+            setIsCelebrationMode={setIsCelebrationMode}
+            celebrationPayerId={celebrationPayerId}
+            setCelebrationPayerId={setCelebrationPayerId}
+            celebrationAmountInput={celebrationAmountInput}
+            setCelebrationAmountInput={setCelebrationAmountInput}
+            actualCelebrationAmount={actualCelebrationAmount}
+            totalAmount={totalAmount}
+            amountToSplit={amountToSplit}
+            people={people}
+            peopleMap={peopleMap}
+          />
+        </SettleEaseErrorBoundary>
+
+        <SettleEaseErrorBoundary componentName="Payment Details" size="medium">
+          <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
+              <Wallet className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              Payment Details
+            </h3>
+            <div className="space-y-4 sm:space-y-5">
+              <SettleEaseErrorBoundary componentName="Payer Input Section" size="small">
+                <PayerInputSection
+                  payers={payers}
+                  people={people}
+                  isMultiplePayers={isMultiplePayers}
+                  handlePayerChange={handlePayerChange}
+                  addPayer={addPayer}
+                  removePayer={removePayer}
+                  onToggleMultiplePayers={handleToggleMultiplePayers}
+                  defaultPayerId={defaultPayerId}
+                />
+              </SettleEaseErrorBoundary>
+            </div>
+          </div>
+        </SettleEaseErrorBoundary>
+
+        <SettleEaseErrorBoundary componentName="Split Method" size="medium">
+          <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
+            <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
+              <Wallet className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+              Split Method
+            </h3>
+            <div className="space-y-4 sm:space-y-5">
+              <SettleEaseErrorBoundary componentName="Split Method Selector" size="small">
                 <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
-                
-                {splitMethod === 'equal' && (
-                    <EqualSplitSection 
+              </SettleEaseErrorBoundary>
+              
+              {splitMethod === 'equal' && (
+                <SettleEaseErrorBoundary componentName="Equal Split Section" size="small">
+                  <EqualSplitSection 
                     people={people}
                     selectedPeopleEqual={selectedPeopleEqual}
                     handleEqualSplitChange={handleEqualSplitChange}
-                    />
-                )}
-                {splitMethod === 'unequal' && (
-                    <UnequalSplitSection
+                  />
+                </SettleEaseErrorBoundary>
+              )}
+              {splitMethod === 'unequal' && (
+                <SettleEaseErrorBoundary componentName="Unequal Split Section" size="small">
+                  <UnequalSplitSection
                     people={people}
                     unequalShares={unequalShares}
                     handleUnequalShareChange={handleUnequalShareChange}
-                    />
-                )}
-                {splitMethod === 'itemwise' && (
-                    <ItemwiseSplitSection
+                  />
+                </SettleEaseErrorBoundary>
+              )}
+              {splitMethod === 'itemwise' && (
+                <SettleEaseErrorBoundary componentName="Itemwise Split Section" size="small">
+                  <ItemwiseSplitSection
                     items={items}
                     people={people}
                     dynamicCategories={dynamicCategories}
@@ -775,20 +494,22 @@ export default function AddExpenseTab({
                     handleItemSharedByChange={handleItemSharedByChange}
                     removeItem={removeItem}
                     addItem={handleAddItem}
-                    />
-                )}
+                  />
+                </SettleEaseErrorBoundary>
+              )}
             </div>
-        </div>
+          </div>
+        </SettleEaseErrorBoundary>
       </CardContent>
 
       <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-end gap-2 sm:space-x-3">
         {expenseToEdit && onCancelEdit && (
-            <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">
-              <AlertTriangle className="mr-1 h-4 w-4" />
-              Cancel
-            </Button>
+          <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={isLoading} className="w-full sm:w-auto">
+            <AlertTriangle className="mr-1 h-4 w-4" />
+            Cancel
+          </Button>
         )}
-        <Button onClick={handleSubmitExpense} size="sm" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category) } className="w-full sm:w-auto">
+        <Button onClick={onSubmit} size="sm" disabled={isLoading || (people.length === 0 && !expenseToEdit) || (dynamicCategories.length === 0 && !category)} className="w-full sm:w-auto">
           <CreditCard className="mr-1 h-4 w-4" />
           {isLoading ? (expenseToEdit ? "Updating..." : "Adding...") : (expenseToEdit ? "Update Expense" : "Add Expense")}
         </Button>
@@ -796,7 +517,3 @@ export default function AddExpenseTab({
     </Card>
   );
 }
-
-    
-
-    
