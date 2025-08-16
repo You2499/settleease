@@ -233,14 +233,6 @@ export function calculatePairwiseTransactions(
   const transactions: CalculatedTransaction[] = [];
 
   for (const debtorId in rawPairwiseDebts) {
-    // Check if this person has settled all their debts through any payments
-    const hasSettledAllDebts =
-      netSettlementBalances[debtorId] >= totalDebtObligations[debtorId] - 0.01;
-
-    if (hasSettledAllDebts) {
-      continue; // Skip all debts for this person as they've settled everything
-    }
-
     for (const creditorId in rawPairwiseDebts[debtorId]) {
       let netAmount = rawPairwiseDebts[debtorId][creditorId].amount;
       const alreadySettled = settledAmountsMap[debtorId]?.[creditorId] || 0;
