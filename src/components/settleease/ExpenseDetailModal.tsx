@@ -192,7 +192,7 @@ export default function ExpenseDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
+      <DialogContent className={`max-h-[90vh] overflow-y-auto no-scrollbar ${showBackButton ? 'expense-detail-no-close' : ''}`}>
         {showBackButton && (
           <Button
             variant="outline"
@@ -254,6 +254,11 @@ export default function ExpenseDetailModal({
           </div>
         </div>
       </DialogContent>
+      <style jsx global>{`
+        .expense-detail-no-close .radix-dialog-close {
+          display: none !important;
+        }
+      `}</style>
     </Dialog>
   );
 }

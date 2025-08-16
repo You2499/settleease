@@ -217,44 +217,22 @@ export default function SettlementSummary({
 
   const transactionsToDisplay = useMemo(() => {
     if (simplifySettlement) {
+      // For simplified transactions, always show all transactions
+      // The balanced people toggle only affects the modal view, not the main settlement view
       return simplifiedTransactions;
     }
 
-    // For pairwise transactions, filter out those involving balanced people
-    // unless showBalancedPeople is true
-    if (showBalancedPeople) {
-      return pairwiseTransactions;
-    }
-
-    const visiblePeopleIds = new Set(filteredPeople.map((p) => p.id));
-    return pairwiseTransactions.filter((txn) => {
-      // Show if debtor is visible (they need to see what they owe)
-      if (visiblePeopleIds.has(txn.from)) return true;
-      // Show if creditor is visible (they need to see what they're owed)
-      if (visiblePeopleIds.has(txn.to)) return true;
-      // Hide if both parties are hidden
-      return false;
-    });
+    // For pairwise transactions, always show all transactions in the main view
+    // The balanced people toggle only affects the modal view
+    return pairwiseTransactions;
   }, [
     simplifySettlement,
     simplifiedTransactions,
     pairwiseTransactions,
-    showBalancedPeople,
-    filteredPeople,
   ]);
 
   const unpaidSimplifiedTransactions = useMemo(() => {
-    let filteredTransactions = simplifiedTransactions;
-
-    // Filter out transactions involving balanced people unless showBalancedPeople is true
-    if (!showBalancedPeople) {
-      const visiblePeopleIds = new Set(filteredPeople.map((p) => p.id));
-      filteredTransactions = simplifiedTransactions.filter(
-        (txn) => visiblePeopleIds.has(txn.from) && visiblePeopleIds.has(txn.to)
-      );
-    }
-
-    return filteredTransactions.filter((txn) => {
+    return simplifiedTransactions.filter((txn) => {
       // Check if this transaction has been fully settled
       const settledAmount = settlementPayments
         .filter(
@@ -269,6 +247,23 @@ export default function SettlementSummary({
   }, [
     simplifiedTransactions,
     settlementPayments,
+  ]);
+
+  // Filtered versions for the modal that respect the showBalancedPeople toggle
+  const modalUnpaidSimplifiedTransactions = useMemo(() => {
+    let filteredTransactions = unpaidSimplifiedTransactions;
+
+    // Filter out transactions involving balanced people unless showBalancedPeople is true
+    if (!showBalancedPeople) {
+      const visiblePeopleIds = new Set(filteredPeople.map((p) => p.id));
+      filteredTransactions = unpaidSimplifiedTransactions.filter(
+        (txn) => visiblePeopleIds.has(txn.from) && visiblePeopleIds.has(txn.to)
+      );
+    }
+
+    return filteredTransactions;
+  }, [
+    unpaidSimplifiedTransactions,
     showBalancedPeople,
     filteredPeople,
   ]);
@@ -350,35 +345,18 @@ export default function SettlementSummary({
                             {formatCurrency(txn.amount)}
                           </span>
                           <div className="flex-shrink-0 flex justify-center col-span-1 sm:col-span-1 w-full sm:w-auto">
-                            {(() => {
-                              const visiblePeopleIds = new Set(
-                                filteredPeople.map((p) => p.id)
-                              );
-                              const hasBalancedPerson =
-                                !visiblePeopleIds.has(txn.from) ||
-                                !visiblePeopleIds.has(txn.to);
-
-                              if (hasBalancedPerson) {
-                                return (
-                                  <div className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500 text-white shadow-sm whitespace-nowrap">
-                                    balanced person
-                                  </div>
-                                );
-                              }
-
-                              return userRole === "admin" ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleInternalMarkAsPaid(txn)}
-                                  disabled={isLoading}
-                                  className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
-                                >
-                                  <CheckCircle2 className="mr-1 h-4 w-4" />
-                                  Mark as Paid
-                                </Button>
-                              ) : null;
-                            })()}
+                            {userRole === "admin" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleInternalMarkAsPaid(txn)}
+                                disabled={isLoading}
+                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
+                              >
+                                <CheckCircle2 className="mr-1 h-4 w-4" />
+                                Mark as Paid
+                              </Button>
+                            ) : null}
                           </div>
                         </div>
                       </Card>
@@ -522,7 +500,7 @@ export default function SettlementSummary({
             <div className="min-w-0">
               <Step3SimplificationProcess
                 pairwiseTransactions={pairwiseTransactions}
-                unpaidSimplifiedTransactions={unpaidSimplifiedTransactions}
+                unpaidSimplifiedTransactions={modalUnpaidSimplifiedTransactions}
                 personBalances={filteredPersonBalances}
                 people={filteredPeople}
                 peopleMap={peopleMap}
