@@ -99,7 +99,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
         hideCloseButton={false}
       >
         {/* Search Bar */}
-        <div className="p-4 pb-0">
+        <div className="p-4 pb-0 pr-16">
           <Input
             autoFocus
             placeholder={`Search ${filteredIconNames.length} icons ...`}

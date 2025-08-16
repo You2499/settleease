@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
@@ -223,7 +223,7 @@ export default function ExpenseDetailModalAppleHIG({
       <Dialog open={isOpen} onOpenChange={onOpenChange}>
         <DialogContent
           className="max-h-[90vh] overflow-y-auto no-scrollbar"
-          hideCloseButton={showBackButton}
+          hideCloseButton={true}
         >
           <DialogHeader className="pb-3 border-b">
             <div className="flex items-center justify-between">
@@ -231,21 +231,19 @@ export default function ExpenseDetailModalAppleHIG({
                 Expense Details
               </DialogTitle>
 
-              {/* Integrated Pill with Toggle and Back Button */}
-              <div className="flex items-center bg-muted/20 dark:bg-muted/15 rounded-2xl p-1 border border-border/20 dark:border-border/10">
+              {/* Integrated Control Pill */}
+              <div className="flex items-center bg-muted/20 dark:bg-muted/15 rounded-2xl border border-border/20 dark:border-border/10 overflow-hidden">
                 {showBackButton && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
+                  <button
                     onClick={onBack}
-                    className="p-2 rounded-xl hover:bg-muted/50 transition-colors mr-2"
+                    className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10"
                     title="Back to Step 2"
                   >
-                    <ArrowLeft className="h-4 w-4" />
-                  </Button>
+                    <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                  </button>
                 )}
                 
-                <div className="flex items-center space-x-3 px-3 py-2">
+                <div className="flex items-center space-x-3 px-4 py-3">
                   <Badge
                     variant="secondary"
                     className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
@@ -263,6 +261,18 @@ export default function ExpenseDetailModalAppleHIG({
                     />
                   </div>
                 </div>
+                
+                {!showBackButton && (
+                  <button
+                    onClick={() => onOpenChange(false)}
+                    className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10"
+                    title="Close"
+                  >
+                    <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -426,8 +436,8 @@ export default function ExpenseDetailModalAppleHIG({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[90vh] overflow-hidden flex flex-col bg-gradient-to-br from-background via-background/95 to-muted/20 border-border/30"
-        hideCloseButton={showBackButton}
+        className="max-h-[90vh] overflow-hidden flex flex-col bg-background border-border/30"
+        hideCloseButton={true}
       >
         {/* Header with Integrated Toggle */}
         <DialogHeader className="pb-6 border-b border-border/30">
@@ -441,21 +451,19 @@ export default function ExpenseDetailModalAppleHIG({
               </p>
             </div>
 
-            {/* Integrated Pill with Toggle and Back Button */}
-            <div className="flex items-center bg-muted/30 dark:bg-muted/20 rounded-2xl p-1 border border-border/20 dark:border-border/10">
+            {/* Integrated Control Pill */}
+            <div className="flex items-center bg-muted/30 dark:bg-muted/20 rounded-2xl border border-border/20 dark:border-border/10 overflow-hidden">
               {showBackButton && (
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={onBack}
-                  className="p-2 rounded-xl hover:bg-muted/50 transition-colors mr-2"
+                  className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10"
                   title="Back to Step 2"
                 >
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
+                  <ArrowLeft className="h-4 w-4 text-muted-foreground" />
+                </button>
               )}
               
-              <div className="flex items-center space-x-3 px-3 py-2">
+              <div className="flex items-center space-x-3 px-4 py-3">
                 <Badge
                   variant="secondary"
                   className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
@@ -473,6 +481,18 @@ export default function ExpenseDetailModalAppleHIG({
                   />
                 </div>
               </div>
+              
+              {!showBackButton && (
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10"
+                  title="Close"
+                >
+                  <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
             </div>
           </div>
         </DialogHeader>
