@@ -1,14 +1,28 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
-import { Scale, SlidersHorizontal, ClipboardList, ReceiptText, ShoppingBag, ListTree, Settings2 } from "lucide-react";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import {
+  Scale,
+  SlidersHorizontal,
+  ClipboardList,
+  ReceiptText,
+  ShoppingBag,
+  ListTree,
+  Settings2,
+} from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
-import type { 
-  Expense, 
-  ExpenseItemDetail, 
+import type {
+  Expense,
+  ExpenseItemDetail,
   PersonAggregatedItemShares,
-  Category 
+  Category,
 } from "@/lib/settleease/types";
 
 interface ExpenseSplitDetailsProps {
@@ -19,7 +33,9 @@ interface ExpenseSplitDetailsProps {
   sortedItemwiseBreakdownEntries: Array<[string, any]>;
   peopleMap: Record<string, string>;
   categories: Category[];
-  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  getCategoryIconFromName: (
+    categoryName: string
+  ) => React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
 export default function ExpenseSplitDetails({
@@ -52,7 +68,9 @@ export default function ExpenseSplitDetails({
   };
 
   const sortPersonIdsByName = (ids: string[]) =>
-    ids.slice().sort((a, b) => (peopleMap[a] || "").localeCompare(peopleMap[b] || ""));
+    ids
+      .slice()
+      .sort((a, b) => (peopleMap[a] || "").localeCompare(peopleMap[b] || ""));
 
   return (
     <Card>
@@ -72,7 +90,8 @@ export default function ExpenseSplitDetails({
             <div>
               <CardDescription className="mb-1 sm:mb-1.5 text-xs">
                 Split equally among {expense.shares.length}{" "}
-                {expense.shares.length === 1 ? "person" : "people"} based on the amount of{" "}
+                {expense.shares.length === 1 ? "person" : "people"} based on the
+                amount of{" "}
                 <strong className="text-accent">
                   {formatCurrency(amountEffectivelySplit)}
                 </strong>
@@ -134,13 +153,18 @@ export default function ExpenseSplitDetails({
                   {expense.items && (
                     <>
                       {(() => {
-                        const itemsByCategory: Record<string, ExpenseItemDetail[]> = {};
+                        const itemsByCategory: Record<
+                          string,
+                          ExpenseItemDetail[]
+                        > = {};
                         expense.items!.forEach((item) => {
                           const cat = item.categoryName || "";
                           if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
                           itemsByCategory[cat].push(item);
                         });
-                        const sortedCategoryNames = Object.keys(itemsByCategory).sort(
+                        const sortedCategoryNames = Object.keys(
+                          itemsByCategory
+                        ).sort(
                           (a, b) => getCategoryRank(a) - getCategoryRank(b)
                         );
                         return sortedCategoryNames.flatMap((catName) => [
@@ -150,15 +174,22 @@ export default function ExpenseSplitDetails({
                               className="font-semibold text-primary/80 text-xs mt-2 mb-1 flex items-center"
                             >
                               {getItemCategoryIcon(catName) &&
-                                React.createElement(getItemCategoryIcon(catName), {
-                                  className: "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0",
-                                })}
+                                React.createElement(
+                                  getItemCategoryIcon(catName),
+                                  {
+                                    className:
+                                      "mr-1.5 h-3 w-3 text-muted-foreground flex-shrink-0",
+                                  }
+                                )}
                               {catName}
                             </li>
                           ) : null,
                           ...itemsByCategory[catName].map((item) => {
                             return (
-                              <li key={item.id} className="p-1.5 bg-secondary/20 rounded-sm">
+                              <li
+                                key={item.id}
+                                className="p-1.5 bg-secondary/20 rounded-sm"
+                              >
                                 <div className="flex justify-between items-center">
                                   <span
                                     className="font-medium truncate flex items-center mr-2"
@@ -171,17 +202,23 @@ export default function ExpenseSplitDetails({
                                   </span>
                                 </div>
                                 {(() => {
-                                  const sortedSharedBy = sortPersonIdsByName(item.sharedBy);
+                                  const sortedSharedBy = sortPersonIdsByName(
+                                    item.sharedBy
+                                  );
                                   return (
                                     <div
                                       className="text-muted-foreground/80 pl-1.5 text-[10px] sm:text-xs truncate"
                                       title={`Shared by: ${sortedSharedBy
-                                        .map((pid) => peopleMap[pid] || "Unknown")
+                                        .map(
+                                          (pid) => peopleMap[pid] || "Unknown"
+                                        )
                                         .join(", ")}`}
                                     >
                                       Shared by:{" "}
                                       {sortedSharedBy
-                                        .map((pid) => peopleMap[pid] || "Unknown")
+                                        .map(
+                                          (pid) => peopleMap[pid] || "Unknown"
+                                        )
                                         .join(", ")}
                                     </div>
                                   );
@@ -197,91 +234,125 @@ export default function ExpenseSplitDetails({
                 <p className="text-xs text-muted-foreground mt-1 sm:mt-1.5">
                   Total of original items:{" "}
                   {formatCurrency(
-                    expense.items.reduce((sum, item) => sum + Number(item.price), 0)
+                    expense.items.reduce(
+                      (sum, item) => sum + Number(item.price),
+                      0
+                    )
                   )}
                 </p>
               </div>
 
-              {itemwiseBreakdownForDisplay && amountEffectivelySplit > 0.001 && (
-                <div>
-                  <h4 className="font-medium text-muted-foreground mb-1 sm:mb-1.5 flex items-center">
-                    <ListTree className="mr-2 h-4 w-4" />
-                    Individual Item Shares (Adjusted):
-                  </h4>
-                  <CardDescription className="text-xs mb-1.5 sm:mb-2">
-                    Based on splitting {formatCurrency(amountEffectivelySplit)}. Original item
-                    prices are proportionally reduced before calculating individual shares.
-                  </CardDescription>
-                  <div className="space-y-2">
-                    {sortedItemwiseBreakdownEntries
-                      .filter(([_, details]) => details.totalShareOfAdjustedItems > 0.001)
-                      .map(([personId, details]) => (
-                        <div key={personId} className="space-y-1">
-                          {/* Person header */}
-                          <div className="flex justify-between items-center p-2 bg-secondary/30 rounded border border-border/50">
-                            <span className="font-medium text-sm">
-                              {peopleMap[personId] || "Unknown Person"}
-                            </span>
-                            <span className="font-bold text-primary">
-                              {formatCurrency(details.totalShareOfAdjustedItems)}
-                            </span>
-                          </div>
-                          
-                          {/* Items grouped by category */}
-                          <div className="ml-4 space-y-1">
-                            {(() => {
-                              // Group items by category
-                              const itemsByCategory: Record<string, any[]> = {};
-                              details.items.forEach((itemDetail: any) => {
-                                const cat = itemDetail.itemCategoryName || "Other";
-                                if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
-                                itemsByCategory[cat].push(itemDetail);
-                              });
-                              
-                              // Sort categories by rank
-                              const sortedCategoryNames = Object.keys(itemsByCategory).sort(
-                                (a, b) => getCategoryRank(a) - getCategoryRank(b)
-                              );
-                              
-                              return sortedCategoryNames.map((catName) => (
-                                <div key={catName}>
-                                  {/* Category header */}
-                                  <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
-                                    {getItemCategoryIcon(catName) &&
-                                      React.createElement(getItemCategoryIcon(catName), {
-                                        className: "mr-1.5 h-3 w-3 flex-shrink-0",
-                                      })}
-                                    <span className="uppercase tracking-wide">{catName}</span>
+              {itemwiseBreakdownForDisplay &&
+                amountEffectivelySplit > 0.001 && (
+                  <div>
+                    <h4 className="font-medium text-muted-foreground mb-1 sm:mb-1.5 flex items-center">
+                      <ListTree className="mr-2 h-4 w-4" />
+                      Individual Item Shares (Adjusted):
+                    </h4>
+                    <CardDescription className="text-xs mb-1.5 sm:mb-2">
+                      Based on splitting{" "}
+                      {formatCurrency(amountEffectivelySplit)}. Original item
+                      prices are proportionally reduced before calculating
+                      individual shares.
+                    </CardDescription>
+                    <div className="space-y-2">
+                      {sortedItemwiseBreakdownEntries
+                        .filter(
+                          ([_, details]) =>
+                            details.totalShareOfAdjustedItems > 0.001
+                        )
+                        .map(([personId, details]) => (
+                          <div
+                            key={personId}
+                            className="relative p-3 bg-secondary/30 rounded border border-border/50"
+                          >
+                            {/* Green vertical line */}
+                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l"></div>
+
+                            {/* Person header */}
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="font-medium text-sm">
+                                {peopleMap[personId] || "Unknown Person"}
+                              </span>
+                              <span className="font-bold text-primary">
+                                {formatCurrency(
+                                  details.totalShareOfAdjustedItems
+                                )}
+                              </span>
+                            </div>
+
+                            {/* Items grouped by category */}
+                            <div className="ml-4 space-y-1">
+                              {(() => {
+                                // Group items by category
+                                const itemsByCategory: Record<string, any[]> =
+                                  {};
+                                details.items.forEach((itemDetail: any) => {
+                                  const cat =
+                                    itemDetail.itemCategoryName || "Other";
+                                  if (!itemsByCategory[cat])
+                                    itemsByCategory[cat] = [];
+                                  itemsByCategory[cat].push(itemDetail);
+                                });
+
+                                // Sort categories by rank
+                                const sortedCategoryNames = Object.keys(
+                                  itemsByCategory
+                                ).sort(
+                                  (a, b) =>
+                                    getCategoryRank(a) - getCategoryRank(b)
+                                );
+
+                                return sortedCategoryNames.map((catName) => (
+                                  <div key={catName}>
+                                    {/* Category header */}
+                                    <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
+                                      {getItemCategoryIcon(catName) &&
+                                        React.createElement(
+                                          getItemCategoryIcon(catName),
+                                          {
+                                            className:
+                                              "mr-1.5 h-3 w-3 flex-shrink-0",
+                                          }
+                                        )}
+                                      <span className="uppercase tracking-wide">
+                                        {catName}
+                                      </span>
+                                    </div>
+
+                                    {/* Items in this category with green vertical line */}
+                                    <div className="relative ml-5 space-y-0.5">
+                                      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-green-400"></div>
+                                      {itemsByCategory[catName].map(
+                                        (itemDetail: any) => (
+                                          <div
+                                            key={itemDetail.itemId}
+                                            className="flex justify-between items-center text-xs text-muted-foreground pl-3"
+                                          >
+                                            <span
+                                              className="truncate"
+                                              title={itemDetail.itemName}
+                                            >
+                                              {itemDetail.itemName}
+                                            </span>
+                                            <span className="font-medium ml-2 flex-shrink-0">
+                                              {formatCurrency(
+                                                itemDetail.shareForPerson
+                                              )}
+                                            </span>
+                                          </div>
+                                        )
+                                      )}
+                                    </div>
                                   </div>
-                                  
-                                  {/* Items in this category */}
-                                  <div className="ml-5 space-y-0.5">
-                                    {itemsByCategory[catName].map((itemDetail: any) => (
-                                      <div 
-                                        key={itemDetail.itemId} 
-                                        className="flex justify-between items-center text-xs text-muted-foreground"
-                                      >
-                                        <span 
-                                          className="truncate" 
-                                          title={itemDetail.itemName}
-                                        >
-                                          • {itemDetail.itemName}
-                                        </span>
-                                        <span className="font-medium ml-2 flex-shrink-0">
-                                          {formatCurrency(itemDetail.shareForPerson)}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              ));
-                            })()}
+                                ));
+                              })()}
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
             </div>
           )}
       </CardContent>
