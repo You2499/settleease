@@ -32,8 +32,10 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    hideCloseButton?: boolean;
+  }
+>(({ className, children, hideCloseButton = false, ...props }, ref) => {
   const findTitle = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
       if (!React.isValidElement(node)) return false
@@ -78,10 +80,12 @@ const DialogContent = React.forwardRef<
           </VisuallyHidden>
         )}
         {children}
-        <DialogPrimitive.Close className="absolute top-4 right-4 z-50 bg-background hover:bg-accent border border-border shadow-sm rounded-md p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {!hideCloseButton && (
+          <DialogPrimitive.Close className="absolute top-4 right-4 z-50 bg-background border border-border shadow-sm rounded-md p-2">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Close</span>
+          </DialogPrimitive.Close>
+        )}
       </DialogPrimitive.Content>
     </DialogPortal>
   )

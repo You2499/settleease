@@ -192,17 +192,18 @@ export default function ExpenseDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className={`max-h-[90vh] overflow-y-auto no-scrollbar ${showBackButton ? 'expense-detail-no-close' : ''}`}>
+      <DialogContent 
+        className="max-h-[90vh] overflow-y-auto no-scrollbar"
+        hideCloseButton={showBackButton}
+      >
         {showBackButton && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute top-4 right-4 z-50 bg-background hover:bg-accent border border-border shadow-sm"
+          <button
+            className="absolute top-4 right-4 z-50 bg-background border border-border shadow-sm rounded-md p-2"
             title="Back to Step 2"
             onClick={onBack}
           >
             <ArrowLeft className="h-4 w-4" />
-          </Button>
+          </button>
         )}
         <DialogHeader className="pb-3 border-b">
           <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
@@ -254,11 +255,6 @@ export default function ExpenseDetailModal({
           </div>
         </div>
       </DialogContent>
-      <style jsx global>{`
-        .expense-detail-no-close .radix-dialog-close {
-          display: none !important;
-        }
-      `}</style>
     </Dialog>
   );
 }

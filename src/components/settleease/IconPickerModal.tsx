@@ -95,10 +95,11 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900 icon-picker-no-close"
+        className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900"
+        hideCloseButton={true}
       >
         {/* Search Bar */}
-        <div className="p-4 pb-0">
+        <div className="p-4 pb-0 pr-16">
           <Input
             autoFocus
             placeholder={`Search ${filteredIconNames.length} icons ...`}
@@ -171,9 +172,6 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
         </div>
       </DialogContent>
       <style jsx global>{`
-        .icon-picker-no-close .radix-dialog-close {
-          display: none !important;
-        }
         .no-scrollbar::-webkit-scrollbar {
           display: none !important;
         }
