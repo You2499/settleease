@@ -264,11 +264,8 @@ export default function ExpenseSplitDetails({
                         .map(([personId, details]) => (
                           <div
                             key={personId}
-                            className="relative p-3 bg-secondary/30 rounded border border-border/50"
+                            className="p-3 bg-secondary/30 rounded border border-border/50"
                           >
-                            {/* Green vertical line */}
-                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l"></div>
-
                             {/* Person header */}
                             <div className="flex justify-between items-center mb-2">
                               <span className="font-medium text-sm">
@@ -282,7 +279,7 @@ export default function ExpenseSplitDetails({
                             </div>
 
                             {/* Items grouped by category */}
-                            <div className="ml-4 space-y-1">
+                            <div className="space-y-1">
                               {(() => {
                                 // Group items by category
                                 const itemsByCategory: Record<string, any[]> =
