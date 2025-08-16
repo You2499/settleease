@@ -30,15 +30,15 @@ This document provides comprehensive documentation for the Apple HIG-compliant E
 
 #### **2. Deference**
 - **Content-First Design**: The expense data is the primary focus
-- **Subtle UI Elements**: Borders, shadows, and backgrounds are subtle and don't compete with content
+- **Subtle UI Elements**: Borders and backgrounds are subtle and don't compete with content
 - **Progressive Disclosure**: Collapsible sections allow users to focus on what's important
 - **Clean Layout**: Generous whitespace and organized information hierarchy
 
 #### **3. Depth**
-- **Layered Interface**: Cards and sections create visual depth
-- **Subtle Shadows**: Box shadows create depth without being distracting
+- **Layered Interface**: Cards and sections create visual depth through color and spacing
+- **Clean Design**: Flat design without distracting shadows for modern appearance
 - **Rounded Corners**: Consistent 12px-16px border radius throughout
-- **Hover States**: Interactive elements have subtle hover effects
+- **Hover States**: Interactive elements have smooth color transitions
 
 #### **4. Accessibility**
 - **High Contrast**: Text meets WCAG contrast requirements
@@ -201,10 +201,12 @@ import ExpenseDetailModal from "@/components/settleease/ExpenseDetailModal";
 4. **Switch Back**: Toggle off to return to original design anytime
 
 ### **Design Toggle**
-Users will see a toggle switch in the top-right corner of the modal:
+Users will see an integrated pill design in the top-right corner of the modal:
 - **Beta Badge**: Indicates this is a new experimental design
-- **Apple Design Toggle**: Switch between old and new designs
+- **New Design Toggle**: Switch between original and new designs
+- **Integrated Layout**: Toggle and back button housed in a unified pill design
 - **Smooth Transition**: Instant switching with no data loss
+- **Clean Interface**: No overlapping elements or visual conflicts
 
 ## 🌟 Benefits
 
@@ -255,7 +257,7 @@ Users will see a toggle switch in the top-right corner of the modal:
 - **✅ Full Dark Mode Support**: All components adapt seamlessly to dark theme
 - **✅ Enhanced Contrast**: Improved text and background contrast in dark mode
 - **✅ Color Consistency**: Color-coded elements maintain meaning across themes
-- **✅ Shadow Adjustments**: Appropriate shadow opacity for dark backgrounds
+- **✅ Clean Design**: Modern flat design without distracting shadows
 - **✅ Border Refinements**: Subtle borders that work in both light and dark modes
 - **✅ Icon Visibility**: All icons maintain proper contrast and visibility
 

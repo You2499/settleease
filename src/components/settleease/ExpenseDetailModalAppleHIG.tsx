@@ -225,37 +225,44 @@ export default function ExpenseDetailModalAppleHIG({
           className="max-h-[90vh] overflow-y-auto no-scrollbar"
           hideCloseButton={showBackButton}
         >
-          {showBackButton && (
-            <button
-              className="absolute top-4 right-4 z-50 bg-background border border-border shadow-sm rounded-md p-2"
-              title="Back to Step 2"
-              onClick={onBack}
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-          )}
           <DialogHeader className="pb-3 border-b">
             <div className="flex items-center justify-between">
               <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
                 Expense Details
               </DialogTitle>
 
-              {/* Design Toggle */}
-              <div className="flex items-center space-x-3 bg-muted/20 dark:bg-muted/15 rounded-xl p-2 border border-border/20 dark:border-border/10">
-                <Badge
-                  variant="secondary"
-                  className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
-                >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Beta
-                </Badge>
-                <span className="text-xs text-muted-foreground dark:text-muted-foreground/90">
-                  Apple Design
-                </span>
-                <Switch
-                  checked={useAppleDesign}
-                  onCheckedChange={setUseAppleDesign}
-                />
+              {/* Integrated Pill with Toggle and Back Button */}
+              <div className="flex items-center bg-muted/20 dark:bg-muted/15 rounded-2xl p-1 border border-border/20 dark:border-border/10">
+                {showBackButton && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onBack}
+                    className="p-2 rounded-xl hover:bg-muted/50 transition-colors mr-2"
+                    title="Back to Step 2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                
+                <div className="flex items-center space-x-3 px-3 py-2">
+                  <Badge
+                    variant="secondary"
+                    className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    Beta
+                  </Badge>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                      New Design
+                    </span>
+                    <Switch
+                      checked={useAppleDesign}
+                      onCheckedChange={setUseAppleDesign}
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </DialogHeader>
@@ -351,13 +358,13 @@ export default function ExpenseDetailModalAppleHIG({
     const isExpanded = expandedSections.has(id);
 
     return (
-      <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden shadow-sm hover:shadow-md dark:shadow-black/10 dark:hover:shadow-black/20 transition-shadow">
+      <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden transition-colors hover:bg-card/80 dark:hover:bg-card/90">
         <button
           onClick={() => toggleSection(id)}
           className="w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5 hover:from-muted/30 hover:to-muted/20 dark:hover:from-muted/25 dark:hover:to-muted/15 transition-all duration-200 active:scale-[0.98]"
         >
           <div className="flex items-center space-x-3">
-            <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl shadow-sm dark:shadow-black/10">
+            <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl">
               <Icon className="h-5 w-5 text-primary dark:text-primary/90" />
             </div>
             <span className="font-semibold text-base text-foreground dark:text-foreground/95">
@@ -396,7 +403,7 @@ export default function ExpenseDetailModalAppleHIG({
     <div className="flex items-center justify-between py-3 px-4 bg-muted/20 dark:bg-muted/15 rounded-xl hover:bg-muted/30 dark:hover:bg-muted/25 transition-colors">
       <div className="flex items-center space-x-3">
         {Icon && (
-          <div className="p-1.5 bg-background dark:bg-background/80 rounded-lg shadow-sm dark:shadow-black/10">
+          <div className="p-1.5 bg-background dark:bg-background/80 rounded-lg">
             <Icon className="h-4 w-4 text-muted-foreground dark:text-muted-foreground/80" />
           </div>
         )}
@@ -419,50 +426,52 @@ export default function ExpenseDetailModalAppleHIG({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[90vh] overflow-hidden flex flex-col bg-gradient-to-br from-background via-background/95 to-muted/20 border-border/30 shadow-2xl dark:shadow-black/20"
+        className="max-h-[90vh] overflow-hidden flex flex-col bg-gradient-to-br from-background via-background/95 to-muted/20 border-border/30"
         hideCloseButton={showBackButton}
       >
-        {/* Header with Toggle */}
+        {/* Header with Integrated Toggle */}
         <DialogHeader className="pb-6 border-b border-border/30">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div>
+              <DialogTitle className="text-2xl font-bold text-foreground mb-1">
+                Expense Details
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                {expense.description}
+              </p>
+            </div>
+
+            {/* Integrated Pill with Toggle and Back Button */}
+            <div className="flex items-center bg-muted/30 dark:bg-muted/20 rounded-2xl p-1 border border-border/20 dark:border-border/10">
               {showBackButton && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={onBack}
-                  className="p-2 rounded-xl hover:bg-muted/50 transition-colors"
+                  className="p-2 rounded-xl hover:bg-muted/50 transition-colors mr-2"
+                  title="Back to Step 2"
                 >
-                  <ArrowLeft className="h-5 w-5" />
+                  <ArrowLeft className="h-4 w-4" />
                 </Button>
               )}
-              <div>
-                <DialogTitle className="text-2xl font-bold text-foreground mb-1">
-                  Expense Details
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground">
-                  {expense.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Design Toggle */}
-            <div className="flex items-center space-x-3 bg-muted/30 dark:bg-muted/20 rounded-2xl p-3 border border-border/20 dark:border-border/10">
-              <Badge
-                variant="secondary"
-                className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                Beta
-              </Badge>
-              <div className="flex items-center space-x-2">
-                <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
-                  Apple Design
-                </span>
-                <Switch
-                  checked={useAppleDesign}
-                  onCheckedChange={setUseAppleDesign}
-                />
+              
+              <div className="flex items-center space-x-3 px-3 py-2">
+                <Badge
+                  variant="secondary"
+                  className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+                >
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Beta
+                </Badge>
+                <div className="flex items-center space-x-2">
+                  <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                    New Design
+                  </span>
+                  <Switch
+                    checked={useAppleDesign}
+                    onCheckedChange={setUseAppleDesign}
+                  />
+                </div>
               </div>
             </div>
           </div>

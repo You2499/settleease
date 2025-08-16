@@ -96,10 +96,10 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
         className="max-w-4xl w-full h-[80vh] max-h-[90vh] bg-background p-0 flex flex-col dark:bg-neutral-900"
-        hideCloseButton={true}
+        hideCloseButton={false}
       >
         {/* Search Bar */}
-        <div className="p-4 pb-0 pr-16">
+        <div className="p-4 pb-0">
           <Input
             autoFocus
             placeholder={`Search ${filteredIconNames.length} icons ...`}
