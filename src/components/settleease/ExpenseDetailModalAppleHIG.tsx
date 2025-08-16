@@ -62,7 +62,7 @@ export default function ExpenseDetailModalAppleHIG({
 }: ExpenseDetailModalAppleHIGProps) {
   const [useAppleDesign, setUseAppleDesign] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(["general"])
+    new Set(["general", "payment", "split", "summary"])
   );
 
   const categoryObj = categories.find((cat) => cat.name === expense.category);
@@ -231,29 +231,32 @@ export default function ExpenseDetailModalAppleHIG({
                 Expense Details
               </DialogTitle>
 
-              {/* Integrated Control Pill */}
+              {/* Integrated Control Pill - Mobile Optimized */}
               <div className="flex items-center bg-muted/20 dark:bg-muted/15 rounded-2xl border border-border/20 dark:border-border/10 overflow-hidden">
                 {showBackButton && (
                   <button
                     onClick={onBack}
-                    className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10"
+                    className="flex items-center justify-center p-2 sm:p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10 min-w-[44px] min-h-[44px]"
                     title="Back to Step 2"
                   >
                     <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                   </button>
                 )}
                 
-                <div className="flex items-center space-x-3 px-4 py-3">
+                <div className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-4 py-2 sm:py-3">
                   <Badge
                     variant="secondary"
-                    className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+                    className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30 hidden sm:flex"
                   >
                     <Sparkles className="h-3 w-3 mr-1" />
                     Beta
                   </Badge>
-                  <div className="flex items-center space-x-2">
-                    <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                  <div className="flex items-center space-x-1 sm:space-x-2">
+                    <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90 hidden sm:inline">
                       New Design
+                    </span>
+                    <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90 sm:hidden">
+                      New
                     </span>
                     <Switch
                       checked={useAppleDesign}
@@ -265,7 +268,7 @@ export default function ExpenseDetailModalAppleHIG({
                 {!showBackButton && (
                   <button
                     onClick={() => onOpenChange(false)}
-                    className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10"
+                    className="flex items-center justify-center p-2 sm:p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10 min-w-[44px] min-h-[44px]"
                     title="Close"
                   >
                     <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -451,29 +454,32 @@ export default function ExpenseDetailModalAppleHIG({
               </p>
             </div>
 
-            {/* Integrated Control Pill */}
+            {/* Integrated Control Pill - Mobile Optimized */}
             <div className="flex items-center bg-muted/30 dark:bg-muted/20 rounded-2xl border border-border/20 dark:border-border/10 overflow-hidden">
               {showBackButton && (
                 <button
                   onClick={onBack}
-                  className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10"
+                  className="flex items-center justify-center p-2 sm:p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-r border-border/20 dark:border-border/10 min-w-[44px] min-h-[44px]"
                   title="Back to Step 2"
                 >
                   <ArrowLeft className="h-4 w-4 text-muted-foreground" />
                 </button>
               )}
               
-              <div className="flex items-center space-x-3 px-4 py-3">
+              <div className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-4 py-2 sm:py-3">
                 <Badge
                   variant="secondary"
-                  className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30"
+                  className="text-xs bg-primary/10 dark:bg-primary/15 text-primary border-primary/20 dark:border-primary/30 hidden sm:flex"
                 >
                   <Sparkles className="h-3 w-3 mr-1" />
                   Beta
                 </Badge>
-                <div className="flex items-center space-x-2">
-                  <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90">
+                <div className="flex items-center space-x-1 sm:space-x-2">
+                  <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90 hidden sm:inline">
                     New Design
+                  </span>
+                  <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground/90 sm:hidden">
+                    New
                   </span>
                   <Switch
                     checked={useAppleDesign}
@@ -485,7 +491,7 @@ export default function ExpenseDetailModalAppleHIG({
               {!showBackButton && (
                 <button
                   onClick={() => onOpenChange(false)}
-                  className="flex items-center justify-center p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10"
+                  className="flex items-center justify-center p-2 sm:p-3 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors border-l border-border/20 dark:border-border/10 min-w-[44px] min-h-[44px]"
                   title="Close"
                 >
                   <svg className="h-4 w-4 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
