@@ -212,29 +212,23 @@ export default function ExpenseSplitDetails({
                     Based on splitting {formatCurrency(amountEffectivelySplit)}. Original item
                     prices are proportionally reduced before calculating individual shares.
                   </CardDescription>
-                  <div className="space-y-3 sm:space-y-4">
+                  <div className="space-y-2">
                     {sortedItemwiseBreakdownEntries
                       .filter(([_, details]) => details.totalShareOfAdjustedItems > 0.001)
                       .map(([personId, details]) => (
-                        <div
-                          key={personId}
-                          className="relative p-3 sm:p-4 bg-gradient-to-r from-green-50/50 to-transparent dark:from-green-950/20 dark:to-transparent rounded-lg border border-green-200/50 dark:border-green-800/30"
-                        >
-                          {/* Vertical green line */}
-                          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-green-400 to-green-600 rounded-l-lg"></div>
-                          
+                        <div key={personId} className="space-y-1">
                           {/* Person header */}
-                          <div className="flex justify-between items-center mb-3">
-                            <span className="font-semibold text-base text-green-800 dark:text-green-200">
+                          <div className="flex justify-between items-center p-2 bg-secondary/30 rounded border border-border/50">
+                            <span className="font-medium text-sm">
                               {peopleMap[personId] || "Unknown Person"}
                             </span>
-                            <span className="font-bold text-lg text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-md">
+                            <span className="font-bold text-primary">
                               {formatCurrency(details.totalShareOfAdjustedItems)}
                             </span>
                           </div>
                           
-                          {/* Items list with category grouping and indentation */}
-                          <div className="ml-4 space-y-2">
+                          {/* Items grouped by category */}
+                          <div className="ml-4 space-y-1">
                             {(() => {
                               // Group items by category
                               const itemsByCategory: Record<string, any[]> = {};
@@ -250,38 +244,30 @@ export default function ExpenseSplitDetails({
                               );
                               
                               return sortedCategoryNames.map((catName) => (
-                                <div key={catName} className="space-y-1">
+                                <div key={catName}>
                                   {/* Category header */}
-                                  <div className="flex items-center text-xs font-medium text-green-700 dark:text-green-300 mb-1">
+                                  <div className="flex items-center text-xs font-medium text-muted-foreground mb-1">
                                     {getItemCategoryIcon(catName) &&
                                       React.createElement(getItemCategoryIcon(catName), {
-                                        className: "mr-2 h-3 w-3 text-green-600 dark:text-green-400 flex-shrink-0",
+                                        className: "mr-1.5 h-3 w-3 flex-shrink-0",
                                       })}
                                     <span className="uppercase tracking-wide">{catName}</span>
                                   </div>
                                   
                                   {/* Items in this category */}
-                                  <div className="ml-5 space-y-1">
+                                  <div className="ml-5 space-y-0.5">
                                     {itemsByCategory[catName].map((itemDetail: any) => (
                                       <div 
                                         key={itemDetail.itemId} 
-                                        className="flex justify-between items-center py-1 px-2 bg-white/60 dark:bg-gray-800/40 rounded border-l-2 border-green-300 dark:border-green-700"
+                                        className="flex justify-between items-center text-xs text-muted-foreground"
                                       >
-                                        <div className="flex items-center min-w-0 flex-1">
-                                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2 flex-shrink-0"></div>
-                                          <span 
-                                            className="text-xs text-gray-700 dark:text-gray-300 truncate" 
-                                            title={itemDetail.itemName}
-                                          >
-                                            {itemDetail.itemName}
-                                          </span>
-                                          {itemDetail.sharedByCount > 1 && (
-                                            <span className="ml-2 text-[10px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-1 py-0.5 rounded flex-shrink-0">
-                                              ÷{itemDetail.sharedByCount}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <span className="text-xs font-medium text-green-700 dark:text-green-300 ml-2 flex-shrink-0">
+                                        <span 
+                                          className="truncate" 
+                                          title={itemDetail.itemName}
+                                        >
+                                          • {itemDetail.itemName}
+                                        </span>
+                                        <span className="font-medium ml-2 flex-shrink-0">
                                           {formatCurrency(itemDetail.shareForPerson)}
                                         </span>
                                       </div>
