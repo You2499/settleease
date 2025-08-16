@@ -504,7 +504,7 @@ export default function ExpenseDetailModalAppleHIG({
         </DialogHeader>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto space-y-5 py-4">
+        <div className="flex-1 overflow-y-auto space-y-5 py-4 no-scrollbar">
           {/* General Information */}
           <Section id="general" title="General Information" icon={Info}>
             <div className="space-y-3">
