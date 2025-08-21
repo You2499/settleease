@@ -144,21 +144,23 @@ export default function DashboardView({
   }
 
   return (
-    <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6">
+    <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
       <div className="flex items-center justify-end">
         <Button variant="outline" size="sm" onClick={() => setShowComprehensiveDebug((s) => !s)}>
           {showComprehensiveDebug ? 'Hide Debug' : 'Show Debug'}
         </Button>
       </div>
       {showComprehensiveDebug && (
-        <ComprehensiveDebug
-          people={people}
-          expenses={expenses}
-          settlementPayments={settlementPayments}
-          peopleMap={peopleMap}
-          categories={dynamicCategories}
-          userRole={userRole}
-        />
+        <div className="flex-1 min-h-0">
+          <ComprehensiveDebug
+            people={people}
+            expenses={expenses}
+            settlementPayments={settlementPayments}
+            peopleMap={peopleMap}
+            categories={dynamicCategories}
+            userRole={userRole}
+          />
+        </div>
       )}
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}

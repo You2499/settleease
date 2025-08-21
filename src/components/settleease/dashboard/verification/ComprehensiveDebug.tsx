@@ -337,7 +337,7 @@ export default function ComprehensiveDebug({
   };
 
   return (
-    <Card className="shadow-lg">
+    <Card className="shadow-lg h-full flex flex-col">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -366,7 +366,7 @@ export default function ComprehensiveDebug({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
         <div className="mb-3 flex items-center justify-between bg-muted/50 p-2 rounded-md">
           <div className="text-xs sm:text-sm">
             Overview descriptions
@@ -394,7 +394,7 @@ export default function ComprehensiveDebug({
           </div>
         </div>
 
-        <ScrollArea className="max-h-[65vh] border rounded-md p-2">
+        <ScrollArea className="flex-1 min-h-0 border rounded-md p-2">
           <div className="space-y-4">
             {/* Overview: People balances */}
             <section className="p-2 rounded-md border">
