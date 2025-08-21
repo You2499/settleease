@@ -339,7 +339,7 @@ export default function ComprehensiveDebug({
   return (
     <Card className="shadow-lg h-full flex flex-col">
       <CardHeader className="pb-2">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <CardTitle className="flex items-center text-lg font-bold">
               <Bug className="mr-2 h-5 w-5 text-purple-600" />
@@ -349,25 +349,32 @@ export default function ComprehensiveDebug({
               Mirrors all values shown across Settlement Hub, How it Works, and Per Person
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={handleCopy}>
-              <Copy className="mr-1 h-4 w-4" /> Copy JSON
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handleCopy} className="">
+              <Copy className="mr-1 h-4 w-4" />
+              <span className="hidden sm:inline">Copy JSON</span>
+              <span className="sm:hidden">Copy</span>
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
-              <Download className="mr-1 h-4 w-4" /> Download JSON
+            <Button variant="outline" size="sm" onClick={handleDownload} className="">
+              <Download className="mr-1 h-4 w-4" />
+              <span className="hidden sm:inline">Download JSON</span>
+              <span className="sm:hidden">Download</span>
             </Button>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowJson((s) => !s)}
+              className=""
             >
-              <FileText className="mr-1 h-4 w-4" /> {showJson ? "Hide" : "Show"} Raw JSON
+              <FileText className="mr-1 h-4 w-4" />
+              <span className="hidden sm:inline">{showJson ? "Hide" : "Show"} Raw JSON</span>
+              <span className="sm:hidden">{showJson ? "Hide" : "JSON"}</span>
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0 flex-1 flex flex-col min-h-0">
-        <div className="mb-3 flex items-center justify-between bg-muted/50 p-2 rounded-md">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between bg-muted/50 p-2 rounded-md">
           <div className="text-xs sm:text-sm">
             Overview descriptions
             <div className="text-muted-foreground">
@@ -383,11 +390,15 @@ export default function ComprehensiveDebug({
             >
               {showBalancedPeople ? (
                 <>
-                  <Eye className="mr-1 h-4 w-4" /> Showing balanced
+                  <Eye className="mr-1 h-4 w-4" />
+                  <span className="hidden sm:inline">Showing balanced</span>
+                  <span className="sm:hidden">Show</span>
                 </>
               ) : (
                 <>
-                  <EyeOff className="mr-1 h-4 w-4" /> Hiding balanced
+                  <EyeOff className="mr-1 h-4 w-4" />
+                  <span className="hidden sm:inline">Hiding balanced</span>
+                  <span className="sm:hidden">Hide</span>
                 </>
               )}
             </Button>

@@ -171,8 +171,8 @@ export default function DashboardView({
             <SheetHeader className="px-4 pt-4">
               <SheetTitle>Comprehensive Debug</SheetTitle>
             </SheetHeader>
-            <div className="h-[80vh] overflow-hidden p-4 pt-2">
-              <div className="h-full">
+            <div className="h-[80vh] flex flex-col p-4 pt-2">
+              <div className="flex-1 min-h-0 overflow-y-auto">
                 <ComprehensiveDebug
                   people={people}
                   expenses={expenses}
