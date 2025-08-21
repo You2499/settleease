@@ -5,10 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
+import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
@@ -42,6 +44,7 @@ export default function DashboardView({
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
+  const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
 
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
     if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
@@ -142,6 +145,21 @@ export default function DashboardView({
 
   return (
     <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6">
+      <div className="flex items-center justify-end">
+        <Button variant="outline" size="sm" onClick={() => setShowComprehensiveDebug((s) => !s)}>
+          {showComprehensiveDebug ? 'Hide Debug' : 'Show Debug'}
+        </Button>
+      </div>
+      {showComprehensiveDebug && (
+        <ComprehensiveDebug
+          people={people}
+          expenses={expenses}
+          settlementPayments={settlementPayments}
+          peopleMap={peopleMap}
+          categories={dynamicCategories}
+          userRole={userRole}
+        />
+      )}
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
