@@ -198,54 +198,17 @@ export function calculatePairwiseTransactions(
     }
   });
 
-  // Calculate net settlement balance for each person
-  const netSettlementBalances: Record<string, number> = {};
-  people.forEach((p) => (netSettlementBalances[p.id] = 0));
-
-  settlementPayments.forEach((sp) => {
-    const amount = Number(sp.amount_settled);
-    netSettlementBalances[sp.debtor_id] =
-      (netSettlementBalances[sp.debtor_id] || 0) + amount;
-    netSettlementBalances[sp.creditor_id] =
-      (netSettlementBalances[sp.creditor_id] || 0) - amount;
-  });
-
-  // Calculate total debt obligations for each person
-  const totalDebtObligations: Record<string, number> = {};
-  people.forEach((p) => (totalDebtObligations[p.id] = 0));
-
-  for (const debtorId in rawPairwiseDebts) {
-    for (const creditorId in rawPairwiseDebts[debtorId]) {
-      totalDebtObligations[debtorId] +=
-        rawPairwiseDebts[debtorId][creditorId].amount;
-    }
-  }
-
-  // Calculate settled amounts for specific debtor-creditor pairs
-  const settledAmountsMap: Record<string, Record<string, number>> = {};
-  settlementPayments.forEach((sp) => {
-    if (!settledAmountsMap[sp.debtor_id]) settledAmountsMap[sp.debtor_id] = {};
-    settledAmountsMap[sp.debtor_id][sp.creditor_id] =
-      (settledAmountsMap[sp.debtor_id][sp.creditor_id] || 0) +
-      Number(sp.amount_settled);
-  });
-
   const transactions: CalculatedTransaction[] = [];
 
   for (const debtorId in rawPairwiseDebts) {
     for (const creditorId in rawPairwiseDebts[debtorId]) {
-      let netAmount = rawPairwiseDebts[debtorId][creditorId].amount;
-      const alreadySettled = settledAmountsMap[debtorId]?.[creditorId] || 0;
-      netAmount -= alreadySettled;
-
-      if (netAmount > 0.01) {
+      const transaction = rawPairwiseDebts[debtorId][creditorId];
+      if (transaction.amount > 0.01) {
         transactions.push({
           from: debtorId,
           to: creditorId,
-          amount: netAmount,
-          contributingExpenseIds: Array.from(
-            rawPairwiseDebts[debtorId][creditorId].expenseIds
-          ),
+          amount: transaction.amount,
+          contributingExpenseIds: Array.from(transaction.expenseIds),
         });
       }
     }
