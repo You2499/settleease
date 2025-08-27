@@ -83,15 +83,15 @@ export default function SettleEasePage() {
     }
   };
 
- const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
+  const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
     return (LucideIcons as any)[iconName] || Settings2;
   }, []);
 
 
   if (isLoadingAuth || (currentUser && isLoadingRole)) {
     const title = "Loading SettleEase";
-    const subtitle = isLoadingAuth 
-      ? "Initializing application and verifying your session. Just a moment..." 
+    const subtitle = isLoadingAuth
+      ? "Initializing application and verifying your session. Just a moment..."
       : "Securing your account details. Almost there...";
     return <AppLoadingScreen title={title} subtitle={subtitle} />;
   }
@@ -122,7 +122,7 @@ export default function SettleEasePage() {
   }
 
   if (isLoadingData && !isDataFetchedAtLeastOnce) {
-     return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
+    return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
   }
 
   // Helper for AddExpenseTab to redirect to dashboard after adding
@@ -149,11 +149,11 @@ export default function SettleEasePage() {
           </header>
           <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar">
             {isLoadingData && isDataFetchedAtLeastOnce && (
-                <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
+              <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
             )}
             {activeView === 'dashboard' && (
-              <SettleEaseErrorBoundary 
-                componentName="Dashboard" 
+              <SettleEaseErrorBoundary
+                componentName="Dashboard"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
@@ -172,8 +172,8 @@ export default function SettleEasePage() {
               </SettleEaseErrorBoundary>
             )}
             {activeView === 'analytics' && (
-              <SettleEaseErrorBoundary 
-                componentName="Analytics" 
+              <SettleEaseErrorBoundary
+                componentName="Analytics"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
@@ -187,66 +187,66 @@ export default function SettleEasePage() {
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'addExpense' && (
-              <SettleEaseErrorBoundary 
-                componentName="Add Expense" 
+              <SettleEaseErrorBoundary
+                componentName="Add Expense"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <AddExpenseTab 
-                  people={people} 
-                  db={db} 
-                  supabaseInitializationError={supabaseInitializationError} 
-                  onExpenseAdded={handleExpenseAddedAndRedirect} 
-                  dynamicCategories={categories} 
+                <AddExpenseTab
+                  people={people}
+                  db={db}
+                  supabaseInitializationError={supabaseInitializationError}
+                  onExpenseAdded={handleExpenseAddedAndRedirect}
+                  dynamicCategories={categories}
                 />
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'editExpenses' && (
-              <SettleEaseErrorBoundary 
-                componentName="Edit Expenses" 
+              <SettleEaseErrorBoundary
+                componentName="Edit Expenses"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <EditExpensesTab 
-                  people={people} 
-                  expenses={expenses} 
-                  db={db} 
-                  supabaseInitializationError={supabaseInitializationError} 
-                  onActionComplete={handleExpenseAddedAndRedirect} 
-                  dynamicCategories={categories} 
+                <EditExpensesTab
+                  people={people}
+                  expenses={expenses}
+                  db={db}
+                  supabaseInitializationError={supabaseInitializationError}
+                  onActionComplete={handleExpenseAddedAndRedirect}
+                  dynamicCategories={categories}
                 />
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'managePeople' && (
-              <SettleEaseErrorBoundary 
-                componentName="Manage People" 
+              <SettleEaseErrorBoundary
+                componentName="Manage People"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <ManagePeopleTab 
-                  people={people} 
-                  db={db} 
-                  supabaseInitializationError={supabaseInitializationError} 
+                <ManagePeopleTab
+                  people={people}
+                  db={db}
+                  supabaseInitializationError={supabaseInitializationError}
                 />
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'manageCategories' && (
-              <SettleEaseErrorBoundary 
-                componentName="Manage Categories" 
+              <SettleEaseErrorBoundary
+                componentName="Manage Categories"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <ManageCategoriesTab 
-                  categories={categories} 
-                  db={db} 
-                  supabaseInitializationError={supabaseInitializationError} 
-                  onCategoriesUpdate={() => fetchAllData(false)} 
+                <ManageCategoriesTab
+                  categories={categories}
+                  db={db}
+                  supabaseInitializationError={supabaseInitializationError}
+                  onCategoriesUpdate={() => fetchAllData(false)}
                 />
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'manageSettlements' && (
-              <SettleEaseErrorBoundary 
-                componentName="Manage Settlements" 
+              <SettleEaseErrorBoundary
+                componentName="Manage Settlements"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
@@ -262,12 +262,23 @@ export default function SettleEasePage() {
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'testErrorBoundary' && (
-              <SettleEaseErrorBoundary 
-                componentName="Test Error Boundary" 
+              <SettleEaseErrorBoundary
+                componentName="Test Error Boundary"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <TestErrorBoundaryTab userRole={userRole} />
+                <TestErrorBoundaryTab
+                  userRole={userRole}
+                  expenses={expenses}
+                  people={people}
+                  peopleMap={peopleMap}
+                  categories={categories}
+                  settlementPayments={settlementPayments}
+                  db={db}
+                  currentUserId={currentUser.id}
+                  getCategoryIconFromName={getCategoryIconFromName}
+                  onActionComplete={() => fetchAllData(false)}
+                />
               </SettleEaseErrorBoundary>
             )}
           </main>

@@ -1,70 +1,47 @@
 "use client";
 
 import React, { useState } from 'react';
-import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart3, Calculator } from 'lucide-react';
+import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart3, Home, Users, DollarSign } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+
+// Import actual components to crash
+import AnalyticsTab from '@/components/settleease/AnalyticsTab';
+import DashboardView from '@/components/settleease/DashboardView';
+import AddExpenseTab from '@/components/settleease/AddExpenseTab';
+import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
-
-// Test components that can be made to crash
-const CrashableComponent = ({ shouldCrash, componentName }: { shouldCrash: boolean; componentName: string }) => {
-  if (shouldCrash) {
-    throw new Error(`Intentional crash in ${componentName} for testing error boundary`);
-  }
-  
-  return (
-    <div className="p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-      <div className="flex items-center gap-2">
-        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-        <span className="text-green-800 dark:text-green-200 font-medium">{componentName} is working correctly</span>
-      </div>
-    </div>
-  );
-};
-
-const AnalyticsChartSimulator = ({ shouldCrash, componentName }: { shouldCrash: boolean; componentName: string }) => {
-  if (shouldCrash) {
-    throw new Error(`Chart rendering failed in ${componentName} - invalid data format`);
-  }
-  
-  return (
-    <div className="h-32 bg-gradient-to-r from-blue-100 to-purple-100 dark:from-blue-900 dark:to-purple-900 rounded-lg flex items-center justify-center">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-        <span className="text-blue-800 dark:text-blue-200 font-medium">Mock Analytics Chart</span>
-      </div>
-    </div>
-  );
-};
-
-const SettlementCalculatorSimulator = ({ shouldCrash, componentName }: { shouldCrash: boolean; componentName: string }) => {
-  if (shouldCrash) {
-    throw new Error(`Settlement calculation failed in ${componentName} - division by zero`);
-  }
-  
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-        <span>Alice owes Bob</span>
-        <span className="font-mono">$25.00</span>
-      </div>
-      <div className="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded">
-        <span>Charlie owes Alice</span>
-        <span className="font-mono">$15.50</span>
-      </div>
-    </div>
-  );
-};
 
 interface TestErrorBoundaryTabProps {
   userRole: 'admin' | 'user' | null;
+  // Props needed to render actual components
+  expenses?: any[];
+  people?: any[];
+  peopleMap?: Record<string, string>;
+  categories?: any[];
+  settlementPayments?: any[];
+  db?: any;
+  currentUserId?: string;
+  getCategoryIconFromName?: (iconName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  onActionComplete?: () => void;
 }
 
-export default function TestErrorBoundaryTab({ userRole }: TestErrorBoundaryTabProps) {
+export default function TestErrorBoundaryTab({ 
+  userRole, 
+  expenses = [], 
+  people = [], 
+  peopleMap = {}, 
+  categories = [], 
+  settlementPayments = [], 
+  db, 
+  currentUserId = '', 
+  getCategoryIconFromName,
+  onActionComplete 
+}: TestErrorBoundaryTabProps) {
   const [crashStates, setCrashStates] = useState<Record<string, boolean>>({});
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
 
@@ -86,38 +63,116 @@ export default function TestErrorBoundaryTab({ userRole }: TestErrorBoundaryTabP
     setTestResults({});
   };
 
+  // Default fallback function for getCategoryIconFromName
+  const defaultGetCategoryIcon = (iconName: string) => {
+    return () => React.createElement('div', { className: 'w-4 h-4 bg-gray-400 rounded' });
+  };
+
+  // Default fallback function for onActionComplete
+  const defaultOnActionComplete = () => {
+    console.log('Action completed in test environment');
+  };
+
+  // Create wrapper components that crash when needed
+  const CrashableAnalyticsTab = ({ shouldCrash }: { shouldCrash: boolean }) => {
+    if (shouldCrash) {
+      throw new Error('Analytics Tab crashed: Invalid data processing in chart rendering');
+    }
+    return (
+      <AnalyticsTab
+        expenses={expenses}
+        people={people}
+        peopleMap={peopleMap}
+        dynamicCategories={categories}
+        getCategoryIconFromName={getCategoryIconFromName || defaultGetCategoryIcon}
+      />
+    );
+  };
+
+  const CrashableDashboardView = ({ shouldCrash }: { shouldCrash: boolean }) => {
+    if (shouldCrash) {
+      throw new Error('Dashboard View crashed: Settlement calculation failed with invalid expense data');
+    }
+    return (
+      <DashboardView
+        expenses={expenses}
+        people={people}
+        peopleMap={peopleMap}
+        dynamicCategories={categories}
+        getCategoryIconFromName={getCategoryIconFromName || defaultGetCategoryIcon}
+        settlementPayments={settlementPayments}
+        db={db}
+        currentUserId={currentUserId}
+        onActionComplete={onActionComplete || defaultOnActionComplete}
+        userRole={userRole}
+      />
+    );
+  };
+
+  const CrashableAddExpenseTab = ({ shouldCrash }: { shouldCrash: boolean }) => {
+    if (shouldCrash) {
+      throw new Error('Add Expense Tab crashed: Form validation failed with corrupted category data');
+    }
+    return (
+      <AddExpenseTab
+        people={people}
+        db={db}
+        supabaseInitializationError={null}
+        onExpenseAdded={onActionComplete || defaultOnActionComplete}
+        dynamicCategories={categories}
+      />
+    );
+  };
+
+  const CrashableManagePeopleTab = ({ shouldCrash }: { shouldCrash: boolean }) => {
+    if (shouldCrash) {
+      throw new Error('Manage People Tab crashed: Database connection lost during people management operation');
+    }
+    return (
+      <ManagePeopleTab
+        people={people}
+        db={db}
+        supabaseInitializationError={null}
+      />
+    );
+  };
+
   const testComponents = [
     {
-      id: 'analytics-chart',
-      name: 'Analytics Chart',
-      description: 'Simulates complex data visualization components',
-      component: AnalyticsChartSimulator,
-      size: 'small' as const,
-      riskLevel: 'high'
+      id: 'analytics-tab',
+      name: 'Analytics Tab',
+      description: 'Tests actual analytics charts and data visualization',
+      component: CrashableAnalyticsTab,
+      size: 'large' as const,
+      riskLevel: 'high',
+      icon: BarChart3
     },
     {
-      id: 'settlement-calculator',
-      name: 'Settlement Calculator',
-      description: 'Simulates critical business logic calculations',
-      component: SettlementCalculatorSimulator,
-      size: 'medium' as const,
-      riskLevel: 'critical'
+      id: 'dashboard-view',
+      name: 'Dashboard View',
+      description: 'Tests settlement calculations and expense display',
+      component: CrashableDashboardView,
+      size: 'large' as const,
+      riskLevel: 'critical',
+      icon: Home
     },
     {
-      id: 'dashboard-widget',
-      name: 'Dashboard Widget',
-      description: 'Simulates dashboard component rendering',
-      component: CrashableComponent,
-      size: 'small' as const,
-      riskLevel: 'medium'
+      id: 'add-expense-tab',
+      name: 'Add Expense Tab',
+      description: 'Tests expense form and validation logic',
+      component: CrashableAddExpenseTab,
+      size: 'large' as const,
+      riskLevel: 'medium',
+      icon: DollarSign
     },
     {
-      id: 'expense-form',
-      name: 'Expense Form Section',
-      description: 'Simulates form input components',
-      component: CrashableComponent,
-      size: 'medium' as const,
-      riskLevel: 'medium'
+      id: 'manage-people-tab',
+      name: 'Manage People Tab',
+      description: 'Tests people management interface',
+      component: CrashableManagePeopleTab,
+      size: 'large' as const,
+      riskLevel: 'medium',
+      icon: Users
     }
   ];
 
@@ -182,6 +237,7 @@ export default function TestErrorBoundaryTab({ userRole }: TestErrorBoundaryTabP
       <div className="grid gap-6">
         {testComponents.map((test) => {
           const TestComponent = test.component;
+          const IconComponent = test.icon;
           
           return (
             <Card key={test.id} className="overflow-hidden">
@@ -189,6 +245,7 @@ export default function TestErrorBoundaryTab({ userRole }: TestErrorBoundaryTabP
                 <div className="flex items-center justify-between">
                   <div className="space-y-1">
                     <CardTitle className="flex items-center gap-2">
+                      <IconComponent className="h-5 w-5" />
                       {test.name}
                       <Badge variant={getRiskBadgeColor(test.riskLevel)}>
                         {test.riskLevel} risk
@@ -224,10 +281,9 @@ export default function TestErrorBoundaryTab({ userRole }: TestErrorBoundaryTabP
                     setTestResults(prev => ({ ...prev, [test.id]: 'pass' }));
                   }}
                 >
-                  <TestComponent 
-                    shouldCrash={crashStates[test.id] || false} 
-                    componentName={test.name}
-                  />
+                  <div className="max-h-96 overflow-hidden">
+                    <TestComponent shouldCrash={crashStates[test.id] || false} />
+                  </div>
                 </SettleEaseErrorBoundary>
               </CardContent>
             </Card>
