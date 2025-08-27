@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import type { ActiveView } from '@/lib/settleease/types';
 
@@ -20,6 +21,7 @@ export default function TestErrorBoundaryTab({
   userRole,
   setActiveView
 }: TestErrorBoundaryTabProps) {
+  const isMobile = useIsMobile();
   const [crashStates, setCrashStates] = useState(crashTestManager.getAllStates());
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
 
@@ -149,18 +151,18 @@ export default function TestErrorBoundaryTab({
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Bug className="h-8 w-8 text-primary" />
+          <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Bug className="h-6 w-6 md:h-8 md:w-8 text-primary" />
             Test Error Boundaries
           </h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground mt-2 text-sm md:text-base">
             Visually test error boundary coverage by forcing component crashes
           </p>
         </div>
-        <Button onClick={resetAll} variant="outline" className="flex items-center gap-2">
+        <Button onClick={resetAll} variant="outline" className="flex items-center gap-2 w-full md:w-auto">
           <RefreshCw className="h-4 w-4" />
           Reset All Tests
         </Button>
@@ -176,68 +178,70 @@ export default function TestErrorBoundaryTab({
         </AlertDescription>
       </Alert>
 
-      <div className="grid gap-6">
+      <div className="grid gap-4 md:gap-6">
         {testComponents.map((test) => {
           const IconComponent = test.icon;
           const isActive = crashStates[test.id];
           
           return (
             <Card key={test.id} className="overflow-hidden">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="flex items-center gap-2">
-                      <IconComponent className="h-5 w-5" />
-                      {test.name}
-                      <Badge variant={getRiskBadgeColor(test.riskLevel)}>
-                        {test.riskLevel} risk
-                      </Badge>
-                      <Badge variant="outline">
-                        {test.size} boundary
-                      </Badge>
-                      {isActive && (
-                        <Badge variant="destructive" className="animate-pulse">
-                          CRASHING
+              <CardHeader className="pb-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div className="space-y-2">
+                    <CardTitle className="flex flex-wrap items-center gap-2 text-base md:text-lg">
+                      <IconComponent className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
+                      <span className="break-words">{test.name}</span>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant={getRiskBadgeColor(test.riskLevel)} className="text-xs">
+                          {test.riskLevel} risk
                         </Badge>
-                      )}
+                        <Badge variant="outline" className="text-xs">
+                          {test.size} boundary
+                        </Badge>
+                        {isActive && (
+                          <Badge variant="destructive" className="animate-pulse text-xs">
+                            CRASHING
+                          </Badge>
+                        )}
+                      </div>
                     </CardTitle>
-                    <p className="text-sm text-muted-foreground">{test.description}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">{test.description}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap md:flex-nowrap">
                     {getTestResultIcon(testResults[test.id] || 'pending')}
                     <Button
                       onClick={() => navigateToTab(test.tabName)}
                       variant="outline"
-                      size="sm"
-                      className="flex items-center gap-2"
+                      size={isMobile ? "sm" : "sm"}
+                      className="flex items-center gap-2 flex-1 md:flex-initial"
                       disabled={!isActive}
                     >
-                      <IconComponent className="h-4 w-4" />
-                      View Tab
+                      <IconComponent className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="text-xs md:text-sm">View Tab</span>
                     </Button>
                     <Button
                       onClick={() => toggleCrash(test.id)}
                       variant={isActive ? "destructive" : "default"}
-                      size="sm"
-                      className="flex items-center gap-2"
+                      size={isMobile ? "sm" : "sm"}
+                      className="flex items-center gap-2 flex-1 md:flex-initial"
                     >
-                      <Zap className="h-4 w-4" />
-                      {isActive ? 'Stop Crash' : 'Force Crash'}
+                      <Zap className="h-3 w-3 md:h-4 md:w-4" />
+                      <span className="text-xs md:text-sm">{isActive ? 'Stop Crash' : 'Force Crash'}</span>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               <Separator />
-              <CardContent className="p-4">
-                <div className="text-sm text-muted-foreground">
+              <CardContent className="p-3 md:p-4">
+                <div className="text-xs md:text-sm text-muted-foreground">
                   {isActive ? (
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                      <XCircle className="h-4 w-4" />
+                    <div className="flex items-start gap-2 text-red-600 dark:text-red-400">
+                      <XCircle className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 mt-0.5" />
                       <span>Component is currently crashing. Navigate to the tab to see the error boundary.</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
-                      <CheckCircle className="h-4 w-4" />
+                    <div className="flex items-start gap-2 text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-3 w-3 md:h-4 md:w-4 flex-shrink-0 mt-0.5" />
                       <span>Component is running normally.</span>
                     </div>
                   )}
@@ -250,46 +254,46 @@ export default function TestErrorBoundaryTab({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+            <CheckCircle className="h-4 w-4 md:h-5 md:w-5 text-green-600" />
             Error Boundary Coverage Summary
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-green-50 dark:bg-green-950 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+              <div className="text-center p-3 md:p-4 bg-green-50 dark:bg-green-950 rounded-lg">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-                  <span className="text-xl font-bold text-green-600 dark:text-green-400">Excellent</span>
+                  <CheckCircle className="h-5 w-5 md:h-6 md:w-6 text-green-600 dark:text-green-400" />
+                  <span className="text-lg md:text-xl font-bold text-green-600 dark:text-green-400">Excellent</span>
                 </div>
-                <div className="text-sm text-green-800 dark:text-green-200">Add Expense Flow</div>
+                <div className="text-xs md:text-sm text-green-800 dark:text-green-200">Add Expense Flow</div>
                 <div className="text-xs text-muted-foreground">13 error boundaries</div>
               </div>
-              <div className="text-center p-4 bg-red-50 dark:bg-red-950 rounded-lg">
+              <div className="text-center p-3 md:p-4 bg-red-50 dark:bg-red-950 rounded-lg">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
-                  <span className="text-xl font-bold text-red-600 dark:text-red-400">Poor</span>
+                  <XCircle className="h-5 w-5 md:h-6 md:w-6 text-red-600 dark:text-red-400" />
+                  <span className="text-lg md:text-xl font-bold text-red-600 dark:text-red-400">Poor</span>
                 </div>
-                <div className="text-sm text-red-800 dark:text-red-200">Analytics Components</div>
+                <div className="text-xs md:text-sm text-red-800 dark:text-red-200">Analytics Components</div>
                 <div className="text-xs text-muted-foreground">0 internal boundaries</div>
               </div>
-              <div className="text-center p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
+              <div className="text-center p-3 md:p-4 bg-yellow-50 dark:bg-yellow-950 rounded-lg">
                 <div className="flex items-center justify-center gap-2 mb-2">
-                  <AlertTriangle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-                  <span className="text-xl font-bold text-yellow-600 dark:text-yellow-400">Minimal</span>
+                  <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-lg md:text-xl font-bold text-yellow-600 dark:text-yellow-400">Minimal</span>
                 </div>
-                <div className="text-sm text-yellow-800 dark:text-yellow-200">Dashboard Components</div>
+                <div className="text-xs md:text-sm text-yellow-800 dark:text-yellow-200">Dashboard Components</div>
                 <div className="text-xs text-muted-foreground">Top-level only</div>
               </div>
             </div>
             
             <Separator />
             
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs md:text-sm text-muted-foreground">
               <p className="mb-2"><strong>Coverage Analysis:</strong></p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li>7 main tabs have large error boundaries (App level)</li>
+              <ul className="space-y-1 list-disc list-inside pl-2">
+                <li>8 main tabs have large error boundaries (App level)</li>
                 <li>AddExpense flow has comprehensive multi-level protection</li>
                 <li>Analytics and Dashboard components lack internal error boundaries</li>
                 <li>Management features rely solely on top-level boundaries</li>
