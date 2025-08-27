@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug
 } from 'lucide-react';
 import { useTheme } from "next-themes"; 
 
@@ -158,6 +158,17 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                 >
                   <Handshake />
                   <span className="group-data-[state=collapsed]:hidden">Manage Settlements</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNavigation('testErrorBoundary')}
+                  isActive={activeView === 'testErrorBoundary'}
+                  tooltip={{ content: "Test Error Boundary", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start"
+                >
+                  <Bug />
+                  <span className="group-data-[state=collapsed]:hidden">Test Error Boundary</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </>

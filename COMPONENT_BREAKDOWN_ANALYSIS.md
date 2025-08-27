@@ -10,7 +10,7 @@ The SettleEase application follows a well-structured component architecture with
 
 ### Root Level Components
 - **App Layout** (`src/app/layout.tsx`) - Main application wrapper
-- **Main Page** (`src/app/page.tsx`) - Entry point component
+- **Main Page** (`src/app/page.tsx`) - Entry point component with 8 main tab views
 - **Theme Provider** (`src/components/ThemeProvider.tsx`) - Theme management wrapper
 
 ## Core Feature Components (Main Tabs)
@@ -22,13 +22,13 @@ The SettleEase application follows a well-structured component architecture with
 This is one of the most well-decomposed components in the application. It's broken down into 8 specialized sub-components:
 
 #### Sub-components in `src/components/settleease/addexpense/`:
-- **ExpenseBasicInfo.tsx** - Handles description, amount, category, and date inputs
+- **ExpenseBasicInfo.tsx** - Handles description, amount, category, and date inputs (4 internal error boundaries)
 - **PayerInputSection.tsx** - Manages who paid for the expense
 - **SplitMethodSelector.tsx** - Radio buttons for selecting split method (equal/unequal/itemwise)
 - **EqualSplitSection.tsx** - Checkbox selection for equal split participants
 - **UnequalSplitSection.tsx** - Input fields for custom amounts per person
 - **ItemwiseSplitSection.tsx** - Complex item-by-item splitting interface
-- **CelebrationSection.tsx** - Special handling for celebration contributions
+- **CelebrationSection.tsx** - Special handling for celebration contributions (2 internal error boundaries)
 - **ExpenseFormLogic.tsx** - Custom hook containing form submission logic
 
 **Benefits of this breakdown:**
@@ -36,6 +36,7 @@ This is one of the most well-decomposed components in the application. It's brok
 - Easy to test individual pieces
 - Reusable components (e.g., ExpenseBasicInfo is reused in edit mode)
 - Clear separation between UI and business logic
+- Comprehensive error boundary coverage (13 total boundaries)
 
 ### 2. AnalyticsTab (`src/components/settleease/AnalyticsTab.tsx`)
 
@@ -61,6 +62,8 @@ The analytics tab is broken down into 10 specialized chart and table components:
 - Charts can be reused in other contexts
 - Performance optimization possible per component
 
+**Note**: Currently has no internal error boundaries - relies on top-level protection only
+
 ### 3. DashboardView (`src/components/settleease/DashboardView.tsx`)
 
 **Breakdown Level: MODERATELY DECOMPOSED**
@@ -72,6 +75,8 @@ The dashboard is broken down into 2 main sub-components:
 - **ExpenseLog.tsx** - List of all expenses with date grouping
 
 The SettlementSummary itself is further decomposed (see below).
+
+**Note**: Currently has no internal error boundaries - relies on top-level protection only
 
 ## Complex Sub-Components
 
@@ -90,7 +95,8 @@ This component is broken down into multiple layers:
 - **Step3SimplificationProcess.tsx** - Shows how debts are simplified
 
 #### Verification components in `src/components/settleease/dashboard/verification/`:
-- **AlgorithmVerification.tsx** - Algorithm testing interface
+- **AlgorithmVerification.tsx** - Algorithm testing interface (also exists at dashboard level)
+- **ComprehensiveDebug.tsx** - Comprehensive debugging interface
 - **DebugPanel.tsx** - Debug information display
 - **SummaryStats.tsx** - Verification statistics
 - **TestDetailRenderer.tsx** - Individual test result display
@@ -98,6 +104,13 @@ This component is broken down into multiple layers:
 - **VerificationDebug.tsx** - Debug mode interface
 - **VerificationOverview.tsx** - High-level verification info
 - **VerificationResults.tsx** - Verification result display
+- **testRunner.ts** - Test execution logic
+- **testUtils.ts** - Testing utilities
+- **types.ts** - Verification type definitions
+- **index.ts** - Barrel export file
+
+#### Additional dashboard components:
+- **RelevantExpensesModal.tsx** - Modal for showing relevant expenses
 
 ### PerPersonSettlementDetails (`src/components/settleease/dashboard/PerPersonSettlementDetails.tsx`)
 
@@ -121,6 +134,16 @@ This modal is broken down into 4 specialized sections in `src/components/settlee
 - **ExpenseSplitDetails.tsx** - How the expense was split
 - **ExpenseNetEffectSummary.tsx** - Net effect on each person
 
+**Additional expense-detail components:**
+- **ExpenseBasicInfo.tsx** - Basic expense information variant
+- **ExpenseOriginalDesign.tsx** - Original design implementation
+- **ExpensePaymentAnalysis.tsx** - Payment analysis component
+- **types.ts** - Type definitions for expense detail components
+
+**Error Boundary Coverage**: 4 medium-sized error boundaries protecting each section
+
+**Note**: There's also an **ExpenseDetailModalAppleHIG.tsx** variant following Apple Human Interface Guidelines with identical error boundary coverage.
+
 ## Moderately Decomposed Components
 
 ### ExpenseLog (`src/components/settleease/dashboard/ExpenseLog.tsx`)
@@ -129,6 +152,24 @@ This modal is broken down into 4 specialized sections in `src/components/settlee
 
 Uses one sub-component:
 - **ExpenseListItem.tsx** - Individual expense card display
+
+### 4. TestErrorBoundaryTab (`src/components/settleease/TestErrorBoundaryTab.tsx`) **[NEW]**
+
+**Breakdown Level: MODERATELY DECOMPOSED**
+
+Admin-only tab for testing error boundary coverage:
+
+#### Internal Components:
+- **CrashableComponent** - Generic test component that can be forced to crash
+- **AnalyticsChartSimulator** - Simulates chart rendering failures
+- **SettlementCalculatorSimulator** - Simulates calculation failures
+
+**Features:**
+- Visual error boundary testing interface
+- 4 different test scenarios with varying risk levels
+- Real-time test result feedback
+- Coverage summary dashboard
+- Admin-only access control
 
 ### Other Main Tab Components
 
@@ -140,6 +181,8 @@ These components are less decomposed but still well-structured:
 - **ManagePeopleTab.tsx** - People management
 - **ManageSettlementsTab.tsx** - Settlement management
 - **IconPickerModal.tsx** - Icon selection interface
+- **AppLoadingScreen.tsx** - Loading state component
+- **AppSidebar.tsx** - Navigation sidebar with 8 tab options
 
 ## UI Component Library
 
@@ -157,61 +200,84 @@ The application uses a comprehensive set of base UI components:
 - sidebar.tsx, dropdown-menu.tsx
 
 **Feedback Components:**
-- alert-dialog.tsx, toast.tsx, toaster.tsx, skeleton.tsx
+- alert-dialog.tsx, alert.tsx **[NEW]**, toast.tsx, toaster.tsx, skeleton.tsx
 
 **Data Display:**
 - badge.tsx, calendar.tsx, popover.tsx, scroll-area.tsx, separator.tsx, tooltip.tsx
 
 **Error Handling:**
-- ErrorBoundary.tsx, CriticalErrorBoundary.tsx, SettleEaseErrorBoundary.tsx
-- withErrorBoundary.tsx, withSettleEaseErrorBoundary.tsx
+- SettleEaseErrorBoundary.tsx **[ONLY REMAINING - OTHERS REMOVED]**
 
 **Accessibility:**
 - visually-hidden.tsx
 
 ## Error Boundary Strategy
 
-The application implements a comprehensive error boundary strategy:
+The application implements a focused error boundary strategy:
 
-1. **CriticalErrorBoundary** - Catches critical application errors
-2. **SettleEaseErrorBoundary** - Domain-specific error handling with different sizes (small, medium, large)
-3. **withErrorBoundary** - HOC for wrapping components
-4. **withSettleEaseErrorBoundary** - Domain-specific HOC
+1. **SettleEaseErrorBoundary** - Domain-specific error handling with three sizes:
+   - `small` - Individual form inputs and small components
+   - `medium` - Component sections and feature areas  
+   - `large` - Entire tab components and major features
 
-Error boundaries are strategically placed throughout the component tree to isolate failures.
+**Current Implementation:**
+- **App Level**: 8 large error boundaries (one per main tab)
+- **AddExpense Flow**: 13 error boundaries (4 medium + 9 small)
+- **ExpenseDetail Modal**: 4 medium error boundaries
+- **TestErrorBoundary Tab**: Uses error boundaries for testing
+
+**Removed Components**: CriticalErrorBoundary, ErrorBoundary, withErrorBoundary, and withSettleEaseErrorBoundary were removed as unused bloat.
+
+Error boundaries are strategically placed throughout the component tree to isolate failures while maintaining SettleEase branding and theming.
 
 ## Custom Hooks
 
 The application uses several custom hooks for logic separation:
 
 - **useErrorHandler.ts** - Centralized error handling
-- **useSupabaseAuth.ts** - Authentication logic
+- **useSupabaseAuth.ts** - Authentication logic  
 - **useSupabaseData.ts** - Data fetching logic
 - **useSupabaseRealtime.ts** - Real-time updates
 - **use-mobile.tsx** - Mobile detection
 - **use-toast.ts** - Toast notifications
 
+## Supporting Libraries and Utilities
+
+### Core Libraries (`src/lib/settleease/`)
+- **types.ts** - Comprehensive type definitions including new `testErrorBoundary` ActiveView
+- **constants.ts** - Application constants
+- **utils.ts** - Utility functions
+- **settlementCalculations.ts** - Complex settlement algorithm logic
+- **index.ts** - Barrel exports
+
+### Additional Resources
+- **lucide-icons-metadata.json** - Icon metadata for dynamic icon loading
+- **utils.ts** - General utility functions (Tailwind CSS utilities)
+
 ## Component Breakdown Quality Assessment
 
 ### Excellent Decomposition (5/5):
-- **AddExpenseTab** - 8 focused sub-components
+- **AddExpenseTab** - 8 focused sub-components with comprehensive error boundaries
 - **AnalyticsTab** - 10 specialized chart components
-- **SettlementSummary** - Multi-layer breakdown with 12+ sub-components
-- **ExpenseDetailModal** - 4 focused sections
+- **SettlementSummary** - Multi-layer breakdown with 15+ sub-components across 3 subdirectories
+- **ExpenseDetailModal** - 4+ focused sections with error boundary protection
 
 ### Good Decomposition (4/5):
-- **PerPersonSettlementDetails** - 4 focused sub-components
-- **DashboardView** - 2 main components with further breakdown
+- **PerPersonSettlementDetails** - 4 focused sub-components with type definitions
+- **DashboardView** - 2 main components with extensive further breakdown
+- **TestErrorBoundaryTab** - 3 test components with admin access control **[NEW]**
 
 ### Moderate Decomposition (3/5):
 - **ExpenseLog** - Uses ExpenseListItem sub-component
-- **AppSidebar** - Single focused component
+- **AppSidebar** - Single focused component with 8 navigation options
 
 ### Minimal Decomposition (2/5):
 - **AuthForm** - Single component (appropriate for its scope)
 - **ManageCategoriesTab** - Single component
-- **ManagePeopleTab** - Single component
+- **ManagePeopleTab** - Single component  
 - **ManageSettlementsTab** - Single component
+- **AppLoadingScreen** - Single component (appropriate for its scope)
+- **IconPickerModal** - Single component
 
 ## Key Benefits of This Architecture
 
@@ -234,4 +300,18 @@ The architecture successfully balances component granularity with practical main
 
 ## Summary
 
-The SettleEase application showcases a mature component architecture with thoughtful decomposition. The most complex features (expense creation, analytics, settlement calculations) are broken down into highly focused, reusable components, while simpler features maintain appropriate levels of abstraction. This approach results in a maintainable, testable, and scalable codebase.
+The SettleEase application showcases a mature component architecture with thoughtful decomposition. The most complex features (expense creation, analytics, settlement calculations) are broken down into highly focused, reusable components, while simpler features maintain appropriate levels of abstraction.
+
+**Recent Improvements:**
+- Added TestErrorBoundaryTab for visual error boundary testing
+- Cleaned up unused error boundary components (removed 4 bloat files)
+- Enhanced error boundary coverage documentation
+- Added new Alert UI component for better user feedback
+
+**Current Statistics:**
+- **Total Components**: 60+ components across 8 main feature areas
+- **Error Boundary Coverage**: 25+ strategically placed boundaries
+- **Decomposition Quality**: 4 excellent, 3 good, 2 moderate, 6 minimal
+- **Architecture Grade**: A- (Excellent with room for analytics error boundary improvement)
+
+This approach results in a maintainable, testable, and scalable codebase with comprehensive error handling and clear separation of concerns.
