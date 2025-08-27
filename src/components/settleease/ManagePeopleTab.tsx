@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,6 +30,11 @@ interface ManagePeopleTabProps {
 }
 
 export default function ManagePeopleTab({ people, db, supabaseInitializationError }: ManagePeopleTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('managePeople', 'Manage People Tab crashed: Database connection lost during people management operation');
+  });
+
   const [newPersonName, setNewPersonName] = useState('');
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
   const [editingPersonNewName, setEditingPersonNewName] = useState('');

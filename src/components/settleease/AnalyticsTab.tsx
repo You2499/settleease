@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   BarChart3, Users, Eye, UserSquare
 } from 'lucide-react';
@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from '@/components/ui/label';
 
-import { AVAILABLE_CATEGORY_ICONS } from '@/lib/settleease/constants';
+
 import type {
   Expense, Person, Category as DynamicCategory,
   CategoryAnalyticsData, ParticipantAnalyticsData, ExpenseAmountDistributionData,
@@ -28,6 +28,7 @@ import CategoryAnalyticsTable from './analytics/CategoryAnalyticsTable';
 import ParticipantSummaryTable from './analytics/ParticipantSummaryTable';
 import CategorySpendingPieChart from './analytics/CategorySpendingPieChart';
 import ExpenseDistributionChart from './analytics/ExpenseDistributionChart';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 
 interface AnalyticsTabProps {
@@ -63,6 +64,11 @@ export default function AnalyticsTab({
   dynamicCategories,
   getCategoryIconFromName,
 }: AnalyticsTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('analytics', 'Analytics Tab crashed: Chart rendering failed with invalid data processing');
+  });
+
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'group' | 'personal'>('group');
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
 

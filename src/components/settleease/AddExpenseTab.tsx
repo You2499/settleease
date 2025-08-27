@@ -18,6 +18,7 @@ import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 interface AddExpenseTabProps {
   people: Person[];
@@ -38,6 +39,11 @@ export default function AddExpenseTab({
   expenseToEdit,
   onCancelEdit,
 }: AddExpenseTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('addExpense', 'Add Expense Tab crashed: Form validation failed with corrupted category data');
+  });
+
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [category, setCategory] = useState('');

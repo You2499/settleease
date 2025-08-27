@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -52,6 +53,11 @@ export default function ManageSettlementsTab({
   currentUserId,
   onActionComplete,
 }: ManageSettlementsTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('manageSettlements', 'Manage Settlements Tab crashed: Settlement processing failed with corrupted payment data');
+  });
+
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
   const [isLoading, setIsLoading] = useState(false);

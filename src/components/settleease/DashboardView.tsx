@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { FileText } from 'lucide-react';
 
@@ -17,6 +17,7 @@ import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 interface DashboardViewProps {
   expenses: Expense[];
@@ -43,6 +44,11 @@ export default function DashboardView({
   onActionComplete,
   userRole,
 }: DashboardViewProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('dashboard', 'Dashboard View crashed: Settlement calculation failed with corrupted expense data');
+  });
+
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);

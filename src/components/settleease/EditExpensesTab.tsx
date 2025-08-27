@@ -1,6 +1,7 @@
 "use client";
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,6 +34,11 @@ interface EditExpensesTabProps {
 }
 
 export default function EditExpensesTab({ people, expenses, db, supabaseInitializationError, onActionComplete, dynamicCategories }: EditExpensesTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('editExpenses', 'Edit Expenses Tab crashed: Expense modification failed with invalid data');
+  });
+
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 

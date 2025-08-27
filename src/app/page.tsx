@@ -269,15 +269,7 @@ export default function SettleEasePage() {
               >
                 <TestErrorBoundaryTab
                   userRole={userRole}
-                  expenses={expenses}
-                  people={people}
-                  peopleMap={peopleMap}
-                  categories={categories}
-                  settlementPayments={settlementPayments}
-                  db={db}
-                  currentUserId={currentUser.id}
-                  getCategoryIconFromName={getCategoryIconFromName}
-                  onActionComplete={() => fetchAllData(false)}
+                  setActiveView={handleSetActiveView}
                 />
               </SettleEaseErrorBoundary>
             )}

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +35,11 @@ interface ManageCategoriesTabProps {
 }
 
 export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate, isAdmin }: ManageCategoriesTabProps) {
+  // Check for crash test
+  useEffect(() => {
+    crashTestManager.checkAndCrash('manageCategories', 'Manage Categories Tab crashed: Category validation failed with corrupted data');
+  });
+
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>('Utensils');
   const [showAddIconModal, setShowAddIconModal] = useState(false);
@@ -116,8 +122,8 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       return;
     }
     if (!editingIconKey) {
-        toast({ title: "Validation Error", description: "Please select an icon for the category.", variant: "destructive" });
-        return;
+      toast({ title: "Validation Error", description: "Please select an icon for the category.", variant: "destructive" });
+      return;
     }
     if (!db || supabaseInitializationError) {
       toast({ title: "Database Error", description: `Supabase client not available. ${supabaseInitializationError || ''}`, variant: "destructive" });
@@ -130,8 +136,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
       toast({ title: "Category Updated", description: "Category updated successfully." });
       handleCancelEdit();
       onCategoriesUpdate();
-    } catch (error: any)
- {
+    } catch (error: any) {
       toast({ title: "Error Updating Category", description: error.message || "Could not update category.", variant: "destructive" });
     } finally {
       setIsLoading(false);
@@ -145,7 +150,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
   const executeDeleteCategory = async () => {
     if (!categoryToDelete || !db || supabaseInitializationError) {
       toast({ title: "Error", description: "Cannot delete category due to system error.", variant: "destructive" });
-      if (categoryToDelete) setCategoryToDelete(null); 
+      if (categoryToDelete) setCategoryToDelete(null);
       return;
     }
 
@@ -272,7 +277,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
           <CardDescription className="text-xs sm:text-sm">Add new expense categories, choose icons, or edit existing ones.</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
-          
+
           <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
             <Label className="text-md sm:text-lg font-semibold block mb-2 sm:mb-3 text-primary">Add New Category</Label>
             <div className="flex flex-col gap-3 sm:grid sm:grid-cols-1 md:grid-cols-3 md:gap-4 md:items-end">
@@ -391,8 +396,8 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                               />
                             )}
                             <div className="flex items-center flex-grow truncate mr-2">
-                                <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
-                                <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
+                              <IconComponent className="mr-2 sm:mr-2.5 h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+                              <span className="truncate text-sm font-medium" title={category.name}>{category.name}</span>
                             </div>
                             <div className="flex items-center space-x-0.5 sm:space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
                               <Button variant="ghost" size="icon" onClick={() => handleStartEdit(category)} className="h-8 w-8 text-blue-600 hover:text-blue-700" title="Edit category" disabled={isLoading || !!editingCategory}>
@@ -411,9 +416,9 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
               </ScrollArea>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
-                  <ListChecks className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                  <p className="text-md sm:text-lg font-medium">No Categories Yet</p>
-                  <p className="text-xs sm:text-sm">Add some categories using the form above to organize your expenses.</p>
+                <ListChecks className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+                <p className="text-md sm:text-lg font-medium">No Categories Yet</p>
+                <p className="text-xs sm:text-sm">Add some categories using the form above to organize your expenses.</p>
               </div>
             )}
           </div>
