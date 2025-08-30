@@ -19,7 +19,6 @@ import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 interface AddExpenseTabProps {
   people: Person[];

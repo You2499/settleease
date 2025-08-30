@@ -140,14 +140,14 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
               </div>
             </div>
           </CardHeader>
-          
+
           {size !== 'small' && <Separator className="mx-4" />}
-          
+
           <CardContent className={`${styles.padding} pt-3 ${styles.spacing}`}>
             {size !== 'small' && (
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {size === 'large' 
+                  {size === 'large'
                     ? "A critical error occurred that prevented this feature from working properly. The error has been isolated by SettleEase's error boundary system to prevent it from affecting other parts of the application."
                     : "This component encountered an error but the rest of SettleEase continues to work normally. The error boundary has contained the issue."
                   }
@@ -162,7 +162,7 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
                 )}
               </div>
             )}
-            
+
             {process.env.NODE_ENV === 'development' && this.state.error && size !== 'small' && (
               <details className="text-xs bg-muted/50 p-3 rounded-md border border-muted-foreground/20">
                 <summary className="cursor-pointer font-medium mb-2 text-muted-foreground hover:text-foreground transition-colors">
@@ -179,22 +179,22 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
                 </div>
               </details>
             )}
-            
+
             <div className={`flex ${size === 'small' ? 'flex-col gap-1.5' : 'flex-col sm:flex-row gap-2'} pt-1`}>
-              <Button 
-                onClick={this.handleRetry} 
-                variant="default" 
+              <Button
+                onClick={this.handleRetry}
+                variant="default"
                 size={size === 'small' ? 'sm' : 'default'}
                 className={`${size === 'small' ? 'w-full' : 'flex-1'} ${styles.button} bg-primary hover:bg-primary/90 shadow-sm transition-all duration-200 hover:shadow-md`}
               >
                 <RefreshCw className={`mr-2 ${size === 'small' ? 'h-3 w-3' : 'h-4 w-4'}`} />
                 Try Again
               </Button>
-              
+
               {(this.props.onNavigateHome || size === 'large') && (
-                <Button 
-                  onClick={this.handleNavigateHome} 
-                  variant="outline" 
+                <Button
+                  onClick={this.handleNavigateHome}
+                  variant="outline"
                   size={size === 'small' ? 'sm' : 'default'}
                   className={`${size === 'small' ? 'w-full' : 'flex-1'} ${styles.button} border-primary/30 hover:bg-primary/5 hover:border-primary/50 shadow-sm transition-all duration-200 hover:shadow-md`}
                 >

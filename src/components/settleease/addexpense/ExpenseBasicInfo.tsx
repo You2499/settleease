@@ -105,8 +105,8 @@ const CategorySelectComponent = ({ category, setCategory, dynamicCategories }: {
 };
 
 const DatePickerComponent = ({ expenseDate, setExpenseDate, calendarOpen, setCalendarOpen }: { 
-  expenseDate: Date; 
-  setExpenseDate: (date: Date) => void;
+  expenseDate: Date | undefined; 
+  setExpenseDate: (date: Date | undefined) => void;
   calendarOpen: boolean;
   setCalendarOpen: (open: boolean) => void;
 }) => {
