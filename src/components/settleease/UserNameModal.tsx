@@ -35,20 +35,20 @@ interface UserNameModalProps {
     isEditMode?: boolean;
 }
 
-export default function UserNameModal({ 
-    isOpen, 
-    onClose, 
-    db, 
-    userId, 
-    initialFirstName = '', 
-    initialLastName = '', 
-    isGoogleUser = false, 
-    isEditMode = false 
+export default function UserNameModal({
+    isOpen,
+    onClose,
+    db,
+    userId,
+    initialFirstName = '',
+    initialLastName = '',
+    isGoogleUser = false,
+    isEditMode = false
 }: UserNameModalProps) {
     const [firstName, setFirstName] = useState(initialFirstName);
     const [lastName, setLastName] = useState(initialLastName);
     const [isLoading, setIsLoading] = useState(false);
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['profile']));
+    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['google', 'profile']));
 
     // Helper function to properly capitalize names (first letter uppercase, rest lowercase)
     const capitalizeName = (name: string) => {
@@ -198,11 +198,10 @@ export default function UserNameModal({
                 </span>
             </div>
             <div
-                className={`text-sm font-medium text-right max-w-[60%] ${
-                    highlight
+                className={`text-sm font-medium text-right max-w-[60%] break-words hyphens-auto ${highlight
                         ? "text-primary dark:text-primary/90 font-semibold text-base"
                         : "text-foreground dark:text-foreground/95"
-                }`}
+                    }`}
             >
                 {value}
             </div>
@@ -226,10 +225,10 @@ export default function UserNameModal({
                     </div>
                     <div>
                         <DialogTitle className="text-2xl font-bold text-center text-foreground mb-1">
-                            {isEditMode 
-                                ? 'Edit Your Name' 
-                                : isGoogleUser 
-                                    ? 'Confirm Your Name' 
+                            {isEditMode
+                                ? 'Edit Your Name'
+                                : isGoogleUser
+                                    ? 'Confirm Your Name'
                                     : 'Welcome to SettleEase!'
                             }
                         </DialogTitle>
@@ -284,7 +283,7 @@ export default function UserNameModal({
                                         disabled={isLoading}
                                         required
                                         autoFocus
-                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0 break-words"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -299,19 +298,19 @@ export default function UserNameModal({
                                         onChange={(e) => setLastName(e.target.value)}
                                         disabled={isLoading}
                                         required
-                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0 break-words"
                                     />
                                 </div>
-                                
-                                {/* Preview */}
-                                {(firstName.trim() || lastName.trim()) && (
-                                    <div className="mt-4">
+
+                                {/* Preview - Fixed height to prevent shifting */}
+                                <div className="mt-4 min-h-[80px]">
+                                    {(firstName.trim() || lastName.trim()) ? (
                                         <InfoRow
                                             label="Display Name"
                                             value={
-                                                <div className="text-right">
-                                                    <div className="text-base font-bold text-primary">
-                                                        {`${firstName.trim()} ${lastName.trim()}`.trim() || 'Enter your name'}
+                                                <div className="text-right max-w-[200px]">
+                                                    <div className="text-base font-bold text-primary break-words hyphens-auto">
+                                                        {`${firstName.trim()} ${lastName.trim()}`.trim()}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">
                                                         How others will see you
@@ -320,8 +319,14 @@ export default function UserNameModal({
                                             }
                                             highlight
                                         />
-                                    </div>
-                                )}
+                                    ) : (
+                                        <div className="flex items-center justify-center py-6">
+                                            <p className="text-sm text-muted-foreground italic">
+                                                Enter your name to see preview
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </Section>
 
