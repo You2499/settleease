@@ -117,10 +117,10 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
-                <DialogHeader className="pb-6 border-b border-border/30">
-                    <div className="flex items-center justify-center mb-4">
-                        <div className="flex items-center justify-center w-16 h-16 bg-primary/15 dark:bg-primary/20 rounded-2xl">
-                            <HandCoins className="h-8 w-8 text-primary dark:text-primary/90" />
+                <DialogHeader className="pb-5 border-b border-border/30">
+                    <div className="flex items-center justify-center mb-3">
+                        <div className="flex items-center justify-center w-14 h-14 bg-primary/15 dark:bg-primary/20 rounded-2xl">
+                            <HandCoins className="h-7 w-7 text-primary dark:text-primary/90" />
                         </div>
                     </div>
                     <DialogTitle className="text-2xl font-bold text-center text-foreground mb-1">
@@ -128,44 +128,39 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                     </DialogTitle>
                     <DialogDescription className="text-center text-muted-foreground">
                         {isGoogleUser
-                            ? 'Review and confirm how your name appears to friends.'
+                            ? 'We\'ve pre-filled your name from Google. Please review and edit if needed to ensure it appears correctly to your friends.'
                             : 'To personalize your experience and help your friends recognize you, please provide your first and last name.'
                         }
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 overflow-y-auto space-y-5 py-4 no-scrollbar">
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div className="space-y-5">
+                <div className="flex-1 overflow-y-auto space-y-4 py-4 no-scrollbar">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-4">
                             {isGoogleUser && (
-                                <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden">
-                                    <div className="px-5 py-4 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl">
-                                                <GoogleIcon />
-                                            </div>
-                                            <div>
-                                                <h4 className="font-semibold text-base text-foreground dark:text-foreground/95">
-                                                    Google Account
-                                                </h4>
-                                                <p className="text-sm text-muted-foreground dark:text-muted-foreground/90">
-                                                    Names pre-filled from your profile
-                                                </p>
-                                            </div>
+                                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/30 rounded-xl p-4">
+                                    <div className="flex items-center space-x-3">
+                                        <GoogleIcon />
+                                        <div>
+                                            <h4 className="font-semibold text-sm text-blue-800 dark:text-blue-200">
+                                                Connected with Google
+                                            </h4>
+                                            <p className="text-xs text-blue-600 dark:text-blue-300">
+                                                Feel free to edit the names below if needed
+                                            </p>
                                         </div>
                                     </div>
-
                                 </div>
                             )}
 
-                            <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
+                            <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-xl overflow-hidden">
+                                <div className="px-4 py-3 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
                                     <h4 className="font-semibold text-base text-foreground dark:text-foreground/95">
                                         Your Information
                                     </h4>
                                 </div>
-                                <div className="px-5 py-4 bg-background/50 dark:bg-background/30 space-y-4">
-                                    <div className="space-y-2">
+                                <div className="px-4 py-4 bg-background/50 dark:bg-background/30 space-y-3">
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="firstName" className="text-sm font-medium text-foreground">First Name</Label>
                                         <Input
                                             id="firstName"
@@ -176,10 +171,10 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                                             disabled={isLoading}
                                             required
                                             autoFocus
-                                            className="h-11 text-base border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                            className="h-10 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
                                         />
                                     </div>
-                                    <div className="space-y-2">
+                                    <div className="space-y-1.5">
                                         <Label htmlFor="lastName" className="text-sm font-medium text-foreground">Last Name</Label>
                                         <Input
                                             id="lastName"
@@ -189,18 +184,18 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                                             onChange={(e) => setLastName(e.target.value)}
                                             disabled={isLoading}
                                             required
-                                            className="h-11 text-base border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                            className="h-10 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
                                         />
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="pt-4 border-t border-border/30">
+                        <div className="pt-3 border-t border-border/30">
                             <Button
                                 type="submit"
                                 disabled={isLoading || !firstName.trim() || !lastName.trim()}
-                                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 active:scale-[0.98]"
+                                className="w-full h-11 font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-all duration-200 active:scale-[0.98]"
                             >
                                 {isLoading ? (
                                     <>
@@ -209,7 +204,7 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                                     </>
                                 ) : (
                                     <>
-                                        <User className="mr-2 h-5 w-5" />
+                                        <User className="mr-2 h-4 w-4" />
                                         Complete Profile
                                     </>
                                 )}
