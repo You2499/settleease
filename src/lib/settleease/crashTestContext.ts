@@ -9,6 +9,23 @@ type CrashTestState = {
   manageCategories: boolean;
   manageSettlements: boolean;
   editExpenses: boolean;
+  // Granular Add Expense components
+  expenseBasicInfo: boolean;
+  descriptionInput: boolean;
+  amountInput: boolean;
+  categorySelect: boolean;
+  datePicker: boolean;
+  celebrationSection: boolean;
+  celebrationPayerSelect: boolean;
+  celebrationAmountInput: boolean;
+  paymentDetails: boolean;
+  payerInputSection: boolean;
+  splitMethodSelector: boolean;
+  // Expense Detail Modal components
+  expenseGeneralInfo: boolean;
+  expensePaymentInfo: boolean;
+  expenseSplitDetails: boolean;
+  expenseNetEffectSummary: boolean;
 };
 
 class CrashTestManager {
@@ -20,6 +37,23 @@ class CrashTestManager {
     manageCategories: false,
     manageSettlements: false,
     editExpenses: false,
+    // Granular Add Expense components
+    expenseBasicInfo: false,
+    descriptionInput: false,
+    amountInput: false,
+    categorySelect: false,
+    datePicker: false,
+    celebrationSection: false,
+    celebrationPayerSelect: false,
+    celebrationAmountInput: false,
+    paymentDetails: false,
+    payerInputSection: false,
+    splitMethodSelector: false,
+    // Expense Detail Modal components
+    expenseGeneralInfo: false,
+    expensePaymentInfo: false,
+    expenseSplitDetails: false,
+    expenseNetEffectSummary: false,
   };
 
   private listeners: Set<() => void> = new Set();

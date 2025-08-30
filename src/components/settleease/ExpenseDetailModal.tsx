@@ -26,6 +26,7 @@ import ExpensePaymentInfo from "./expense-detail/ExpensePaymentInfo";
 import ExpenseSplitDetails from "./expense-detail/ExpenseSplitDetails";
 import ExpenseNetEffectSummary from "./expense-detail/ExpenseNetEffectSummary";
 import SettleEaseErrorBoundary from "../ui/SettleEaseErrorBoundary";
+import { crashTestManager } from "@/lib/settleease/crashTestContext";
 
 interface ExpenseDetailModalProps {
   expense: Expense;
@@ -39,6 +40,27 @@ interface ExpenseDetailModalProps {
   showBackButton?: boolean;
   onBack?: () => void;
 }
+
+// Modal section wrapper components with crash test logic
+const ExpenseGeneralInfoWrapper = ({ children }: { children: React.ReactNode }) => {
+  crashTestManager.checkAndCrash('expenseGeneralInfo', 'Expense General Info crashed: Expense data parsing failed');
+  return <>{children}</>;
+};
+
+const ExpensePaymentInfoWrapper = ({ children }: { children: React.ReactNode }) => {
+  crashTestManager.checkAndCrash('expensePaymentInfo', 'Expense Payment Info crashed: Payment data validation failed');
+  return <>{children}</>;
+};
+
+const ExpenseSplitDetailsWrapper = ({ children }: { children: React.ReactNode }) => {
+  crashTestManager.checkAndCrash('expenseSplitDetails', 'Expense Split Details crashed: Split calculation engine failed');
+  return <>{children}</>;
+};
+
+const ExpenseNetEffectSummaryWrapper = ({ children }: { children: React.ReactNode }) => {
+  crashTestManager.checkAndCrash('expenseNetEffectSummary', 'Expense Net Effect Summary crashed: Net effect calculation failed');
+  return <>{children}</>;
+};
 
 export default function ExpenseDetailModal({
   expense,
@@ -243,43 +265,51 @@ export function ExpenseDetailModalOriginal({
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
           <div className="space-y-4 sm:space-y-6 pt-2">
             <SettleEaseErrorBoundary componentName="Expense General Info" size="medium">
-              <ExpenseGeneralInfo
-                expense={expense}
-                totalOriginalBill={totalOriginalBill}
-                CategoryIcon={CategoryIcon}
-              />
+              <ExpenseGeneralInfoWrapper>
+                <ExpenseGeneralInfo
+                  expense={expense}
+                  totalOriginalBill={totalOriginalBill}
+                  CategoryIcon={CategoryIcon}
+                />
+              </ExpenseGeneralInfoWrapper>
             </SettleEaseErrorBoundary>
 
             <SettleEaseErrorBoundary componentName="Expense Payment Info" size="medium">
-              <ExpensePaymentInfo
-                sortedPaidBy={sortedPaidBy}
-                celebrationContributionOpt={celebrationContributionOpt}
-                amountEffectivelySplit={amountEffectivelySplit}
-                peopleMap={peopleMap}
-              />
+              <ExpensePaymentInfoWrapper>
+                <ExpensePaymentInfo
+                  sortedPaidBy={sortedPaidBy}
+                  celebrationContributionOpt={celebrationContributionOpt}
+                  amountEffectivelySplit={amountEffectivelySplit}
+                  peopleMap={peopleMap}
+                />
+              </ExpensePaymentInfoWrapper>
             </SettleEaseErrorBoundary>
 
             <SettleEaseErrorBoundary componentName="Expense Split Details" size="medium">
-              <ExpenseSplitDetails
-                expense={expense}
-                amountEffectivelySplit={amountEffectivelySplit}
-                sortedShares={sortedShares}
-                itemwiseBreakdownForDisplay={itemwiseBreakdownForDisplay}
-                sortedItemwiseBreakdownEntries={sortedItemwiseBreakdownEntries}
-                peopleMap={peopleMap}
-                categories={categories}
-                getCategoryIconFromName={getCategoryIconFromName}
-              />
+              <ExpenseSplitDetailsWrapper>
+                <ExpenseSplitDetails
+                  expense={expense}
+                  amountEffectivelySplit={amountEffectivelySplit}
+                  sortedShares={sortedShares}
+                  itemwiseBreakdownForDisplay={itemwiseBreakdownForDisplay}
+                  sortedItemwiseBreakdownEntries={sortedItemwiseBreakdownEntries}
+                  peopleMap={peopleMap}
+                  categories={categories}
+                  getCategoryIconFromName={getCategoryIconFromName}
+                />
+              </ExpenseSplitDetailsWrapper>
             </SettleEaseErrorBoundary>
 
             <SettleEaseErrorBoundary componentName="Expense Net Effect Summary" size="medium">
-              <ExpenseNetEffectSummary
-                expense={expense}
-                sortedInvolvedPersonIdsOverall={sortedInvolvedPersonIdsOverall}
-                celebrationContributionOpt={celebrationContributionOpt}
-                amountEffectivelySplit={amountEffectivelySplit}
-                peopleMap={peopleMap}
-              />
+              <ExpenseNetEffectSummaryWrapper>
+                <ExpenseNetEffectSummary
+                  expense={expense}
+                  sortedInvolvedPersonIdsOverall={sortedInvolvedPersonIdsOverall}
+                  celebrationContributionOpt={celebrationContributionOpt}
+                  amountEffectivelySplit={amountEffectivelySplit}
+                  peopleMap={peopleMap}
+                />
+              </ExpenseNetEffectSummaryWrapper>
             </SettleEaseErrorBoundary>
           </div>
         </div>
