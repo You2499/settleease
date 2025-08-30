@@ -37,6 +37,7 @@ import * as LucideIcons from 'lucide-react';
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [showNameModal, setShowNameModal] = useState(false);
+  const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -111,6 +112,7 @@ export default function SettleEasePage() {
       if (!hasShownModal && (googleInfo?.isGoogle || !userProfile || !hasCompleteName())) {
         // Add a small delay to ensure the UI is ready, especially for Google OAuth redirects
         const timer = setTimeout(() => {
+          setIsNameModalEditMode(false); // This is initial setup, not edit mode
           setShowNameModal(true);
         }, 500);
         
@@ -121,9 +123,11 @@ export default function SettleEasePage() {
 
   const handleNameModalClose = async (success: boolean) => {
     if (success && currentUser) {
-      // Mark modal as shown for this user
-      const modalShownKey = `nameModal_shown_${currentUser.id}`;
-      localStorage.setItem(modalShownKey, 'true');
+      // Mark modal as shown for this user (only for initial setup, not for edits)
+      if (!isNameModalEditMode) {
+        const modalShownKey = `nameModal_shown_${currentUser.id}`;
+        localStorage.setItem(modalShownKey, 'true');
+      }
       
       // Refresh user profile to get updated names
       try {
@@ -133,6 +137,12 @@ export default function SettleEasePage() {
       }
     }
     setShowNameModal(false);
+    setIsNameModalEditMode(false);
+  };
+
+  const handleEditName = () => {
+    setIsNameModalEditMode(true);
+    setShowNameModal(true);
   };
 
 
@@ -217,9 +227,10 @@ export default function SettleEasePage() {
         onClose={handleNameModalClose}
         db={db}
         userId={currentUser.id}
-        initialFirstName={getGoogleUserInfo()?.firstName || userProfile?.first_name || ''}
-        initialLastName={getGoogleUserInfo()?.lastName || userProfile?.last_name || ''}
-        isGoogleUser={getGoogleUserInfo()?.isGoogle || false}
+        initialFirstName={isNameModalEditMode ? (userProfile?.first_name || '') : (getGoogleUserInfo()?.firstName || userProfile?.first_name || '')}
+        initialLastName={isNameModalEditMode ? (userProfile?.last_name || '') : (getGoogleUserInfo()?.lastName || userProfile?.last_name || '')}
+        isGoogleUser={!isNameModalEditMode && (getGoogleUserInfo()?.isGoogle || false)}
+        isEditMode={isNameModalEditMode}
       />
       <SidebarProvider defaultOpen={true}>
         <AppSidebar 
@@ -228,7 +239,8 @@ export default function SettleEasePage() {
           handleLogout={handleLogout} 
           currentUserEmail={currentUser.email}
           currentUserName={getDisplayName()}
-          userRole={userRole} 
+          userRole={userRole}
+          onEditName={handleEditName}
         />
       <SidebarInset>
         <div className="flex flex-col h-full">

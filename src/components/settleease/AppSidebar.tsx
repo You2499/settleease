@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3
 } from 'lucide-react';
 import { useTheme } from "next-themes"; 
 
@@ -56,9 +56,10 @@ interface AppSidebarProps {
   currentUserEmail?: string | null;
   currentUserName?: string;
   userRole: UserRole;
+  onEditName?: () => void;
 }
 
-export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole }: AppSidebarProps) {
+export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar(); 
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -199,6 +200,13 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Profile</DropdownMenuLabel>
+                    {onEditName && (
+                        <DropdownMenuItem onClick={onEditName}>
+                            <Edit3 className="mr-2 h-4 w-4" /> Edit Name
+                        </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
                     <DropdownMenuLabel>Appearance</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => setTheme("light")}>
                         <Sun className="mr-2 h-4 w-4" /> Light
