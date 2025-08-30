@@ -58,7 +58,8 @@ export interface UserProfile {
   id: string; // profile ID
   user_id: string; // maps to auth.users.id
   role: UserRole;
-  // you can add other profile fields like full_name, avatar_url here
+  first_name?: string | null;
+  last_name?: string | null;
   created_at?: string;
   updated_at?: string;
 }

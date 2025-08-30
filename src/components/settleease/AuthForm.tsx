@@ -29,6 +29,8 @@ interface AuthFormProps {
 export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isLoginView, setIsLoginView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -41,6 +43,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     if (!email || !password) {
       toast({ title: "Authentication Error", description: "Email and password are required.", variant: "destructive" });
+      return;
+    }
+    
+    if (!isLoginView && (!firstName.trim() || !lastName.trim())) {
+      toast({ title: "Authentication Error", description: "First name and last name are required for signup.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
@@ -59,6 +66,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           password,
           options: {
             emailRedirectTo: productionSiteUrl,
+            data: {
+              first_name: firstName.trim(),
+              last_name: lastName.trim(),
+            },
           },
         });
         if (signUpError) throw signUpError;
@@ -68,6 +79,27 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
           return;
         }
+        
+        // If signup successful and we have a user, update their profile with names
+        if (data.user && data.session) {
+          try {
+            const { error: profileError } = await db
+              .from('user_profiles')
+              .update({
+                first_name: firstName.trim(),
+                last_name: lastName.trim(),
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', data.user.id);
+            
+            if (profileError) {
+              console.warn('Profile update error during signup:', profileError);
+            }
+          } catch (profileErr) {
+            console.warn('Failed to update profile during signup:', profileErr);
+          }
+        }
+        
         toast({ title: "Signup Successful", description: "Please check your email to confirm your account if required." });
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       }
@@ -156,6 +188,38 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
             <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
               <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                {!isLoginView && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 sm:space-y-1.5">
+                      <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        autoComplete="given-name"
+                        placeholder="John"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        disabled={isLoading || isGoogleLoading}
+                        required
+                        className="h-10 text-sm sm:h-11 sm:text-base"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:space-y-1.5">
+                      <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        autoComplete="family-name"
+                        placeholder="Doe"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        disabled={isLoading || isGoogleLoading}
+                        required
+                        className="h-10 text-sm sm:h-11 sm:text-base"
+                      />
+                    </div>
+                  </div>
+                )}
                 <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="email" className="text-sm">Email Address</Label>
                   <Input
@@ -217,7 +281,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              <Button variant="link" onClick={() => { setIsLoginView(!isLoginView); }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
+              <Button variant="link" onClick={() => { 
+                setIsLoginView(!isLoginView); 
+                setFirstName('');
+                setLastName('');
+              }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
             </CardFooter>

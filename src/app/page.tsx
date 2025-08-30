@@ -23,10 +23,12 @@ import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
+import UserNameModal from '@/components/settleease/UserNameModal';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { useUserProfile } from '@/hooks/useUserProfile';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -34,6 +36,7 @@ import * as LucideIcons from 'lucide-react';
 
 export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [showNameModal, setShowNameModal] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -45,6 +48,40 @@ export default function SettleEasePage() {
     isLoadingRole,
     handleLogout,
   } = useSupabaseAuth();
+
+  // Use user profile hook
+  const {
+    userProfile,
+    isLoadingProfile,
+    hasCompleteName,
+    getDisplayName,
+    fetchUserProfile,
+  } = useUserProfile(db, currentUser);
+
+  // Helper function to detect Google OAuth users and parse their names
+  const getGoogleUserInfo = useCallback(() => {
+    if (!currentUser?.user_metadata) return null;
+    
+    const metadata = currentUser.user_metadata;
+    const isGoogle = metadata.iss === 'https://accounts.google.com' || metadata.provider_id;
+    
+    if (!isGoogle) return null;
+    
+    const fullName = metadata.full_name || metadata.name || '';
+    if (!fullName) return { isGoogle: true, firstName: '', lastName: '' };
+    
+    // Parse the full name
+    const spaceIndex = fullName.indexOf(' ');
+    const firstName = spaceIndex > 0 ? fullName.substring(0, spaceIndex).trim() : fullName.trim();
+    const lastName = spaceIndex > 0 ? fullName.substring(spaceIndex + 1).trim() : '';
+    
+    return {
+      isGoogle: true,
+      firstName,
+      lastName,
+      originalFullName: fullName
+    };
+  }, [currentUser]);
 
   const {
     people,
@@ -58,6 +95,45 @@ export default function SettleEasePage() {
 
   // Set up realtime subscriptions
   useSupabaseRealtime(db, supabaseInitializationError, currentUser, userRole, isDataFetchedAtLeastOnce, fetchAllData);
+
+  // Effect to show name modal for users without complete names or Google users
+  useEffect(() => {
+    if (currentUser && !isLoadingProfile) {
+      // Check if we've already shown the modal for this user (using localStorage)
+      const modalShownKey = `nameModal_shown_${currentUser.id}`;
+      const hasShownModal = localStorage.getItem(modalShownKey);
+      
+      const googleInfo = getGoogleUserInfo();
+      
+      // Show modal if:
+      // 1. Modal hasn't been shown before for this user AND
+      // 2. (User is a Google OAuth user OR user doesn't have complete names)
+      if (!hasShownModal && (googleInfo?.isGoogle || !userProfile || !hasCompleteName())) {
+        // Add a small delay to ensure the UI is ready, especially for Google OAuth redirects
+        const timer = setTimeout(() => {
+          setShowNameModal(true);
+        }, 500);
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [currentUser, userProfile, isLoadingProfile, hasCompleteName, getGoogleUserInfo]);
+
+  const handleNameModalClose = async (success: boolean) => {
+    if (success && currentUser) {
+      // Mark modal as shown for this user
+      const modalShownKey = `nameModal_shown_${currentUser.id}`;
+      localStorage.setItem(modalShownKey, 'true');
+      
+      // Refresh user profile to get updated names
+      try {
+        await fetchUserProfile(currentUser.id);
+      } catch (error) {
+        console.warn('Failed to refresh user profile after name update:', error);
+      }
+    }
+    setShowNameModal(false);
+  };
 
 
   // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
@@ -88,11 +164,13 @@ export default function SettleEasePage() {
   }, []);
 
 
-  if (isLoadingAuth || (currentUser && isLoadingRole)) {
+  if (isLoadingAuth || (currentUser && (isLoadingRole || isLoadingProfile))) {
     const title = "Loading SettleEase";
     const subtitle = isLoadingAuth
       ? "Initializing application and verifying your session. Just a moment..."
-      : "Securing your account details. Almost there...";
+      : isLoadingRole
+      ? "Securing your account details. Almost there..."
+      : "Loading your profile information...";
     return <AppLoadingScreen title={title} subtitle={subtitle} />;
   }
 
@@ -133,8 +211,25 @@ export default function SettleEasePage() {
 
 
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AppSidebar activeView={activeView} setActiveView={handleSetActiveView} handleLogout={handleLogout} currentUserEmail={currentUser.email} userRole={userRole} />
+    <>
+      <UserNameModal
+        isOpen={showNameModal}
+        onClose={handleNameModalClose}
+        db={db}
+        userId={currentUser.id}
+        initialFirstName={getGoogleUserInfo()?.firstName || userProfile?.first_name || ''}
+        initialLastName={getGoogleUserInfo()?.lastName || userProfile?.last_name || ''}
+        isGoogleUser={getGoogleUserInfo()?.isGoogle || false}
+      />
+      <SidebarProvider defaultOpen={true}>
+        <AppSidebar 
+          activeView={activeView} 
+          setActiveView={handleSetActiveView} 
+          handleLogout={handleLogout} 
+          currentUserEmail={currentUser.email}
+          currentUserName={getDisplayName()}
+          userRole={userRole} 
+        />
       <SidebarInset>
         <div className="flex flex-col h-full">
           <header className="p-4 md:hidden flex items-center sticky top-0 bg-background z-20 border-b shadow-sm">
@@ -277,6 +372,7 @@ export default function SettleEasePage() {
         </div>
       </SidebarInset>
     </SidebarProvider>
+    </>
   );
 }
 

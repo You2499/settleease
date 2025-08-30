@@ -54,10 +54,11 @@ interface AppSidebarProps {
   setActiveView: (view: ActiveView) => void;
   handleLogout: () => void;
   currentUserEmail?: string | null;
+  currentUserName?: string;
   userRole: UserRole;
 }
 
-export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, userRole }: AppSidebarProps) {
+export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar(); 
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -177,10 +178,10 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
       </SidebarContent>
       <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
         <div className="mb-2 flex items-center justify-between"> 
-            {currentUserEmail && (
+            {(currentUserName || currentUserEmail) && (
             <div className="space-y-0.5 flex-grow overflow-hidden">
-                <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserEmail}>
-                {currentUserEmail}
+                <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserName || currentUserEmail || ''}>
+                {currentUserName || currentUserEmail}
                 </p>
                 {userRole && (
                 <div className="flex items-center gap-1 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>

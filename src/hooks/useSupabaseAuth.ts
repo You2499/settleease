@@ -33,7 +33,7 @@ export function useSupabaseAuth() {
     try {
       const { data, error } = await db
         .from(USER_PROFILES_TABLE)
-        .select('role')
+        .select('role, first_name, last_name')
         .eq('user_id', userId)
         .single();
 
