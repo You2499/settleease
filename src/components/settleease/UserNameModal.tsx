@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { User, HandCoins, Edit3, ChevronDown, ChevronRight } from 'lucide-react';
+import { User, HandCoins, Edit3 } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 // Google Icon SVG as a React component
@@ -48,16 +48,15 @@ export default function UserNameModal({
     const [firstName, setFirstName] = useState(initialFirstName);
     const [lastName, setLastName] = useState(initialLastName);
     const [isLoading, setIsLoading] = useState(false);
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['google', 'profile']));
 
     // Helper function to properly capitalize names (first letter uppercase, rest lowercase)
-    const capitalizeName = (name: string) => {
+    const capitalizeName = useCallback((name: string) => {
         return name
             .toLowerCase()
             .split(' ')
             .map(word => word.charAt(0).toUpperCase() + word.slice(1))
             .join(' ');
-    };
+    }, []);
 
     // Update state when initial values change (for Google users)
     React.useEffect(() => {
@@ -66,15 +65,14 @@ export default function UserNameModal({
         setLastName(isGoogleUser && initialLastName ? capitalizeName(initialLastName) : initialLastName);
     }, [initialFirstName, initialLastName, isGoogleUser]);
 
-    const toggleSection = (sectionId: string) => {
-        const newExpanded = new Set(expandedSections);
-        if (newExpanded.has(sectionId)) {
-            newExpanded.delete(sectionId);
-        } else {
-            newExpanded.add(sectionId);
-        }
-        setExpandedSections(newExpanded);
-    };
+    // Memoize handlers to prevent re-renders
+    const handleFirstNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setFirstName(e.target.value);
+    }, []);
+
+    const handleLastNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setLastName(e.target.value);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -129,53 +127,35 @@ export default function UserNameModal({
         }
     };
 
-    // Apple HIG Section Component
-    const Section = ({
-        id,
+    // Static Section Component (always expanded to prevent shifting)
+    const Section = useMemo(() => ({
         title,
         icon: Icon,
         children,
     }: {
-        id: string;
         title: string;
         icon: React.FC<React.SVGProps<SVGSVGElement>>;
         children: React.ReactNode;
-    }) => {
-        const isExpanded = expandedSections.has(id);
-
-        return (
-            <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden transition-colors hover:bg-card/80 dark:hover:bg-card/90">
-                <button
-                    onClick={() => toggleSection(id)}
-                    className="w-full px-5 py-4 flex items-center justify-between bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5 hover:from-muted/30 hover:to-muted/20 dark:hover:from-muted/25 dark:hover:to-muted/15 transition-all duration-200 active:scale-[0.98]"
-                >
-                    <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl">
-                            <Icon className="h-5 w-5 text-primary dark:text-primary/90" />
-                        </div>
-                        <span className="font-semibold text-base text-foreground dark:text-foreground/95">
-                            {title}
-                        </span>
+    }) => (
+        <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden">
+            <div className="px-5 py-4 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
+                <div className="flex items-center space-x-3">
+                    <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl">
+                        <Icon className="h-5 w-5 text-primary dark:text-primary/90" />
                     </div>
-                    <div className="p-1 rounded-full bg-background/50 dark:bg-background/30">
-                        {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground dark:text-muted-foreground/80 transition-transform" />
-                        ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground dark:text-muted-foreground/80 transition-transform" />
-                        )}
-                    </div>
-                </button>
-                {isExpanded && (
-                    <div className="px-5 py-4 bg-background/50 dark:bg-background/30 space-y-4 animate-in slide-in-from-top-2 duration-200">
-                        {children}
-                    </div>
-                )}
+                    <span className="font-semibold text-base text-foreground dark:text-foreground/95">
+                        {title}
+                    </span>
+                </div>
             </div>
-        );
-    };
+            <div className="px-5 py-4 bg-background/50 dark:bg-background/30 space-y-4">
+                {children}
+            </div>
+        </div>
+    ), []);
 
-    // Apple HIG Info Row Component
-    const InfoRow = ({
+    // Memoized Info Row Component
+    const InfoRow = useMemo(() => ({
         label,
         value,
         icon: Icon,
@@ -206,7 +186,12 @@ export default function UserNameModal({
                 {value}
             </div>
         </div>
-    );
+    ), []);
+
+    // Memoize the display name to prevent unnecessary re-renders
+    const displayName = useMemo(() => {
+        return `${firstName.trim()} ${lastName.trim()}`.trim();
+    }, [firstName, lastName]);
 
     return (
         <Dialog open={isOpen} onOpenChange={() => { }}>
@@ -248,7 +233,7 @@ export default function UserNameModal({
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {/* Google Account Info Section */}
                         {isGoogleUser && !isEditMode && (
-                            <Section id="google" title="Google Account" icon={() => <GoogleIcon />}>
+                            <Section title="Google Account" icon={() => <GoogleIcon />}>
                                 <InfoRow
                                     label="Account Type"
                                     value={
@@ -268,7 +253,7 @@ export default function UserNameModal({
                         )}
 
                         {/* Profile Information Section */}
-                        <Section id="profile" title="Profile Information" icon={isEditMode ? Edit3 : User}>
+                        <Section title="Profile Information" icon={isEditMode ? Edit3 : User}>
                             <div className="space-y-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="firstName" className="text-sm font-medium text-foreground">
@@ -279,11 +264,11 @@ export default function UserNameModal({
                                         type="text"
                                         placeholder="John"
                                         value={firstName}
-                                        onChange={(e) => setFirstName(e.target.value)}
+                                        onChange={handleFirstNameChange}
                                         disabled={isLoading}
                                         required
                                         autoFocus
-                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0 break-words"
+                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -295,22 +280,22 @@ export default function UserNameModal({
                                         type="text"
                                         placeholder="Doe"
                                         value={lastName}
-                                        onChange={(e) => setLastName(e.target.value)}
+                                        onChange={handleLastNameChange}
                                         disabled={isLoading}
                                         required
-                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0 break-words"
+                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
                                     />
                                 </div>
 
                                 {/* Preview - Fixed height to prevent shifting */}
-                                <div className="mt-4 min-h-[80px]">
-                                    {(firstName.trim() || lastName.trim()) ? (
+                                <div className="mt-4 min-h-[80px] flex items-center">
+                                    {displayName ? (
                                         <InfoRow
                                             label="Display Name"
                                             value={
                                                 <div className="text-right max-w-[200px]">
                                                     <div className="text-base font-bold text-primary break-words hyphens-auto">
-                                                        {`${firstName.trim()} ${lastName.trim()}`.trim()}
+                                                        {displayName}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground">
                                                         How others will see you
@@ -320,7 +305,7 @@ export default function UserNameModal({
                                             highlight
                                         />
                                     ) : (
-                                        <div className="flex items-center justify-center py-6">
+                                        <div className="flex items-center justify-center py-6 w-full">
                                             <p className="text-sm text-muted-foreground italic">
                                                 Enter your name to see preview
                                             </p>
