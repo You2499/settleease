@@ -8,7 +8,6 @@ import {
     Dialog,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -129,7 +128,7 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                     </DialogTitle>
                     <DialogDescription className="text-center text-muted-foreground">
                         {isGoogleUser
-                            ? 'Please check and confirm your name below. We\'ve pre-filled it from your Google profile, but you can edit it to ensure it appears correctly to your friends.'
+                            ? 'Review and confirm how your name appears to friends.'
                             : 'To personalize your experience and help your friends recognize you, please provide your first and last name.'
                         }
                     </DialogDescription>
@@ -155,11 +154,7 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="px-5 py-4 bg-background/50 dark:bg-background/30">
-                                        <p className="text-sm text-muted-foreground dark:text-muted-foreground/90">
-                                            Please review the names below. We've pre-filled them from your Google account and formatted them properly. You can edit them if needed.
-                                        </p>
-                                    </div>
+
                                 </div>
                             )}
 
