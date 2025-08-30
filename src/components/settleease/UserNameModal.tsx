@@ -16,9 +16,9 @@ import { toast } from "@/hooks/use-toast";
 import { User, HandCoins } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-// Google Icon SVG as a React component
+// Google Icon SVG as a React component (larger size)
 const GoogleIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
         <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
@@ -113,18 +113,18 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
     return (
         <Dialog open={isOpen} onOpenChange={() => { }}>
             <DialogContent
-                className="w-full max-w-md mx-auto max-h-[90vh] overflow-y-auto no-scrollbar"
+                className="w-full max-w-md mx-auto max-h-[90vh] overflow-hidden flex flex-col bg-background border-border/30"
                 hideCloseButton={true}
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
-                <DialogHeader className="pb-4 border-b">
+                <DialogHeader className="pb-6 border-b border-border/30">
                     <div className="flex items-center justify-center mb-4">
-                        <div className="flex items-center justify-center w-16 h-16 bg-primary/10 rounded-full">
-                            <HandCoins className="h-8 w-8 text-primary" />
+                        <div className="flex items-center justify-center w-16 h-16 bg-primary/15 dark:bg-primary/20 rounded-2xl">
+                            <HandCoins className="h-8 w-8 text-primary dark:text-primary/90" />
                         </div>
                     </div>
-                    <DialogTitle className="text-xl sm:text-2xl text-center text-primary">
+                    <DialogTitle className="text-2xl font-bold text-center text-foreground mb-1">
                         {isGoogleUser ? 'Confirm Your Name' : 'Welcome to SettleEase!'}
                     </DialogTitle>
                     <DialogDescription className="text-center text-muted-foreground">
@@ -135,53 +135,77 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-2">
-                    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                        <div className="space-y-4">
+                <div className="flex-1 overflow-y-auto space-y-5 py-4 no-scrollbar">
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="space-y-5">
                             {isGoogleUser && (
-                                <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mb-4">
-                                    <div className="flex items-start gap-2">
-                                        <GoogleIcon />
-                                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                                <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden">
+                                    <div className="px-5 py-4 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
+                                        <div className="flex items-center space-x-3">
+                                            <div className="p-2 bg-primary/15 dark:bg-primary/20 rounded-xl">
+                                                <GoogleIcon />
+                                            </div>
+                                            <div>
+                                                <h4 className="font-semibold text-base text-foreground dark:text-foreground/95">
+                                                    Google Account
+                                                </h4>
+                                                <p className="text-sm text-muted-foreground dark:text-muted-foreground/90">
+                                                    Names pre-filled from your profile
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="px-5 py-4 bg-background/50 dark:bg-background/30">
+                                        <p className="text-sm text-muted-foreground dark:text-muted-foreground/90">
                                             Please review the names below. We've pre-filled them from your Google account and formatted them properly. You can edit them if needed.
                                         </p>
                                     </div>
                                 </div>
                             )}
-                            <div className="space-y-2">
-                                <Label htmlFor="firstName" className="text-sm font-medium">First Name</Label>
-                                <Input
-                                    id="firstName"
-                                    type="text"
-                                    placeholder="John"
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    disabled={isLoading}
-                                    required
-                                    autoFocus
-                                    className="h-11 text-base"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label htmlFor="lastName" className="text-sm font-medium">Last Name</Label>
-                                <Input
-                                    id="lastName"
-                                    type="text"
-                                    placeholder="Doe"
-                                    value={lastName}
-                                    onChange={(e) => setLastName(e.target.value)}
-                                    disabled={isLoading}
-                                    required
-                                    className="h-11 text-base"
-                                />
+
+                            <div className="bg-card dark:bg-card/95 border border-border/30 dark:border-border/20 rounded-2xl overflow-hidden">
+                                <div className="px-5 py-4 bg-gradient-to-r from-muted/20 to-muted/10 dark:from-muted/15 dark:to-muted/5">
+                                    <h4 className="font-semibold text-base text-foreground dark:text-foreground/95">
+                                        Your Information
+                                    </h4>
+                                </div>
+                                <div className="px-5 py-4 bg-background/50 dark:bg-background/30 space-y-4">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="firstName" className="text-sm font-medium text-foreground">First Name</Label>
+                                        <Input
+                                            id="firstName"
+                                            type="text"
+                                            placeholder="John"
+                                            value={firstName}
+                                            onChange={(e) => setFirstName(e.target.value)}
+                                            disabled={isLoading}
+                                            required
+                                            autoFocus
+                                            className="h-11 text-base border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label htmlFor="lastName" className="text-sm font-medium text-foreground">Last Name</Label>
+                                        <Input
+                                            id="lastName"
+                                            type="text"
+                                            placeholder="Doe"
+                                            value={lastName}
+                                            onChange={(e) => setLastName(e.target.value)}
+                                            disabled={isLoading}
+                                            required
+                                            className="h-11 text-base border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <DialogFooter className="pt-4 border-t">
+                        <div className="pt-4 border-t border-border/30">
                             <Button
                                 type="submit"
                                 disabled={isLoading || !firstName.trim() || !lastName.trim()}
-                                className="w-full h-11 text-base font-semibold"
+                                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 active:scale-[0.98]"
                             >
                                 {isLoading ? (
                                     <>
@@ -190,12 +214,12 @@ export default function UserNameModal({ isOpen, onClose, db, userId, initialFirs
                                     </>
                                 ) : (
                                     <>
-                                        <User className="mr-2 h-4 w-4" />
+                                        <User className="mr-2 h-5 w-5" />
                                         Complete Profile
                                     </>
                                 )}
                             </Button>
-                        </DialogFooter>
+                        </div>
                     </form>
                 </div>
             </DialogContent>
