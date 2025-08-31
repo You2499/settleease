@@ -34,6 +34,21 @@ export function useUserProfile(db: SupabaseClient | undefined, currentUser: Supa
     }
   }, [db]);
 
+  // Add a refresh function that updates the state
+  const refreshUserProfile = useCallback(async (): Promise<void> => {
+    if (!currentUser) return;
+    
+    setIsLoadingProfile(true);
+    try {
+      const profile = await fetchUserProfile(currentUser.id);
+      setUserProfile(profile);
+    } catch (error) {
+      console.error('Error refreshing user profile:', error);
+    } finally {
+      setIsLoadingProfile(false);
+    }
+  }, [currentUser, fetchUserProfile]);
+
   const updateUserProfile = useCallback(async (updates: Partial<UserProfile>): Promise<boolean> => {
     if (!db || !currentUser) return false;
     
@@ -99,5 +114,6 @@ export function useUserProfile(db: SupabaseClient | undefined, currentUser: Supa
     hasCompleteName,
     getDisplayName,
     fetchUserProfile,
+    refreshUserProfile,
   };
 }

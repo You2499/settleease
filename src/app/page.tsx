@@ -56,7 +56,7 @@ export default function SettleEasePage() {
     isLoadingProfile,
     hasCompleteName,
     getDisplayName,
-    fetchUserProfile,
+    refreshUserProfile,
   } = useUserProfile(db, currentUser);
 
   // Helper function to detect Google OAuth users and parse their names
@@ -131,7 +131,7 @@ export default function SettleEasePage() {
       
       // Refresh user profile to get updated names
       try {
-        await fetchUserProfile(currentUser.id);
+        await refreshUserProfile();
       } catch (error) {
         console.warn('Failed to refresh user profile after name update:', error);
       }
