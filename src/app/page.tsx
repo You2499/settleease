@@ -173,6 +173,14 @@ export default function SettleEasePage() {
     return (LucideIcons as any)[iconName] || Settings2;
   }, []);
 
+  // Helper for AddExpenseTab to redirect to dashboard after adding
+  const handleExpenseAddedAndRedirect = useCallback(async () => {
+    await fetchAllData(false);
+    setActiveView('dashboard');
+  }, [fetchAllData]);
+
+  // Memoized callback for action complete to prevent unnecessary re-renders
+  const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
   // Show loading screen for auth, role, or profile loading
   if (isLoadingAuth || (currentUser && (isLoadingRole || isLoadingProfile))) {
@@ -219,15 +227,6 @@ export default function SettleEasePage() {
   if (currentUser && userRole && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && !isDataFetchedAtLeastOnce) {
     return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
   }
-
-  // Helper for AddExpenseTab to redirect to dashboard after adding
-  const handleExpenseAddedAndRedirect = useCallback(async () => {
-    await fetchAllData(false);
-    setActiveView('dashboard');
-  }, [fetchAllData]);
-
-  // Memoized callback for action complete to prevent unnecessary re-renders
-  const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
 
   return (
