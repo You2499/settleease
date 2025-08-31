@@ -121,7 +121,7 @@ export default function SettleEasePage() {
     }
   }, [currentUser, userProfile, isLoadingProfile, hasCompleteName, getGoogleUserInfo]);
 
-  const handleNameModalClose = async (success: boolean) => {
+  const handleNameModalClose = useCallback(async (success: boolean) => {
     if (success && currentUser) {
       // Mark modal as shown for this user (only for initial setup, not for edits)
       if (!isNameModalEditMode) {
@@ -129,21 +129,21 @@ export default function SettleEasePage() {
         localStorage.setItem(modalShownKey, 'true');
       }
       
-      // Refresh user profile to get updated names
+      // Refresh user profile to get updated names - but do it silently without triggering loading states
       try {
-        await refreshUserProfile();
+        await refreshUserProfile(false); // false = don't show loading state
       } catch (error) {
         console.warn('Failed to refresh user profile after name update:', error);
       }
     }
     setShowNameModal(false);
     setIsNameModalEditMode(false);
-  };
+  }, [currentUser, isNameModalEditMode, refreshUserProfile]);
 
-  const handleEditName = () => {
+  const handleEditName = useCallback(() => {
     setIsNameModalEditMode(true);
     setShowNameModal(true);
-  };
+  }, []);
 
 
   // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
@@ -159,7 +159,7 @@ export default function SettleEasePage() {
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
-  const handleSetActiveView = (view: ActiveView) => {
+  const handleSetActiveView = useCallback((view: ActiveView) => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
@@ -167,13 +167,14 @@ export default function SettleEasePage() {
     } else {
       setActiveView(view);
     }
-  };
+  }, [userRole]);
 
   const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
     return (LucideIcons as any)[iconName] || Settings2;
   }, []);
 
 
+  // Show loading screen for auth, role, or profile loading
   if (isLoadingAuth || (currentUser && (isLoadingRole || isLoadingProfile))) {
     const title = "Loading SettleEase";
     const subtitle = isLoadingAuth
@@ -209,15 +210,24 @@ export default function SettleEasePage() {
     );
   }
 
+  // Show loading screen for initial data fetch or when data is loading and no data has been fetched yet
   if (isLoadingData && !isDataFetchedAtLeastOnce) {
     return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
   }
 
+  // Show loading screen if we're still waiting for initial data after auth/role/profile are ready
+  if (currentUser && userRole && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && !isDataFetchedAtLeastOnce) {
+    return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
+  }
+
   // Helper for AddExpenseTab to redirect to dashboard after adding
-  const handleExpenseAddedAndRedirect = async () => {
+  const handleExpenseAddedAndRedirect = useCallback(async () => {
     await fetchAllData(false);
     setActiveView('dashboard');
-  };
+  }, [fetchAllData]);
+
+  // Memoized callback for action complete to prevent unnecessary re-renders
+  const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
 
   return (
@@ -273,7 +283,7 @@ export default function SettleEasePage() {
                   settlementPayments={settlementPayments}
                   db={db}
                   currentUserId={currentUser.id}
-                  onActionComplete={() => fetchAllData(false)}
+                  onActionComplete={handleActionComplete}
                   userRole={userRole}
                 />
               </SettleEaseErrorBoundary>
@@ -347,7 +357,7 @@ export default function SettleEasePage() {
                   categories={categories}
                   db={db}
                   supabaseInitializationError={supabaseInitializationError}
-                  onCategoriesUpdate={() => fetchAllData(false)}
+                  onCategoriesUpdate={handleActionComplete}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -364,7 +374,7 @@ export default function SettleEasePage() {
                   settlementPayments={settlementPayments}
                   db={db}
                   currentUserId={currentUser.id}
-                  onActionComplete={() => fetchAllData(false)}
+                  onActionComplete={handleActionComplete}
                 />
               </SettleEaseErrorBoundary>
             )}

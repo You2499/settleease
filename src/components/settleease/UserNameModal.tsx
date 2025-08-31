@@ -35,7 +35,7 @@ interface UserNameModalProps {
     isEditMode?: boolean;
 }
 
-export default function UserNameModal({
+const UserNameModal = React.memo(function UserNameModal({
     isOpen,
     onClose,
     db,
@@ -342,4 +342,6 @@ export default function UserNameModal({
             </DialogContent>
         </Dialog>
     );
-}
+});
+
+export default UserNameModal;

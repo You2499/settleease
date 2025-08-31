@@ -34,18 +34,22 @@ export function useUserProfile(db: SupabaseClient | undefined, currentUser: Supa
     }
   }, [db]);
 
-  // Add a refresh function that updates the state
-  const refreshUserProfile = useCallback(async (): Promise<void> => {
+  // Add a refresh function that updates the state without showing loading
+  const refreshUserProfile = useCallback(async (showLoading: boolean = false): Promise<void> => {
     if (!currentUser) return;
     
-    setIsLoadingProfile(true);
+    if (showLoading) {
+      setIsLoadingProfile(true);
+    }
     try {
       const profile = await fetchUserProfile(currentUser.id);
       setUserProfile(profile);
     } catch (error) {
       console.error('Error refreshing user profile:', error);
     } finally {
-      setIsLoadingProfile(false);
+      if (showLoading) {
+        setIsLoadingProfile(false);
+      }
     }
   }, [currentUser, fetchUserProfile]);
 
@@ -63,7 +67,7 @@ export function useUserProfile(db: SupabaseClient | undefined, currentUser: Supa
 
       if (error) throw error;
       
-      // Refresh the profile data
+      // Refresh the profile data silently
       const updatedProfile = await fetchUserProfile(currentUser.id);
       setUserProfile(updatedProfile);
       

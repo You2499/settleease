@@ -59,7 +59,7 @@ interface AppSidebarProps {
   onEditName?: () => void;
 }
 
-export default function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar(); 
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -233,5 +233,7 @@ export default function AppSidebar({ activeView, setActiveView, handleLogout, cu
       </SidebarFooter>
     </Sidebar>
   );
-}
+});
+
+export default AppSidebar;
 
