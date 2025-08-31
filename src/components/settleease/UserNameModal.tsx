@@ -179,8 +179,8 @@ export default function UserNameModal({
             </div>
             <div
                 className={`text-sm font-medium text-right max-w-[60%] break-words hyphens-auto ${highlight
-                        ? "text-primary dark:text-primary/90 font-semibold text-base"
-                        : "text-foreground dark:text-foreground/95"
+                    ? "text-primary dark:text-primary/90 font-semibold text-base"
+                    : "text-foreground dark:text-foreground/95"
                     }`}
             >
                 {value}
@@ -288,24 +288,26 @@ export default function UserNameModal({
                                 </div>
 
                                 {/* Preview - Fixed height to prevent shifting */}
-                                <div className="mt-4 min-h-[80px] flex items-center">
+                                <div className="mt-4 min-h-[80px]">
                                     {displayName ? (
-                                        <InfoRow
-                                            label="Display Name"
-                                            value={
-                                                <div className="text-right max-w-[200px]">
-                                                    <div className="text-base font-bold text-primary break-words hyphens-auto">
-                                                        {displayName}
+                                        <div className="w-full">
+                                            <InfoRow
+                                                label="Display Name"
+                                                value={
+                                                    <div className="text-right max-w-[200px]">
+                                                        <div className="text-base font-bold text-primary break-words hyphens-auto">
+                                                            {displayName}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            How others will see you
+                                                        </div>
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        How others will see you
-                                                    </div>
-                                                </div>
-                                            }
-                                            highlight
-                                        />
+                                                }
+                                                highlight
+                                            />
+                                        </div>
                                     ) : (
-                                        <div className="flex items-center justify-center py-6 w-full">
+                                        <div className="flex items-center justify-center py-6 w-full min-h-[80px]">
                                             <p className="text-sm text-muted-foreground italic">
                                                 Enter your name to see preview
                                             </p>
