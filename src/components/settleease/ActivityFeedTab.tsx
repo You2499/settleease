@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
     Select,
@@ -15,7 +14,6 @@ import {
 } from "@/components/ui/select";
 import {
     Activity,
-    RefreshCw,
     AlertTriangle
 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
@@ -52,14 +50,13 @@ export default function ActivityFeedTab({
     onViewExpenseDetails
 }: ActivityFeedTabProps) {
     const [activities, setActivities] = useState<ActivityFeedItem[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [selectedPerson, setSelectedPerson] = useState<string>('all');
+    const activityChannelRef = useRef<RealtimeChannel | null>(null);
 
     const fetchActivityFeed = async () => {
         if (!db) return;
 
-        setIsLoading(true);
         try {
             const { data: activityData, error: activityError } = await db
                 .from('activity_feed_with_details')
@@ -76,13 +73,64 @@ export default function ActivityFeedTab({
                 description: `Could not fetch activity feed: ${error.message}`,
                 variant: "destructive",
             });
-        } finally {
-            setIsLoading(false);
         }
     };
 
+    // Set up real-time subscription for activity feed
     useEffect(() => {
+        let isMounted = true;
+
+        if (!db) return;
+
+        // Initial fetch
         fetchActivityFeed();
+
+        // Set up real-time subscription
+        const setupRealtimeSubscription = async () => {
+            if (activityChannelRef.current) {
+                try {
+                    await db.removeChannel(activityChannelRef.current);
+                } catch (error) {
+                    console.warn('Error removing existing activity feed channel:', error);
+                }
+                activityChannelRef.current = null;
+            }
+
+            const channel = db.channel('activity_feed_changes')
+                .on('postgres_changes', 
+                    { event: '*', schema: 'public', table: 'activity_feed' },
+                    (payload) => {
+                        if (!isMounted) return;
+                        console.log('Activity feed real-time update:', payload.eventType);
+                        // Refresh activity feed when any activity changes
+                        fetchActivityFeed();
+                    }
+                );
+
+            activityChannelRef.current = channel;
+
+            channel.subscribe((status, err) => {
+                if (!isMounted) return;
+                if (status === 'SUBSCRIBED') {
+                    console.log('Activity feed real-time subscription active');
+                } else if (err) {
+                    console.error('Activity feed subscription error:', err);
+                }
+            });
+        };
+
+        setupRealtimeSubscription();
+
+        return () => {
+            isMounted = false;
+            if (db && activityChannelRef.current) {
+                db.removeChannel(activityChannelRef.current)
+                    .catch(err => console.warn('Error removing activity feed channel:', err))
+                    .finally(() => {
+                        activityChannelRef.current = null;
+                    });
+            }
+        };
     }, [db]);
 
     const filteredActivities = useMemo(() => {
@@ -128,24 +176,13 @@ export default function ActivityFeedTab({
     return (
         <Card className="shadow-lg rounded-lg h-full flex flex-col">
             <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <div>
-                        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                            <Activity className="mr-2 h-5 w-5 text-primary" /> Activity Feed
-                        </CardTitle>
-                        <CardDescription className="text-xs sm:text-sm">
-                            Track all changes and activities in your expense sharing group. Click an expense activity for details.
-                        </CardDescription>
-                    </div>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={fetchActivityFeed}
-                        disabled={isLoading}
-                    >
-                        <RefreshCw className={`mr-1 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                        Refresh
-                    </Button>
+                <div>
+                    <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                        <Activity className="mr-2 h-5 w-5 text-primary" /> Activity Feed
+                    </CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">
+                        Track all changes and activities in your expense sharing group. Updates automatically in real-time.
+                    </CardDescription>
                 </div>
 
                 {/* Filters */}
