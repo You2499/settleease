@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
+import { Settings2, AlertTriangle, HandCoins, BarChartBig, Activity } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
@@ -19,17 +19,20 @@ import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import ActivityFeedTab from '@/components/settleease/ActivityFeedTab';
+import FeatureRolloutTab from '@/components/settleease/FeatureRolloutTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
+import FeatureNotificationModal from '@/components/settleease/FeatureNotificationModal';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -39,6 +42,7 @@ export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
+  const [showFeatureNotificationModal, setShowFeatureNotificationModal] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -98,6 +102,9 @@ export default function SettleEasePage() {
   // Set up realtime subscriptions
   useSupabaseRealtime(db, supabaseInitializationError, currentUser, userRole, isDataFetchedAtLeastOnce, fetchAllData);
 
+  // Use feature flags hook
+  const { isFeatureEnabled } = useFeatureFlags(db, currentUser?.id);
+
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
     if (currentUser && !isLoadingProfile) {
@@ -149,7 +156,7 @@ export default function SettleEasePage() {
 
   // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'featureRollout', 'testErrorBoundary'];
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
       console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
       setActiveView('dashboard');
@@ -157,11 +164,43 @@ export default function SettleEasePage() {
     }
   }, [userRole, activeView]);
 
+  // Effect to check for feature notifications when user logs in
+  useEffect(() => {
+    if (currentUser && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && isDataFetchedAtLeastOnce) {
+      // Check for unread feature notifications
+      const checkFeatureNotifications = async () => {
+        if (!db) return;
+        
+        try {
+          const { data, error } = await db
+            .from('feature_notifications')
+            .select('id')
+            .eq('user_id', currentUser.id)
+            .eq('is_read', false)
+            .limit(1);
+
+          if (error) throw error;
+          
+          if (data && data.length > 0) {
+            // Add a small delay to ensure other modals are handled first
+            setTimeout(() => {
+              setShowFeatureNotificationModal(true);
+            }, 1000);
+          }
+        } catch (error) {
+          console.error('Error checking feature notifications:', error);
+        }
+      };
+
+      checkFeatureNotifications();
+    }
+  }, [currentUser, isLoadingAuth, isLoadingRole, isLoadingProfile, isDataFetchedAtLeastOnce, db]);
+
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'featureRollout', 'testErrorBoundary'];
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
       setActiveView('dashboard'); // This triggers the Role-View Sync effect if needed
@@ -242,6 +281,12 @@ export default function SettleEasePage() {
         isGoogleUser={!isNameModalEditMode && (getGoogleUserInfo()?.isGoogle || false)}
         isEditMode={isNameModalEditMode}
       />
+      <FeatureNotificationModal
+        isOpen={showFeatureNotificationModal}
+        onClose={() => setShowFeatureNotificationModal(false)}
+        db={db}
+        currentUserId={currentUser.id}
+      />
       <SidebarProvider defaultOpen={true}>
         <AppSidebar 
           activeView={activeView} 
@@ -251,6 +296,7 @@ export default function SettleEasePage() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
+          isFeatureEnabled={isFeatureEnabled}
         />
       <SidebarInset>
         <div className="flex flex-col h-full">
@@ -294,13 +340,28 @@ export default function SettleEasePage() {
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <AnalyticsTab
-                  expenses={expenses}
-                  people={people}
-                  peopleMap={peopleMap}
-                  dynamicCategories={categories}
-                  getCategoryIconFromName={getCategoryIconFromName}
-                />
+                {isFeatureEnabled('analytics') ? (
+                  <AnalyticsTab
+                    expenses={expenses}
+                    people={people}
+                    peopleMap={peopleMap}
+                    dynamicCategories={categories}
+                    getCategoryIconFromName={getCategoryIconFromName}
+                  />
+                ) : (
+                  <Card className="text-center py-10">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-center text-muted-foreground">
+                        <BarChartBig className="mr-2 h-6 w-6" />
+                        Analytics Not Available
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">This feature is currently disabled for your account.</p>
+                      <p className="text-sm text-muted-foreground mt-2">Contact your administrator if you need access.</p>
+                    </CardContent>
+                  </Card>
+                )}
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'addExpense' && (
@@ -378,21 +439,50 @@ export default function SettleEasePage() {
                 />
               </SettleEaseErrorBoundary>
             )}
+            {userRole === 'admin' && activeView === 'featureRollout' && (
+              <SettleEaseErrorBoundary
+                componentName="Feature Rollout"
+                size="large"
+                onNavigateHome={() => setActiveView('dashboard')}
+              >
+                <FeatureRolloutTab
+                  db={db}
+                  supabaseInitializationError={supabaseInitializationError}
+                  people={people}
+                  currentUserId={currentUser.id}
+                />
+              </SettleEaseErrorBoundary>
+            )}
             {activeView === 'activityFeed' && (
               <SettleEaseErrorBoundary
                 componentName="Activity Feed"
                 size="large"
                 onNavigateHome={() => setActiveView('dashboard')}
               >
-                <ActivityFeedTab
-                  db={db}
-                  people={people}
-                  peopleMap={peopleMap}
-                  onViewExpenseDetails={(expenseId) => {
-                    // TODO: Implement expense detail view from activity feed
-                    console.log('View expense details:', expenseId);
-                  }}
-                />
+                {isFeatureEnabled('activityFeed') ? (
+                  <ActivityFeedTab
+                    db={db}
+                    people={people}
+                    peopleMap={peopleMap}
+                    onViewExpenseDetails={(expenseId) => {
+                      // TODO: Implement expense detail view from activity feed
+                      console.log('View expense details:', expenseId);
+                    }}
+                  />
+                ) : (
+                  <Card className="text-center py-10">
+                    <CardHeader>
+                      <CardTitle className="flex items-center justify-center text-muted-foreground">
+                        <Activity className="mr-2 h-6 w-6" />
+                        Activity Feed Not Available
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-muted-foreground">This feature is currently disabled for your account.</p>
+                      <p className="text-sm text-muted-foreground mt-2">Contact your administrator if you need access.</p>
+                    </CardContent>
+                  </Card>
+                )}
               </SettleEaseErrorBoundary>
             )}
             {userRole === 'admin' && activeView === 'testErrorBoundary' && (

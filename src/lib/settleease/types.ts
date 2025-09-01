@@ -84,7 +84,7 @@ export interface CalculatedTransaction {
 
 
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'activityFeed' | 'testErrorBoundary';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'activityFeed' | 'featureRollout' | 'testErrorBoundary';
 
 
 // Analytics Specific Types
@@ -156,6 +156,27 @@ export interface SplitMethodDistributionData {
 export interface TopExpenseData extends Expense {
   // Potentially add formatted payer strings or other derived data if needed for display
   // For now, just reusing Expense type is fine if all necessary fields are there
+}
+
+// Feature Rollout Types
+export interface FeatureFlag {
+  id: string;
+  feature_name: string;
+  display_name: string;
+  description: string;
+  is_enabled: boolean;
+  enabled_for_users: string[]; // Array of user IDs
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FeatureNotification {
+  id: string;
+  user_id: string;
+  feature_name: string;
+  notification_type: 'enabled' | 'disabled';
+  is_read: boolean;
+  created_at?: string;
 }
 
 // Used in ExpenseDetailModal for itemwise breakdown

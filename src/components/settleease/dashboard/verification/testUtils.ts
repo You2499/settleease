@@ -108,7 +108,6 @@ export const generateTestData = () => {
       amount_settled: 100,
       settled_at: new Date().toISOString(),
       marked_by_user_id: "admin",
-      status: "pending",
     },
   ];
 
