@@ -105,6 +105,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               <span className="group-data-[state=collapsed]:hidden">Analytics</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => handleNavigation('activityFeed')}
+              isActive={activeView === 'activityFeed'}
+              tooltip={{ content: "Activity Feed", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+              className="justify-start"
+            >
+              <Edit3 />
+              <span className="group-data-[state=collapsed]:hidden">Activity Feed</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           {userRole === 'admin' && (
             <>
               <SidebarMenuItem>
