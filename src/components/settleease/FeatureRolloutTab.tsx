@@ -57,11 +57,29 @@ export default function FeatureRolloutTab({
     if (!db || supabaseInitializationError) return;
 
     try {
-      const { data, error } = await db
+      // First check if current user is admin by querying their own profile
+      const { data: currentUserData, error: currentUserError } = await db
         .from('user_profiles')
-        .select('user_id, first_name, last_name, role')
-        .order('role', { ascending: false }) // Show admins first
-        .order('first_name', { ascending: true });
+        .select('role')
+        .eq('user_id', currentUserId)
+        .single();
+
+      if (currentUserError) throw currentUserError;
+
+      const isCurrentUserAdmin = currentUserData?.role === 'admin';
+
+      // If user is admin, use the admin view to get all users
+      // Otherwise, just get their own profile
+      const { data, error } = isCurrentUserAdmin
+        ? await db
+          .from('admin_user_profiles')
+          .select('user_id, first_name, last_name, role')
+          .order('role', { ascending: false }) // Show admins first
+          .order('first_name', { ascending: true })
+        : await db
+          .from('user_profiles')
+          .select('user_id, first_name, last_name, role')
+          .eq('user_id', currentUserId);
 
       if (error) throw error;
 
