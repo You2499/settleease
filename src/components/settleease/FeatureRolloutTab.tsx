@@ -53,50 +53,77 @@ export default function FeatureRolloutTab({
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
+  const [forceRender, setForceRender] = useState(0);
+
+  // Debug effect to monitor authenticatedUsers changes
+  useEffect(() => {
+    console.log('authenticatedUsers state changed:', authenticatedUsers);
+  }, [authenticatedUsers]);
 
   const fetchAuthenticatedUsers = useCallback(async () => {
-    if (!db || supabaseInitializationError) return;
+    if (!db || supabaseInitializationError) {
+      console.log('Skipping user fetch - no db or error:', { db: !!db, error: supabaseInitializationError });
+      return;
+    }
 
     try {
+      console.log('Fetching authenticated users...');
       const { data, error } = await db
         .from('user_profiles')
-        .select(`
-          user_id,
-          first_name,
-          last_name,
-          role
-        `)
-        .not('user_id', 'is', null)
+        .select('user_id, first_name, last_name, role')
         .order('role', { ascending: false }) // Show admins first
         .order('first_name', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Database error fetching users:', error);
+        throw error;
+      }
 
       console.log('Fetched user profiles:', data); // Debug log
+      console.log('Number of users fetched:', data?.length || 0);
+
+      // Filter out any profiles without user_id
+      const validProfiles = data?.filter(profile => profile.user_id) || [];
+
+      if (validProfiles.length === 0) {
+        console.warn('No valid user profiles found in database');
+        // Fallback: just use current user
+        setAuthenticatedUsers([{
+          id: currentUserId,
+          email: 'Current User',
+          display_name: 'Current User',
+          role: 'user'
+        }]);
+        return;
+      }
 
       // Create user list with display names and roles
-      const users: AuthenticatedUser[] = data.map(profile => ({
+      const users: AuthenticatedUser[] = validProfiles.map(profile => ({
         id: profile.user_id,
         email: '', // We'll show display name instead
         first_name: profile.first_name,
         last_name: profile.last_name,
-        role: profile.role,
+        role: profile.role || 'user',
         display_name: profile.first_name && profile.last_name 
           ? `${profile.first_name} ${profile.last_name}`.trim()
-          : `User ${profile.user_id.slice(0, 8)}...`
+          : profile.first_name || profile.last_name || `User ${profile.user_id.slice(0, 8)}...`
       }));
 
       console.log('Processed users:', users); // Debug log
+      console.log('Setting authenticated users state with', users.length, 'users');
       setAuthenticatedUsers(users);
+      setForceRender(prev => prev + 1); // Force re-render
     } catch (error: any) {
       console.error('Error fetching authenticated users:', error);
       // Fallback: just use current user
-      setAuthenticatedUsers([{
+      const fallbackUser = {
         id: currentUserId,
         email: 'Current User',
-        display_name: 'Current User',
+        display_name: 'Current User (Fallback)',
         role: 'user'
-      }]);
+      };
+      console.log('Using fallback user:', fallbackUser);
+      setAuthenticatedUsers([fallbackUser]);
     }
   }, [db, supabaseInitializationError, currentUserId]);
 
@@ -168,9 +195,12 @@ export default function FeatureRolloutTab({
   }, [db, supabaseInitializationError, fetchFeatureFlags]);
 
   useEffect(() => {
+    console.log('FeatureRolloutTab useEffect triggered');
     const initialize = async () => {
+      console.log('Starting initialization...');
       await fetchAuthenticatedUsers();
       await initializeFeatureFlags();
+      console.log('Initialization complete');
     };
     initialize();
 
@@ -217,7 +247,10 @@ export default function FeatureRolloutTab({
               });
             }
             
-            fetchAuthenticatedUsers();
+            // Add a small delay to ensure the database has been updated
+            setTimeout(() => {
+              fetchAuthenticatedUsers();
+            }, 100);
           }
         )
         .subscribe((status) => {
@@ -226,6 +259,7 @@ export default function FeatureRolloutTab({
         });
 
       return () => {
+        console.log('FeatureRolloutTab cleanup - unsubscribing');
         subscription.unsubscribe();
         setIsRealtimeConnected(false);
       };
@@ -353,6 +387,11 @@ export default function FeatureRolloutTab({
     }
   };
 
+  // Debug logging (only log when users change)
+  if (authenticatedUsers.length > 0) {
+    console.log('FeatureRolloutTab render - authenticatedUsers count:', authenticatedUsers.length);
+  }
+
   if (supabaseInitializationError) {
     return (
       <Card className="text-center py-10">
@@ -410,10 +449,22 @@ export default function FeatureRolloutTab({
             </div>
           </div>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Settings className="h-3 w-3" />
-          Admin Only
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log('Manual refresh triggered');
+              fetchAuthenticatedUsers();
+            }}
+          >
+            Refresh Users ({authenticatedUsers.length})
+          </Button>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Settings className="h-3 w-3" />
+            Admin Only
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-6">
