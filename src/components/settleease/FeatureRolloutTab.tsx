@@ -24,6 +24,7 @@ interface AuthenticatedUser {
   first_name?: string;
   last_name?: string;
   display_name: string;
+  role?: string;
 }
 
 const AVAILABLE_FEATURES = [
@@ -61,23 +62,30 @@ export default function FeatureRolloutTab({
         .select(`
           user_id,
           first_name,
-          last_name
+          last_name,
+          role
         `)
-        .not('user_id', 'is', null);
+        .not('user_id', 'is', null)
+        .order('role', { ascending: false }) // Show admins first
+        .order('first_name', { ascending: true });
 
       if (error) throw error;
 
-      // Create user list with display names
+      console.log('Fetched user profiles:', data); // Debug log
+
+      // Create user list with display names and roles
       const users: AuthenticatedUser[] = data.map(profile => ({
         id: profile.user_id,
         email: '', // We'll show display name instead
         first_name: profile.first_name,
         last_name: profile.last_name,
+        role: profile.role,
         display_name: profile.first_name && profile.last_name 
           ? `${profile.first_name} ${profile.last_name}`.trim()
           : `User ${profile.user_id.slice(0, 8)}...`
       }));
 
+      console.log('Processed users:', users); // Debug log
       setAuthenticatedUsers(users);
     } catch (error: any) {
       console.error('Error fetching authenticated users:', error);
@@ -85,7 +93,8 @@ export default function FeatureRolloutTab({
       setAuthenticatedUsers([{
         id: currentUserId,
         email: 'Current User',
-        display_name: 'Current User'
+        display_name: 'Current User',
+        role: 'user'
       }]);
     }
   }, [db, supabaseInitializationError, currentUserId]);
@@ -163,7 +172,30 @@ export default function FeatureRolloutTab({
       await initializeFeatureFlags();
     };
     initialize();
-  }, [fetchAuthenticatedUsers, initializeFeatureFlags]);
+
+    // Set up real-time subscription for feature flags changes
+    if (db) {
+      const subscription = db
+        .channel('feature_rollout_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: FEATURE_FLAGS_TABLE,
+          },
+          () => {
+            console.log('Feature flags changed, refreshing...');
+            fetchFeatureFlags();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [fetchAuthenticatedUsers, initializeFeatureFlags, fetchFeatureFlags, db]);
 
   const createNotification = async (featureName: string, notificationType: 'enabled' | 'disabled', userIds: string[]) => {
     if (!db || userIds.length === 0) return;
@@ -327,10 +359,20 @@ export default function FeatureRolloutTab({
             Control which features are available to users
           </p>
         </div>
-        <Badge variant="secondary" className="flex items-center gap-1">
-          <Settings className="h-3 w-3" />
-          Admin Only
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={fetchAuthenticatedUsers}
+            disabled={isLoading}
+          >
+            Refresh Users
+          </Button>
+          <Badge variant="secondary" className="flex items-center gap-1">
+            <Settings className="h-3 w-3" />
+            Admin Only
+          </Badge>
+        </div>
       </div>
 
       <div className="grid gap-6">
@@ -403,7 +445,9 @@ export default function FeatureRolloutTab({
                 {/* Individual User Controls */}
                 {authenticatedUsers.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-muted-foreground">Individual User Access</h4>
+                    <h4 className="font-medium text-sm text-muted-foreground">
+                      Individual User Access ({authenticatedUsers.length} users)
+                    </h4>
                     <div className="grid gap-2 max-h-60 overflow-y-auto">
                       {authenticatedUsers.map((user) => {
                         const isEnabled = featureFlag.enabled_for_users?.includes(user.id) || false;
@@ -415,10 +459,23 @@ export default function FeatureRolloutTab({
                           >
                             <div className="flex items-center space-x-3">
                               <div className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                              <span className="font-medium">{user.display_name}</span>
-                              {user.id === currentUserId && (
-                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">You</span>
-                              )}
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.display_name}</span>
+                                <div className="flex items-center gap-2">
+                                  {user.role && (
+                                    <span className={`text-xs px-2 py-0.5 rounded ${
+                                      user.role === 'admin' 
+                                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' 
+                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                    }`}>
+                                      {user.role}
+                                    </span>
+                                  )}
+                                  {user.id === currentUserId && (
+                                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">You</span>
+                                  )}
+                                </div>
+                              </div>
                             </div>
                             <Switch
                               checked={isEnabled}

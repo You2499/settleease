@@ -103,7 +103,7 @@ export default function SettleEasePage() {
   useSupabaseRealtime(db, supabaseInitializationError, currentUser, userRole, isDataFetchedAtLeastOnce, fetchAllData);
 
   // Use feature flags hook
-  const { isFeatureEnabled } = useFeatureFlags(db, currentUser?.id);
+  const { isFeatureEnabled, featureFlags } = useFeatureFlags(db, currentUser?.id);
 
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
@@ -164,13 +164,11 @@ export default function SettleEasePage() {
     }
   }, [userRole, activeView]);
 
-  // Effect to check for feature notifications when user logs in
+  // Effect to check for feature notifications when user logs in and set up real-time subscriptions
   useEffect(() => {
-    if (currentUser && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && isDataFetchedAtLeastOnce) {
+    if (currentUser && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && isDataFetchedAtLeastOnce && db) {
       // Check for unread feature notifications
       const checkFeatureNotifications = async () => {
-        if (!db) return;
-        
         try {
           const { data, error } = await db
             .from('feature_notifications')
@@ -193,8 +191,41 @@ export default function SettleEasePage() {
       };
 
       checkFeatureNotifications();
+
+      // Set up real-time subscription for new feature notifications
+      const notificationSubscription = db
+        .channel('feature_notifications_realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'feature_notifications',
+            filter: `user_id=eq.${currentUser.id}`,
+          },
+          (payload) => {
+            console.log('New feature notification received:', payload);
+            // Show immediate toast notification
+            const notification = payload.new as any;
+            toast({
+              title: `🎉 Feature ${notification.notification_type === 'enabled' ? 'Enabled' : 'Disabled'}!`,
+              description: `${notification.feature_name} has been ${notification.notification_type} for you. Check it out in the sidebar!`,
+              duration: 5000,
+            });
+            
+            // Show the notification modal after a short delay
+            setTimeout(() => {
+              setShowFeatureNotificationModal(true);
+            }, 2000);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        notificationSubscription.unsubscribe();
+      };
     }
-  }, [currentUser, isLoadingAuth, isLoadingRole, isLoadingProfile, isDataFetchedAtLeastOnce, db]);
+  }, [currentUser, isLoadingAuth, isLoadingRole, isLoadingProfile, isDataFetchedAtLeastOnce, db, toast]);
 
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
@@ -297,6 +328,7 @@ export default function SettleEasePage() {
           userRole={userRole}
           onEditName={handleEditName}
           isFeatureEnabled={isFeatureEnabled}
+          featureFlags={featureFlags}
         />
       <SidebarInset>
         <div className="flex flex-col h-full">

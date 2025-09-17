@@ -65,9 +65,10 @@ interface AppSidebarProps {
   userRole: UserRole;
   onEditName?: () => void;
   isFeatureEnabled?: (featureName: string) => boolean;
+  featureFlags?: any[]; // Add this to trigger re-renders
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isFeatureEnabled }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isFeatureEnabled, featureFlags }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -143,8 +144,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Analytics</span>
                         {isFeatureEnabled?.('analytics') && (
-                          <div className="ml-auto">
+                          <div className="ml-auto flex items-center gap-1">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium">
+                              ACTIVE
+                            </span>
                           </div>
                         )}
                       </SidebarMenuButton>
@@ -163,8 +167,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Activity Feed</span>
                         {isFeatureEnabled?.('activityFeed') && (
-                          <div className="ml-auto">
+                          <div className="ml-auto flex items-center gap-1">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium">
+                              ACTIVE
+                            </span>
                           </div>
                         )}
                       </SidebarMenuButton>
