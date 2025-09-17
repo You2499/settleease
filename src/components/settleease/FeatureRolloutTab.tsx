@@ -52,6 +52,7 @@ export default function FeatureRolloutTab({
   const [authenticatedUsers, setAuthenticatedUsers] = useState<AuthenticatedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
 
   const fetchAuthenticatedUsers = useCallback(async () => {
     if (!db || supabaseInitializationError) return;
@@ -173,10 +174,10 @@ export default function FeatureRolloutTab({
     };
     initialize();
 
-    // Set up real-time subscription for feature flags changes
+    // Set up real-time subscriptions
     if (db) {
       const subscription = db
-        .channel('feature_rollout_changes')
+        .channel('feature_rollout_realtime')
         .on(
           'postgres_changes',
           {
@@ -189,10 +190,44 @@ export default function FeatureRolloutTab({
             fetchFeatureFlags();
           }
         )
-        .subscribe();
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'user_profiles',
+          },
+          (payload) => {
+            console.log('User profiles changed, refreshing users...', payload);
+            
+            // Show toast notification for user changes
+            if (payload.eventType === 'INSERT') {
+              const newUser = payload.new as any;
+              toast({
+                title: "👤 New User Added",
+                description: `${newUser.first_name} ${newUser.last_name} has joined the system`,
+                duration: 3000,
+              });
+            } else if (payload.eventType === 'UPDATE') {
+              const updatedUser = payload.new as any;
+              toast({
+                title: "👤 User Updated",
+                description: `User profile has been updated`,
+                duration: 2000,
+              });
+            }
+            
+            fetchAuthenticatedUsers();
+          }
+        )
+        .subscribe((status) => {
+          console.log('Realtime subscription status:', status);
+          setIsRealtimeConnected(status === 'SUBSCRIBED');
+        });
 
       return () => {
         subscription.unsubscribe();
+        setIsRealtimeConnected(false);
       };
     }
   }, [fetchAuthenticatedUsers, initializeFeatureFlags, fetchFeatureFlags, db]);
@@ -355,24 +390,30 @@ export default function FeatureRolloutTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-primary">Feature Rollout</h1>
-          <p className="text-muted-foreground mt-1">
-            Control which features are available to users
-          </p>
+          <div className="flex items-center gap-3 mt-1">
+            <p className="text-muted-foreground">
+              Control which features are available to users
+            </p>
+            <div className={`flex items-center gap-1 text-xs ${
+              isRealtimeConnected 
+                ? 'text-green-600 dark:text-green-400' 
+                : 'text-orange-600 dark:text-orange-400'
+            }`}>
+              <div className={`w-2 h-2 rounded-full ${
+                isRealtimeConnected 
+                  ? 'bg-green-500 animate-pulse' 
+                  : 'bg-orange-500'
+              }`}></div>
+              <span className="font-medium">
+                {isRealtimeConnected ? 'Live Updates' : 'Connecting...'}
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={fetchAuthenticatedUsers}
-            disabled={isLoading}
-          >
-            Refresh Users
-          </Button>
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <Settings className="h-3 w-3" />
-            Admin Only
-          </Badge>
-        </div>
+        <Badge variant="secondary" className="flex items-center gap-1">
+          <Settings className="h-3 w-3" />
+          Admin Only
+        </Badge>
       </div>
 
       <div className="grid gap-6">
@@ -445,9 +486,17 @@ export default function FeatureRolloutTab({
                 {/* Individual User Controls */}
                 {authenticatedUsers.length > 0 && (
                   <div className="space-y-2">
-                    <h4 className="font-medium text-sm text-muted-foreground">
-                      Individual User Access ({authenticatedUsers.length} users)
-                    </h4>
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-sm text-muted-foreground">
+                        Individual User Access ({authenticatedUsers.length} users)
+                      </h4>
+                      {isRealtimeConnected && (
+                        <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                          <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                          <span className="font-medium">Auto-sync</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="grid gap-2 max-h-60 overflow-y-auto">
                       {authenticatedUsers.map((user) => {
                         const isEnabled = featureFlag.enabled_for_users?.includes(user.id) || false;

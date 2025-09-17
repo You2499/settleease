@@ -207,9 +207,13 @@ export default function SettleEasePage() {
             console.log('New feature notification received:', payload);
             // Show immediate toast notification
             const notification = payload.new as any;
+            const featureName = notification.feature_name === 'analytics' ? 'Analytics' : 
+                               notification.feature_name === 'activityFeed' ? 'Activity Feed' : 
+                               notification.feature_name;
+            
             toast({
               title: `🎉 Feature ${notification.notification_type === 'enabled' ? 'Enabled' : 'Disabled'}!`,
-              description: `${notification.feature_name} has been ${notification.notification_type} for you. Check it out in the sidebar!`,
+              description: `${featureName} has been ${notification.notification_type} for you. Check it out in the sidebar!`,
               duration: 5000,
             });
             
@@ -219,7 +223,9 @@ export default function SettleEasePage() {
             }, 2000);
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Feature notification subscription status:', status);
+        });
 
       return () => {
         notificationSubscription.unsubscribe();
