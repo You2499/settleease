@@ -17,11 +17,13 @@ import {
   Activity, 
   Sparkles, 
   Bell,
-  X
+  X,
+  AlertCircle
 } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FeatureNotification } from '@/lib/settleease/types';
 import { FEATURE_NOTIFICATIONS_TABLE } from '@/lib/settleease/constants';
+import { useFeatureInteractions } from '@/hooks/useFeatureInteractions';
 
 interface FeatureNotificationModalProps {
   isOpen: boolean;
@@ -58,6 +60,7 @@ export default function FeatureNotificationModal({
   const [notifications, setNotifications] = useState<FeatureNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMarkingAsRead, setIsMarkingAsRead] = useState(false);
+  const { markNotificationSeen } = useFeatureInteractions();
 
   const fetchNotifications = useCallback(async () => {
     if (!db || !currentUserId) return;
@@ -115,11 +118,21 @@ export default function FeatureNotificationModal({
   }, [isOpen, fetchNotifications]);
 
   const handleClose = async () => {
+    // Mark all notifications as seen in our interaction tracking
+    notifications.forEach(notification => {
+      markNotificationSeen(notification.feature_name);
+    });
+    
     await markNotificationsAsRead();
     onClose();
   };
 
   const handleDismiss = async () => {
+    // Mark all notifications as seen in our interaction tracking
+    notifications.forEach(notification => {
+      markNotificationSeen(notification.feature_name);
+    });
+    
     await markNotificationsAsRead();
     onClose();
   };
@@ -263,6 +276,8 @@ export default function FeatureNotificationModal({
                         const featureName = feature.feature_name === 'analytics' ? 'analytics' : 
                                            feature.feature_name === 'activityFeed' ? 'activityFeed' : 
                                            feature.feature_name;
+                        // Mark notification as seen when navigating to feature
+                        markNotificationSeen(feature.feature_name);
                         onNavigateToFeature!(featureName);
                         handleClose();
                       }}

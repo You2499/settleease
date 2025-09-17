@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import type { ActiveView, UserRole } from '@/lib/settleease';
+import { useFeatureInteractions } from '@/hooks/useFeatureInteractions';
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -66,12 +67,14 @@ interface AppSidebarProps {
   onEditName?: () => void;
   isFeatureEnabled?: (featureName: string) => boolean;
   featureFlags?: any[]; // Add this to trigger re-renders
+  lastUpdated?: Date | null; // Add this to trigger re-renders on feature changes
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isFeatureEnabled, featureFlags }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isFeatureEnabled, featureFlags, lastUpdated }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
+  const { markFeatureClicked, shouldShowIndicator } = useFeatureInteractions();
 
   // State for collapsible sections
   const [isInsightsOpen, setIsInsightsOpen] = React.useState(true);
@@ -80,6 +83,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const [isSystemOpen, setIsSystemOpen] = React.useState(false);
 
   const handleNavigation = (view: ActiveView) => {
+    // Track feature clicks for analytics and activityFeed
+    if (view === 'analytics' || view === 'activityFeed') {
+      markFeatureClicked(view);
+    }
+    
     setActiveView(view);
     if (isMobile) {
       setOpenMobile(false);
@@ -137,12 +145,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('analytics')}
                         isActive={activeView === 'analytics'}
                         tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200"
+                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200 animate-in fade-in-0 slide-in-from-left-2 relative"
                       >
                         <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded">
                           <BarChartBig className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Analytics</span>
+                        {shouldShowIndicator('analytics') && (
+                          <div className="absolute -top-1 -right-1 group-data-[state=collapsed]:hidden">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping opacity-75"></div>
+                          </div>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -152,12 +166,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('activityFeed')}
                         isActive={activeView === 'activityFeed'}
                         tooltip={{ content: "Activity Feed", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200"
+                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200 animate-in fade-in-0 slide-in-from-left-2 relative"
                       >
                         <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded">
                           <Edit3 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Activity Feed</span>
+                        {shouldShowIndicator('activityFeed') && (
+                          <div className="absolute -top-1 -right-1 group-data-[state=collapsed]:hidden">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <div className="absolute inset-0 w-2 h-2 bg-green-500 rounded-full animate-ping opacity-75"></div>
+                          </div>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}

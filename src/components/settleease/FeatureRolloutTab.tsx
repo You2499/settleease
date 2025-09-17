@@ -146,10 +146,29 @@ export default function FeatureRolloutTab({
     }
   }, [db, supabaseInitializationError]);
 
+  const cleanupDuplicateNotifications = useCallback(async () => {
+    if (!db || supabaseInitializationError) return;
+
+    try {
+      // Clean up duplicate notifications by keeping only the most recent one per user per feature
+      const { error } = await db.rpc('cleanup_duplicate_notifications');
+      
+      if (error) {
+        console.error('Error cleaning up duplicate notifications:', error);
+        // Don't throw, this is not critical
+      }
+    } catch (error: any) {
+      console.error('Error in cleanup function:', error);
+    }
+  }, [db, supabaseInitializationError]);
+
   const initializeFeatureFlags = useCallback(async () => {
     if (!db || supabaseInitializationError) return;
 
     try {
+      // Clean up any duplicate notifications first
+      await cleanupDuplicateNotifications();
+
       // Check which features already exist
       const { data: existingFlags } = await db
         .from(FEATURE_FLAGS_TABLE)
@@ -187,7 +206,7 @@ export default function FeatureRolloutTab({
         variant: "destructive"
       });
     }
-  }, [db, supabaseInitializationError, fetchFeatureFlags]);
+  }, [db, supabaseInitializationError, fetchFeatureFlags, cleanupDuplicateNotifications]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -256,6 +275,21 @@ export default function FeatureRolloutTab({
     if (!db || userIds.length === 0) return;
 
     try {
+      // First, delete any existing unread notifications for this feature and these users
+      // to prevent duplicates
+      const { error: deleteError } = await db
+        .from(FEATURE_NOTIFICATIONS_TABLE)
+        .delete()
+        .eq('feature_name', featureName)
+        .in('user_id', userIds)
+        .eq('is_read', false);
+
+      if (deleteError) {
+        console.error('Error deleting old notifications:', deleteError);
+        // Continue anyway, don't throw
+      }
+
+      // Create new notifications
       const notifications = userIds.map(userId => ({
         user_id: userId,
         feature_name: featureName,
@@ -280,10 +314,9 @@ export default function FeatureRolloutTab({
 
     try {
       const newEnabledState = !featureFlag.is_enabled;
-
-      // Use the authenticated users we already fetched
       const allUserIds = authenticatedUsers.map(user => user.id);
 
+      // Update the feature flag
       const { error } = await db
         .from(FEATURE_FLAGS_TABLE)
         .update({
@@ -295,16 +328,19 @@ export default function FeatureRolloutTab({
 
       if (error) throw error;
 
-      // Create notifications for all authenticated users
-      await createNotification(
-        featureFlag.feature_name,
-        newEnabledState ? 'enabled' : 'disabled',
-        allUserIds
-      );
+      // Only create notifications if there are users to notify
+      if (allUserIds.length > 0) {
+        await createNotification(
+          featureFlag.feature_name,
+          newEnabledState ? 'enabled' : 'disabled',
+          allUserIds
+        );
+      }
 
       toast({
         title: "🎉 Feature Updated Successfully",
-        description: `${featureFlag.display_name} has been ${newEnabledState ? 'enabled' : 'disabled'} for all ${allUserIds.length} user${allUserIds.length !== 1 ? 's' : ''}. ${newEnabledState ? 'Users will see a notification about this new feature!' : 'Users will be notified about this change.'}`,
+        description: `${featureFlag.display_name} has been ${newEnabledState ? 'enabled' : 'disabled'} for all ${allUserIds.length} user${allUserIds.length !== 1 ? 's' : ''} in real-time. ${newEnabledState ? 'Users will see the feature immediately and receive a notification!' : 'Users will lose access immediately and be notified about this change.'}`,
+        duration: 6000,
       });
 
       await fetchFeatureFlags();
@@ -329,38 +365,43 @@ export default function FeatureRolloutTab({
       const currentEnabledUsers = featureFlag.enabled_for_users || [];
       const isCurrentlyEnabled = currentEnabledUsers.includes(userId);
 
-      let newEnabledUsers: string[];
-      if (isCurrentlyEnabled) {
-        newEnabledUsers = currentEnabledUsers.filter(id => id !== userId);
-      } else {
-        newEnabledUsers = [...currentEnabledUsers, userId];
+      // Don't do anything if the state isn't actually changing
+      if (isCurrentlyEnabled === isCurrentlyEnabled) {
+        let newEnabledUsers: string[];
+        if (isCurrentlyEnabled) {
+          newEnabledUsers = currentEnabledUsers.filter(id => id !== userId);
+        } else {
+          newEnabledUsers = [...currentEnabledUsers, userId];
+        }
+
+        // Update the feature flag
+        const { error } = await db
+          .from(FEATURE_FLAGS_TABLE)
+          .update({
+            enabled_for_users: newEnabledUsers,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', featureFlag.id);
+
+        if (error) throw error;
+
+        // Create notification for the specific user only
+        await createNotification(
+          featureFlag.feature_name,
+          isCurrentlyEnabled ? 'disabled' : 'enabled',
+          [userId]
+        );
+
+        const user = authenticatedUsers.find(u => u.id === userId);
+        const userName = user?.display_name || 'User';
+        toast({
+          title: `✨ Feature ${isCurrentlyEnabled ? 'Disabled' : 'Enabled'}`,
+          description: `${featureFlag.display_name} has been ${isCurrentlyEnabled ? 'disabled' : 'enabled'} for ${userName} in real-time. ${!isCurrentlyEnabled ? 'They will see the feature immediately and receive a notification!' : 'They will lose access immediately and be notified about this change.'}`,
+          duration: 5000,
+        });
+
+        await fetchFeatureFlags();
       }
-
-      const { error } = await db
-        .from(FEATURE_FLAGS_TABLE)
-        .update({
-          enabled_for_users: newEnabledUsers,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', featureFlag.id);
-
-      if (error) throw error;
-
-      // Create notification for the specific user
-      await createNotification(
-        featureFlag.feature_name,
-        isCurrentlyEnabled ? 'disabled' : 'enabled',
-        [userId]
-      );
-
-      const user = authenticatedUsers.find(u => u.id === userId);
-      const userName = user?.display_name || 'User';
-      toast({
-        title: `✨ Feature ${isCurrentlyEnabled ? 'Disabled' : 'Enabled'}`,
-        description: `${featureFlag.display_name} has been ${isCurrentlyEnabled ? 'disabled' : 'enabled'} for ${userName}. ${!isCurrentlyEnabled ? 'They will receive a notification about this new feature!' : 'They will be notified about this change.'}`,
-      });
-
-      await fetchFeatureFlags();
     } catch (error: any) {
       console.error('Error updating feature flag for user:', error);
       toast({
@@ -425,13 +466,12 @@ export default function FeatureRolloutTab({
                 : 'bg-orange-500'
                 }`}></div>
               <span className="font-medium">
-                {isRealtimeConnected ? 'Live Updates' : 'Connecting...'}
+                {isRealtimeConnected ? 'Real-time Active' : 'Connecting...'}
               </span>
             </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-
           <Badge variant="secondary" className="flex items-center gap-1">
             <Settings className="h-3 w-3" />
             Admin Only

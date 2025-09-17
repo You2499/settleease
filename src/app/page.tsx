@@ -27,6 +27,7 @@ import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 import FeatureNotificationModal from '@/components/settleease/FeatureNotificationModal';
+import FeatureIndicatorHelper from '@/components/settleease/FeatureIndicatorHelper';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
@@ -104,7 +105,7 @@ export default function SettleEasePage() {
   useSupabaseRealtime(db, supabaseInitializationError, currentUser, userRole, isDataFetchedAtLeastOnce, fetchAllData);
 
   // Use feature flags hook
-  const { isFeatureEnabled, featureFlags } = useFeatureFlags(db, currentUser?.id);
+  const { isFeatureEnabled, featureFlags, lastUpdated } = useFeatureFlags(db, currentUser?.id);
 
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
@@ -167,16 +168,17 @@ export default function SettleEasePage() {
       return;
     }
 
-    // Check feature-based restrictions
+    // Check feature-based restrictions (enhanced for real-time updates)
     if (activeView === 'analytics' && !isFeatureEnabled('analytics')) {
       console.log('Feature-View Sync Effect: Analytics feature is disabled. Redirecting to dashboard.');
       setActiveView('dashboard');
       setWasKickedFromFeature(true);
-      setShowFeatureNotificationModal(true); // Show the modal explaining the change
+      setShowFeatureNotificationModal(true);
       toast({ 
-        title: "Feature Disabled", 
-        description: "Analytics has been disabled for your account. You've been redirected to the dashboard.", 
-        variant: "destructive" 
+        title: "🚫 Feature Disabled", 
+        description: "Analytics has been disabled for your account in real-time. You've been redirected to the dashboard.", 
+        variant: "destructive",
+        duration: 6000
       });
       return;
     }
@@ -185,15 +187,16 @@ export default function SettleEasePage() {
       console.log('Feature-View Sync Effect: Activity Feed feature is disabled. Redirecting to dashboard.');
       setActiveView('dashboard');
       setWasKickedFromFeature(true);
-      setShowFeatureNotificationModal(true); // Show the modal explaining the change
+      setShowFeatureNotificationModal(true);
       toast({ 
-        title: "Feature Disabled", 
-        description: "Activity Feed has been disabled for your account. You've been redirected to the dashboard.", 
-        variant: "destructive" 
+        title: "🚫 Feature Disabled", 
+        description: "Activity Feed has been disabled for your account in real-time. You've been redirected to the dashboard.", 
+        variant: "destructive",
+        duration: 6000
       });
       return;
     }
-  }, [userRole, activeView, isFeatureEnabled, setShowFeatureNotificationModal]);
+  }, [userRole, activeView, isFeatureEnabled, setShowFeatureNotificationModal, lastUpdated]);
 
   // Effect to check for feature notifications when user logs in and set up real-time subscriptions
   useEffect(() => {
@@ -416,6 +419,7 @@ export default function SettleEasePage() {
           onEditName={handleEditName}
           isFeatureEnabled={isFeatureEnabled}
           featureFlags={featureFlags}
+          lastUpdated={lastUpdated}
         />
       <SidebarInset>
         <div className="flex flex-col h-full">
