@@ -43,6 +43,7 @@ export default function SettleEasePage() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [showFeatureNotificationModal, setShowFeatureNotificationModal] = useState(false);
+  const [wasKickedFromFeature, setWasKickedFromFeature] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -154,15 +155,45 @@ export default function SettleEasePage() {
   }, []);
 
 
-  // Effect to synchronize activeView based on userRole (e.g., redirect 'user' from admin pages)
+  // Effect to synchronize activeView based on userRole and feature access
   useEffect(() => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'featureRollout', 'testErrorBoundary'];
+    
+    // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
       console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
       setActiveView('dashboard');
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
+      return;
     }
-  }, [userRole, activeView]);
+
+    // Check feature-based restrictions
+    if (activeView === 'analytics' && !isFeatureEnabled('analytics')) {
+      console.log('Feature-View Sync Effect: Analytics feature is disabled. Redirecting to dashboard.');
+      setActiveView('dashboard');
+      setWasKickedFromFeature(true);
+      setShowFeatureNotificationModal(true); // Show the modal explaining the change
+      toast({ 
+        title: "Feature Disabled", 
+        description: "Analytics has been disabled for your account. You've been redirected to the dashboard.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (activeView === 'activityFeed' && !isFeatureEnabled('activityFeed')) {
+      console.log('Feature-View Sync Effect: Activity Feed feature is disabled. Redirecting to dashboard.');
+      setActiveView('dashboard');
+      setWasKickedFromFeature(true);
+      setShowFeatureNotificationModal(true); // Show the modal explaining the change
+      toast({ 
+        title: "Feature Disabled", 
+        description: "Activity Feed has been disabled for your account. You've been redirected to the dashboard.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+  }, [userRole, activeView, isFeatureEnabled, setShowFeatureNotificationModal]);
 
   // Effect to check for feature notifications when user logs in and set up real-time subscriptions
   useEffect(() => {
@@ -211,11 +242,30 @@ export default function SettleEasePage() {
                                notification.feature_name === 'activityFeed' ? 'Activity Feed' : 
                                notification.feature_name;
             
-            toast({
-              title: `🎉 Feature ${notification.notification_type === 'enabled' ? 'Enabled' : 'Disabled'}!`,
-              description: `${featureName} has been ${notification.notification_type} for you. Check it out in the sidebar!`,
-              duration: 5000,
-            });
+            if (notification.notification_type === 'enabled') {
+              toast({
+                title: `🎉 Feature Enabled!`,
+                description: `${featureName} has been enabled for you. Check it out in the sidebar!`,
+                duration: 7000,
+                action: {
+                  label: "Check it out!",
+                  onClick: () => {
+                    if (notification.feature_name === 'analytics') {
+                      setActiveView('analytics');
+                    } else if (notification.feature_name === 'activityFeed') {
+                      setActiveView('activityFeed');
+                    }
+                  }
+                }
+              });
+            } else {
+              toast({
+                title: `Feature Disabled`,
+                description: `${featureName} has been disabled for your account.`,
+                duration: 5000,
+                variant: "destructive"
+              });
+            }
             
             // Show the notification modal after a short delay
             setTimeout(() => {
@@ -238,13 +288,36 @@ export default function SettleEasePage() {
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'featureRollout', 'testErrorBoundary'];
+    
+    // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
-      setActiveView('dashboard'); // This triggers the Role-View Sync effect if needed
-    } else {
-      setActiveView(view);
+      setActiveView('dashboard');
+      return;
     }
-  }, [userRole]);
+
+    // Check feature-based restrictions
+    if (view === 'analytics' && !isFeatureEnabled('analytics')) {
+      toast({ 
+        title: "Feature Not Available", 
+        description: "Analytics is not enabled for your account.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    if (view === 'activityFeed' && !isFeatureEnabled('activityFeed')) {
+      toast({ 
+        title: "Feature Not Available", 
+        description: "Activity Feed is not enabled for your account.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    setActiveView(view);
+    setWasKickedFromFeature(false); // Reset the kicked state when navigating normally
+  }, [userRole, isFeatureEnabled]);
 
   const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
     return (LucideIcons as any)[iconName] || Settings2;
@@ -323,6 +396,14 @@ export default function SettleEasePage() {
         onClose={() => setShowFeatureNotificationModal(false)}
         db={db}
         currentUserId={currentUser.id}
+        onNavigateToFeature={(featureName) => {
+          // Navigate to the feature if it's enabled
+          if (featureName === 'analytics' && isFeatureEnabled('analytics')) {
+            setActiveView('analytics');
+          } else if (featureName === 'activityFeed' && isFeatureEnabled('activityFeed')) {
+            setActiveView('activityFeed');
+          }
+        }}
       />
       <SidebarProvider defaultOpen={true}>
         <AppSidebar 

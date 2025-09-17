@@ -28,6 +28,7 @@ interface FeatureNotificationModalProps {
   onClose: () => void;
   db: SupabaseClient | undefined;
   currentUserId: string;
+  onNavigateToFeature?: (featureName: string) => void;
 }
 
 const FEATURE_CONFIGS = {
@@ -52,6 +53,7 @@ export default function FeatureNotificationModal({
   onClose,
   db,
   currentUserId,
+  onNavigateToFeature,
 }: FeatureNotificationModalProps) {
   const [notifications, setNotifications] = useState<FeatureNotification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -246,23 +248,73 @@ export default function FeatureNotificationModal({
 
         {/* Footer */}
         <div className="pt-4 border-t border-border/30">
-          <Button
-            onClick={handleClose}
-            disabled={isMarkingAsRead}
-            className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 active:scale-[0.98]"
-          >
-            {isMarkingAsRead ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Updating...
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="mr-2 h-5 w-5" />
-                Got it!
-              </>
-            )}
-          </Button>
+          {(() => {
+            // Check if there are any enabled features that can be navigated to
+            const enabledFeatures = notifications.filter(n => n.notification_type === 'enabled');
+            const hasNavigableFeatures = enabledFeatures.length > 0 && onNavigateToFeature;
+
+            if (hasNavigableFeatures) {
+              return (
+                <div className="space-y-3">
+                  {enabledFeatures.length === 1 && (
+                    <Button
+                      onClick={() => {
+                        const feature = enabledFeatures[0];
+                        const featureName = feature.feature_name === 'analytics' ? 'analytics' : 
+                                           feature.feature_name === 'activityFeed' ? 'activityFeed' : 
+                                           feature.feature_name;
+                        onNavigateToFeature!(featureName);
+                        handleClose();
+                      }}
+                      disabled={isMarkingAsRead}
+                      className="w-full h-12 text-base font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white rounded-xl transition-all duration-200 active:scale-[0.98]"
+                    >
+                      <Sparkles className="mr-2 h-5 w-5" />
+                      Check it out!
+                    </Button>
+                  )}
+                  <Button
+                    onClick={handleClose}
+                    disabled={isMarkingAsRead}
+                    variant={enabledFeatures.length === 1 ? "outline" : "default"}
+                    className="w-full h-12 text-base font-semibold rounded-xl transition-all duration-200 active:scale-[0.98]"
+                  >
+                    {isMarkingAsRead ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                        Updating...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        {enabledFeatures.length === 1 ? 'Maybe later' : 'Got it!'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              );
+            }
+
+            return (
+              <Button
+                onClick={handleClose}
+                disabled={isMarkingAsRead}
+                className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl transition-all duration-200 active:scale-[0.98]"
+              >
+                {isMarkingAsRead ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="mr-2 h-5 w-5" />
+                    Got it!
+                  </>
+                )}
+              </Button>
+            );
+          })()}
         </div>
       </DialogContent>
     </Dialog>

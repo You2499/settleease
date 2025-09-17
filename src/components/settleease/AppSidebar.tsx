@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, ToggleLeft, ChevronDown, ChevronRight, TrendingUp, Database, Wrench
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, ToggleLeft, ChevronDown, ChevronRight, TrendingUp, Database, Wrench, Heart
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 
@@ -403,7 +403,9 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
 
           <div className="text-center border-t border-sidebar-border/20 pt-3">
             <p className="text-[11px] text-sidebar-foreground/50 flex items-center justify-center gap-1">
-              <span>Made with ❤️ by Gagan Gupta</span>
+              <span>Made with</span>
+              <Heart className="h-3 w-3 text-red-500 fill-red-500" />
+              <span>by Gagan Gupta</span>
             </p>
           </div>
         </div>
