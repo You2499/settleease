@@ -567,7 +567,6 @@ export default function SettleEasePage() {
                 <FeatureRolloutTab
                   db={db}
                   supabaseInitializationError={supabaseInitializationError}
-                  people={people}
                   currentUserId={currentUser.id}
                 />
               </SettleEaseErrorBoundary>

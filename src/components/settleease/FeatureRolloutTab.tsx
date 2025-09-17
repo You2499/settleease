@@ -8,13 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { Settings, Users, BarChart3, Activity, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { FeatureFlag, Person } from '@/lib/settleease/types';
+import type { FeatureFlag } from '@/lib/settleease/types';
 import { FEATURE_FLAGS_TABLE, FEATURE_NOTIFICATIONS_TABLE } from '@/lib/settleease/constants';
 
 interface FeatureRolloutTabProps {
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
-  people: Person[];
   currentUserId: string;
 }
 
@@ -45,7 +44,6 @@ const AVAILABLE_FEATURES = [
 export default function FeatureRolloutTab({
   db,
   supabaseInitializationError,
-  people,
   currentUserId,
 }: FeatureRolloutTabProps) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
@@ -53,40 +51,24 @@ export default function FeatureRolloutTab({
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false);
-  const [forceRender, setForceRender] = useState(0);
 
-  // Debug effect to monitor authenticatedUsers changes
-  useEffect(() => {
-    console.log('authenticatedUsers state changed:', authenticatedUsers);
-  }, [authenticatedUsers]);
 
   const fetchAuthenticatedUsers = useCallback(async () => {
-    if (!db || supabaseInitializationError) {
-      console.log('Skipping user fetch - no db or error:', { db: !!db, error: supabaseInitializationError });
-      return;
-    }
+    if (!db || supabaseInitializationError) return;
 
     try {
-      console.log('Fetching authenticated users...');
       const { data, error } = await db
         .from('user_profiles')
         .select('user_id, first_name, last_name, role')
         .order('role', { ascending: false }) // Show admins first
         .order('first_name', { ascending: true });
 
-      if (error) {
-        console.error('Database error fetching users:', error);
-        throw error;
-      }
-
-      console.log('Fetched user profiles:', data); // Debug log
-      console.log('Number of users fetched:', data?.length || 0);
+      if (error) throw error;
 
       // Filter out any profiles without user_id
       const validProfiles = data?.filter(profile => profile.user_id) || [];
 
       if (validProfiles.length === 0) {
-        console.warn('No valid user profiles found in database');
         // Fallback: just use current user
         setAuthenticatedUsers([{
           id: currentUserId,
@@ -104,26 +86,21 @@ export default function FeatureRolloutTab({
         first_name: profile.first_name,
         last_name: profile.last_name,
         role: profile.role || 'user',
-        display_name: profile.first_name && profile.last_name 
+        display_name: profile.first_name && profile.last_name
           ? `${profile.first_name} ${profile.last_name}`.trim()
           : profile.first_name || profile.last_name || `User ${profile.user_id.slice(0, 8)}...`
       }));
 
-      console.log('Processed users:', users); // Debug log
-      console.log('Setting authenticated users state with', users.length, 'users');
       setAuthenticatedUsers(users);
-      setForceRender(prev => prev + 1); // Force re-render
     } catch (error: any) {
       console.error('Error fetching authenticated users:', error);
       // Fallback: just use current user
-      const fallbackUser = {
+      setAuthenticatedUsers([{
         id: currentUserId,
         email: 'Current User',
         display_name: 'Current User (Fallback)',
         role: 'user'
-      };
-      console.log('Using fallback user:', fallbackUser);
-      setAuthenticatedUsers([fallbackUser]);
+      }]);
     }
   }, [db, supabaseInitializationError, currentUserId]);
 
@@ -195,12 +172,9 @@ export default function FeatureRolloutTab({
   }, [db, supabaseInitializationError, fetchFeatureFlags]);
 
   useEffect(() => {
-    console.log('FeatureRolloutTab useEffect triggered');
     const initialize = async () => {
-      console.log('Starting initialization...');
       await fetchAuthenticatedUsers();
       await initializeFeatureFlags();
-      console.log('Initialization complete');
     };
     initialize();
 
@@ -216,7 +190,6 @@ export default function FeatureRolloutTab({
             table: FEATURE_FLAGS_TABLE,
           },
           () => {
-            console.log('Feature flags changed, refreshing...');
             fetchFeatureFlags();
           }
         )
@@ -228,8 +201,6 @@ export default function FeatureRolloutTab({
             table: 'user_profiles',
           },
           (payload) => {
-            console.log('User profiles changed, refreshing users...', payload);
-            
             // Show toast notification for user changes
             if (payload.eventType === 'INSERT') {
               const newUser = payload.new as any;
@@ -239,14 +210,13 @@ export default function FeatureRolloutTab({
                 duration: 3000,
               });
             } else if (payload.eventType === 'UPDATE') {
-              const updatedUser = payload.new as any;
               toast({
                 title: "👤 User Updated",
                 description: `User profile has been updated`,
                 duration: 2000,
               });
             }
-            
+
             // Add a small delay to ensure the database has been updated
             setTimeout(() => {
               fetchAuthenticatedUsers();
@@ -254,12 +224,10 @@ export default function FeatureRolloutTab({
           }
         )
         .subscribe((status) => {
-          console.log('Realtime subscription status:', status);
           setIsRealtimeConnected(status === 'SUBSCRIBED');
         });
 
       return () => {
-        console.log('FeatureRolloutTab cleanup - unsubscribing');
         subscription.unsubscribe();
         setIsRealtimeConnected(false);
       };
@@ -294,7 +262,7 @@ export default function FeatureRolloutTab({
 
     try {
       const newEnabledState = !featureFlag.is_enabled;
-      
+
       // Use the authenticated users we already fetched
       const allUserIds = authenticatedUsers.map(user => user.id);
 
@@ -342,7 +310,7 @@ export default function FeatureRolloutTab({
     try {
       const currentEnabledUsers = featureFlag.enabled_for_users || [];
       const isCurrentlyEnabled = currentEnabledUsers.includes(userId);
-      
+
       let newEnabledUsers: string[];
       if (isCurrentlyEnabled) {
         newEnabledUsers = currentEnabledUsers.filter(id => id !== userId);
@@ -387,10 +355,7 @@ export default function FeatureRolloutTab({
     }
   };
 
-  // Debug logging (only log when users change)
-  if (authenticatedUsers.length > 0) {
-    console.log('FeatureRolloutTab render - authenticatedUsers count:', authenticatedUsers.length);
-  }
+
 
   if (supabaseInitializationError) {
     return (
@@ -433,16 +398,14 @@ export default function FeatureRolloutTab({
             <p className="text-muted-foreground">
               Control which features are available to users
             </p>
-            <div className={`flex items-center gap-1 text-xs ${
-              isRealtimeConnected 
-                ? 'text-green-600 dark:text-green-400' 
-                : 'text-orange-600 dark:text-orange-400'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                isRealtimeConnected 
-                  ? 'bg-green-500 animate-pulse' 
-                  : 'bg-orange-500'
-              }`}></div>
+            <div className={`flex items-center gap-1 text-xs ${isRealtimeConnected
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-orange-600 dark:text-orange-400'
+              }`}>
+              <div className={`w-2 h-2 rounded-full ${isRealtimeConnected
+                ? 'bg-green-500 animate-pulse'
+                : 'bg-orange-500'
+                }`}></div>
               <span className="font-medium">
                 {isRealtimeConnected ? 'Live Updates' : 'Connecting...'}
               </span>
@@ -450,16 +413,7 @@ export default function FeatureRolloutTab({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              console.log('Manual refresh triggered');
-              fetchAuthenticatedUsers();
-            }}
-          >
-            Refresh Users ({authenticatedUsers.length})
-          </Button>
+
           <Badge variant="secondary" className="flex items-center gap-1">
             <Settings className="h-3 w-3" />
             Admin Only
@@ -490,7 +444,7 @@ export default function FeatureRolloutTab({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <Badge 
+                    <Badge
                       variant={featureFlag.is_enabled ? "default" : "secondary"}
                       className="flex items-center gap-1"
                     >
@@ -551,7 +505,7 @@ export default function FeatureRolloutTab({
                     <div className="grid gap-2 max-h-60 overflow-y-auto">
                       {authenticatedUsers.map((user) => {
                         const isEnabled = featureFlag.enabled_for_users?.includes(user.id) || false;
-                        
+
                         return (
                           <div
                             key={user.id}
@@ -563,11 +517,10 @@ export default function FeatureRolloutTab({
                                 <span className="font-medium">{user.display_name}</span>
                                 <div className="flex items-center gap-2">
                                   {user.role && (
-                                    <span className={`text-xs px-2 py-0.5 rounded ${
-                                      user.role === 'admin' 
-                                        ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' 
-                                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
-                                    }`}>
+                                    <span className={`text-xs px-2 py-0.5 rounded ${user.role === 'admin'
+                                      ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300'
+                                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
+                                      }`}>
                                       {user.role}
                                     </span>
                                   )}

@@ -143,14 +143,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           <BarChartBig className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Analytics</span>
-                        {isFeatureEnabled?.('analytics') && (
-                          <div className="ml-auto flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium">
-                              ACTIVE
-                            </span>
-                          </div>
-                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -166,14 +158,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           <Edit3 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                         </div>
                         <span className="group-data-[state=collapsed]:hidden font-medium">Activity Feed</span>
-                        {isFeatureEnabled?.('activityFeed') && (
-                          <div className="ml-auto flex items-center gap-1">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            <span className="text-[10px] bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded-full font-medium">
-                              ACTIVE
-                            </span>
-                          </div>
-                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
