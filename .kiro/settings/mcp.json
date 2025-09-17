@@ -16,7 +16,8 @@
         "execute_sql",
         "list_extensions",
         "list_migrations",
-        "apply_migration"
+        "apply_migration",
+        "get_project_url"
       ]
     }
   }

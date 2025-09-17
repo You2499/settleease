@@ -1,393 +1,349 @@
 # SettleEase
 
-A comprehensive expense management and settlement application designed to simplify group finances. Track shared expenses, calculate settlements, and visualize financial data with real-time synchronization.
+A comprehensive expense management and settlement application for groups, built with Next.js, TypeScript, and Supabase.
 
-## Features
+## 🌟 Overview
 
-- **Real-Time Expense Tracking**: Live updates across all connected users
-- **Flexible Expense Splitting**:
-  - Equal split among participants
-  - Unequal split with custom amounts
-  - Itemized split for detailed bill breakdown
-- **Smart Settlement Calculation**: Optimized debt settlement algorithm
-- **Comprehensive Analytics**: Visual insights into spending patterns
-- **User & Category Management**: Easy management of people and expense categories
-- **Settlement Tracking**: Log payments to keep balances accurate
-- **Secure Authentication**: Powered by Supabase Auth
-- **Error Boundary Testing**: Visual testing interface for error handling
+SettleEase is a modern web application designed to simplify group expense management and settlement calculations. Whether you're managing expenses for roommates, travel groups, or any shared financial arrangements, SettleEase provides an intuitive interface to track expenses, calculate settlements, and manage group finances efficiently.
 
-## Technology Stack
+## ✨ Key Features
 
-- **Frontend**: Next.js 15 with TypeScript
-- **Backend**: Supabase (PostgreSQL + Real-time)
-- **UI**: Tailwind CSS + Shadcn/UI components
-- **Charts**: Recharts for data visualization
-- **Icons**: Lucide React
+### 📊 **Expense Management**
+- **Multiple Split Methods**: Equal split, unequal split, and itemwise splitting
+- **Dynamic Categories**: Customizable expense categories with Lucide icons
+- **Celebration Contributions**: Special handling for celebration expenses
+- **Real-time Updates**: Live synchronization across all users
 
-## Quick Start
+### 🧮 **Smart Settlement Calculations**
+- **Simplified Transactions**: Optimized settlement calculations to minimize transactions
+- **Pairwise Transactions**: Direct debt tracking between specific people
+- **Settlement History**: Complete audit trail of all payments
+- **Net Balance Tracking**: Real-time balance calculations for all participants
+
+### 👥 **User Management**
+- **Role-based Access Control**: Admin and user roles with different permissions
+- **Google OAuth Integration**: Seamless authentication with automatic name parsing
+- **User Profiles**: Customizable first and last names
+- **Multi-user Support**: Designed for group collaboration
+
+### 📈 **Advanced Analytics** (Feature Flag Controlled)
+- **Spending Patterns**: Comprehensive analytics and insights
+- **Category Breakdown**: Detailed spending analysis by category
+- **Participant Analytics**: Individual spending and sharing patterns
+- **Visual Charts**: Interactive charts using Recharts library
+
+### 🔔 **Activity Feed** (Feature Flag Controlled)
+- **Real-time Activity**: Live feed of all expense updates and user actions
+- **Comprehensive Logging**: Detailed activity tracking with metadata
+- **User Attribution**: Clear visibility of who made what changes
+
+### 🎛️ **Feature Management**
+- **Feature Flags**: Granular control over feature availability per user
+- **Real-time Notifications**: Instant notifications when features are enabled/disabled
+- **Admin Controls**: Complete feature rollout management interface
+
+## 🏗️ Architecture
+
+### **Frontend Stack**
+- **Next.js 15.3.3**: React framework with App Router
+- **TypeScript**: Full type safety throughout the application
+- **Tailwind CSS**: Utility-first CSS framework with custom design system
+- **Radix UI**: Accessible component primitives
+- **Lucide React**: Beautiful icon library with 1000+ icons
+- **Recharts**: Powerful charting library for analytics
+
+### **Backend & Database**
+- **Supabase**: Backend-as-a-Service with PostgreSQL database
+- **Row Level Security (RLS)**: Secure data access patterns
+- **Real-time Subscriptions**: Live data synchronization
+- **Database Triggers**: Automated user profile creation
+
+### **State Management**
+- **Custom Hooks**: Modular state management with React hooks
+- **Real-time Sync**: Automatic data synchronization across components
+- **Error Boundaries**: Comprehensive error handling and recovery
+
+## 🗄️ Database Schema
+
+### **Core Tables**
+
+#### `people`
+- Stores group participants
+- Simple name-based identification
+- Used for expense attribution and settlement calculations
+
+#### `expenses`
+- Central expense tracking with JSONB fields for flexibility
+- Supports multiple split methods (equal, unequal, itemwise)
+- Stores payer information and calculated shares
+- Optional celebration contributions
+
+#### `categories`
+- Customizable expense categories
+- Lucide icon integration
+- Ranking system for custom ordering
+
+#### `settlement_payments`
+- Tracks actual payments between people
+- Audit trail with user attribution
+- Timestamped settlement records
+
+#### `user_profiles`
+- User role management (admin/user)
+- Profile information (first_name, last_name)
+- Links to Supabase Auth users
+
+#### `feature_flags`
+- Granular feature control per user
+- Real-time feature rollout capabilities
+- Admin-controlled feature management
+
+#### `feature_notifications`
+- User notifications for feature changes
+- Read/unread status tracking
+- Automatic notification generation
+
+#### `activity_feed`
+- Comprehensive activity logging
+- JSONB metadata for flexible event data
+- User attribution and timestamps
+
+## 🚀 Getting Started
 
 ### Prerequisites
+- Node.js 18+ and npm
+- Supabase account and project
+- Git
 
-- Node.js 18+
-- A Supabase account
+### Installation
 
-### 1. Database Setup
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd settleease
+   ```
 
-Create a new Supabase project and run this SQL:
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-```sql
--- People table
-CREATE TABLE public.people (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
+3. **Environment Setup**
+   Create a `.env.local` file in the root directory:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
 
--- Categories table
-CREATE TABLE public.categories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL UNIQUE,
-    icon_name TEXT,
-    rank INTEGER DEFAULT 0,
-    created_at TIMESTAMPTZ DEFAULT now()
-);
+4. **Database Setup**
+   - Set up your Supabase project
+   - Run the database migrations (see Database Setup section)
+   - Configure Row Level Security policies
 
--- Expenses table
-CREATE TABLE public.expenses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    description TEXT NOT NULL,
-    total_amount NUMERIC NOT NULL,
-    category TEXT REFERENCES public.categories(name),
-    paid_by JSONB,
-    split_method TEXT NOT NULL,
-    shares JSONB,
-    items JSONB,
-    celebration_contribution JSONB,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
+5. **Build Lucide Icons**
+   ```bash
+   npm run prebuild
+   ```
 
--- Settlement payments table
-CREATE TABLE public.settlement_payments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    debtor_id UUID REFERENCES public.people(id),
-    creditor_id UUID REFERENCES public.people(id),
-    amount_settled NUMERIC NOT NULL,
-    settled_at TIMESTAMPTZ DEFAULT now(),
-    marked_by_user_id UUID REFERENCES auth.users(id),
-    notes TEXT,
-    status TEXT DEFAULT 'pending'
-);
+6. **Start Development Server**
+   ```bash
+   npm run dev
+   ```
 
--- User profiles table
-CREATE TABLE public.user_profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE REFERENCES auth.users(id),
-    role TEXT DEFAULT 'user',
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
+   The application will be available at `http://localhost:3000`
 
--- Auto-create user profile on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS $
-BEGIN
-  INSERT INTO public.user_profiles (user_id, role)
-  VALUES (new.id, 'user');
-  RETURN new;
-END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+### Production Deployment
 
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+1. **Build the application**
+   ```bash
+   npm run build
+   ```
+
+2. **Start production server**
+   ```bash
+   npm start
+   ```
+
+## 🔧 Configuration
+
+### **MCP (Model Context Protocol) Integration**
+The application includes MCP integration for enhanced development capabilities:
+
+```json
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--project-ref=your_project_ref"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "your_access_token"
+      },
+      "autoApprove": ["list_tables", "execute_sql", "list_extensions", "list_migrations", "apply_migration"]
+    }
+  }
+}
 ```
 
-### 2. Application Setup
+### **Feature Flags Configuration**
+Features can be controlled through the admin interface:
+- **Analytics**: Advanced spending analytics and insights
+- **Activity Feed**: Real-time activity tracking and notifications
 
-```bash
-# Clone the repository
-git clone <your-repo-url>
-cd settleease
+### **Theme Configuration**
+The application supports light and dark themes with a custom green-based color palette:
+- **Primary**: Forest Green (#388E3C)
+- **Secondary**: Light Green variations
+- **Accent**: Teal (#008080)
+- **Charts**: Coordinated color scheme for data visualization
 
-# Install dependencies
-npm install
+## 📱 User Interface
 
-# Create environment file
-cp .env.example .env.local
+### **Responsive Design**
+- Mobile-first approach with adaptive layouts
+- Touch-friendly interfaces for mobile devices
+- Desktop-optimized workflows for complex operations
 
-# Add your Supabase credentials to .env.local
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+### **Accessibility**
+- WCAG 2.1 compliant components via Radix UI
+- Keyboard navigation support
+- Screen reader compatibility
+- High contrast theme support
 
-# Run development server
-npm run dev
-```
+### **Component Architecture**
+- **Shadcn/ui**: Base component library
+- **Custom Components**: Domain-specific components for expense management
+- **Error Boundaries**: Graceful error handling with recovery options
+- **Loading States**: Comprehensive loading indicators and skeleton screens
 
-Visit `http://localhost:3000` to start using SettleEase.
+## 🔐 Security
 
-## Project Structure
+### **Authentication**
+- Supabase Auth with Google OAuth integration
+- Automatic user profile creation via database triggers
+- Session management with automatic token refresh
 
-```
-src/
-├── app/                    # Next.js app directory
-├── components/
-│   ├── settleease/        # Core application components
-│   └── ui/                # Reusable UI components
-├── lib/
-│   └── settleease/        # Types, utilities, and constants
-└── hooks/                 # Custom React hooks
-```
+### **Authorization**
+- Role-based access control (Admin/User)
+- Row Level Security (RLS) policies on all tables
+- Feature-level permissions via feature flags
 
-## Architecture Overview
+### **Data Protection**
+- All sensitive operations require authentication
+- Database-level security with RLS
+- Input validation and sanitization
 
-### Component Architecture
+## 🧪 Development Features
 
-SettleEase follows a well-structured component architecture with clear separation of concerns. Components are organized hierarchically, with larger container components broken down into smaller, focused sub-components.
+### **Error Handling**
+- Comprehensive error boundaries with component-level recovery
+- Toast notifications for user feedback
+- Detailed error logging for debugging
 
-#### Main Application Structure
+### **Development Tools**
+- TypeScript for type safety
+- ESLint for code quality
+- Comprehensive debug interfaces
+- Real-time data synchronization testing
 
-- **App Layout** (`src/app/layout.tsx`) - Main application wrapper
-- **Main Page** (`src/app/page.tsx`) - Entry point with 8 main tab views
-- **Theme Provider** (`src/components/ThemeProvider.tsx`) - Theme management
+### **Build Process**
+- Automated Lucide icon processing
+- TypeScript compilation with strict mode
+- Optimized production builds with Next.js
 
-#### Core Feature Components (Main Tabs)
+## 📊 Analytics & Insights
 
-1. **Dashboard** - Settlement calculations and expense overview
-2. **Analytics** - Data visualization and spending insights
-3. **Add Expense** - Expense creation with flexible splitting options
-4. **Edit Expenses** - Expense modification interface
-5. **Manage People** - User management (Admin only)
-6. **Manage Categories** - Category management (Admin only)
-7. **Manage Settlements** - Settlement tracking (Admin only)
-8. **Test Error Boundaries** - Error boundary testing interface (Admin only)
+When the Analytics feature is enabled, users can access:
 
-### Component Decomposition Quality
+### **Overall Statistics**
+- Total expenses and average amounts
+- Participant counts and date ranges
+- Most expensive categories and largest expenses
 
-#### ✅ Excellent Decomposition (5/5)
-
-**AddExpenseTab** - Broken into 8 specialized sub-components:
-- `ExpenseBasicInfo.tsx` - Description, amount, category, date inputs
-- `PayerInputSection.tsx` - Payment selection
-- `SplitMethodSelector.tsx` - Split method selection
-- `EqualSplitSection.tsx` - Equal split participants
-- `UnequalSplitSection.tsx` - Custom amount splitting
-- `ItemwiseSplitSection.tsx` - Item-by-item splitting
-- `CelebrationSection.tsx` - Special celebration handling
-- `ExpenseFormLogic.tsx` - Form submission logic
-
-**AnalyticsTab** - Broken into 10 specialized chart components:
-- `OverallAnalyticsSnapshot.tsx` - Summary statistics
-- `MonthlySpendingChart.tsx` - Monthly trends
-- `ShareVsPaidComparisonChart.tsx` - Payment vs obligation comparison
-- `SpendingByDayChart.tsx` - Day-of-week patterns
-- `SplitMethodChart.tsx` - Split method distribution
-- `TopExpensesTable.tsx` - Highest expenses
-- `CategoryAnalyticsTable.tsx` - Category breakdown
-- `ParticipantSummaryTable.tsx` - Per-person summary
-- `CategorySpendingPieChart.tsx` - Category spending visualization
-- `ExpenseDistributionChart.tsx` - Distribution analysis
-
-**SettlementSummary** - Multi-layer breakdown with 15+ sub-components:
-- Step-by-step settlement process visualization
-- Comprehensive verification and debugging tools
-- Per-person settlement details with 4 focused sub-components
-
-**ExpenseDetailModal** - 4 focused sections with comprehensive error boundaries
-
-#### ✅ Good Decomposition (4/5)
-
-- **DashboardView** - 2 main components with extensive sub-breakdown
-- **TestErrorBoundaryTab** - 3 test components with admin access control
-
-#### ⚠️ Moderate to Minimal Decomposition
-
-- Management tabs (People, Categories, Settlements) - Single components
-- Authentication and loading screens - Appropriately scoped
-
-### Error Boundary System
-
-SettleEase implements a comprehensive error boundary strategy using a single, focused system:
-
-#### SettleEaseErrorBoundary
-- **Purpose**: Domain-specific error handling with SettleEase theming
-- **Sizes**: `small`, `medium`, `large`
-- **Features**: 
-  - Custom branded error messages
-  - Retry functionality
-  - Size-responsive UI
-  - Development error details
-  - Navigation to dashboard
-
-#### Error Boundary Coverage
-
-**✅ Excellent Coverage:**
-- **App Level**: 8 large error boundaries (one per main tab)
-- **AddExpense Flow**: 13 error boundaries (4 medium + 9 small)
-- **ExpenseDetail Modal**: 4 medium error boundaries
-- **TestErrorBoundary Tab**: Visual testing interface
-
-**❌ Areas Needing Improvement:**
-- **Analytics Components**: No internal error boundaries
-- **Dashboard Components**: Settlement calculations unprotected
-- **Management Features**: Rely solely on top-level boundaries
-
-#### Coverage Statistics
-
-| Protection Level | Component Count | Percentage |
-|-----------------|----------------|------------|
-| **Fully Protected** | 3 components | 5% |
-| **Well Protected** | 8 components | 13% |
-| **Indirectly Protected** | 15 components | 25% |
-| **Minimally Protected** | 25 components | 42% |
-| **No Protection** | 10 components | 15% |
-
-### Custom Hooks
-
-- **useSupabaseAuth.ts** - Authentication logic
-- **useSupabaseData.ts** - Data fetching logic
-- **useSupabaseRealtime.ts** - Real-time updates
-- **useErrorHandler.ts** - Centralized error handling
-- **use-mobile.tsx** - Mobile detection
-- **use-toast.ts** - Toast notifications
-
-### UI Component Library
-
-Comprehensive set of base UI components including:
-- Form components (button, input, select, checkbox, etc.)
-- Layout components (card, dialog, sheet, tabs, table)
-- Navigation components (sidebar, dropdown-menu)
-- Feedback components (alert, toast, skeleton)
-- Data display components (badge, calendar, tooltip)
-
-## Key Features
-
-### Real-Time Synchronization
-- Live updates across all connected users
-- Automatic data refresh on changes
-- Real-time settlement calculations
-
-### Flexible Expense Management
-- Multiple splitting methods (equal, unequal, itemized)
-- Category-based organization
-- Celebration contribution handling
-- Comprehensive expense editing
-
-### Smart Settlement Algorithm
-- Optimized debt settlement calculations
-- Step-by-step settlement visualization
-- Payment tracking and verification
-- Algorithm testing and debugging tools
-
-### Comprehensive Analytics
+### **Visual Analytics**
 - Monthly spending trends
-- Category-based analysis
-- Per-person spending summaries
-- Visual data representation with charts
+- Category spending breakdowns
+- Individual vs. shared expense analysis
+- Spending patterns by day of week
 
-### Error Handling & Testing
-- Visual error boundary testing interface
-- Comprehensive error coverage analysis
-- Admin-only testing tools
-- Real-time crash simulation
+### **Participant Insights**
+- Individual spending patterns
+- Net balance calculations
+- Most frequent categories per person
+- Payment vs. consumption analysis
 
-### Mobile Optimization
-- Responsive design across all components
-- Mobile-first approach
-- Touch-friendly interfaces
-- Optimized navigation for small screens
+## 🔄 Real-time Features
 
-## Development Guidelines
+### **Live Data Synchronization**
+- Automatic updates when expenses are added/modified
+- Real-time settlement calculations
+- Live activity feed updates
 
-### Component Best Practices
-1. **Single Responsibility** - Each component has a clear, focused purpose
-2. **Reusability** - Sub-components can be used in different contexts
-3. **Error Boundaries** - Critical flows have comprehensive error protection
-4. **Mobile First** - All components are mobile-optimized
-5. **Type Safety** - Comprehensive TypeScript coverage
+### **Notifications**
+- Feature enablement/disablement notifications
+- Settlement completion confirmations
+- Error and success feedback
 
-### Error Boundary Strategy
-1. **Hierarchical Protection** - Multi-level error boundary implementation
-2. **Appropriate Sizing** - Large for features, medium for sections, small for inputs
-3. **Descriptive Names** - Clear component names for debugging
-4. **Strategic Placement** - Critical user flows are well protected
+## 🛠️ Customization
 
-## Deployment
+### **Categories**
+- Add custom expense categories
+- Choose from 1000+ Lucide icons
+- Custom ranking and organization
 
-### Vercel (Recommended)
+### **Settlement Methods**
+- Simplified transactions (optimized)
+- Pairwise transactions (detailed)
+- Historical settlement tracking
 
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Add environment variables in Vercel dashboard
-4. Deploy automatically
+### **User Experience**
+- Customizable user profiles
+- Theme preferences (light/dark)
+- Mobile-responsive interfaces
 
-### Other Platforms
+## 📈 Scalability
 
-SettleEase works on any platform supporting Next.js:
-- Netlify
-- Railway
-- DigitalOcean App Platform
-- Self-hosted with Docker
+### **Database Design**
+- Efficient JSONB usage for flexible data structures
+- Indexed queries for performance
+- Scalable real-time subscriptions
 
-## Development Reference
+### **Frontend Performance**
+- Component-level code splitting
+- Optimized re-renders with React hooks
+- Efficient state management patterns
 
-### 📋 Component Refactor and Boundary Plan
-For detailed implementation guidance, current status, and future roadmap, see:
-**[COMPONENT_REFACTOR_AND_BOUNDARY_PLAN.md](./COMPONENT_REFACTOR_AND_BOUNDARY_PLAN.md)**
+### **Feature Management**
+- Gradual feature rollouts
+- A/B testing capabilities via feature flags
+- User-specific feature enablement
 
-This comprehensive document includes:
-- Current implementation status for all components
-- Detailed error boundary coverage analysis
-- Step-by-step implementation plans with code examples
-- File reference guide for quick navigation
-- Testing strategies and success metrics
-- Roadmap for future development phases
+## 🤝 Contributing
 
-### 🧪 Error Boundary Testing
-Use the built-in testing interface:
-1. Login as admin user
-2. Navigate to "Test Error Boundary" tab
-3. Use visual testing tools to simulate crashes
-4. Verify error boundary coverage across all components
-
-## Contributing
-
+### **Development Workflow**
 1. Fork the repository
 2. Create a feature branch
-3. **Review the Component Refactor Plan** - Check current status and implementation guidelines
-4. Make your changes following the component architecture guidelines
-5. Add appropriate error boundaries for new components
-6. Ensure mobile optimization using `useIsMobile` hook
-7. Test error boundaries using the TestErrorBoundaryTab
-8. Update the Component Refactor Plan document with your changes
-9. Submit a pull request
+3. Make your changes with proper TypeScript types
+4. Test thoroughly including mobile responsiveness
+5. Submit a pull request
 
-## Architecture Assessment
-
-**Overall Grade: A-** - Excellent component architecture with comprehensive error handling
-
-**Strengths:**
-- Excellent component decomposition in critical flows
-- Comprehensive error boundary coverage in key areas
+### **Code Standards**
+- TypeScript strict mode compliance
+- Consistent component patterns
+- Comprehensive error handling
 - Mobile-first responsive design
-- Clear separation of concerns
-- Comprehensive TypeScript coverage
 
-**Areas for Improvement:**
-- Add error boundaries to analytics components
-- Enhance dashboard component error isolation
-- Improve management feature error handling
+## 📄 License
 
-## Statistics
+This project is licensed under the MIT License - see the LICENSE file for details.
 
-- **Total Components**: 60+ components across 8 main feature areas
-- **Error Boundary Coverage**: 25+ strategically placed boundaries
-- **Mobile Optimization**: 100% responsive components
-- **TypeScript Coverage**: Comprehensive type safety
-- **Architecture Quality**: Excellent with focused improvements needed
+## 🆘 Support
 
-This architecture results in a maintainable, testable, and scalable codebase with comprehensive error handling, mobile optimization, and clear separation of concerns.
+For support, please:
+1. Check the comprehensive debug interface in the application
+2. Review the database schema and RLS policies
+3. Examine the real-time subscription logs
+4. Contact the development team with detailed error information
 
-## License
+---
 
-MIT License - see LICENSE file for details
+**SettleEase** - Making group expense management simple, transparent, and efficient.
