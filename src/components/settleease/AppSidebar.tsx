@@ -95,7 +95,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           </div>
         </SidebarHeader>
       )}
-      <SidebarContent className="p-2">
+      <SidebarContent className="p-3 space-y-3">
         <SidebarMenu>
           {/* Dashboard - Always visible */}
           <SidebarMenuItem>
@@ -103,10 +103,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               onClick={() => handleNavigation('dashboard')}
               isActive={activeView === 'dashboard'}
               tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start"
+              className="justify-start bg-gradient-to-r from-slate-50 to-gray-50 dark:from-slate-950/30 dark:to-gray-950/30 border border-slate-200 dark:border-slate-700/30 hover:bg-slate-100 dark:hover:bg-slate-800/50 data-[active=true]:bg-slate-200 dark:data-[active=true]:bg-slate-800 rounded-lg transition-all duration-200 font-semibold"
             >
-              <LayoutDashboard />
-              <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
+              <div className="p-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
+                <LayoutDashboard className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+              </div>
+              <span className="group-data-[state=collapsed]:hidden text-slate-900 dark:text-slate-100">Dashboard</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -115,16 +117,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
         <SidebarGroup>
           <Collapsible open={isInsightsOpen} onOpenChange={setIsInsightsOpen}>
             <SidebarGroupLabel asChild>
-              <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md px-2 py-1.5 text-sm font-medium transition-colors group-data-[state=collapsed]:hidden">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>Insights</span>
+              <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 group-data-[state=collapsed]:hidden bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-800/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-1.5 bg-blue-100 dark:bg-blue-900/50 rounded-md">
+                    <TrendingUp className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <span className="text-blue-900 dark:text-blue-100">Insights</span>
                 </div>
-                <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 text-blue-600 dark:text-blue-400" />
               </CollapsibleTrigger>
             </SidebarGroupLabel>
             <CollapsibleContent>
-              <SidebarGroupContent>
+              <SidebarGroupContent className="mt-2">
                 <SidebarMenu>
                   {isFeatureEnabled?.('analytics') && (
                     <SidebarMenuItem>
@@ -132,10 +136,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('analytics')}
                         isActive={activeView === 'analytics'}
                         tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                        className="justify-start"
+                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200"
                       >
-                        <BarChartBig />
-                        <span className="group-data-[state=collapsed]:hidden">Analytics</span>
+                        <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded">
+                          <BarChartBig className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="group-data-[state=collapsed]:hidden font-medium">Analytics</span>
+                        {isFeatureEnabled?.('analytics') && (
+                          <div className="ml-auto">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          </div>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -145,10 +156,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('activityFeed')}
                         isActive={activeView === 'activityFeed'}
                         tooltip={{ content: "Activity Feed", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                        className="justify-start"
+                        className="justify-start ml-2 hover:bg-blue-50 dark:hover:bg-blue-950/30 data-[active=true]:bg-blue-100 dark:data-[active=true]:bg-blue-900/50 data-[active=true]:text-blue-900 dark:data-[active=true]:text-blue-100 rounded-lg transition-all duration-200"
                       >
-                        <Edit3 />
-                        <span className="group-data-[state=collapsed]:hidden">Activity Feed</span>
+                        <div className="p-1 bg-blue-100 dark:bg-blue-900/50 rounded">
+                          <Edit3 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <span className="group-data-[state=collapsed]:hidden font-medium">Activity Feed</span>
+                        {isFeatureEnabled?.('activityFeed') && (
+                          <div className="ml-auto">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                          </div>
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
@@ -165,26 +183,30 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             <SidebarGroup>
               <Collapsible open={isExpenseManagementOpen} onOpenChange={setIsExpenseManagementOpen}>
                 <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md px-2 py-1.5 text-sm font-medium transition-colors group-data-[state=collapsed]:hidden">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      <span>Expenses</span>
+                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 group-data-[state=collapsed]:hidden bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border border-emerald-100 dark:border-emerald-800/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/50 rounded-md">
+                        <CreditCard className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                      </div>
+                      <span className="text-emerald-900 dark:text-emerald-100">Expenses</span>
                     </div>
-                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 text-emerald-600 dark:text-emerald-400" />
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
-                  <SidebarGroupContent>
+                  <SidebarGroupContent className="mt-2">
                     <SidebarMenu>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('addExpense')}
                           isActive={activeView === 'addExpense'}
                           tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 data-[active=true]:bg-emerald-100 dark:data-[active=true]:bg-emerald-900/50 data-[active=true]:text-emerald-900 dark:data-[active=true]:text-emerald-100 rounded-lg transition-all duration-200"
                         >
-                          <CreditCard />
-                          <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
+                          <div className="p-1 bg-emerald-100 dark:bg-emerald-900/50 rounded">
+                            <CreditCard className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Add Expense</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -192,10 +214,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           onClick={() => handleNavigation('editExpenses')}
                           isActive={activeView === 'editExpenses'}
                           tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 data-[active=true]:bg-emerald-100 dark:data-[active=true]:bg-emerald-900/50 data-[active=true]:text-emerald-900 dark:data-[active=true]:text-emerald-100 rounded-lg transition-all duration-200"
                         >
-                          <FilePenLine />
-                          <span className="group-data-[state=collapsed]:hidden">Edit Expenses</span>
+                          <div className="p-1 bg-emerald-100 dark:bg-emerald-900/50 rounded">
+                            <FilePenLine className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Edit Expenses</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -203,10 +227,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           onClick={() => handleNavigation('manageSettlements')}
                           isActive={activeView === 'manageSettlements'}
                           tooltip={{ content: "Manage Settlements", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 data-[active=true]:bg-emerald-100 dark:data-[active=true]:bg-emerald-900/50 data-[active=true]:text-emerald-900 dark:data-[active=true]:text-emerald-100 rounded-lg transition-all duration-200"
                         >
-                          <Handshake />
-                          <span className="group-data-[state=collapsed]:hidden">Settlements</span>
+                          <div className="p-1 bg-emerald-100 dark:bg-emerald-900/50 rounded">
+                            <Handshake className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Settlements</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
@@ -219,26 +245,30 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             <SidebarGroup>
               <Collapsible open={isDataManagementOpen} onOpenChange={setIsDataManagementOpen}>
                 <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md px-2 py-1.5 text-sm font-medium transition-colors group-data-[state=collapsed]:hidden">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4" />
-                      <span>Data</span>
+                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 group-data-[state=collapsed]:hidden bg-gradient-to-r from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border border-purple-100 dark:border-purple-800/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-purple-100 dark:bg-purple-900/50 rounded-md">
+                        <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="text-purple-900 dark:text-purple-100">Data</span>
                     </div>
-                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 text-purple-600 dark:text-purple-400" />
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
-                  <SidebarGroupContent>
+                  <SidebarGroupContent className="mt-2">
                     <SidebarMenu>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('managePeople')}
                           isActive={activeView === 'managePeople'}
                           tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-purple-50 dark:hover:bg-purple-950/30 data-[active=true]:bg-purple-100 dark:data-[active=true]:bg-purple-900/50 data-[active=true]:text-purple-900 dark:data-[active=true]:text-purple-100 rounded-lg transition-all duration-200"
                         >
-                          <Users />
-                          <span className="group-data-[state=collapsed]:hidden">People</span>
+                          <div className="p-1 bg-purple-100 dark:bg-purple-900/50 rounded">
+                            <Users className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">People</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -246,10 +276,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           onClick={() => handleNavigation('manageCategories')}
                           isActive={activeView === 'manageCategories'}
                           tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-purple-50 dark:hover:bg-purple-950/30 data-[active=true]:bg-purple-100 dark:data-[active=true]:bg-purple-900/50 data-[active=true]:text-purple-900 dark:data-[active=true]:text-purple-100 rounded-lg transition-all duration-200"
                         >
-                          <ListChecks />
-                          <span className="group-data-[state=collapsed]:hidden">Categories</span>
+                          <div className="p-1 bg-purple-100 dark:bg-purple-900/50 rounded">
+                            <ListChecks className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Categories</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
@@ -262,26 +294,30 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             <SidebarGroup>
               <Collapsible open={isSystemOpen} onOpenChange={setIsSystemOpen}>
                 <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md px-2 py-1.5 text-sm font-medium transition-colors group-data-[state=collapsed]:hidden">
-                    <div className="flex items-center gap-2">
-                      <Wrench className="h-4 w-4" />
-                      <span>System</span>
+                  <CollapsibleTrigger className="group/collapsible w-full flex items-center justify-between hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200 group-data-[state=collapsed]:hidden bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/30 dark:to-red-950/30 border border-orange-100 dark:border-orange-800/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-1.5 bg-orange-100 dark:bg-orange-900/50 rounded-md">
+                        <Wrench className="h-4 w-4 text-orange-600 dark:text-orange-400" />
+                      </div>
+                      <span className="text-orange-900 dark:text-orange-100">System</span>
                     </div>
-                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    <ChevronDown className="h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180 text-orange-600 dark:text-orange-400" />
                   </CollapsibleTrigger>
                 </SidebarGroupLabel>
                 <CollapsibleContent>
-                  <SidebarGroupContent>
+                  <SidebarGroupContent className="mt-2">
                     <SidebarMenu>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('featureRollout')}
                           isActive={activeView === 'featureRollout'}
                           tooltip={{ content: "Feature Rollout", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-orange-50 dark:hover:bg-orange-950/30 data-[active=true]:bg-orange-100 dark:data-[active=true]:bg-orange-900/50 data-[active=true]:text-orange-900 dark:data-[active=true]:text-orange-100 rounded-lg transition-all duration-200"
                         >
-                          <ToggleLeft />
-                          <span className="group-data-[state=collapsed]:hidden">Features</span>
+                          <div className="p-1 bg-orange-100 dark:bg-orange-900/50 rounded">
+                            <ToggleLeft className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Features</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -289,10 +325,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                           onClick={() => handleNavigation('testErrorBoundary')}
                           isActive={activeView === 'testErrorBoundary'}
                           tooltip={{ content: "Test Error Boundary", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                          className="justify-start"
+                          className="justify-start ml-2 hover:bg-orange-50 dark:hover:bg-orange-950/30 data-[active=true]:bg-orange-100 dark:data-[active=true]:bg-orange-900/50 data-[active=true]:text-orange-900 dark:data-[active=true]:text-orange-100 rounded-lg transition-all duration-200"
                         >
-                          <Bug />
-                          <span className="group-data-[state=collapsed]:hidden">Debug</span>
+                          <div className="p-1 bg-orange-100 dark:bg-orange-900/50 rounded">
+                            <Bug className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                          </div>
+                          <span className="group-data-[state=collapsed]:hidden font-medium">Debug</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </SidebarMenu>
@@ -303,58 +341,64 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           </>
         )}
       </SidebarContent>
-      <SidebarFooter className="flex flex-col border-t border-sidebar-border group-data-[state=collapsed]:hidden">
-        <div className="mb-2 flex items-center justify-between">
+      <SidebarFooter className="flex flex-col border-t border-sidebar-border/30 group-data-[state=collapsed]:hidden bg-gradient-to-t from-sidebar-background/50 to-transparent">
+        <div className="p-3 space-y-3">
           {(currentUserName || currentUserEmail) && (
-            <div className="space-y-0.5 flex-grow overflow-hidden">
-              <p className="text-xs text-sidebar-foreground/80 truncate font-medium" title={currentUserName || currentUserEmail || ''}>
-                {currentUserName || currentUserEmail}
-              </p>
-              {userRole && (
-                <div className="flex items-center gap-1 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
-                  <RoleIcon className="h-3.5 w-3.5 shrink-0" />
-                  <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
+            <div className="bg-sidebar-accent/30 rounded-lg p-3 border border-sidebar-border/20">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1 flex-grow overflow-hidden">
+                  <p className="text-sm text-sidebar-foreground font-medium truncate" title={currentUserName || currentUserEmail || ''}>
+                    {currentUserName || currentUserEmail}
+                  </p>
+                  {userRole && (
+                    <div className="flex items-center gap-2 text-xs text-sidebar-foreground/70" title={`Role: ${userRole.charAt(0).toUpperCase() + userRole.slice(1)}`}>
+                      <div className="p-1 bg-sidebar-accent/50 rounded">
+                        <RoleIcon className="h-3 w-3 shrink-0" />
+                      </div>
+                      <span className="font-medium">{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
+                    </div>
+                  )}
                 </div>
-              )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 h-8 w-8 ml-2 shrink-0 rounded-lg">
+                      <Settings className="h-4 w-4" />
+                      <span className="sr-only">Settings & Actions</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuLabel>Profile</DropdownMenuLabel>
+                    {onEditName && (
+                      <DropdownMenuItem onClick={onEditName}>
+                        <Edit3 className="mr-2 h-4 w-4" /> Edit Name
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuLabel>Appearance</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => setTheme("light")}>
+                      <Sun className="mr-2 h-4 w-4" /> Light
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("dark")}>
+                      <Moon className="mr-2 h-4 w-4" /> Dark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      <Settings className="mr-2 h-4 w-4" /> System
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" /> Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           )}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-sidebar-foreground/80 hover:text-sidebar-foreground h-8 w-8 ml-2 shrink-0">
-                <Settings className="h-4 w-4" />
-                <span className="sr-only">Settings & Actions</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Profile</DropdownMenuLabel>
-              {onEditName && (
-                <DropdownMenuItem onClick={onEditName}>
-                  <Edit3 className="mr-2 h-4 w-4" /> Edit Name
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Appearance</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setTheme("light")}>
-                <Sun className="mr-2 h-4 w-4" /> Light
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("dark")}>
-                <Moon className="mr-2 h-4 w-4" /> Dark
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setTheme("system")}>
-                <Settings className="mr-2 h-4 w-4" /> System
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                <LogOut className="mr-2 h-4 w-4" /> Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
 
-        <div className="mt-auto border-t border-sidebar-border/50">
-          <p className="text-center text-[11px] text-sidebar-foreground/60 flex items-center justify-center gap-1 pt-2">
-            <span>Made by Gagan Gupta</span>
-          </p>
+          <div className="text-center border-t border-sidebar-border/20 pt-3">
+            <p className="text-[11px] text-sidebar-foreground/50 flex items-center justify-center gap-1">
+              <span>Made with ❤️ by Gagan Gupta</span>
+            </p>
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>

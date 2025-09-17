@@ -18,6 +18,14 @@ interface FeatureRolloutTabProps {
   currentUserId: string;
 }
 
+interface AuthenticatedUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  display_name: string;
+}
+
 const AVAILABLE_FEATURES = [
   {
     name: 'analytics',
@@ -40,8 +48,47 @@ export default function FeatureRolloutTab({
   currentUserId,
 }: FeatureRolloutTabProps) {
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
+  const [authenticatedUsers, setAuthenticatedUsers] = useState<AuthenticatedUser[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState<string | null>(null);
+
+  const fetchAuthenticatedUsers = useCallback(async () => {
+    if (!db || supabaseInitializationError) return;
+
+    try {
+      const { data, error } = await db
+        .from('user_profiles')
+        .select(`
+          user_id,
+          first_name,
+          last_name
+        `)
+        .not('user_id', 'is', null);
+
+      if (error) throw error;
+
+      // Create user list with display names
+      const users: AuthenticatedUser[] = data.map(profile => ({
+        id: profile.user_id,
+        email: '', // We'll show display name instead
+        first_name: profile.first_name,
+        last_name: profile.last_name,
+        display_name: profile.first_name && profile.last_name 
+          ? `${profile.first_name} ${profile.last_name}`.trim()
+          : `User ${profile.user_id.slice(0, 8)}...`
+      }));
+
+      setAuthenticatedUsers(users);
+    } catch (error: any) {
+      console.error('Error fetching authenticated users:', error);
+      // Fallback: just use current user
+      setAuthenticatedUsers([{
+        id: currentUserId,
+        email: 'Current User',
+        display_name: 'Current User'
+      }]);
+    }
+  }, [db, supabaseInitializationError, currentUserId]);
 
   const fetchFeatureFlags = useCallback(async () => {
     if (!db || supabaseInitializationError) return;
@@ -111,8 +158,12 @@ export default function FeatureRolloutTab({
   }, [db, supabaseInitializationError, fetchFeatureFlags]);
 
   useEffect(() => {
-    initializeFeatureFlags();
-  }, [initializeFeatureFlags]);
+    const initialize = async () => {
+      await fetchAuthenticatedUsers();
+      await initializeFeatureFlags();
+    };
+    initialize();
+  }, [fetchAuthenticatedUsers, initializeFeatureFlags]);
 
   const createNotification = async (featureName: string, notificationType: 'enabled' | 'disabled', userIds: string[]) => {
     if (!db || userIds.length === 0) return;
@@ -142,7 +193,9 @@ export default function FeatureRolloutTab({
 
     try {
       const newEnabledState = !featureFlag.is_enabled;
-      const allUserIds = people.map(person => person.id);
+      
+      // Use the authenticated users we already fetched
+      const allUserIds = authenticatedUsers.map(user => user.id);
 
       const { error } = await db
         .from(FEATURE_FLAGS_TABLE)
@@ -155,7 +208,7 @@ export default function FeatureRolloutTab({
 
       if (error) throw error;
 
-      // Create notifications for all users
+      // Create notifications for all authenticated users
       await createNotification(
         featureFlag.feature_name,
         newEnabledState ? 'enabled' : 'disabled',
@@ -163,8 +216,8 @@ export default function FeatureRolloutTab({
       );
 
       toast({
-        title: "Feature Updated",
-        description: `${featureFlag.display_name} has been ${newEnabledState ? 'enabled' : 'disabled'} for all users`,
+        title: "🎉 Feature Updated Successfully",
+        description: `${featureFlag.display_name} has been ${newEnabledState ? 'enabled' : 'disabled'} for all ${allUserIds.length} user${allUserIds.length !== 1 ? 's' : ''}. ${newEnabledState ? 'Users will see a notification about this new feature!' : 'Users will be notified about this change.'}`,
       });
 
       await fetchFeatureFlags();
@@ -213,10 +266,11 @@ export default function FeatureRolloutTab({
         [userId]
       );
 
-      const userName = people.find(p => p.id === userId)?.name || 'User';
+      const user = authenticatedUsers.find(u => u.id === userId);
+      const userName = user?.display_name || 'User';
       toast({
-        title: "Feature Updated",
-        description: `${featureFlag.display_name} has been ${isCurrentlyEnabled ? 'disabled' : 'enabled'} for ${userName}`,
+        title: `✨ Feature ${isCurrentlyEnabled ? 'Disabled' : 'Enabled'}`,
+        description: `${featureFlag.display_name} has been ${isCurrentlyEnabled ? 'disabled' : 'enabled'} for ${userName}. ${!isCurrentlyEnabled ? 'They will receive a notification about this new feature!' : 'They will be notified about this change.'}`,
       });
 
       await fetchFeatureFlags();
@@ -284,7 +338,7 @@ export default function FeatureRolloutTab({
           const featureConfig = AVAILABLE_FEATURES.find(f => f.name === featureFlag.feature_name);
           const FeatureIcon = featureConfig?.icon || Settings;
           const enabledUserCount = featureFlag.enabled_for_users?.length || 0;
-          const totalUserCount = people.length;
+          const totalUserCount = authenticatedUsers.length;
 
           return (
             <Card key={featureFlag.id} className="overflow-hidden">
@@ -347,25 +401,28 @@ export default function FeatureRolloutTab({
                 </div>
 
                 {/* Individual User Controls */}
-                {people.length > 0 && (
+                {authenticatedUsers.length > 0 && (
                   <div className="space-y-2">
                     <h4 className="font-medium text-sm text-muted-foreground">Individual User Access</h4>
                     <div className="grid gap-2 max-h-60 overflow-y-auto">
-                      {people.map((person) => {
-                        const isEnabled = featureFlag.enabled_for_users?.includes(person.id) || false;
+                      {authenticatedUsers.map((user) => {
+                        const isEnabled = featureFlag.enabled_for_users?.includes(user.id) || false;
                         
                         return (
                           <div
-                            key={person.id}
+                            key={user.id}
                             className="flex items-center justify-between p-3 bg-background border rounded-lg hover:bg-muted/30 transition-colors"
                           >
                             <div className="flex items-center space-x-3">
                               <div className={`w-2 h-2 rounded-full ${isEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
-                              <span className="font-medium">{person.name}</span>
+                              <span className="font-medium">{user.display_name}</span>
+                              {user.id === currentUserId && (
+                                <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">You</span>
+                              )}
                             </div>
                             <Switch
                               checked={isEnabled}
-                              onCheckedChange={() => toggleFeatureForUser(featureFlag, person.id)}
+                              onCheckedChange={() => toggleFeatureForUser(featureFlag, user.id)}
                               disabled={isUpdating === featureFlag.id}
                             />
                           </div>
@@ -375,10 +432,10 @@ export default function FeatureRolloutTab({
                   </div>
                 )}
 
-                {people.length === 0 && (
+                {authenticatedUsers.length === 0 && (
                   <div className="text-center py-4 text-muted-foreground">
                     <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>No users available. Add people first to manage individual access.</p>
+                    <p>No authenticated users found. Please check your user profiles.</p>
                   </div>
                 )}
               </CardContent>

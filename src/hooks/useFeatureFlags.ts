@@ -61,7 +61,30 @@ export function useFeatureFlags(
 
   useEffect(() => {
     fetchFeatureFlags();
-  }, [fetchFeatureFlags]);
+
+    // Set up real-time subscription for feature flags
+    if (db) {
+      const subscription = db
+        .channel('feature_flags_changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: FEATURE_FLAGS_TABLE,
+          },
+          () => {
+            // Refresh feature flags when any change occurs
+            fetchFeatureFlags();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [fetchFeatureFlags, db]);
 
   return {
     featureFlags,
