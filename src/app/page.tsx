@@ -35,7 +35,7 @@ import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useFeatureFlags } from '@/hooks/useFeatureFlags';
 
-import type { ActiveView } from '@/lib/settleease';
+import type { ActiveView, FeatureNotification } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 
 
@@ -43,7 +43,7 @@ export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
-  const [showFeatureNotificationModal, setShowFeatureNotificationModal] = useState(false);
+  const [notificationsToShow, setNotificationsToShow] = useState<FeatureNotification[] | null>(null);
   const [wasKickedFromFeature, setWasKickedFromFeature] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
@@ -173,13 +173,14 @@ export default function SettleEasePage() {
       console.log('Feature-View Sync Effect: Analytics feature is disabled. Redirecting to dashboard.');
       setActiveView('dashboard');
       setWasKickedFromFeature(true);
-      setShowFeatureNotificationModal(true);
-      toast({ 
-        title: "🚫 Feature Disabled", 
-        description: "Analytics has been disabled for your account in real-time. You've been redirected to the dashboard.", 
-        variant: "destructive",
-        duration: 6000
-      });
+      setNotificationsToShow([{
+        id: 'kicked-analytics',
+        user_id: currentUser!.id,
+        feature_name: 'analytics',
+        notification_type: 'disabled',
+        is_read: false,
+        created_at: new Date().toISOString(),
+      }]);
       return;
     }
 
@@ -187,16 +188,17 @@ export default function SettleEasePage() {
       console.log('Feature-View Sync Effect: Activity Feed feature is disabled. Redirecting to dashboard.');
       setActiveView('dashboard');
       setWasKickedFromFeature(true);
-      setShowFeatureNotificationModal(true);
-      toast({ 
-        title: "🚫 Feature Disabled", 
-        description: "Activity Feed has been disabled for your account in real-time. You've been redirected to the dashboard.", 
-        variant: "destructive",
-        duration: 6000
-      });
+      setNotificationsToShow([{
+        id: 'kicked-activityFeed',
+        user_id: currentUser!.id,
+        feature_name: 'activityFeed',
+        notification_type: 'disabled',
+        is_read: false,
+        created_at: new Date().toISOString(),
+      }]);
       return;
     }
-  }, [userRole, activeView, isFeatureEnabled, setShowFeatureNotificationModal, lastUpdated]);
+  }, [userRole, activeView, isFeatureEnabled, lastUpdated, currentUser]);
 
   // Effect to check for feature notifications when user logs in and set up real-time subscriptions
   useEffect(() => {
@@ -206,17 +208,16 @@ export default function SettleEasePage() {
         try {
           const { data, error } = await db
             .from('feature_notifications')
-            .select('id')
+            .select('*')
             .eq('user_id', currentUser.id)
-            .eq('is_read', false)
-            .limit(1);
+            .eq('is_read', false);
 
           if (error) throw error;
           
           if (data && data.length > 0) {
             // Add a small delay to ensure other modals are handled first
             setTimeout(() => {
-              setShowFeatureNotificationModal(true);
+              setNotificationsToShow(data as FeatureNotification[]);
             }, 1000);
           }
         } catch (error) {
@@ -239,41 +240,12 @@ export default function SettleEasePage() {
           },
           (payload) => {
             console.log('New feature notification received:', payload);
-            // Show immediate toast notification
-            const notification = payload.new as any;
-            const featureName = notification.feature_name === 'analytics' ? 'Analytics' : 
-                               notification.feature_name === 'activityFeed' ? 'Activity Feed' : 
-                               notification.feature_name;
-            
-            if (notification.notification_type === 'enabled') {
-              toast({
-                title: `🎉 Feature Enabled!`,
-                description: `${featureName} has been enabled for you. Check it out in the sidebar!`,
-                duration: 7000,
-                action: {
-                  label: "Check it out!",
-                  onClick: () => {
-                    if (notification.feature_name === 'analytics') {
-                      setActiveView('analytics');
-                    } else if (notification.feature_name === 'activityFeed') {
-                      setActiveView('activityFeed');
-                    }
-                  }
-                }
-              });
-            } else {
-              toast({
-                title: `Feature Disabled`,
-                description: `${featureName} has been disabled for your account.`,
-                duration: 5000,
-                variant: "destructive"
-              });
-            }
+            const newNotification = payload.new as FeatureNotification;
             
             // Show the notification modal after a short delay
             setTimeout(() => {
-              setShowFeatureNotificationModal(true);
-            }, 2000);
+              setNotificationsToShow(current => [...(current || []), newNotification]);
+            }, 500);
           }
         )
         .subscribe((status) => {
@@ -284,7 +256,7 @@ export default function SettleEasePage() {
         notificationSubscription.unsubscribe();
       };
     }
-  }, [currentUser, isLoadingAuth, isLoadingRole, isLoadingProfile, isDataFetchedAtLeastOnce, db, toast]);
+  }, [currentUser, isLoadingAuth, isLoadingRole, isLoadingProfile, isDataFetchedAtLeastOnce, db]);
 
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
@@ -395,8 +367,9 @@ export default function SettleEasePage() {
         isEditMode={isNameModalEditMode}
       />
       <FeatureNotificationModal
-        isOpen={showFeatureNotificationModal}
-        onClose={() => setShowFeatureNotificationModal(false)}
+        isOpen={!!notificationsToShow}
+        notifications={notificationsToShow || []}
+        onClose={() => setNotificationsToShow(null)}
         db={db}
         currentUserId={currentUser.id}
         onNavigateToFeature={(featureName) => {

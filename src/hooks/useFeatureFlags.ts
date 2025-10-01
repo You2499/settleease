@@ -19,14 +19,13 @@ export function useFeatureFlags(
   const [featureFlags, setFeatureFlags] = useState<FeatureFlag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [previousFlags, setPreviousFlags] = useState<FeatureFlag[]>([]);
 
-  const fetchFeatureFlags = useCallback(async (showNotifications = false) => {
+  const fetchFeatureFlags = useCallback(async () => {
     if (!db) {
       setIsLoading(false);
       return;
     }
-
+    setIsLoading(true);
     try {
       const { data, error } = await db
         .from(FEATURE_FLAGS_TABLE)
@@ -35,33 +34,7 @@ export function useFeatureFlags(
 
       if (error) throw error;
 
-      const newFlags = data || [];
-      
-      // Check for changes and show notifications if requested
-      if (showNotifications && currentUserId && previousFlags.length > 0) {
-        newFlags.forEach(newFlag => {
-          const oldFlag = previousFlags.find(f => f.feature_name === newFlag.feature_name);
-          if (oldFlag && currentUserId) {
-            const wasEnabled = oldFlag.enabled_for_users?.includes(currentUserId) || false;
-            const isNowEnabled = newFlag.enabled_for_users?.includes(currentUserId) || false;
-            
-            // Show notification if the feature status changed for this user
-            if (wasEnabled !== isNowEnabled) {
-              const featureName = newFlag.display_name || newFlag.feature_name;
-              toast({
-                title: isNowEnabled ? `✨ ${featureName} Enabled!` : `🚫 ${featureName} Disabled`,
-                description: isNowEnabled 
-                  ? `You now have access to ${featureName}. Check it out in the sidebar!`
-                  : `${featureName} has been disabled for your account.`,
-                duration: 4000,
-              });
-            }
-          }
-        });
-      }
-
-      setPreviousFlags(featureFlags); // Store current flags as previous
-      setFeatureFlags(newFlags);
+      setFeatureFlags(data || []);
       setLastUpdated(new Date());
     } catch (error) {
       console.error('Error fetching feature flags:', error);
@@ -69,11 +42,10 @@ export function useFeatureFlags(
     } finally {
       setIsLoading(false);
     }
-  }, [db, currentUserId, previousFlags, featureFlags]);
+  }, [db]);
 
   const refreshFeatureFlags = useCallback(async () => {
-    setIsLoading(true);
-    await fetchFeatureFlags(false);
+    await fetchFeatureFlags();
   }, [fetchFeatureFlags]);
 
   const isFeatureEnabled = useCallback((featureName: string, userId?: string): boolean => {
@@ -83,18 +55,14 @@ export function useFeatureFlags(
     const featureFlag = featureFlags.find(flag => flag.feature_name === featureName);
     if (!featureFlag) return false;
 
-    // If the feature is globally disabled, return false
     if (!featureFlag.is_enabled) return false;
 
-    // Check if the user is in the enabled_for_users array
     return featureFlag.enabled_for_users?.includes(targetUserId) || false;
   }, [featureFlags, currentUserId]);
 
   useEffect(() => {
-    // Initial fetch without notifications
-    fetchFeatureFlags(false);
+    fetchFeatureFlags();
 
-    // Set up real-time subscription for feature flags
     if (db && currentUserId) {
       const subscription = db
         .channel('feature_flags_realtime')
@@ -107,8 +75,38 @@ export function useFeatureFlags(
           },
           (payload) => {
             console.log('Feature flags changed in real-time:', payload);
-            // Refresh feature flags with notifications enabled for real-time updates
-            fetchFeatureFlags(true);
+            
+            setFeatureFlags(currentFlags => {
+              const oldFlag = payload.old as FeatureFlag;
+              const newFlag = payload.new as FeatureFlag;
+              let updatedFlags = [...currentFlags];
+
+              if (payload.eventType === 'INSERT') {
+                updatedFlags.push(newFlag);
+              } else if (payload.eventType === 'UPDATE') {
+                updatedFlags = updatedFlags.map(f => f.id === newFlag.id ? newFlag : f);
+              } else if (payload.eventType === 'DELETE') {
+                updatedFlags = updatedFlags.filter(f => f.id !== oldFlag.id);
+              }
+              
+              if (currentUserId) {
+                const wasEnabled = oldFlag ? (oldFlag.enabled_for_users?.includes(currentUserId) && oldFlag.is_enabled) : false;
+                const isNowEnabled = newFlag ? (newFlag.enabled_for_users?.includes(currentUserId) && newFlag.is_enabled) : false;
+
+                if (wasEnabled !== isNowEnabled) {
+                  const featureName = newFlag?.display_name || oldFlag?.display_name || 'A feature';
+                  toast({
+                    title: isNowEnabled ? `✨ ${featureName} Enabled!` : `🚫 ${featureName} Disabled`,
+                    description: isNowEnabled 
+                      ? `You now have access to ${featureName}.`
+                      : `${featureName} has been disabled for your account.`,
+                    duration: 4000,
+                  });
+                }
+              }
+              return updatedFlags;
+            });
+            setLastUpdated(new Date());
           }
         )
         .subscribe((status) => {
@@ -119,7 +117,7 @@ export function useFeatureFlags(
         subscription.unsubscribe();
       };
     }
-  }, [fetchFeatureFlags, db, currentUserId]);
+  }, [db, currentUserId]);
 
   return {
     featureFlags,
