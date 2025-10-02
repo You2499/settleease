@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
 import {
-  BarChart3, Users, Eye, UserSquare
+  BarChartBig, Users, Eye, UserSquare
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -517,7 +517,7 @@ export default function AnalyticsTab({
       <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
         <CardHeader className="pb-2 pt-4">
           <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">
-            <BarChart3 className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
+            <BarChartBig className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0">

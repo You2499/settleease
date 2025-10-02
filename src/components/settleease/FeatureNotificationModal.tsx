@@ -1,3 +1,17 @@
+
+import React, { useState, useCallback } from 'react';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { Activity, BarChart4, Bell, CheckCircle2, Sparkles, X, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useFeatureInteractions } from '@/hooks/useFeatureInteractions';
+import { FEATURE_NOTIFICATIONS_TABLE } from '@/lib/settleease/constants';
+import type { FeatureNotification } from '@/lib/settleease/types';
+import { toast } from '@/hooks/use-toast';
+
+
 interface FeatureNotificationModalProps {
   isOpen: boolean;
   notifications: FeatureNotification[];
@@ -10,7 +24,7 @@ interface FeatureNotificationModalProps {
 const FEATURE_CONFIGS = {
   analytics: {
     name: 'Analytics',
-    icon: BarChart3,
+    icon: BarChart4,
     description: 'Advanced analytics and insights for expense tracking',
     enabledMessage: 'You now have access to detailed analytics and spending insights!',
     disabledMessage: 'Analytics features have been temporarily disabled.',

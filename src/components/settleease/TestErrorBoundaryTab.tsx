@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart3, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer } from 'lucide-react';
+import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,8 +61,7 @@ export default function TestErrorBoundaryTab({
       description: 'Crashes the real analytics charts and data visualization',
       tabName: 'analytics' as ActiveView,
       size: 'large' as const,
-      riskLevel: 'high',
-      icon: BarChart3,
+icon: BarChart4,
       category: 'Tab Level'
     },
     {
@@ -216,7 +215,7 @@ export default function TestErrorBoundaryTab({
       tabName: 'addExpense' as ActiveView,
       size: 'small' as const,
       riskLevel: 'low',
-      icon: BarChart3,
+      icon: BarChart4,
       category: 'Input Field'
     },
     {

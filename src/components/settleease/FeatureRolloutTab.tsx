@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
-import { Settings, Users, BarChart3, Activity, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
+import { Settings, Users, BarChart4, Activity, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { FeatureFlag } from '@/lib/settleease/types';
 import { FEATURE_FLAGS_TABLE, FEATURE_NOTIFICATIONS_TABLE } from '@/lib/settleease/constants';
@@ -31,7 +31,7 @@ const AVAILABLE_FEATURES = [
     name: 'analytics',
     displayName: 'Analytics',
     description: 'Advanced analytics and insights for expense tracking and spending patterns',
-    icon: BarChart3,
+    icon: BarChart4,
   },
   {
     name: 'activityFeed',

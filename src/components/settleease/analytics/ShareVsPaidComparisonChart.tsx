@@ -3,7 +3,7 @@
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart3 } from 'lucide-react';
+import { BarChart4 } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import type { ShareVsPaidDataPoint } from '@/lib/settleease/types';
 
@@ -30,7 +30,7 @@ export default function ShareVsPaidComparisonChart({
     <Card className="shadow-md rounded-lg">
       <CardHeader className="px-4 py-3">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+          <BarChart4 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
           {analyticsViewMode === 'personal' && personName ? `Share vs. Paid (For ${personName})` : 'Share vs. Paid'}
         </CardTitle>
       </CardHeader>

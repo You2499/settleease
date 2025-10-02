@@ -19,7 +19,7 @@ import {
   ChevronDown,
   ChevronRight,
   Activity,
-  BarChart3,
+  BarChart4,
   Settings
 } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
@@ -215,7 +215,7 @@ export default function VerificationDebug({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center shadow-sm">
-                  <BarChart3 className="w-5 h-5 text-blue-800 dark:text-blue-200" />
+                  <BarChart4 className="w-5 h-5 text-blue-800 dark:text-blue-200" />
                 </div>
                 <div>
                   <h3 className="font-bold text-blue-900 dark:text-blue-100">
