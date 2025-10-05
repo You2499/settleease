@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
@@ -418,15 +418,16 @@ export default function FeatureRolloutTab({
 
   if (supabaseInitializationError) {
     return (
-      <Card className="text-center py-10">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-center text-destructive">
-            <AlertCircle className="mr-2 h-6 w-6" />
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
+            <AlertCircle className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
             Database Error
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Cannot manage feature rollouts without database connection.</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base">Cannot manage feature rollouts without database connection.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );
@@ -434,27 +435,30 @@ export default function FeatureRolloutTab({
 
   if (isLoading) {
     return (
-      <Card className="text-center py-10">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-center">
-            <Clock className="mr-2 h-6 w-6 animate-spin" />
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <Clock className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary" />
             Loading Feature Flags
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">Fetching feature rollout configuration...</p>
+        <CardContent className="flex-1 p-4 sm:p-6">
+          <p className="text-sm sm:text-base text-muted-foreground">Fetching feature rollout configuration...</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-primary">Feature Rollout</h1>
-          <div className="flex items-center gap-3 mt-1">
-            <p className="text-muted-foreground">
+    <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+          <Settings className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+          Feature Rollout
+        </CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 mt-2">
+          <div className="flex items-center gap-3">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Control which features are available to users
             </p>
             <div className={`flex items-center gap-1 text-xs ${isRealtimeConnected
@@ -470,16 +474,15 @@ export default function FeatureRolloutTab({
               </span>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="flex items-center gap-1">
+          <Badge variant="secondary" className="flex items-center gap-1 w-fit">
             <Settings className="h-3 w-3" />
             Admin Only
           </Badge>
         </div>
-      </div>
-
-      <div className="grid gap-6">
+      </CardHeader>
+      
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pt-4 sm:pt-6">
+        <div className="grid gap-4 sm:gap-6">
         {featureFlags.map((featureFlag) => {
           const featureConfig = AVAILABLE_FEATURES.find(f => f.name === featureFlag.feature_name);
           const FeatureIcon = featureConfig?.icon || Settings;
@@ -610,21 +613,16 @@ export default function FeatureRolloutTab({
             </Card>
           );
         })}
-      </div>
+        </div>
 
-      {featureFlags.length === 0 && (
-        <Card className="text-center py-10">
-          <CardHeader>
-            <CardTitle className="flex items-center justify-center text-muted-foreground">
-              <Settings className="mr-2 h-6 w-6" />
-              No Feature Flags
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Feature flags will be automatically created when available.</p>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+        {featureFlags.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
+            <Settings className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+            <p className="text-md sm:text-lg font-medium">No Feature Flags</p>
+            <p className="text-xs sm:text-sm">Feature flags will be automatically created when available.</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
