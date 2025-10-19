@@ -134,7 +134,7 @@ export default function GoogleOAuthModal({
     isLoading = false
 }: GoogleOAuthModalProps) {
     return (
-        <Dialog open={isOpen} onOpenChange={() => {}}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
             <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
                 <div className={`bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6 transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
                     <div>

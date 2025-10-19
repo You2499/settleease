@@ -75,14 +75,43 @@ export function useSupabaseAuth() {
 
   const handleLogout = async () => {
     if (!db) return;
-    const { error } = await db.auth.signOut();
-    if (error) {
-      if (error.message === "Auth session missing!") {
-        console.warn("Logout attempt: Auth session was already missing or token was invalid. Forcing local currentUser to null.");
-        setCurrentUser(null);
-      } else {
-        toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+    
+    try {
+      const { error } = await db.auth.signOut();
+      
+      if (error) {
+        if (error.message === "Auth session missing!") {
+          console.warn("Logout attempt: Auth session was already missing or token was invalid. Forcing local currentUser to null.");
+        } else {
+          console.error("Logout error:", error);
+          toast({ title: "Logout Error", description: error.message, variant: "destructive" });
+        }
       }
+      
+      // Always clear local state regardless of error to ensure logout on mobile
+      setCurrentUser(null);
+      setUserRole(null);
+      
+      // Clear any stored session data
+      if (typeof window !== 'undefined') {
+        // Clear localStorage and sessionStorage for Supabase
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            localStorage.removeItem(key);
+          }
+        });
+        Object.keys(sessionStorage).forEach(key => {
+          if (key.startsWith('sb-') || key.includes('supabase')) {
+            sessionStorage.removeItem(key);
+          }
+        });
+      }
+      
+    } catch (err: any) {
+      console.error("Unexpected error during logout:", err);
+      // Force logout even if there's an error
+      setCurrentUser(null);
+      setUserRole(null);
     }
   };
 

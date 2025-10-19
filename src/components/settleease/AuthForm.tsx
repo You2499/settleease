@@ -611,11 +611,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   const handleGoogleOAuthConfirm = async () => {
+    console.log("Google OAuth: Starting authentication process");
     setIsGoogleLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
+      console.log("Google OAuth: Calling signInWithOAuth");
       const { error: googleError } = await db!.auth.signInWithOAuth({
         provider: 'google',
         options: {
@@ -623,17 +625,24 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           queryParams: getGoogleOAuthParams(isLoginView),
         },
       });
-      if (googleError) throw googleError;
+      
+      if (googleError) {
+        console.error("Google OAuth: Error from signInWithOAuth:", googleError);
+        throw googleError;
+      }
 
+      console.log("Google OAuth: signInWithOAuth successful, user should be redirected");
+      
       // Set a timeout to reset states if OAuth doesn't complete
       // This handles cases where user closes the OAuth popup or navigates back
       setTimeout(() => {
+        console.log("Google OAuth: Timeout reached, resetting loading states");
         setIsGoogleLoading(false);
         setShowGoogleModal(false);
       }, 10000); // Reset after 10 seconds
 
     } catch (err: any) {
-      console.error("Auth error (Google):", err);
+      console.error("Google OAuth: Caught error:", err);
       const { title, description } = getAuthErrorMessage(err, isLoginView);
       toast({
         title: title.includes("Sign In") ? "Google Sign-In Error" : title,
