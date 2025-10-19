@@ -17,7 +17,8 @@
         "list_extensions",
         "list_migrations",
         "apply_migration",
-        "get_project_url"
+        "get_project_url",
+        "search_docs"
       ]
     }
   }

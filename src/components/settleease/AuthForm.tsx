@@ -9,6 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
+import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams } from '@/lib/settleease/authUtils';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -238,6 +239,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
       return;
     }
+
+    // Show confirmation dialog for sign-in flow
+    if (!showGoogleOAuthConfirmation(isLoginView)) {
+      return;
+    }
+
     setIsGoogleLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
@@ -247,6 +254,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         provider: 'google',
         options: {
           redirectTo: productionSiteUrl,
+          queryParams: getGoogleOAuthParams(isLoginView),
         },
       });
       if (googleError) throw googleError;
@@ -389,14 +397,17 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
               >
-                {isGoogleLoading ? (
-                  "Redirecting to Google..."
-                ) : (
-                  <>
-                    <GoogleIcon /> <span className="ml-2.5">Sign {isLoginView ? 'in' : 'up'} with Google</span>
-                  </>
-                )}
+                <GoogleIcon /> 
+                <span className="ml-2.5">
+                  {getGoogleButtonText(isLoginView, isGoogleLoading)}
+                </span>
               </Button>
+
+              {isLoginView && (
+                <p className="text-xs text-muted-foreground text-center mt-2 px-2">
+                  ⚠️ Google Sign-In will create a new account if you don't already have one
+                </p>
+              )}
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
