@@ -141,6 +141,43 @@ export function useSupabaseAuth() {
           setCurrentUser(prevLocalUser => { 
             if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
                 console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
+                
+                // Handle Google OAuth sign-in success toast
+                if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
+                  // Check if this is a Google OAuth user (consistent with getGoogleUserInfo)
+                  const isGoogleUser = newAuthUser.app_metadata?.provider === 'google' || 
+                                     newAuthUser.user_metadata?.iss === 'https://accounts.google.com' ||
+                                     newAuthUser.user_metadata?.provider_id;
+                  
+                  if (isGoogleUser) {
+                    // Show welcome toast for Google OAuth users only
+                    // (Email/password users get their toast from AuthForm)
+                    const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
+                    const firstName = fullName ? fullName.split(' ')[0] : '';
+                    const userName = firstName || newAuthUser.email?.split('@')[0] || 'there';
+                    
+                    // Check if this is a new user (created_at is recent) or returning user
+                    const createdAt = new Date(newAuthUser.created_at);
+                    const now = new Date();
+                    const timeDiff = now.getTime() - createdAt.getTime();
+                    const isNewUser = timeDiff < 60000; // Less than 1 minute ago = new user
+                    
+                    if (isNewUser) {
+                      toast({
+                        title: "Welcome to SettleEase!",
+                        description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+                        variant: "default"
+                      });
+                    } else {
+                      toast({
+                        title: "Welcome Back!",
+                        description: `Hi ${userName}! You've successfully signed in to SettleEase.`,
+                        variant: "default"
+                      });
+                    }
+                  }
+                }
+                
                 if (!newAuthUser) {
                   setUserRole(null);
                 }
