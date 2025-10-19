@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb, Shield } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
@@ -859,6 +859,16 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           </div>
         </div>
       </Card>
+
+      {/* Security Branding Footer */}
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
+        <div className="flex items-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="text-xs text-muted-foreground font-medium">
+            Protected by <span className="text-primary font-semibold">SettleSecure</span>
+          </span>
+        </div>
+      </div>
 
       {/* Google OAuth Confirmation Modal */}
       <GoogleOAuthModal
