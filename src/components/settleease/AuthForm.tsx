@@ -377,7 +377,28 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     try {
       if (isLoginView) {
         const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
-        if (signInError) throw signInError;
+        
+        if (signInError) {
+          // Check if this is an unconfirmed email error
+          if (signInError.code === 'email_not_confirmed' || signInError.message.toLowerCase().includes('email not confirmed')) {
+            // SECURITY NOTE: Supabase only returns 'email_not_confirmed' when BOTH email and password are correct
+            // If password was wrong, Supabase would return 'invalid_credentials' instead
+            // Therefore, it's safe to show resend option here - user has proven they own the account
+            toast({
+              title: "Email Not Verified",
+              description: "Your account exists but hasn't been verified yet. Please check your email and click the verification link to activate your account before signing in.",
+              variant: "destructive"
+            });
+            setHasAuthError(true);
+            setAuthErrorType('email_not_confirmed');
+            setShowResendConfirmation(true);
+            setResendEmail(email);
+            setIsLoading(false);
+            return;
+          }
+          throw signInError;
+        }
+        
         toast({
           title: "Welcome Back!",
           description: "You've successfully signed in to SettleEase.",
@@ -664,12 +685,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     />
                   </div>
                   {/* Conditional button/resend section */}
-                  {!isLoginView && showResendConfirmation ? (
-                    // Show resend section instead of Create Account button
+                  {showResendConfirmation ? (
+                    // Show resend section instead of Sign In/Create Account button
                     <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
                       <div className="text-center">
                         <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                          Account Exists - Email Confirmation Needed
+                          {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
                         </h3>
                         <p className="text-xs text-amber-700 dark:text-amber-300">
                           Your account exists but hasn't been verified yet. Please check your email for the confirmation link, or resend it below.
