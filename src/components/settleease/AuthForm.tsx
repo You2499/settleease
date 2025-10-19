@@ -178,6 +178,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       
       setShowResendConfirmation(false);
       setHasAuthError(false);
+      setAuthErrorType('');
       
     } catch (err) {
       // Even if there's an error, the email is likely sent
@@ -189,6 +190,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       
       setShowResendConfirmation(false);
       setHasAuthError(false);
+      setAuthErrorType('');
     } finally {
       setIsLoading(false);
     }
@@ -206,8 +208,17 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         return true;
       }
       
-      // Check if error indicates correct email but wrong password
+      // Check specific error types
       const errorMsg = error.message.toLowerCase();
+      const errorCode = error.code;
+      
+      // If email is not confirmed, but credentials are correct, return true
+      if (errorCode === 'email_not_confirmed' || errorMsg.includes('email not confirmed')) {
+        console.log('Password verification: Email not confirmed but password is correct');
+        return true;
+      }
+      
+      // Check if error indicates wrong credentials
       if (errorMsg.includes('invalid') && errorMsg.includes('credentials')) {
         // This could mean either wrong password OR email doesn't exist
         // We can't distinguish, so return false for security
@@ -264,10 +275,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           
         case 'unconfirmed':
           // Email exists but not confirmed - verify password before revealing this
+          console.log('Found unconfirmed account, verifying password...');
           const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
+          console.log('Password verification result for unconfirmed account:', isUnconfirmedPasswordCorrect);
           
           if (isUnconfirmedPasswordCorrect) {
             // Password is correct - safe to show unconfirmed status and resend option
+            console.log('Password correct for unconfirmed account - showing resend option');
             return {
               shouldProceed: false,
               toastConfig: {
@@ -279,6 +293,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             };
           } else {
             // Password is wrong - don't reveal account exists, proceed with signup
+            console.log('Password incorrect for unconfirmed account - proceeding with signup');
             return { shouldProceed: true };
           }
           
@@ -340,10 +355,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       console.log('Checking email status with password verification:', email);
       const { shouldProceed, toastConfig, showResendOption } = await checkEmailStatusSecure(email, password);
       
+      console.log('Email status check result:', { shouldProceed, showResendOption, toastTitle: toastConfig?.title });
+      
       if (!shouldProceed && toastConfig) {
         toast(toastConfig);
         setHasAuthError(true);
         if (showResendOption) {
+          console.log('Showing resend confirmation option');
           setShowResendConfirmation(true);
           setResendEmail(email);
         }
