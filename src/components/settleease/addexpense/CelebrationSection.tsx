@@ -69,6 +69,8 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
       <Input
         id="celebrationAmount"
         type="number"
+        inputMode="decimal"
+        pattern="[0-9]*\.?[0-9]*"
         value={celebrationAmountInput}
         onChange={(e) => setCelebrationAmountInput(e.target.value)}
         placeholder="e.g., 20.00"

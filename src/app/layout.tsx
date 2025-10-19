@@ -6,6 +6,12 @@ import { ThemeProvider } from "@/components/ThemeProvider"; // Added ThemeProvid
 export const metadata: Metadata = {
   title: 'SettleEase - Expense Settlement Dashboard',
   description: 'A comprehensive dashboard to manage and settle group expenses.',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
 };
 
 export default function RootLayout({

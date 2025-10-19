@@ -61,6 +61,8 @@ const AmountInputComponent = ({ totalAmount, setTotalAmount }: { totalAmount: st
       <Input
         id="totalAmount"
         type="number"
+        inputMode="decimal"
+        pattern="[0-9]*\.?[0-9]*"
         value={totalAmount}
         onChange={(e) => setTotalAmount(e.target.value)}
         placeholder="e.g., 100.00"

@@ -22,6 +22,8 @@ export default function UnequalSplitSection({ people, unequalShares, handleUnequ
           <Input
             id={`unequal-${person.id}`}
             type="number"
+            inputMode="decimal"
+            pattern="[0-9]*\.?[0-9]*"
             value={unequalShares[person.id] || ''}
             onChange={e => handleUnequalShareChange(person.id, e.target.value)}
             placeholder="Amount"

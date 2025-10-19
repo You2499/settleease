@@ -45,6 +45,8 @@ export default function ItemwiseSplitSection({
                 />
                 <Input 
                     type="number" 
+                    inputMode="decimal"
+                    pattern="[0-9]*\.?[0-9]*"
                     value={item.price as string} 
                     onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
                     placeholder="Price" 
