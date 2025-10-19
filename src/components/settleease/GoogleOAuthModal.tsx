@@ -234,11 +234,17 @@ export default function GoogleOAuthModal({
                         {/* Action Buttons */}
                         <div className="flex flex-col space-y-2 pt-4">
                             <Button
-                                className={`w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                className={`w-full h-10 text-sm sm:h-11 sm:text-base transition-all duration-200 ${
+                                    isLoading 
+                                        ? 'bg-gray-100 hover:bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:border-gray-600' 
+                                        : 'bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600'
+                                }`}
                                 onClick={onConfirm}
                                 disabled={isLoading}
                             >
-                                <GoogleIcon />
+                                <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+                                    <GoogleIcon />
+                                </div>
                                 <span className="ml-2.5">
                                     {isLoading ? "Redirecting to Google..." : "Continue with Google"}
                                 </span>

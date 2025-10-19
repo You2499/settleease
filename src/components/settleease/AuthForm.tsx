@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb, Shield } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb, Shield, Eye, EyeOff } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
@@ -140,6 +140,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -664,6 +665,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
                     Sign in to continue simplifying your group expenses.
                   </p>
+                  
+                  {/* Mobile Security Badge - Only show on mobile for login view */}
+                  <div className="md:hidden mt-6 flex items-center justify-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+                    <Shield className="h-4 w-4 text-primary" />
+                    <span className="text-xs text-muted-foreground font-medium">
+                      Protected by <span className="text-primary font-semibold">SettleSecure</span>
+                    </span>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -755,25 +764,41 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   </div>
                   <div className="space-y-1 sm:space-y-1.5">
                     <Label htmlFor="password" className="text-sm">Password</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      autoComplete={isLoginView ? "current-password" : "new-password"}
-                      placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
-                      value={password}
-                      onChange={(e) => {
-                        setPassword(e.target.value);
-                        // Reset resend confirmation when password changes
-                        if (showResendConfirmation) {
-                          setShowResendConfirmation(false);
-                          setResendEmail('');
-                        }
-                      }}
-                      disabled={isLoading || isGoogleLoading}
-                      required
-                      minLength={6}
-                      className="h-10 sm:h-11"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete={isLoginView ? "current-password" : "new-password"}
+                        placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
+                        value={password}
+                        onChange={(e) => {
+                          setPassword(e.target.value);
+                          // Reset resend confirmation when password changes
+                          if (showResendConfirmation) {
+                            setShowResendConfirmation(false);
+                            setResendEmail('');
+                          }
+                        }}
+                        disabled={isLoading || isGoogleLoading}
+                        required
+                        minLength={6}
+                        className="h-10 sm:h-11 pr-10"
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading || isGoogleLoading}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+                    </div>
                   </div>
                   {/* Conditional button/resend section */}
                   {showResendConfirmation ? (
@@ -860,8 +885,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         </div>
       </Card>
 
-      {/* Security Branding Footer */}
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
+      {/* Security Branding Footer - Hidden on mobile */}
+      <div className="hidden md:block fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
         <div className="flex items-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
           <Shield className="h-4 w-4 text-primary" />
           <span className="text-xs text-muted-foreground font-medium">
