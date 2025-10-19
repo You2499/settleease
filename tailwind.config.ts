@@ -1,5 +1,5 @@
 
-import type {Config} from 'tailwindcss';
+import type { Config } from 'tailwindcss';
 
 export default {
   darkMode: ['class'],
@@ -11,9 +11,38 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        body: ['Inter', 'sans-serif'],
-        headline: ['Inter', 'sans-serif'],
-        code: ['monospace'],
+        body: [
+          // System fonts for Apple devices
+          '-apple-system',
+          'BlinkMacSystemFont',
+          // Inter for other systems
+          'Inter',
+          // Fallbacks
+          'system-ui',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif',
+          'Apple Color Emoji',
+          'Segoe UI Emoji',
+          'Segoe UI Symbol'
+        ],
+        headline: [
+          // System fonts for Apple devices
+          '-apple-system',
+          'BlinkMacSystemFont',
+          // Inter for other systems
+          'Inter',
+          // Fallbacks
+          'system-ui',
+          'Segoe UI',
+          'Roboto',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif'
+        ],
+        code: ['SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'monospace'],
       },
       colors: {
         background: 'hsl(var(--background))',
