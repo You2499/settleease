@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
+import { createPortal } from 'react-dom';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -214,7 +215,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       
       // If email is not confirmed, but credentials are correct, return true
       if (errorCode === 'email_not_confirmed' || errorMsg.includes('email not confirmed')) {
-        console.log('Password verification: Email not confirmed but password is correct');
         return true;
       }
       
@@ -275,26 +275,32 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           
         case 'unconfirmed':
           // Email exists but not confirmed - verify password before revealing this
-          console.log('Found unconfirmed account, verifying password...');
           const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
-          console.log('Password verification result for unconfirmed account:', isUnconfirmedPasswordCorrect);
           
           if (isUnconfirmedPasswordCorrect) {
             // Password is correct - safe to show unconfirmed status and resend option
-            console.log('Password correct for unconfirmed account - showing resend option');
             return {
               shouldProceed: false,
               toastConfig: {
                 title: "Account Exists - Confirmation Needed",
-                description: "Your account exists but hasn't been confirmed yet. Please check your email (including spam folder) for the confirmation link.",
+                description: "Your account exists but hasn't been verified yet. Please check your email (including spam folder) for the confirmation link.",
                 variant: "destructive"
               },
               showResendOption: true
             };
           } else {
-            // Password is wrong - don't reveal account exists, proceed with signup
-            console.log('Password incorrect for unconfirmed account - proceeding with signup');
-            return { shouldProceed: true };
+            // SECURITY FIX: Password is wrong - BLOCK signup to prevent account hijacking
+            // Even with wrong password, we cannot allow signup as it would let attackers
+            // hijack unconfirmed accounts by getting the confirmation email
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Email Already in Use",
+                description: "This email address is already associated with an account. If this is your email, please check your inbox for a confirmation link, or try signing in if you've already confirmed your account.",
+                variant: "destructive"
+              },
+              showResendOption: false
+            };
           }
           
         case 'pending':
@@ -352,16 +358,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     // For signup, check email status with password verification for security
     if (!isLoginView) {
       setIsLoading(true);
-      console.log('Checking email status with password verification:', email);
       const { shouldProceed, toastConfig, showResendOption } = await checkEmailStatusSecure(email, password);
-      
-      console.log('Email status check result:', { shouldProceed, showResendOption, toastTitle: toastConfig?.title });
       
       if (!shouldProceed && toastConfig) {
         toast(toastConfig);
         setHasAuthError(true);
         if (showResendOption) {
-          console.log('Showing resend confirmation option');
           setShowResendConfirmation(true);
           setResendEmail(email);
         }
@@ -539,7 +541,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
+    <>
+      <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
       <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
         {/* Left Pane: Branding & Features */}
         <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[600px] md:h-[600px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
@@ -684,22 +687,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              {showResendConfirmation && (
-                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-center">
-                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
-                    Need a new confirmation email?
-                  </p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleResendConfirmation}
-                    disabled={isLoading}
-                    className="text-xs"
-                  >
-                    {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-                  </Button>
-                </div>
-              )}
+
               
               {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
                 <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
@@ -724,7 +712,49 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           </div>
         </div>
       </div>
-    </Card>
+      </Card>
+      
+      {/* Floating Resend Confirmation Notification */}
+    {showResendConfirmation && typeof window !== 'undefined' && createPortal(
+      <div className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] pointer-events-none">
+        <div className="group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 animate-in slide-in-from-top-full sm:slide-in-from-bottom-full">
+          <div className="flex-1">
+            <div className="grid gap-1">
+              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Need a new confirmation email?
+              </div>
+              <div className="text-sm text-amber-700 dark:text-amber-300">
+                Click below to resend the verification link to your email.
+              </div>
+            </div>
+            <div className="mt-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleResendConfirmation}
+                disabled={isLoading}
+                className="text-xs bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/70"
+              >
+                {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+              </Button>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              setShowResendConfirmation(false);
+              setHasAuthError(false);
+              setAuthErrorType('');
+              setResendEmail('');
+            }}
+            className="absolute right-2 top-2 rounded-md p-1 text-amber-600/70 dark:text-amber-400/70 opacity-70 transition-opacity hover:text-amber-800 dark:hover:text-amber-200 focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
 }
 
