@@ -26,21 +26,7 @@ export async function checkUserExists(db: SupabaseClient, email: string): Promis
   }
 }
 
-/**
- * Show a confirmation dialog for Google OAuth with clear messaging
- */
-export function showGoogleOAuthConfirmation(isSignIn: boolean): boolean {
-  if (isSignIn) {
-    return window.confirm(
-      "IMPORTANT: Google Sign-In will create a new account if you don't already have one.\n\n" +
-      "• If you have an existing account: You'll be signed in\n" +
-      "• If you DON'T have an account: A new account will be created automatically\n\n" +
-      "If you only want to sign in to an existing account, click 'Cancel' and use email/password instead.\n\n" +
-      "Continue with Google Sign-In?"
-    );
-  }
-  return true; // No confirmation needed for sign-up flow
-}
+
 
 /**
  * Get appropriate Google OAuth button text based on context

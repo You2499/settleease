@@ -9,7 +9,8 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { toast } from "@/hooks/use-toast";
 import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
+import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
+import GoogleOAuthModal from './GoogleOAuthModal';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -137,6 +138,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [authErrorType, setAuthErrorType] = useState<string>('');
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
+  const [showGoogleModal, setShowGoogleModal] = useState(false);
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -377,7 +379,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     try {
       if (isLoginView) {
         const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
-        
+
         if (signInError) {
           // Check if this is an unconfirmed email error
           if (signInError.code === 'email_not_confirmed' || signInError.message.toLowerCase().includes('email not confirmed')) {
@@ -398,7 +400,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
           throw signInError;
         }
-        
+
         toast({
           title: "Welcome Back!",
           description: "You've successfully signed in to SettleEase.",
@@ -522,23 +524,24 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = () => {
     if (!db) {
       toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
       return;
     }
 
-    // Show confirmation dialog for sign-in flow
-    if (!showGoogleOAuthConfirmation(isLoginView)) {
-      return;
-    }
+    // Show confirmation modal
+    setShowGoogleModal(true);
+  };
 
+  const handleGoogleOAuthConfirm = async () => {
+    setShowGoogleModal(false);
     setIsGoogleLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
-      const { error: googleError } = await db.auth.signInWithOAuth({
+      const { error: googleError } = await db!.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: productionSiteUrl,
@@ -734,12 +737,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   </span>
                 </Button>
 
-                {isLoginView && (
-                  <div className="flex items-center justify-center text-xs text-muted-foreground mt-2 px-2">
-                    <AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
-                    <span>Google Sign-In will create a new account if you don't already have one</span>
-                  </div>
-                )}
+
               </CardContent>
 
               <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
@@ -770,7 +768,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         </div>
       </Card>
 
-
+      {/* Google OAuth Confirmation Modal */}
+      <GoogleOAuthModal
+        isOpen={showGoogleModal}
+        onClose={() => setShowGoogleModal(false)}
+        onConfirm={handleGoogleOAuthConfirm}
+        isSignIn={isLoginView}
+      />
     </>
   );
 }
