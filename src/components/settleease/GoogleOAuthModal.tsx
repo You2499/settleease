@@ -240,6 +240,7 @@ export default function GoogleOAuthModal({
                                     Continue with Google
                                 </span>
                             </Button>
+                        </div>
                     </div>
                 </div>
             </DialogContent>

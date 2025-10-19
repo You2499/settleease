@@ -379,6 +379,7 @@ const UserNameModal = React.memo(function UserNameModal({
                                     </>
                                 )}
                             </Button>
+                        </div>
                     </div>
                 </div>
             </DialogContent>
