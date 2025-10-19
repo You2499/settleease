@@ -38,6 +38,14 @@ export default function SettleEasePage() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
+  
+  // Clean up any hash in URL on page load
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      const url = window.location.href.split('#')[0];
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
 
   // Use custom hooks for auth, data, and realtime
   const {

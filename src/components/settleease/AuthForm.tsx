@@ -64,6 +64,15 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     
     return () => clearTimeout(timer);
   }, []); // Empty dependency array for mount only
+  
+  // Clean up any hash in URL on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      // Remove hash from URL without triggering a page reload
+      const url = window.location.href.split('#')[0];
+      window.history.replaceState(null, '', url);
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -82,7 +91,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsLoading(true);
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    // Use current origin to avoid URL hash issues
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : "https://settleease.netlify.app";
 
     try {
       if (isLoginView) {
@@ -95,7 +105,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           email,
           password,
           options: {
-            emailRedirectTo: productionSiteUrl,
+            emailRedirectTo: currentOrigin,
             data: {
               first_name: firstName.trim(),
               last_name: lastName.trim(),
@@ -153,13 +163,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsGoogleLoading(true);
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    // Use current origin to avoid URL hash issues
+    const currentOrigin = typeof window !== 'undefined' ? window.location.origin : "https://settleease.netlify.app";
 
     try {
       const { error: googleError } = await db.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: productionSiteUrl, 
+          redirectTo: currentOrigin, 
         },
       });
       if (googleError) throw googleError;
@@ -298,6 +309,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </div>
 
               <Button
+                type="button"
                 className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
@@ -313,14 +325,20 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              <Button variant="link" onClick={() => { 
-                setIsLoginView(!isLoginView); 
-                setFirstName('');
-                setLastName('');
-                // Clear form fields when switching modes
-                setEmail('');
-                setPassword('');
-              }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
+              <Button 
+                type="button"
+                variant="link" 
+                onClick={() => { 
+                  setIsLoginView(!isLoginView); 
+                  setFirstName('');
+                  setLastName('');
+                  // Clear form fields when switching modes
+                  setEmail('');
+                  setPassword('');
+                }} 
+                disabled={isLoading || isGoogleLoading} 
+                className="text-sm text-primary hover:text-primary/80"
+              >
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
             </CardFooter>

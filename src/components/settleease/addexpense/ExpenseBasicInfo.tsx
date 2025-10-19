@@ -130,7 +130,7 @@ const DatePickerComponent = ({ expenseDate, setExpenseDate, calendarOpen, setCal
             {expenseDate ? format(expenseDate, "PPP") : <span>Pick a date</span>}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 border border-border shadow-lg rounded-md bg-popover">
+        <PopoverContent className="w-auto p-0 border border-border shadow-md rounded-lg bg-popover">
           <Calendar
             mode="single"
             selected={expenseDate}
@@ -139,7 +139,7 @@ const DatePickerComponent = ({ expenseDate, setExpenseDate, calendarOpen, setCal
               setCalendarOpen(false);
             }}
             initialFocus
-            className="rounded-md"
+            className="rounded-lg"
           />
         </PopoverContent>
       </Popover>
