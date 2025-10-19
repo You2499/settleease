@@ -271,64 +271,65 @@ export default function ComprehensiveDebug({
 
   return (
     <Card className={isInSheet ? "shadow-none border-0" : "shadow-lg"}>
-      <CardHeader className={isInSheet ? "p-0 pb-4" : ""}>
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <CardHeader className={isInSheet ? "px-4 py-4" : ""}>
+        <div className="flex flex-col gap-3">
           <div>
-            <CardTitle className={isInSheet ? "text-lg font-bold" : "text-xl sm:text-2xl font-bold"}>Debug Information</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg sm:text-xl font-bold">Debug Information</CardTitle>
+            <CardDescription className="text-sm">
               Comprehensive view of all calculations and data
             </CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowBalancedPeople((s) => !s)}
+              className="w-full sm:w-auto justify-start"
             >
               {showBalancedPeople ? (
-                <>
-                  <Eye className="mr-2 h-4 w-4" />
-                  Show All
-                </>
-              ) : (
                 <>
                   <EyeOff className="mr-2 h-4 w-4" />
                   Hide Balanced
                 </>
+              ) : (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Show All
+                </>
               )}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleCopy}>
+            <Button variant="outline" size="sm" onClick={handleCopy} className="w-full sm:w-auto justify-start">
               <Copy className="mr-2 h-4 w-4" />
               Copy JSON
             </Button>
-            <Button variant="outline" size="sm" onClick={handleDownload}>
+            <Button variant="outline" size="sm" onClick={handleDownload} className="w-full sm:w-auto justify-start">
               <Download className="mr-2 h-4 w-4" />
               Download
             </Button>
           </div>
         </div>
       </CardHeader>
-      <CardContent className={isInSheet ? "p-0" : ""}>
+      <CardContent className={isInSheet ? "px-4 pb-4" : ""}>
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="balances" className="text-xs sm:text-sm">Balances</TabsTrigger>
-            <TabsTrigger value="transactions" className="text-xs sm:text-sm">Transactions</TabsTrigger>
-            <TabsTrigger value="perPerson" className="text-xs sm:text-sm">Per Person</TabsTrigger>
-            <TabsTrigger value="expenses" className="text-xs sm:text-sm">Expenses</TabsTrigger>
-            <TabsTrigger value="json" className="text-xs sm:text-sm">Raw JSON</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-0.5 h-auto">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 py-2">Overview</TabsTrigger>
+            <TabsTrigger value="balances" className="text-xs sm:text-sm px-2 py-2">Balances</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs sm:text-sm px-2 py-2">Transactions</TabsTrigger>
+            <TabsTrigger value="perPerson" className="text-xs sm:text-sm px-2 py-2">Per Person</TabsTrigger>
+            <TabsTrigger value="expenses" className="text-xs sm:text-sm px-2 py-2">Expenses</TabsTrigger>
+            <TabsTrigger value="json" className="text-xs sm:text-sm px-2 py-2">Raw JSON</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <TabsContent value="overview" className="space-y-3 mt-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2 px-3 pt-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <Users className="h-4 w-4 text-blue-600" />
                     People
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 pb-3">
                   <div className="text-2xl font-bold">{people.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {filteredPeople.length} with outstanding balances
@@ -337,13 +338,13 @@ export default function ComprehensiveDebug({
               </Card>
 
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2 px-3 pt-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <FileText className="h-4 w-4 text-green-600" />
                     Expenses
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 pb-3">
                   <div className="text-2xl font-bold">{expenses.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Total: {formatCurrency(expenses.reduce((sum, e) => sum + Number(e.total_amount), 0))}
@@ -352,13 +353,13 @@ export default function ComprehensiveDebug({
               </Card>
 
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2 px-3 pt-3">
                   <CardTitle className="text-sm font-medium flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-purple-600" />
                     Settlements
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 pb-3">
                   <div className="text-2xl font-bold">{settlementPayments.length}</div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Total: {formatCurrency(settlementPayments.reduce((sum, p) => sum + Number(p.amount_settled), 0))}
@@ -368,10 +369,10 @@ export default function ComprehensiveDebug({
             </div>
 
             <Card>
-              <CardHeader>
+              <CardHeader className="px-3 pt-3 pb-2">
                 <CardTitle className="text-base">Transaction Efficiency</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 pb-3">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm font-medium text-muted-foreground">Pairwise Transactions</div>
@@ -392,11 +393,11 @@ export default function ComprehensiveDebug({
             </Card>
           </TabsContent>
 
-          <TabsContent value="balances" className="space-y-4 mt-4">
-            <div className="text-sm text-muted-foreground mb-4">
+          <TabsContent value="balances" className="space-y-3 mt-3">
+            <div className="text-sm text-muted-foreground">
               Showing {filteredPeople.length} of {people.length} people
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {filteredPeople.map((p) => {
                 const b = personBalances[p.id];
                 const isCreditor = b?.netBalance > 0.01;
@@ -405,26 +406,26 @@ export default function ComprehensiveDebug({
                 
                 return (
                   <Card key={p.id}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">{p.name}</CardTitle>
+                    <CardHeader className="pb-2 px-3 pt-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <CardTitle className="text-sm sm:text-base truncate">{p.name}</CardTitle>
                         {isBalanced ? (
-                          <Badge variant="outline" className="bg-gray-50">
+                          <Badge variant="outline" className="bg-gray-50 text-xs flex-shrink-0">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : isCreditor ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs flex-shrink-0">
                             Receives
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs flex-shrink-0">
                             Pays
                           </Badge>
                         )}
                       </div>
                     </CardHeader>
-                    <CardContent className="space-y-2">
+                    <CardContent className="space-y-1.5 px-3 pb-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Total Paid</span>
                         <span className="font-medium text-green-600">+{formatCurrency(b?.totalPaid || 0)}</span>
@@ -457,14 +458,14 @@ export default function ComprehensiveDebug({
             </div>
           </TabsContent>
 
-          <TabsContent value="transactions" className="space-y-4 mt-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <TabsContent value="transactions" className="space-y-3 mt-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Simplified Transactions</CardTitle>
-                  <CardDescription>Optimized minimum transactions with settlement tracking</CardDescription>
+                <CardHeader className="px-3 pt-3 pb-2">
+                  <CardTitle className="text-sm sm:text-base">Simplified Transactions</CardTitle>
+                  <CardDescription className="text-xs">Optimized minimum transactions with settlement tracking</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 pb-3">
                   {unpaidSimplified.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
@@ -495,11 +496,11 @@ export default function ComprehensiveDebug({
               </Card>
 
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Pairwise Transactions</CardTitle>
-                  <CardDescription>Direct debts between people</CardDescription>
+                <CardHeader className="px-3 pt-3 pb-2">
+                  <CardTitle className="text-sm sm:text-base">Pairwise Transactions</CardTitle>
+                  <CardDescription className="text-xs">Direct debts between people</CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 pb-3">
                   {pairwiseSortedForDisplay.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
@@ -539,13 +540,13 @@ export default function ComprehensiveDebug({
 
             {/* Step 3 Filtered View */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Step 3 Filtered View (Modal Simulation)</CardTitle>
-                <CardDescription>
+              <CardHeader className="px-3 pt-3 pb-2">
+                <CardTitle className="text-sm sm:text-base">Step 3 Filtered View (Modal Simulation)</CardTitle>
+                <CardDescription className="text-xs">
                   Shows transactions for {showBalancedPeople ? "all people" : "people with outstanding balances only"}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 pb-3">
                 <div className="mb-4 p-3 bg-muted/50 rounded-lg">
                   <div className="grid grid-cols-3 gap-4 text-sm">
                     <div>
@@ -598,34 +599,34 @@ export default function ComprehensiveDebug({
             </Card>
           </TabsContent>
 
-          <TabsContent value="perPerson" className="space-y-4 mt-4">
-            <div className="text-sm text-muted-foreground mb-4">
+          <TabsContent value="perPerson" className="space-y-3 mt-3">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               Detailed breakdown for each person showing their expenses, debts, credits, and settlements
             </div>
-            <div className="space-y-4">
+            <div className="space-y-3">
               {perPerson.map((pp) => (
                 <Card key={pp.person.id}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{pp.person.name}</CardTitle>
-                      <div className="flex gap-2">
-                        <Badge variant="outline">
+                  <CardHeader className="px-3 pt-3 pb-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <CardTitle className="text-base sm:text-lg">{pp.person.name}</CardTitle>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="text-xs">
                           Net: {formatCurrency(Math.abs(pp.personSummary?.netBalance || 0))}
                         </Badge>
                         {Math.abs(pp.personSummary?.netBalance || 0) <= 0.01 ? (
-                          <Badge variant="outline" className="bg-gray-50">
+                          <Badge variant="outline" className="bg-gray-50 text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : pp.personSummary?.netBalance > 0 ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700">Receives</Badge>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">Receives</Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700">Pays</Badge>
+                          <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">Pays</Badge>
                         )}
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 px-3 pb-3">
                     {/* Relevant Expenses */}
                     <div>
                       <div className="font-medium mb-2">Relevant Expenses ({pp.relevantExpenses.length})</div>

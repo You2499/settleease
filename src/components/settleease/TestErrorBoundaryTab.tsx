@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer } from 'lucide-react';
+import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer, X } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -357,14 +357,21 @@ export default function TestErrorBoundaryTab({
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-        {/* Mobile: Debug in a bottom sheet */}
-        {isMobile && (
-          <Sheet open={isDebugSheetOpen} onOpenChange={setIsDebugSheetOpen}>
-            <SheetContent side="bottom" className="w-full max-w-full h-[90vh] p-0 flex flex-col">
-              <SheetHeader className="px-4 pt-4 pb-2 border-b flex-shrink-0">
-                <SheetTitle>Comprehensive Debug</SheetTitle>
-              </SheetHeader>
-              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+        {/* Mobile: Debug in full screen */}
+        {isMobile && isDebugSheetOpen && (
+          <div className="fixed inset-0 z-50 bg-background">
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0">
+                <h2 className="text-lg font-semibold">Comprehensive Debug</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsDebugSheetOpen(false)}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto">
                 <ComprehensiveDebug
                   people={people}
                   expenses={expenses}
@@ -375,8 +382,8 @@ export default function TestErrorBoundaryTab({
                   isInSheet={true}
                 />
               </div>
-            </SheetContent>
-          </Sheet>
+            </div>
+          </div>
         )}
 
         {/* Desktop: Debug inline */}
