@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast, useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, X } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
+import { createPortal } from 'react-dom';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -137,9 +138,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [authErrorType, setAuthErrorType] = useState<string>('');
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
-  const [resendToastId, setResendToastId] = useState<string | null>(null);
-  const { dismiss } = useToast();
-
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -159,34 +157,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
-  // Show resend confirmation toast
-  const showResendToast = () => {
-    const toastResult = toast({
-      title: "Need a new confirmation email?",
-      description: (
-        <div className="space-y-2">
-          <p>Click below to resend the verification link to your email.</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleResendConfirmation}
-            disabled={isLoading}
-            className="text-xs w-full"
-          >
-            {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-          </Button>
-        </div>
-      ),
-      variant: "default",
-      duration: Infinity, // No timeout
-    });
-    setResendToastId(toastResult.id);
-  };
-
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
     if (!db || !resendEmail || !password) return;
-    
+
     setIsLoading(true);
     try {
       // Use the original password that was verified to trigger email resend
@@ -194,38 +168,26 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         email: resendEmail,
         password: password, // Use the actual password that was verified
       });
-      
-      // Dismiss the resend toast
-      if (resendToastId) {
-        dismiss(resendToastId);
-        setResendToastId(null);
-      }
-      
+
       // Show success toast
       toast({
         title: "Confirmation Email Sent",
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
         variant: "default"
       });
-      
+
       setShowResendConfirmation(false);
       setHasAuthError(false);
       setAuthErrorType('');
-      
+
     } catch (err) {
-      // Dismiss the resend toast
-      if (resendToastId) {
-        dismiss(resendToastId);
-        setResendToastId(null);
-      }
-      
       // Show success toast (email likely sent even if API "fails")
       toast({
-        title: "Confirmation Email Sent", 
+        title: "Confirmation Email Sent",
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
         variant: "default"
       });
-      
+
       setShowResendConfirmation(false);
       setHasAuthError(false);
       setAuthErrorType('');
@@ -239,29 +201,29 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     try {
       // Try to sign in with the provided credentials
       const { error } = await db!.auth.signInWithPassword({ email, password });
-      
+
       if (!error) {
         // Password is correct - sign out immediately and return true
         await db!.auth.signOut();
         return true;
       }
-      
+
       // Check specific error types
       const errorMsg = error.message.toLowerCase();
       const errorCode = error.code;
-      
+
       // If email is not confirmed, but credentials are correct, return true
       if (errorCode === 'email_not_confirmed' || errorMsg.includes('email not confirmed')) {
         return true;
       }
-      
+
       // Check if error indicates wrong credentials
       if (errorMsg.includes('invalid') && errorMsg.includes('credentials')) {
         // This could mean either wrong password OR email doesn't exist
         // We can't distinguish, so return false for security
         return false;
       }
-      
+
       return false;
     } catch (err) {
       console.warn('Password verification failed:', err);
@@ -273,27 +235,27 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const checkEmailStatusSecure = async (email: string, password: string): Promise<{ shouldProceed: boolean; toastConfig?: any; showResendOption?: boolean }> => {
     try {
       // First, use the database function to get email status
-      const { data, error } = await db!.rpc('check_email_status', { 
-        email_to_check: email 
+      const { data, error } = await db!.rpc('check_email_status', {
+        email_to_check: email
       });
-      
+
       if (error) {
         console.warn('Email status check RPC error:', error);
         return { shouldProceed: true }; // If we can't check, allow signup to proceed
       }
-      
+
       const status = data?.status;
       console.log('Email status check result:', data);
-      
+
       switch (status) {
         case 'new':
           // Email doesn't exist - proceed with signup
           return { shouldProceed: true };
-          
+
         case 'confirmed':
           // Email exists and is confirmed - verify password before revealing this
           const isPasswordCorrect = await verifyExistingAccountPassword(email, password);
-          
+
           if (isPasswordCorrect) {
             // Password is correct - user should sign in instead
             return {
@@ -309,11 +271,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             // This will fail at Supabase level but won't reveal account existence
             return { shouldProceed: true };
           }
-          
+
         case 'unconfirmed':
           // Email exists but not confirmed - verify password before revealing this
           const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
-          
+
           if (isUnconfirmedPasswordCorrect) {
             // Password is correct - safe to show unconfirmed status and resend option
             return {
@@ -339,11 +301,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               showResendOption: false
             };
           }
-          
+
         case 'pending':
           // Edge case - treat same as confirmed for security
           const isPendingPasswordCorrect = await verifyExistingAccountPassword(email, password);
-          
+
           if (isPendingPasswordCorrect) {
             return {
               shouldProceed: false,
@@ -356,12 +318,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           } else {
             return { shouldProceed: true };
           }
-          
+
         default:
           // Unknown status - allow signup to proceed
           return { shouldProceed: true };
       }
-      
+
     } catch (err) {
       console.warn('Secure email status check failed:', err);
       return { shouldProceed: true }; // If we can't check, allow signup to proceed
@@ -375,44 +337,40 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       return;
     }
     if (!email || !password) {
-      toast({ 
-        title: "Missing Information", 
-        description: "Please enter both your email address and password.", 
-        variant: "destructive" 
+      toast({
+        title: "Missing Information",
+        description: "Please enter both your email address and password.",
+        variant: "destructive"
       });
       return;
     }
 
     if (!isLoginView && (!firstName.trim() || !lastName.trim())) {
-      toast({ 
-        title: "Missing Information", 
-        description: "Please enter both your first name and last name to create your account.", 
-        variant: "destructive" 
+      toast({
+        title: "Missing Information",
+        description: "Please enter both your first name and last name to create your account.",
+        variant: "destructive"
       });
       return;
     }
-    
+
     // For signup, check email status with password verification for security
     if (!isLoginView) {
       setIsLoading(true);
       const { shouldProceed, toastConfig, showResendOption } = await checkEmailStatusSecure(email, password);
-      
+
       if (!shouldProceed && toastConfig) {
         toast(toastConfig);
         setHasAuthError(true);
         if (showResendOption) {
           setShowResendConfirmation(true);
           setResendEmail(email);
-          // Show the resend toast after a short delay to let the error toast appear first
-          setTimeout(() => {
-            showResendToast();
-          }, 100);
         }
         setIsLoading(false);
         return;
       }
     }
-    
+
     setIsLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
@@ -421,8 +379,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       if (isLoginView) {
         const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-        toast({ 
-          title: "Welcome Back!", 
+        toast({
+          title: "Welcome Back!",
           description: "You've successfully signed in to SettleEase.",
           variant: "default"
         });
@@ -441,7 +399,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             },
           },
         });
-        
+
         // Handle specific signup errors
         if (signUpError) {
           console.log('Signup error details:', {
@@ -451,41 +409,41 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             hasSession: !!data.session,
             userConfirmed: data.user ? (data.user as any).email_confirmed_at : null
           });
-          
+
           // For existing user errors, always show "account exists" message
-          if (signUpError.message?.toLowerCase().includes('already') || 
-              signUpError.code === 'user_already_exists' ||
-              signUpError.code === 'email_exists') {
-            
-            toast({ 
-              title: "Account Already Exists", 
-              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need to reset your password.", 
-              variant: "destructive" 
+          if (signUpError.message?.toLowerCase().includes('already') ||
+            signUpError.code === 'user_already_exists' ||
+            signUpError.code === 'email_exists') {
+
+            toast({
+              title: "Account Already Exists",
+              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need to reset your password.",
+              variant: "destructive"
             });
             setHasAuthError(true);
             return;
           }
-          
+
           // For other errors, throw them to be handled by the catch block
           throw signUpError;
         }
-        
-        console.log('Signup response:', { 
-          user: !!data.user, 
-          session: !!data.session, 
+
+        console.log('Signup response:', {
+          user: !!data.user,
+          session: !!data.session,
           userId: data.user ? (data.user as any).id : null,
           userEmail: data.user ? (data.user as any).email : null,
           userCreated: data.user ? (data.user as any).created_at : null,
           confirmationSent: data.user ? (data.user as any).confirmation_sent_at : null
         });
-        
+
         // Handle the case where user exists but no session is created
         if (data.user && !data.session) {
           // This should now only happen for legitimate new signups requiring email confirmation
-          toast({ 
-            title: "Check Your Email", 
-            description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.", 
-            variant: "default" 
+          toast({
+            title: "Check Your Email",
+            description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.",
+            variant: "default"
           });
           setHasAuthError(false);
           return;
@@ -513,8 +471,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
         // Handle successful signup with immediate session
         if (data.session) {
-          toast({ 
-            title: "Welcome to SettleEase!", 
+          toast({
+            title: "Welcome to SettleEase!",
             description: "Your account has been created and you're now signed in.",
             variant: "default"
           });
@@ -523,8 +481,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           if (data.user && onAuthSuccess) onAuthSuccess(data.user);
         } else {
           // This case should be handled above, but keeping as fallback
-          toast({ 
-            title: "Check Your Email", 
+          toast({
+            title: "Check Your Email",
             description: "Please check your email and click the confirmation link to activate your account.",
             variant: "default"
           });
@@ -534,7 +492,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       }
     } catch (err: any) {
       console.error("Auth error (email/password):", err);
-      
+
       const { title, description } = getAuthErrorMessage(err, isLoginView);
       toast({ title, description, variant: "destructive" });
       setHasAuthError(true);
@@ -571,10 +529,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     } catch (err: any) {
       console.error("Auth error (Google):", err);
       const { title, description } = getAuthErrorMessage(err, isLoginView);
-      toast({ 
-        title: title.includes("Sign In") ? "Google Sign-In Error" : title, 
-        description: description.includes("Google") ? description : `Google Sign-In failed: ${description}`, 
-        variant: "destructive" 
+      toast({
+        title: title.includes("Sign In") ? "Google Sign-In Error" : title,
+        description: description.includes("Google") ? description : `Google Sign-In failed: ${description}`,
+        variant: "destructive"
       });
       setHasAuthError(true);
       setIsGoogleLoading(false);
@@ -584,183 +542,219 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   return (
     <>
       <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
-      <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
-        {/* Left Pane: Branding & Features */}
-        <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[600px] md:h-[600px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
-          <div className="flex flex-col flex-1 justify-center min-h-0 h-full">
-            {isLoginView ? (
-              <div className="flex flex-col flex-1 items-center justify-center text-center h-full">
-                <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
-                <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
-                <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
-                  Sign in to continue simplifying your group expenses.
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-6 sm:mb-8 text-center md:text-left">
-                  <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
-                  <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
-                  <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
-                    Simplify your shared expenses. Effortlessly.
+        <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
+          {/* Left Pane: Branding & Features */}
+          <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[600px] md:h-[600px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
+            <div className="flex flex-col flex-1 justify-center min-h-0 h-full">
+              {isLoginView ? (
+                <div className="flex flex-col flex-1 items-center justify-center text-center h-full">
+                  <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
+                  <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
+                  <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
+                    Sign in to continue simplifying your group expenses.
                   </p>
                 </div>
-                <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Key Features:</h3>
-                <ul className="space-y-2.5 text-xs sm:text-sm">
-                  <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
-                  <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-                  <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
-                  <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                  <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from hundreds of Lucide icons for categories.</li>
-                </ul>
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="mb-6 sm:mb-8 text-center md:text-left">
+                    <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
+                    <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
+                    <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
+                      Simplify your shared expenses. Effortlessly.
+                    </p>
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Key Features:</h3>
+                  <ul className="space-y-2.5 text-xs sm:text-sm">
+                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
+                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
+                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
+                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
+                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from hundreds of Lucide icons for categories.</li>
+                  </ul>
+                </>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Right Pane: Form */}
-        <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0 md:min-h-[600px] md:h-[600px] h-full">
-          <div className="flex flex-col justify-center flex-1 min-h-0 h-full">
-            <CardHeader className="px-0 pt-0 pb-4 text-center">
-              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-                {isLoginView ? 'Sign In' : 'Create your Account'}
-              </CardTitle>
-            </CardHeader>
+          {/* Right Pane: Form */}
+          <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0 md:min-h-[600px] md:h-[600px] h-full">
+            <div className="flex flex-col justify-center flex-1 min-h-0 h-full">
+              <CardHeader className="px-0 pt-0 pb-4 text-center">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                  {isLoginView ? 'Sign In' : 'Create your Account'}
+                </CardTitle>
+              </CardHeader>
 
-            <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
-              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                {!isLoginView && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1 sm:space-y-1.5">
-                      <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                      <Input
-                        ref={firstNameRef}
-                        id="firstName"
-                        type="text"
-                        autoComplete="given-name"
-                        placeholder="John"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        disabled={isLoading || isGoogleLoading}
-                        required
-                        className="h-10 text-sm sm:h-11 sm:text-base"
-                      />
+              <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                  {!isLoginView && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1 sm:space-y-1.5">
+                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
+                        <Input
+                          ref={firstNameRef}
+                          id="firstName"
+                          type="text"
+                          autoComplete="given-name"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          disabled={isLoading || isGoogleLoading}
+                          required
+                          className="h-10 text-sm sm:h-11 sm:text-base"
+                        />
+                      </div>
+                      <div className="space-y-1 sm:space-y-1.5">
+                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          type="text"
+                          autoComplete="family-name"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(e.target.value)}
+                          disabled={isLoading || isGoogleLoading}
+                          required
+                          className="h-10 text-sm sm:h-11 sm:text-base"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-1 sm:space-y-1.5">
-                      <Label htmlFor="lastName" className="text-sm">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        type="text"
-                        autoComplete="family-name"
-                        placeholder="Doe"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        disabled={isLoading || isGoogleLoading}
-                        required
-                        className="h-10 text-sm sm:h-11 sm:text-base"
-                      />
-                    </div>
+                  )}
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <Label htmlFor="email" className="text-sm">Email Address</Label>
+                    <Input
+                      ref={emailRef}
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      disabled={isLoading || isGoogleLoading}
+                      required
+                      className="h-10 text-sm sm:h-11 sm:text-base"
+                    />
+                  </div>
+                  <div className="space-y-1 sm:space-y-1.5">
+                    <Label htmlFor="password" className="text-sm">Password</Label>
+                    <Input
+                      id="password"
+                      type="password"
+                      autoComplete={isLoginView ? "current-password" : "new-password"}
+                      placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      disabled={isLoading || isGoogleLoading}
+                      required
+                      minLength={6}
+                      className="h-10 text-sm sm:h-11 sm:text-base"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
+                    {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
+                  </Button>
+                </form>
+
+                <div className="relative my-3 sm:my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Or
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  <GoogleIcon />
+                  <span className="ml-2.5">
+                    {getGoogleButtonText(isLoginView, isGoogleLoading)}
+                  </span>
+                </Button>
+
+                {isLoginView && (
+                  <div className="flex items-center justify-center text-xs text-muted-foreground mt-2 px-2">
+                    <AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+                    <span>Google Sign-In will create a new account if you don't already have one</span>
                   </div>
                 )}
-                <div className="space-y-1 sm:space-y-1.5">
-                  <Label htmlFor="email" className="text-sm">Email Address</Label>
-                  <Input
-                    ref={emailRef}
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    placeholder="you@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    disabled={isLoading || isGoogleLoading}
-                    required
-                    className="h-10 text-sm sm:h-11 sm:text-base"
-                  />
-                </div>
-                <div className="space-y-1 sm:space-y-1.5">
-                  <Label htmlFor="password" className="text-sm">Password</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    autoComplete={isLoginView ? "current-password" : "new-password"}
-                    placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={isLoading || isGoogleLoading}
-                    required
-                    minLength={6}
-                    className="h-10 text-sm sm:h-11 sm:text-base"
-                  />
-                </div>
-                <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
-                  {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
+              </CardContent>
+
+              <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
+
+
+                {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
+                  <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
+                    {getAuthSuggestion(isLoginView, hasAuthError, authErrorType)}
+                  </div>
+                )}
+                <Button variant="link" onClick={() => {
+                  setIsLoginView(!isLoginView);
+                  // Clear form fields when switching views
+                  setFirstName('');
+                  setLastName('');
+                  setEmail('');
+                  setPassword('');
+                  setHasAuthError(false); // Reset error state
+                  setAuthErrorType(''); // Reset error type
+                  setShowResendConfirmation(false); // Reset resend state
+                  setResendEmail('');
+                }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
+                  {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
                 </Button>
-              </form>
-
-              <div className="relative my-3 sm:my-4">
-                <div className="absolute inset-0 flex items-center">
-                  <Separator />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-background px-2 text-muted-foreground">
-                    Or
-                  </span>
-                </div>
-              </div>
-
-              <Button
-                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading || isGoogleLoading}
-              >
-                <GoogleIcon /> 
-                <span className="ml-2.5">
-                  {getGoogleButtonText(isLoginView, isGoogleLoading)}
-                </span>
-              </Button>
-
-              {isLoginView && (
-                <div className="flex items-center justify-center text-xs text-muted-foreground mt-2 px-2">
-                  <AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
-                  <span>Google Sign-In will create a new account if you don't already have one</span>
-                </div>
-              )}
-            </CardContent>
-
-            <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-
-              
-              {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
-                <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
-                  {getAuthSuggestion(isLoginView, hasAuthError, authErrorType)}
-                </div>
-              )}
-              <Button variant="link" onClick={() => {
-                setIsLoginView(!isLoginView);
-                // Clear form fields when switching views
-                setFirstName('');
-                setLastName('');
-                setEmail('');
-                setPassword('');
-                setHasAuthError(false); // Reset error state
-                setAuthErrorType(''); // Reset error type
-                setShowResendConfirmation(false); // Reset resend state
-                setResendEmail('');
-                // Dismiss resend toast if active
-                if (resendToastId) {
-                  dismiss(resendToastId);
-                  setResendToastId(null);
-                }
-              }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
-                {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-              </Button>
-            </CardFooter>
+              </CardFooter>
+            </div>
           </div>
         </div>
-      </div>
       </Card>
-      
 
+      {/* Floating Resend Confirmation Notification - Stacks above toasts */}
+      {showResendConfirmation && typeof window !== 'undefined' && createPortal(
+        <div className="fixed top-0 z-[102] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] pointer-events-none">
+          <div className="pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full border bg-background text-foreground"
+            data-state="open"
+            style={{ marginBottom: '80px' }}>
+            <div className="flex-1">
+              <div className="grid gap-1">
+                <div className="text-sm font-semibold">
+                  Need a new confirmation email?
+                </div>
+                <div className="text-sm opacity-90">
+                  Click below to resend the verification link to your email.
+                </div>
+              </div>
+              <div className="mt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleResendConfirmation}
+                  disabled={isLoading}
+                  className="text-xs w-full"
+                >
+                  {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+                </Button>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowResendConfirmation(false);
+                setHasAuthError(false);
+                setAuthErrorType('');
+                setResendEmail('');
+              }}
+              className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-70 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
