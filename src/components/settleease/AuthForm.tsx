@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast, useToast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, X } from 'lucide-react';
+import { toast } from "@/hooks/use-toast";
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
-import { createPortal } from 'react-dom';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -156,6 +155,28 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
     return () => clearTimeout(timer);
   }, [isLoginView]);
+
+  // Show resend confirmation toast
+  const showResendToast = () => {
+    toast({
+      title: "Need a new confirmation email?",
+      description: (
+        <div className="space-y-3">
+          <p className="text-sm">Click the button below to resend the verification link to your email.</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResendConfirmation}
+            disabled={isLoading}
+            className="w-full"
+          >
+            {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+          </Button>
+        </div>
+      ),
+      duration: 300000, // 5 minutes - very long but not infinite
+    });
+  };
 
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
@@ -365,6 +386,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         if (showResendOption) {
           setShowResendConfirmation(true);
           setResendEmail(email);
+          // Show resend toast after error toast appears
+          setTimeout(() => {
+            showResendToast();
+          }, 200);
         }
         setIsLoading(false);
         return;
@@ -713,48 +738,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         </div>
       </Card>
 
-      {/* Floating Resend Confirmation Notification - Stacks above toasts */}
-      {showResendConfirmation && typeof window !== 'undefined' && createPortal(
-        <div className="fixed top-0 z-[102] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] pointer-events-none">
-          <div className="pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full border bg-background text-foreground"
-            data-state="open"
-            style={{ marginBottom: '80px' }}>
-            <div className="flex-1">
-              <div className="grid gap-1">
-                <div className="text-sm font-semibold">
-                  Need a new confirmation email?
-                </div>
-                <div className="text-sm opacity-90">
-                  Click below to resend the verification link to your email.
-                </div>
-              </div>
-              <div className="mt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResendConfirmation}
-                  disabled={isLoading}
-                  className="text-xs w-full"
-                >
-                  {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-                </Button>
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setShowResendConfirmation(false);
-                setHasAuthError(false);
-                setAuthErrorType('');
-                setResendEmail('');
-              }}
-              className="absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-70 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        </div>,
-        document.body
-      )}
+
     </>
   );
 }
