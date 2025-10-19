@@ -19,7 +19,7 @@ const GoogleIcon = () => (
         <stop offset="1" stopColor="#0cba65" />
       </linearGradient>
       <linearGradient id="g">
-        <stop offset=".2312727" stopColor="#0fbc5f" /> 
+        <stop offset=".2312727" stopColor="#0fbc5f" />
         <stop offset=".3115468" stopColor="#0fbc5f" />
         <stop offset=".3660131" stopColor="#0fbc5e" />
         <stop offset=".4575163" stopColor="#0fbc5d" />
@@ -182,7 +182,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsLoading(true);
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    const productionSiteUrl = "https://settleease-navy.vercel.app/";
 
     try {
       if (isLoginView) {
@@ -253,7 +253,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsGoogleLoading(true);
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    const productionSiteUrl = "https://settleease-navy.vercel.app/";
 
     try {
       const { error: googleError } = await db.auth.signInWithOAuth({
