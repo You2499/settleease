@@ -33,7 +33,7 @@ export async function checkUserExists(db: SupabaseClient, email: string): Promis
  */
 export function getGoogleButtonText(isSignIn: boolean, isLoading: boolean): string {
   if (isLoading) {
-    return "Redirecting to Google...";
+    return "Opening Google Sign-In...";
   }
   return isSignIn ? 'Continue with Google' : 'Sign up with Google';
 }

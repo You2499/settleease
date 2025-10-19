@@ -132,8 +132,8 @@ export default function GoogleOAuthModal({
     isSignIn
 }: GoogleOAuthModalProps) {
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <Dialog open={isOpen} onOpenChange={() => {}}>
+            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
                 <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
                     <div>
                         <DialogHeader className="pb-4">
@@ -229,8 +229,8 @@ export default function GoogleOAuthModal({
 
                         </div>
 
-                        {/* Action Button */}
-                        <div className="flex justify-center pt-4">
+                        {/* Action Buttons */}
+                        <div className="flex flex-col space-y-2 pt-4">
                             <Button
                                 className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
                                 onClick={onConfirm}
@@ -239,6 +239,13 @@ export default function GoogleOAuthModal({
                                 <span className="ml-2.5">
                                     Continue with Google
                                 </span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full h-10 text-sm sm:h-11 sm:text-base"
+                                onClick={onClose}
+                            >
+                                Cancel
                             </Button>
                         </div>
                     </div>

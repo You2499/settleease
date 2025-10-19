@@ -159,6 +159,38 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
+  // Reset Google loading state on component mount and when user navigates back
+  useEffect(() => {
+    // Reset Google loading state when component mounts
+    setIsGoogleLoading(false);
+
+    // Listen for page visibility changes (when user returns from OAuth)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isGoogleLoading) {
+        // User returned to the page, reset the loading state
+        setIsGoogleLoading(false);
+      }
+    };
+
+    // Listen for focus events (when user returns to the tab/window)
+    const handleWindowFocus = () => {
+      if (isGoogleLoading) {
+        // User returned to the window, reset the loading state
+        setIsGoogleLoading(false);
+      }
+    };
+
+    // Add event listeners
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
+    // Cleanup event listeners
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, [isGoogleLoading]);
+
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
     if (!db || !resendEmail || !password) return;
@@ -550,6 +582,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         },
       });
       if (googleError) throw googleError;
+
+      // Set a timeout to reset loading state if OAuth doesn't complete
+      // This handles cases where user closes the OAuth popup or navigates back
+      setTimeout(() => {
+        setIsGoogleLoading(false);
+      }, 10000); // Reset after 10 seconds
+      
     } catch (err: any) {
       console.error("Auth error (Google):", err);
       const { title, description } = getAuthErrorMessage(err, isLoginView);
@@ -768,6 +807,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   setAuthErrorType(''); // Reset error type
                   setShowResendConfirmation(false); // Reset resend state
                   setResendEmail('');
+                  setIsGoogleLoading(false); // Reset Google loading state
                 }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                   {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
                 </Button>
