@@ -113,10 +113,10 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
           description: "Please check your email and password, or create a new account if you're new to SettleEase."
         };
       } else {
-        // For signup, this usually means email confirmation is needed
+        // For signup with existing confirmed account
         return {
-          title: "Check Your Email",
-          description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead."
+          title: "Account Already Exists",
+          description: "An account with this email already exists and is confirmed. Please sign in instead."
         };
       }
 

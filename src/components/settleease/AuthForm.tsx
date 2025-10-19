@@ -205,22 +205,33 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           },
         });
         
-        // Handle specific signup errors that still result in email being sent
+        // Handle specific signup errors
         if (signUpError) {
           console.log('Signup error:', signUpError);
           
-          // Check if this is an "email already exists" error but email confirmation is still sent
+          // Check if this is an "email already exists" error
           if (signUpError.message?.toLowerCase().includes('already') || 
               signUpError.code === 'user_already_exists' ||
               signUpError.code === 'email_exists') {
             
-            // Even with error, Supabase still sends confirmation email for security
-            toast({ 
-              title: "Check Your Email", 
-              description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
-              variant: "default" 
-            });
-            setHasAuthError(false);
+            // Check if we got a user object back - this indicates email confirmation flow
+            if (data.user) {
+              // User exists but email confirmation may be needed
+              toast({ 
+                title: "Check Your Email", 
+                description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
+                variant: "default" 
+              });
+              setHasAuthError(false);
+            } else {
+              // No user object returned - this is a confirmed existing account
+              toast({ 
+                title: "Account Already Exists", 
+                description: "An account with this email already exists and is confirmed. Please sign in instead.", 
+                variant: "destructive" 
+              });
+              setHasAuthError(true);
+            }
             return;
           }
           
@@ -286,23 +297,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     } catch (err: any) {
       console.error("Auth error (email/password):", err);
       
-      // Special handling for signup email confirmation scenarios
-      if (!isLoginView && (
-        err.code === 'user_already_exists' || 
-        err.code === 'email_exists' ||
-        err.message?.toLowerCase().includes('already')
-      )) {
-        toast({ 
-          title: "Check Your Email", 
-          description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
-          variant: "default" 
-        });
-        setHasAuthError(false);
-      } else {
-        const { title, description } = getAuthErrorMessage(err, isLoginView);
-        toast({ title, description, variant: "destructive" });
-        setHasAuthError(true);
-      }
+      const { title, description } = getAuthErrorMessage(err, isLoginView);
+      toast({ title, description, variant: "destructive" });
+      setHasAuthError(true);
     } finally {
       setIsLoading(false);
     }
