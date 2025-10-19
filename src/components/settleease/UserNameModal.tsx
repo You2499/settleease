@@ -394,10 +394,7 @@ const UserNameModal = React.memo(function UserNameModal({
                                 disabled={isLoading || !firstName.trim() || !lastName.trim()}
                             >
                                 {isLoading ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-700 dark:border-gray-200 mr-2"></div>
-                                        <span className="ml-2.5">Saving...</span>
-                                    </>
+                                    <span>Saving...</span>
                                 ) : (
                                     <>
                                         <User className="h-5 w-5" />
