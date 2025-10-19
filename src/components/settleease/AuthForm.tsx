@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,36 +133,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  // Refs for focus management
-  const firstNameRef = useRef<HTMLInputElement>(null);
-  const emailRef = useRef<HTMLInputElement>(null);
-
-  // Focus management when switching between login/signup views
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isLoginView) {
-        emailRef.current?.focus();
-      } else {
-        firstNameRef.current?.focus();
-      }
-    }, 100); // Small delay to ensure DOM is updated
-
-    return () => clearTimeout(timer);
-  }, [isLoginView]);
-
-  // Initial focus when component mounts
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (isLoginView) {
-        emailRef.current?.focus();
-      } else {
-        firstNameRef.current?.focus();
-      }
-    }, 200); // Slightly longer delay for initial mount
-
-    return () => clearTimeout(timer);
-  }, []); // Empty dependency array for mount only
-
 
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -182,7 +152,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsLoading(true);
 
-    const productionSiteUrl = "https://settleease-navy.vercel.app/";
+    const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
       if (isLoginView) {
@@ -253,7 +223,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
     setIsGoogleLoading(true);
 
-    const productionSiteUrl = "https://settleease-navy.vercel.app/";
+    const productionSiteUrl = "https://settleease.netlify.app/";
 
     try {
       const { error: googleError } = await db.auth.signInWithOAuth({
@@ -323,7 +293,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     <div className="space-y-1 sm:space-y-1.5">
                       <Label htmlFor="firstName" className="text-sm">First Name</Label>
                       <Input
-                        ref={firstNameRef}
                         id="firstName"
                         type="text"
                         autoComplete="given-name"
@@ -354,7 +323,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="email" className="text-sm">Email Address</Label>
                   <Input
-                    ref={emailRef}
                     id="email"
                     type="email"
                     autoComplete="email"
