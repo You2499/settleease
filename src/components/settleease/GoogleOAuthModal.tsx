@@ -159,76 +159,61 @@ export default function GoogleOAuthModal({
 
                     {/* Content with higher z-index */}
                     <div className="relative z-10">
-                        <DialogHeader className="pb-2">
-                            <DialogTitle className="flex items-center space-x-3 text-xl font-bold">
-                                <div className="p-3 bg-gradient-to-br from-[#4285F4] via-[#EA4335] to-[#FBBC05] rounded-xl shadow-lg">
-                                    <div className="p-1 bg-white rounded-lg shadow-inner">
-                                        <GoogleIcon />
-                                    </div>
-                                </div>
-                                <span className="bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#FBBC05] bg-clip-text text-transparent font-semibold">
-                                    Continue with Google
-                                </span>
+                        <DialogHeader className="pb-3">
+                            <DialogTitle className="flex items-center justify-center space-x-2 text-lg font-semibold">
+                                <GoogleIcon />
                             </DialogTitle>
                         </DialogHeader>
 
-                        <div className="space-y-4 px-1">
+                        <div className="space-y-3">
                             {/* Warning Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-2xl overflow-hidden shadow-lg">
-                                <div className="px-5 py-4 bg-gradient-to-r from-[#FBBC05]/15 via-[#ff7825]/15 to-[#EA4335]/15 dark:from-[#FBBC05]/10 dark:via-[#ff7825]/10 dark:to-[#EA4335]/10">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="p-2 bg-gradient-to-br from-[#FBBC05] to-[#EA4335] rounded-xl shadow-md">
-                                            <AlertTriangle className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
+                                    <div className="flex items-center space-x-2">
+                                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
+                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
                                             Important Notice
                                         </span>
                                     </div>
                                 </div>
-                                <div className="px-5 py-4 bg-white/90 dark:bg-gray-800/90 space-y-3">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
                                         Google Sign-In will automatically create a new account if you don't already have one with SettleEase.
                                     </p>
                                 </div>
                             </div>
 
                             {/* What Happens Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-2xl overflow-hidden shadow-lg">
-                                <div className="px-5 py-4 bg-gradient-to-r from-[#4285F4]/15 via-[#1893dd]/15 to-[#3086ff]/15 dark:from-[#4285F4]/10 dark:via-[#1893dd]/10 dark:to-[#3086ff]/10">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="p-2 bg-gradient-to-br from-[#4285F4] to-[#3086ff] rounded-xl shadow-md">
-                                            <CheckCircle className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
+                                    <div className="flex items-center space-x-2">
+                                        <CheckCircle className="h-4 w-4 text-[#4285F4]" />
+                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
                                             What happens next?
                                         </span>
                                     </div>
                                 </div>
-                                <div className="px-5 py-4 bg-white/90 dark:bg-gray-800/90 space-y-4">
+                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90 space-y-2">
                                     {isSignIn ? (
                                         <>
-                                            <div className="flex items-center space-x-3 py-3 px-4 bg-white/80 dark:bg-gray-700/80 rounded-xl border border-[#34A853]/30 dark:border-[#34A853]/20 shadow-sm">
-                                                <div className="p-1.5 bg-gradient-to-br from-[#34A853] to-[#4285F4] rounded-lg shadow-sm">
-                                                    <LogIn className="h-4 w-4 text-white" />
-                                                </div>
+                                            <div className="flex items-center space-x-2 py-2">
+                                                <LogIn className="h-4 w-4 text-[#34A853]" />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                                                         If you have an account
                                                     </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
                                                         You'll be signed in immediately
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-3 py-3 px-4 bg-white/80 dark:bg-gray-700/80 rounded-xl border border-[#4285F4]/30 dark:border-[#4285F4]/20 shadow-sm">
-                                                <div className="p-1.5 bg-gradient-to-br from-[#4285F4] to-[#EA4335] rounded-lg shadow-sm">
-                                                    <UserPlus className="h-4 w-4 text-white" />
-                                                </div>
+                                            <div className="flex items-center space-x-2 py-2">
+                                                <UserPlus className="h-4 w-4 text-[#4285F4]" />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                                                         If you don't have an account
                                                     </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
                                                         A new account will be created automatically
                                                     </p>
                                                 </div>
@@ -236,28 +221,24 @@ export default function GoogleOAuthModal({
                                         </>
                                     ) : (
                                         <>
-                                            <div className="flex items-center space-x-3 py-3 px-4 bg-white/80 dark:bg-gray-700/80 rounded-xl border border-[#4285F4]/30 dark:border-[#4285F4]/20 shadow-sm">
-                                                <div className="p-1.5 bg-gradient-to-br from-[#4285F4] to-[#EA4335] rounded-lg shadow-sm">
-                                                    <UserPlus className="h-4 w-4 text-white" />
-                                                </div>
+                                            <div className="flex items-center space-x-2 py-2">
+                                                <UserPlus className="h-4 w-4 text-[#4285F4]" />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                                                         Create new account
                                                     </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
                                                         Sign up with your Google account
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center space-x-3 py-3 px-4 bg-white/80 dark:bg-gray-700/80 rounded-xl border border-[#34A853]/30 dark:border-[#34A853]/20 shadow-sm">
-                                                <div className="p-1.5 bg-gradient-to-br from-[#34A853] to-[#4285F4] rounded-lg shadow-sm">
-                                                    <LogIn className="h-4 w-4 text-white" />
-                                                </div>
+                                            <div className="flex items-center space-x-2 py-2">
+                                                <LogIn className="h-4 w-4 text-[#34A853]" />
                                                 <div className="flex-1">
                                                     <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
                                                         If account exists
                                                     </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
                                                         You'll be signed in instead
                                                     </p>
                                                 </div>
@@ -268,31 +249,25 @@ export default function GoogleOAuthModal({
                             </div>
 
                             {/* Security Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-2xl overflow-hidden shadow-lg">
-                                <div className="px-5 py-4 bg-gradient-to-r from-[#34A853]/15 via-[#0fbc5c]/15 to-[#0cba65]/15 dark:from-[#34A853]/10 dark:via-[#0fbc5c]/10 dark:to-[#0cba65]/10">
-                                    <div className="flex items-center space-x-3">
-                                        <div className="p-2 bg-gradient-to-br from-[#34A853] to-[#0cba65] rounded-xl shadow-md">
-                                            <Shield className="h-5 w-5 text-white" />
-                                        </div>
-                                        <span className="font-semibold text-base text-gray-800 dark:text-gray-100">
+                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
+                                    <div className="flex items-center space-x-2">
+                                        <Shield className="h-4 w-4 text-[#34A853]" />
+                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
                                             Secure & Private
                                         </span>
                                     </div>
                                 </div>
-                                <div className="px-5 py-4 bg-white/90 dark:bg-gray-800/90 space-y-3">
-                                    <div className="flex items-center space-x-3 p-3 bg-white/80 dark:bg-gray-700/80 rounded-lg border border-[#34A853]/30 dark:border-[#34A853]/20 shadow-sm">
-                                        <div className="p-1.5 bg-gradient-to-br from-[#34A853] to-[#0fbc5c] rounded-md shadow-sm">
-                                            <Mail className="h-4 w-4 text-white" />
-                                        </div>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90 space-y-2">
+                                    <div className="flex items-center space-x-2">
+                                        <Mail className="h-4 w-4 text-[#34A853]" />
+                                        <p className="text-sm text-gray-700 dark:text-gray-300">
                                             We only access your email and basic profile info
                                         </p>
                                     </div>
-                                    <div className="flex items-center space-x-3 p-3 bg-white/80 dark:bg-gray-700/80 rounded-lg border border-[#34A853]/30 dark:border-[#34A853]/20 shadow-sm">
-                                        <div className="p-1.5 bg-gradient-to-br from-[#0fbc5c] to-[#0cba65] rounded-md shadow-sm">
-                                            <Shield className="h-4 w-4 text-white" />
-                                        </div>
-                                        <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                    <div className="flex items-center space-x-2">
+                                        <Shield className="h-4 w-4 text-[#34A853]" />
+                                        <p className="text-sm text-gray-700 dark:text-gray-300">
                                             Your Google password is never shared with us
                                         </p>
                                     </div>
@@ -300,23 +275,14 @@ export default function GoogleOAuthModal({
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm relative z-10">
-                            <Button
-                                variant="outline"
-                                onClick={onClose}
-                                className="flex-1 h-11 border-gray-300 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium"
-                            >
-                                Cancel
-                            </Button>
+                        {/* Action Button */}
+                        <div className="flex justify-center pt-4">
                             <Button
                                 onClick={onConfirm}
-                                className="flex-1 h-11 bg-gradient-to-r from-[#4285F4] via-[#34A853] to-[#FBBC05] hover:from-[#3367D6] hover:via-[#2E7D32] hover:to-[#F9A825] text-white shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-[1.02] font-medium"
+                                className="w-full h-11 bg-[#4285F4] text-white font-medium"
                             >
-                                <div className="p-1 bg-white/95 rounded-md mr-2 shadow-sm">
-                                    <GoogleIcon />
-                                </div>
-                                <span>Continue with Google</span>
+                                <GoogleIcon />
+                                <span className="ml-2">Continue with Google</span>
                             </Button>
                         </div>
                     </div>
