@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2 } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams } from '@/lib/settleease/authUtils';
+import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -133,6 +133,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [isLoginView, setIsLoginView] = useState(true); // Changed default to true (Sign In)
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [hasAuthError, setHasAuthError] = useState(false);
 
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -160,12 +161,20 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       return;
     }
     if (!email || !password) {
-      toast({ title: "Authentication Error", description: "Email and password are required.", variant: "destructive" });
+      toast({ 
+        title: "Missing Information", 
+        description: "Please enter both your email address and password.", 
+        variant: "destructive" 
+      });
       return;
     }
 
     if (!isLoginView && (!firstName.trim() || !lastName.trim())) {
-      toast({ title: "Authentication Error", description: "First name and last name are required for signup.", variant: "destructive" });
+      toast({ 
+        title: "Missing Information", 
+        description: "Please enter both your first name and last name to create your account.", 
+        variant: "destructive" 
+      });
       return;
     }
     setIsLoading(true);
@@ -176,7 +185,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       if (isLoginView) {
         const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
         if (signInError) throw signInError;
-        toast({ title: "Login Successful", description: "Welcome back!" });
+        toast({ 
+          title: "Welcome Back!", 
+          description: "You've successfully signed in to SettleEase.",
+          variant: "default"
+        });
+        setHasAuthError(false);
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       } else {
         const { data, error: signUpError } = await db.auth.signUp({
@@ -218,17 +232,19 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
         }
 
-        toast({ title: "Signup Successful", description: "Please check your email to confirm your account if required." });
+        toast({ 
+          title: "Account Created Successfully!", 
+          description: data.session ? "Welcome to SettleEase! You're now signed in." : "Please check your email to verify your account before signing in.",
+          variant: "default"
+        });
+        setHasAuthError(false);
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       }
     } catch (err: any) {
       console.error("Auth error (email/password):", err);
-      let errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred.");
-      // Check for Supabase duplicate email error codes
-      if (err.code === "user_already_exists" || err.code === "email_exists") {
-        errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
-      }
-      toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
+      const { title, description } = getAuthErrorMessage(err, isLoginView);
+      toast({ title, description, variant: "destructive" });
+      setHasAuthError(true);
     } finally {
       setIsLoading(false);
     }
@@ -260,8 +276,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       if (googleError) throw googleError;
     } catch (err: any) {
       console.error("Auth error (Google):", err);
-      const errorMessage = err.message || (typeof err === 'string' ? err : "An unexpected error occurred with Google Sign-In.");
-      toast({ title: "Google Sign-In Error", description: errorMessage, variant: "destructive" });
+      const { title, description } = getAuthErrorMessage(err, isLoginView);
+      toast({ 
+        title: title.includes("Sign In") ? "Google Sign-In Error" : title, 
+        description: description.includes("Google") ? description : `Google Sign-In failed: ${description}`, 
+        variant: "destructive" 
+      });
+      setHasAuthError(true);
       setIsGoogleLoading(false);
     }
   };
@@ -404,13 +425,19 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </Button>
 
               {isLoginView && (
-                <p className="text-xs text-muted-foreground text-center mt-2 px-2">
-                  ⚠️ Google Sign-In will create a new account if you don't already have one
-                </p>
+                <div className="flex items-center justify-center text-xs text-muted-foreground mt-2 px-2">
+                  <AlertTriangle className="h-3 w-3 mr-1 text-yellow-600" />
+                  <span>Google Sign-In will create a new account if you don't already have one</span>
+                </div>
               )}
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
+              {hasAuthError && getAuthSuggestion(isLoginView, hasAuthError) && (
+                <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
+                  {getAuthSuggestion(isLoginView, hasAuthError)}
+                </div>
+              )}
               <Button variant="link" onClick={() => {
                 setIsLoginView(!isLoginView);
                 // Clear form fields when switching views
@@ -418,6 +445,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 setLastName('');
                 setEmail('');
                 setPassword('');
+                setHasAuthError(false); // Reset error state
               }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
