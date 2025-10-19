@@ -19,7 +19,7 @@ const GoogleIcon = () => (
         <stop offset="1" stopColor="#0cba65" />
       </linearGradient>
       <linearGradient id="g">
-        <stop offset=".2312727" stopColor="#0fbc5f" />
+        <stop offset=".2312727" stopColor="#0fbc5f" /> 
         <stop offset=".3115468" stopColor="#0fbc5f" />
         <stop offset=".3660131" stopColor="#0fbc5e" />
         <stop offset=".4575163" stopColor="#0fbc5d" />
@@ -129,7 +129,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [isLoginView, setIsLoginView] = useState(true);
+  const [isLoginView, setIsLoginView] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -398,7 +398,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
               </div>
 
               <Button
-                type="button"
                 className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
@@ -414,20 +413,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              <Button
-                type="button"
-                variant="link"
-                onClick={() => {
-                  setIsLoginView(!isLoginView);
-                  setFirstName('');
-                  setLastName('');
-                  // Clear form fields when switching modes
-                  setEmail('');
-                  setPassword('');
-                }}
-                disabled={isLoading || isGoogleLoading}
-                className="text-sm text-primary hover:text-primary/80"
-              >
+              <Button variant="link" onClick={() => {
+                setIsLoginView(!isLoginView);
+                setFirstName('');
+                setLastName('');
+              }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
             </CardFooter>
