@@ -610,7 +610,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   const handleGoogleOAuthConfirm = async () => {
-    setShowGoogleModal(false);
     setIsGoogleLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
@@ -625,10 +624,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       });
       if (googleError) throw googleError;
 
-      // Set a timeout to reset loading state if OAuth doesn't complete
+      // Set a timeout to reset states if OAuth doesn't complete
       // This handles cases where user closes the OAuth popup or navigates back
       setTimeout(() => {
         setIsGoogleLoading(false);
+        setShowGoogleModal(false);
       }, 10000); // Reset after 10 seconds
 
     } catch (err: any) {
@@ -641,6 +641,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       });
       setHasAuthError(true);
       setIsGoogleLoading(false);
+      setShowGoogleModal(false);
     }
   };
 
@@ -865,6 +866,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         onClose={() => setShowGoogleModal(false)}
         onConfirm={handleGoogleOAuthConfirm}
         isSignIn={isLoginView}
+        isLoading={isGoogleLoading}
       />
     </>
   );

@@ -123,35 +123,16 @@ interface GoogleOAuthModalProps {
     onClose: () => void;
     onConfirm: () => void;
     isSignIn: boolean;
+    isLoading?: boolean;
 }
 
 export default function GoogleOAuthModal({
     isOpen,
     onClose,
     onConfirm,
-    isSignIn
+    isSignIn,
+    isLoading = false
 }: GoogleOAuthModalProps) {
-    const [isLoading, setIsLoading] = React.useState(false);
-
-    const handleConfirm = async () => {
-        setIsLoading(true);
-        
-        // Show loading state for a brief moment before redirecting
-        setTimeout(() => {
-            onConfirm();
-            // Reset loading state after a delay (in case user comes back)
-            setTimeout(() => {
-                setIsLoading(false);
-            }, 3000);
-        }, 500);
-    };
-
-    // Reset loading state when modal closes
-    React.useEffect(() => {
-        if (!isOpen) {
-            setIsLoading(false);
-        }
-    }, [isOpen]);
     return (
         <Dialog open={isOpen} onOpenChange={() => {}}>
             <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
@@ -254,7 +235,7 @@ export default function GoogleOAuthModal({
                         <div className="flex flex-col space-y-2 pt-4">
                             <Button
                                 className={`w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                                onClick={handleConfirm}
+                                onClick={onConfirm}
                                 disabled={isLoading}
                             >
                                 <GoogleIcon />
