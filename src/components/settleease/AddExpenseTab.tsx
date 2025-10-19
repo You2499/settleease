@@ -64,7 +64,7 @@ export default function AddExpenseTab({
   const [totalAmount, setTotalAmount] = useState('');
   const [category, setCategory] = useState('');
   const [expenseDate, setExpenseDate] = useState<Date | undefined>(new Date());
-  
+
   const [payers, setPayers] = useState<PayerInputRow[]>([{ id: Date.now().toString(), personId: '', amount: '' }]);
   const [isMultiplePayers, setIsMultiplePayers] = useState(false);
 
@@ -73,15 +73,16 @@ export default function AddExpenseTab({
   const [celebrationAmountInput, setCelebrationAmountInput] = useState<string>('');
 
   const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
-  
+
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
   const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  
+
   const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
+  const previousExpenseToEdit = useRef<Expense | null | undefined>(undefined);
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -142,26 +143,33 @@ export default function AddExpenseTab({
 
   // Main effect to populate form when expenseToEdit changes or for a new expense
   useEffect(() => {
+    const isTransitioningToNewExpense = previousExpenseToEdit.current !== undefined &&
+      previousExpenseToEdit.current !== null &&
+      expenseToEdit === null;
+    const isInitialMount = previousExpenseToEdit.current === undefined && expenseToEdit === null;
+
     if (expenseToEdit) {
-      initialPeopleSetForFormInstance.current = new Set(); 
+      initialPeopleSetForFormInstance.current = new Set();
       setDescription(expenseToEdit.description);
       setTotalAmount(expenseToEdit.total_amount.toString());
-      setCategory(expenseToEdit.category);
+      // Ensure the category exists in the current categories list
+      const categoryExists = dynamicCategories.some(cat => cat.name === expenseToEdit.category);
+      setCategory(categoryExists ? expenseToEdit.category : (dynamicCategories[0]?.name || ''));
       setExpenseDate(expenseToEdit.created_at ? new Date(expenseToEdit.created_at) : new Date());
-      
+
       if (Array.isArray(expenseToEdit.paid_by) && expenseToEdit.paid_by.length > 0) {
-          setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
-          setPayers(expenseToEdit.paid_by.map(p => ({ 
-            id: p.personId + Date.now().toString() + Math.random().toString(),
-            personId: p.personId, 
-            amount: p.amount.toString() 
-          })));
-      } else { 
+        setIsMultiplePayers(expenseToEdit.paid_by.length > 1);
+        setPayers(expenseToEdit.paid_by.map(p => ({
+          id: p.personId + Date.now().toString() + Math.random().toString(),
+          personId: p.personId,
+          amount: p.amount.toString()
+        })));
+      } else {
         setIsMultiplePayers(false);
-        setPayers([{ 
-          id: Date.now().toString(), 
+        setPayers([{
+          id: Date.now().toString(),
           personId: defaultPayerId || (people.length > 0 ? people[0].id : ''),
-          amount: expenseToEdit.total_amount.toString() 
+          amount: expenseToEdit.total_amount.toString()
         }]);
       }
 
@@ -179,8 +187,8 @@ export default function AddExpenseTab({
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
         setSelectedPeopleEqual(expenseToEdit.shares.map(s => s.personId));
-      } else { 
-         setSelectedPeopleEqual(people.map(p => p.id));
+      } else {
+        setSelectedPeopleEqual(people.map(p => p.id));
       }
 
       if (expenseToEdit.split_method === 'unequal' && Array.isArray(expenseToEdit.shares)) {
@@ -200,13 +208,13 @@ export default function AddExpenseTab({
           categoryName: item.categoryName || defaultItemCategory,
         })));
       } else {
-         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
       }
 
-    } else { 
-      // Resetting form for a new expense
+    } else if (isTransitioningToNewExpense || isInitialMount) {
+      // Resetting form for a new expense - only when transitioning from edit mode or initial mount
       setDescription('');
-      setTotalAmount(''); 
+      setTotalAmount('');
       setCategory(dynamicCategories[0]?.name || '');
       setExpenseDate(new Date());
       setIsMultiplePayers(false);
@@ -221,14 +229,14 @@ export default function AddExpenseTab({
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
-      
+
       // Logic for setting default selected people for equal split
       const currentPeopleIds = people.map(p => p.id);
       const previousPeopleSnapshot = initialPeopleSetForFormInstance.current;
 
       if (previousPeopleSnapshot.size === 0 && people.length > 0) {
         setSelectedPeopleEqual(currentPeopleIds);
-        initialPeopleSetForFormInstance.current = new Set(currentPeopleIds); 
+        initialPeopleSetForFormInstance.current = new Set(currentPeopleIds);
       } else {
         setSelectedPeopleEqual(prevSelected => {
           const newSelected = new Set(prevSelected);
@@ -242,11 +250,14 @@ export default function AddExpenseTab({
 
         const currentSnapshotSet = new Set(currentPeopleIds);
         if (currentSnapshotSet.size !== previousPeopleSnapshot.size ||
-            !Array.from(currentSnapshotSet).every(id => previousPeopleSnapshot.has(id))) {
+          !Array.from(currentSnapshotSet).every(id => previousPeopleSnapshot.has(id))) {
           initialPeopleSetForFormInstance.current = currentSnapshotSet;
         }
       }
     }
+
+    // Update the ref to track the current expenseToEdit for next render
+    previousExpenseToEdit.current = expenseToEdit;
   }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
 
   // Effect to manage payer amount(s) based on totalAmount and isMultiplePayers
@@ -256,8 +267,8 @@ export default function AddExpenseTab({
       const expectedAmount = totalAmount;
 
       if (expenseToEdit) {
-        const personIdToUse = currentPayer?.personId || 
-                              (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
+        const personIdToUse = currentPayer?.personId ||
+          (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
 
         if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
           setPayers([{
@@ -279,30 +290,30 @@ export default function AddExpenseTab({
     } else {
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       if (payers.length === 0 && firstPayerPersonId) {
-           setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+        setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
       } else if (payers.length === 1 && !payers[0].personId && firstPayerPersonId) {
-          if (payers[0].personId !== firstPayerPersonId) {
-              setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
-          }
+        if (payers[0].personId !== firstPayerPersonId) {
+          setPayers(prev => [{ ...prev[0], personId: firstPayerPersonId }]);
+        }
       }
     }
   }, [totalAmount, isMultiplePayers, defaultPayerId, people, expenseToEdit]);
 
   useEffect(() => {
-    if (expenseToEdit) return; 
+    if (expenseToEdit) return;
 
     if (splitMethod === 'unequal') {
-       const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
-        if (!anySharesPopulated && people.length > 0) {
-            const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
-            if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) { 
-                 setUnequalShares(initialEmptyShares);
-            }
+      const anySharesPopulated = Object.values(unequalShares).some(val => val && parseFloat(val) > 0);
+      if (!anySharesPopulated && people.length > 0) {
+        const initialEmptyShares = people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>);
+        if (JSON.stringify(unequalShares) !== JSON.stringify(initialEmptyShares)) {
+          setUnequalShares(initialEmptyShares);
         }
+      }
     }
-    
-    if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0 ) {
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p=>p.id), categoryName: defaultItemCategory }]);
+
+    if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0) {
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
     }
   }, [splitMethod, people, expenseToEdit, items, unequalShares, defaultItemCategory]);
 
@@ -320,17 +331,17 @@ export default function AddExpenseTab({
   const removePayer = (index: number) => {
     const newPayers = payers.filter((_, i) => i !== index);
     const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-    if (newPayers.length === 0) { 
-        if (isMultiplePayers) {
-            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
-        } else { 
-            setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
-        }
+    if (newPayers.length === 0) {
+      if (isMultiplePayers) {
+        setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+      } else {
+        setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
+      }
     } else {
       setPayers(newPayers);
     }
   };
-  
+
   const handleToggleMultiplePayers = () => {
     const goingToMultiple = !isMultiplePayers;
     setIsMultiplePayers(goingToMultiple);
@@ -355,7 +366,7 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]); 
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
@@ -393,7 +404,7 @@ export default function AddExpenseTab({
     );
   }
 
-  if (people.length === 0 && !expenseToEdit) { 
+  if (people.length === 0 && !expenseToEdit) {
     return (
       <Card className="text-center py-8 sm:py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center p-4">
         <CardHeader className="pb-2">
@@ -420,7 +431,7 @@ export default function AddExpenseTab({
           {expenseToEdit ? 'Update the details of the existing expense.' : 'Enter details, who paid, and how the cost should be split.'}
         </CardDescription>
       </CardHeader>
-      
+
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8 pt-4 sm:pt-6">
         <SettleEaseErrorBoundary componentName="Expense Basic Info" size="medium">
           <ExpenseBasicInfo
@@ -491,10 +502,10 @@ export default function AddExpenseTab({
                   <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
                 </SplitMethodSelectorWrapper>
               </SettleEaseErrorBoundary>
-              
+
               {splitMethod === 'equal' && (
                 <SettleEaseErrorBoundary componentName="Equal Split Section" size="small">
-                  <EqualSplitSection 
+                  <EqualSplitSection
                     people={people}
                     selectedPeopleEqual={selectedPeopleEqual}
                     handleEqualSplitChange={handleEqualSplitChange}
