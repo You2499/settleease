@@ -305,6 +305,7 @@ export default function SettleEasePage() {
                   peopleMap={peopleMap}
                   dynamicCategories={categories}
                   getCategoryIconFromName={getCategoryIconFromName}
+                  settlementPayments={settlementPayments}
                 />
               </SettleEaseErrorBoundary>
             )}

@@ -5,13 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { Expense } from '@/lib/settleease/types';
+import type { Expense, SettlementPayment } from '@/lib/settleease/types';
 
 interface TransactionHeatmapCalendarProps {
     expenses: Expense[];
     analyticsViewMode: 'group' | 'personal';
     selectedPersonIdForAnalytics?: string | null;
     peopleMap: Record<string, string>;
+    settlementPayments: SettlementPayment[];
 }
 
 interface DayData {
@@ -29,7 +30,8 @@ export default function TransactionHeatmapCalendar({
     expenses,
     analyticsViewMode,
     selectedPersonIdForAnalytics,
-    peopleMap
+    peopleMap,
+    settlementPayments
 }: TransactionHeatmapCalendarProps) {
     const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
@@ -37,6 +39,7 @@ export default function TransactionHeatmapCalendar({
     const dayDataMap = useMemo(() => {
         const dataMap = new Map<string, DayData>();
 
+        // Process expenses
         expenses.forEach(expense => {
             const expenseDate = new Date(expense.created_at || Date.now());
             const dateKey = expenseDate.toDateString();
@@ -75,8 +78,55 @@ export default function TransactionHeatmapCalendar({
             }
         });
 
+        // Process settlement payments
+        settlementPayments.forEach(payment => {
+            const paymentDate = new Date(payment.settled_at);
+            const dateKey = paymentDate.toDateString();
+
+            let amount = 0;
+            let shouldInclude = false;
+            let description = '';
+
+            if (analyticsViewMode === 'group') {
+                amount = Number(payment.amount_settled);
+                shouldInclude = true;
+                description = `Payment: ${peopleMap[payment.debtor_id]} → ${peopleMap[payment.creditor_id]}`;
+            } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
+                // For personal view, include if the person was involved in the payment
+                if (payment.debtor_id === selectedPersonIdForAnalytics || payment.creditor_id === selectedPersonIdForAnalytics) {
+                    amount = Number(payment.amount_settled);
+                    shouldInclude = true;
+                    if (payment.debtor_id === selectedPersonIdForAnalytics) {
+                        description = `Payment to ${peopleMap[payment.creditor_id]}`;
+                    } else {
+                        description = `Payment from ${peopleMap[payment.debtor_id]}`;
+                    }
+                }
+            }
+
+            if (shouldInclude) {
+                if (!dataMap.has(dateKey)) {
+                    dataMap.set(dateKey, {
+                        date: paymentDate,
+                        transactionCount: 0,
+                        totalAmount: 0,
+                        transactions: []
+                    });
+                }
+
+                const dayData = dataMap.get(dateKey)!;
+                dayData.transactionCount += 1;
+                dayData.totalAmount += amount;
+                dayData.transactions.push({
+                    description: description,
+                    amount: amount,
+                    category: payment.notes ? 'Custom Payment' : 'Settlement Payment'
+                });
+            }
+        });
+
         return dataMap;
-    }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+    }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, settlementPayments, peopleMap]);
 
     // Calculate intensity levels for heatmap coloring
     const { maxTransactionCount } = useMemo(() => {
@@ -249,7 +299,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-1">
                         {calendarDays.map((date, index) => {
-                            if (!date) return <div key={index} className="h-9 w-9" />;
+                            if (!date) return <div key={index} className="aspect-square" />;
 
                             const dateKey = date.toDateString();
                             const dayData = dayDataMap.get(dateKey);
@@ -273,10 +323,10 @@ export default function TransactionHeatmapCalendar({
                             };
 
                             return (
-                                <div key={index} className="relative group">
+                                <div key={index} className="relative group aspect-square">
                                     <div
                                         className={cn(
-                                            "h-9 w-9 p-0 font-normal rounded-md transition-all duration-200 cursor-pointer",
+                                            "w-full h-full p-0 font-normal rounded-md transition-all duration-200 cursor-pointer",
                                             "flex items-center justify-center text-sm",
                                             getHeatmapColor(intensityLevel),
                                             isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background"

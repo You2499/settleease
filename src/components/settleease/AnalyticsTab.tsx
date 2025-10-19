@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 
 
 import type {
-  Expense, Person, Category as DynamicCategory,
+  Expense, Person, Category as DynamicCategory, SettlementPayment,
   CategoryAnalyticsData, ParticipantAnalyticsData, ExpenseAmountDistributionData,
   SpendingByDayOfWeekData, SplitMethodDistributionData, TopExpenseData, MonthlyExpenseData,
   ShareVsPaidDataPoint, EnhancedOverallStats, CategorySpendingPieChartDataPoint
@@ -38,6 +38,7 @@ interface AnalyticsTabProps {
   peopleMap: Record<string, string>;
   dynamicCategories: DynamicCategory[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+  settlementPayments: SettlementPayment[];
 }
 
 const UNCATEGORIZED = "Uncategorized";
@@ -64,6 +65,7 @@ export default function AnalyticsTab({
   peopleMap,
   dynamicCategories,
   getCategoryIconFromName,
+  settlementPayments,
 }: AnalyticsTabProps) {
   // Check for crash test
   useEffect(() => {
@@ -634,6 +636,7 @@ export default function AnalyticsTab({
               analyticsViewMode={analyticsViewMode}
               selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
               peopleMap={peopleMap}
+              settlementPayments={settlementPayments}
             />
             
             {topExpensesData.length > 0 && (
