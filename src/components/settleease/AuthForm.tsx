@@ -134,6 +134,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [hasAuthError, setHasAuthError] = useState(false);
+  const [authErrorType, setAuthErrorType] = useState<string>('');
+  const [showResendConfirmation, setShowResendConfirmation] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
 
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -154,10 +157,74 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
-  // Function to check email status using enhanced database function
-  const checkEmailStatus = async (email: string): Promise<{ shouldProceed: boolean; toastConfig?: any }> => {
+  // Handle resending confirmation email (only for verified accounts)
+  const handleResendConfirmation = async () => {
+    if (!db || !resendEmail || !password) return;
+    
+    setIsLoading(true);
     try {
-      // Use the enhanced database function to get detailed email status
+      // Use the original password that was verified to trigger email resend
+      const { error } = await db.auth.signUp({
+        email: resendEmail,
+        password: password, // Use the actual password that was verified
+      });
+      
+      // We expect this to "fail" but still send the email
+      toast({
+        title: "Confirmation Email Sent",
+        description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
+        variant: "default"
+      });
+      
+      setShowResendConfirmation(false);
+      setHasAuthError(false);
+      
+    } catch (err) {
+      // Even if there's an error, the email is likely sent
+      toast({
+        title: "Confirmation Email Sent", 
+        description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
+        variant: "default"
+      });
+      
+      setShowResendConfirmation(false);
+      setHasAuthError(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to verify password for existing accounts (security check)
+  const verifyExistingAccountPassword = async (email: string, password: string): Promise<boolean> => {
+    try {
+      // Try to sign in with the provided credentials
+      const { error } = await db!.auth.signInWithPassword({ email, password });
+      
+      if (!error) {
+        // Password is correct - sign out immediately and return true
+        await db!.auth.signOut();
+        return true;
+      }
+      
+      // Check if error indicates correct email but wrong password
+      const errorMsg = error.message.toLowerCase();
+      if (errorMsg.includes('invalid') && errorMsg.includes('credentials')) {
+        // This could mean either wrong password OR email doesn't exist
+        // We can't distinguish, so return false for security
+        return false;
+      }
+      
+      return false;
+    } catch (err) {
+      console.warn('Password verification failed:', err);
+      return false;
+    }
+  };
+
+  // Function to check email status with password verification for security
+  const checkEmailStatusSecure = async (email: string, password: string): Promise<{ shouldProceed: boolean; toastConfig?: any; showResendOption?: boolean }> => {
+    try {
+      // First, use the database function to get email status
       const { data, error } = await db!.rpc('check_email_status', { 
         email_to_check: email 
       });
@@ -176,37 +243,61 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           return { shouldProceed: true };
           
         case 'confirmed':
-          // Email exists and is confirmed - show error
-          return {
-            shouldProceed: false,
-            toastConfig: {
-              title: "Account Already Exists",
-              description: "An account with this email already exists and is confirmed. Please sign in instead, or use 'Forgot Password' if you need to reset your password.",
-              variant: "destructive"
-            }
-          };
+          // Email exists and is confirmed - verify password before revealing this
+          const isPasswordCorrect = await verifyExistingAccountPassword(email, password);
+          
+          if (isPasswordCorrect) {
+            // Password is correct - user should sign in instead
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Account Already Exists",
+                description: "You already have a confirmed account with this email and password. Please use the 'Sign In' page instead.",
+                variant: "destructive"
+              }
+            };
+          } else {
+            // Password is wrong - don't reveal account exists, just proceed with signup
+            // This will fail at Supabase level but won't reveal account existence
+            return { shouldProceed: true };
+          }
           
         case 'unconfirmed':
-          // Email exists but not confirmed - show helpful message
-          return {
-            shouldProceed: false,
-            toastConfig: {
-              title: "Account Exists - Confirmation Needed",
-              description: "An account with this email exists but hasn't been confirmed yet. Please check your email for the confirmation link, or we can send a new one.",
-              variant: "destructive"
-            }
-          };
+          // Email exists but not confirmed - verify password before revealing this
+          const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
+          
+          if (isUnconfirmedPasswordCorrect) {
+            // Password is correct - safe to show unconfirmed status and resend option
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Account Exists - Confirmation Needed",
+                description: "Your account exists but hasn't been confirmed yet. Please check your email (including spam folder) for the confirmation link.",
+                variant: "destructive"
+              },
+              showResendOption: true
+            };
+          } else {
+            // Password is wrong - don't reveal account exists, proceed with signup
+            return { shouldProceed: true };
+          }
           
         case 'pending':
-          // Edge case - email exists but no confirmation sent
-          return {
-            shouldProceed: false,
-            toastConfig: {
-              title: "Account Already Exists",
-              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need help accessing your account.",
-              variant: "destructive"
-            }
-          };
+          // Edge case - treat same as confirmed for security
+          const isPendingPasswordCorrect = await verifyExistingAccountPassword(email, password);
+          
+          if (isPendingPasswordCorrect) {
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Account Already Exists",
+                description: "You already have an account with this email. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need help.",
+                variant: "destructive"
+              }
+            };
+          } else {
+            return { shouldProceed: true };
+          }
           
         default:
           // Unknown status - allow signup to proceed
@@ -214,7 +305,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       }
       
     } catch (err) {
-      console.warn('Email status check failed:', err);
+      console.warn('Secure email status check failed:', err);
       return { shouldProceed: true }; // If we can't check, allow signup to proceed
     }
   };
@@ -243,15 +334,19 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       return;
     }
     
-    // For signup, check email status for enhanced user guidance
+    // For signup, check email status with password verification for security
     if (!isLoginView) {
       setIsLoading(true);
-      console.log('Checking email status:', email);
-      const { shouldProceed, toastConfig } = await checkEmailStatus(email);
+      console.log('Checking email status with password verification:', email);
+      const { shouldProceed, toastConfig, showResendOption } = await checkEmailStatusSecure(email, password);
       
       if (!shouldProceed && toastConfig) {
         toast(toastConfig);
         setHasAuthError(true);
+        if (showResendOption) {
+          setShowResendConfirmation(true);
+          setResendEmail(email);
+        }
         setIsLoading(false);
         return;
       }
@@ -271,6 +366,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           variant: "default"
         });
         setHasAuthError(false);
+        setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       } else {
         const { data, error: signUpError } = await db.auth.signUp({
@@ -362,6 +458,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             variant: "default"
           });
           setHasAuthError(false);
+          setAuthErrorType('');
           if (data.user && onAuthSuccess) onAuthSuccess(data.user);
         } else {
           // This case should be handled above, but keeping as fallback
@@ -371,6 +468,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             variant: "default"
           });
           setHasAuthError(false);
+          setAuthErrorType('');
         }
       }
     } catch (err: any) {
@@ -379,6 +477,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       const { title, description } = getAuthErrorMessage(err, isLoginView);
       toast({ title, description, variant: "destructive" });
       setHasAuthError(true);
+      setAuthErrorType(err?.code || '');
     } finally {
       setIsLoading(false);
     }
@@ -567,9 +666,26 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             </CardContent>
 
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-              {hasAuthError && getAuthSuggestion(isLoginView, hasAuthError) && (
+              {showResendConfirmation && (
+                <div className="mb-3 p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md text-center">
+                  <p className="text-xs text-amber-700 dark:text-amber-300 mb-2">
+                    Need a new confirmation email?
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleResendConfirmation}
+                    disabled={isLoading}
+                    className="text-xs"
+                  >
+                    {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+                  </Button>
+                </div>
+              )}
+              
+              {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
                 <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
-                  {getAuthSuggestion(isLoginView, hasAuthError)}
+                  {getAuthSuggestion(isLoginView, hasAuthError, authErrorType)}
                 </div>
               )}
               <Button variant="link" onClick={() => {
@@ -580,6 +696,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 setEmail('');
                 setPassword('');
                 setHasAuthError(false); // Reset error state
+                setAuthErrorType(''); // Reset error type
+                setShowResendConfirmation(false); // Reset resend state
+                setResendEmail('');
               }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>

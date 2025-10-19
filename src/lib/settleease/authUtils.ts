@@ -71,8 +71,13 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
 
   // Handle specific Supabase error codes
   switch (errorCode) {
-    case 'invalid_credentials':
     case 'email_not_confirmed':
+      return {
+        title: "Email Not Verified",
+        description: "Your account exists but hasn't been verified yet. Please check your email and click the verification link to activate your account before signing in."
+      };
+
+    case 'invalid_credentials':
       if (isSignIn) {
         return {
           title: "Sign In Failed",
@@ -154,10 +159,17 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
       }
 
       if (errorMessage.toLowerCase().includes('email not confirmed')) {
-        return {
-          title: "Email Not Verified",
-          description: "Please check your email and click the verification link before signing in."
-        };
+        if (isSignIn) {
+          return {
+            title: "Email Not Verified",
+            description: "Your account exists but hasn't been verified yet. Please check your email and click the verification link to activate your account before signing in."
+          };
+        } else {
+          return {
+            title: "Email Not Verified",
+            description: "Please check your email and click the verification link before signing in."
+          };
+        }
       }
 
       if (errorMessage.toLowerCase().includes('email already registered') || 
@@ -201,6 +213,9 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
  */
 export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorType?: string): string | null {
   if (hasError && isSignIn) {
+    if (errorType === 'email_not_confirmed') {
+      return "💡 Tip: Check your email inbox (including spam folder) for the verification link. You may need to sign up again if you can't find the original email.";
+    }
     if (errorType === 'invalid_credentials') {
       return "💡 Tip: Check your email and password, or try 'Don't have an account? Sign Up' if you're new to SettleEase.";
     }
