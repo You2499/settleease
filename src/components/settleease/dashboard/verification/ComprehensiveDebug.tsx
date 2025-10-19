@@ -410,16 +410,16 @@ export default function ComprehensiveDebug({
                       <div className="flex items-center justify-between gap-2">
                         <CardTitle className="text-sm sm:text-base truncate">{p.name}</CardTitle>
                         {isBalanced ? (
-                          <Badge variant="outline" className="bg-gray-50 text-xs flex-shrink-0">
+                          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-900 text-foreground text-xs flex-shrink-0">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : isCreditor ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs flex-shrink-0">
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800 text-xs flex-shrink-0">
                             Receives
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200 text-xs flex-shrink-0">
+                          <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800 text-xs flex-shrink-0">
                             Pays
                           </Badge>
                         )}
@@ -614,14 +614,14 @@ export default function ComprehensiveDebug({
                           Net: {formatCurrency(Math.abs(pp.personSummary?.netBalance || 0))}
                         </Badge>
                         {Math.abs(pp.personSummary?.netBalance || 0) <= 0.01 ? (
-                          <Badge variant="outline" className="bg-gray-50 text-xs">
+                          <Badge variant="outline" className="bg-gray-50 dark:bg-gray-900 text-foreground text-xs">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : pp.personSummary?.netBalance > 0 ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">Receives</Badge>
+                          <Badge variant="outline" className="bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 text-xs">Receives</Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">Pays</Badge>
+                          <Badge variant="outline" className="bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 text-xs">Pays</Badge>
                         )}
                       </div>
                     </div>
@@ -679,7 +679,7 @@ export default function ComprehensiveDebug({
                         ) : (
                           <div className="space-y-1">
                             {pp.debtsSimplified.map((t, i) => (
-                              <div key={`d-${i}`} className="flex justify-between text-sm p-2 rounded bg-red-50">
+                              <div key={`d-${i}`} className="flex justify-between text-sm p-2 rounded bg-red-50 dark:bg-red-950/30 text-foreground">
                                 <span>→ {peopleMap[t.to]}</span>
                                 <span className="font-medium">{formatCurrency(t.amount)}</span>
                               </div>
@@ -694,7 +694,7 @@ export default function ComprehensiveDebug({
                         ) : (
                           <div className="space-y-1">
                             {pp.creditsSimplified.map((t, i) => (
-                              <div key={`c-${i}`} className="flex justify-between text-sm p-2 rounded bg-green-50">
+                              <div key={`c-${i}`} className="flex justify-between text-sm p-2 rounded bg-green-50 dark:bg-green-950/30 text-foreground">
                                 <span>{peopleMap[t.from]} →</span>
                                 <span className="font-medium">{formatCurrency(t.amount)}</span>
                               </div>

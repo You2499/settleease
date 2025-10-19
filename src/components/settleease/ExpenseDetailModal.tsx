@@ -17,10 +17,7 @@ import type {
   Category,
 } from "@/lib/settleease/types";
 
-// Import the Apple HIG version
-import ExpenseDetailModalAppleHIG from "./ExpenseDetailModalAppleHIG";
-
-// Import the smaller components for fallback
+// Import the smaller components
 import ExpenseGeneralInfo from "./expense-detail/ExpenseGeneralInfo";
 import ExpensePaymentInfo from "./expense-detail/ExpensePaymentInfo";
 import ExpenseSplitDetails from "./expense-detail/ExpenseSplitDetails";
@@ -63,32 +60,6 @@ const ExpenseNetEffectSummaryWrapper = ({ children }: { children: React.ReactNod
 };
 
 export default function ExpenseDetailModal({
-  expense,
-  isOpen,
-  onOpenChange,
-  peopleMap,
-  getCategoryIconFromName,
-  categories,
-  showBackButton = false,
-  onBack,
-}: ExpenseDetailModalProps) {
-  // Use the Apple HIG version which includes the toggle
-  return (
-    <ExpenseDetailModalAppleHIG
-      expense={expense}
-      isOpen={isOpen}
-      onOpenChange={onOpenChange}
-      peopleMap={peopleMap}
-      getCategoryIconFromName={getCategoryIconFromName}
-      categories={categories}
-      showBackButton={showBackButton}
-      onBack={onBack}
-    />
-  );
-}
-
-// Keep the original implementation as a fallback
-export function ExpenseDetailModalOriginal({
   expense,
   isOpen,
   onOpenChange,
