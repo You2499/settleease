@@ -279,6 +279,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       }
 
       const status = data?.status;
+      const isGoogleAccount = data?.is_google_account === true;
       console.log('Email status check result:', data);
 
       switch (status) {
@@ -287,7 +288,21 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           return { shouldProceed: true };
 
         case 'confirmed':
-          // Email exists and is confirmed - verify password before revealing this
+          // Check if this is a Google OAuth account
+          if (isGoogleAccount) {
+            // This is a Google OAuth account - don't allow email/password signup
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Email Already in Use",
+                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
+                variant: "destructive"
+              },
+              showResendOption: false
+            };
+          }
+
+          // Regular email account - verify password before revealing this
           const isPasswordCorrect = await verifyExistingAccountPassword(email, password);
 
           if (isPasswordCorrect) {
@@ -307,7 +322,21 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
 
         case 'unconfirmed':
-          // Email exists but not confirmed - verify password before revealing this
+          // Check if this is a Google OAuth account
+          if (isGoogleAccount) {
+            // This shouldn't happen (Google accounts are auto-confirmed), but handle it
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Email Already in Use",
+                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
+                variant: "destructive"
+              },
+              showResendOption: false
+            };
+          }
+
+          // Regular email account - verify password before revealing this
           const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
 
           if (isUnconfirmedPasswordCorrect) {
@@ -337,6 +366,19 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
 
         case 'pending':
+          // Check if this is a Google OAuth account
+          if (isGoogleAccount) {
+            return {
+              shouldProceed: false,
+              toastConfig: {
+                title: "Email Already in Use",
+                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
+                variant: "destructive"
+              },
+              showResendOption: false
+            };
+          }
+
           // Edge case - treat same as confirmed for security
           const isPendingPasswordCorrect = await verifyExistingAccountPassword(email, password);
 
@@ -588,7 +630,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       setTimeout(() => {
         setIsGoogleLoading(false);
       }, 10000); // Reset after 10 seconds
-      
+
     } catch (err: any) {
       console.error("Auth error (Google):", err);
       const { title, description } = getAuthErrorMessage(err, isLoginView);
@@ -608,7 +650,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       <div className="fixed top-4 right-4 z-50">
         <ThemeToggle />
       </div>
-      
+
       <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
         <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
           {/* Left Pane: Branding & Features */}
