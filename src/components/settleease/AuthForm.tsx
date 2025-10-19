@@ -171,13 +171,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   // Reset Google loading state on component mount and when user navigates back
   useEffect(() => {
-    // Reset Google loading state when component mounts
-    setIsGoogleLoading(false);
-
     // Listen for page visibility changes (when user returns from OAuth)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isGoogleLoading) {
         // User returned to the page, reset the loading state
+        console.log("Visibility change detected, resetting Google loading state");
         setIsGoogleLoading(false);
       }
     };
@@ -186,6 +184,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     const handleWindowFocus = () => {
       if (isGoogleLoading) {
         // User returned to the window, reset the loading state
+        console.log("Window focus detected, resetting Google loading state");
         setIsGoogleLoading(false);
       }
     };
@@ -200,6 +199,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       window.removeEventListener('focus', handleWindowFocus);
     };
   }, [isGoogleLoading]);
+
+  // Reset Google loading state only on initial mount
+  useEffect(() => {
+    console.log("Component mounted, resetting Google loading state");
+    setIsGoogleLoading(false);
+  }, []); // Empty dependency array means this only runs once on mount
 
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
