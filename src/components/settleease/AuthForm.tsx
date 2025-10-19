@@ -236,41 +236,43 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         console.log('Signup response:', { 
           user: !!data.user, 
           session: !!data.session, 
-          userObject: data.user ? JSON.stringify(data.user, null, 2) : null
+          userId: data.user ? (data.user as any).id : null,
+          userEmail: data.user ? (data.user as any).email : null,
+          userCreated: data.user ? (data.user as any).created_at : null,
+          confirmationSent: data.user ? (data.user as any).confirmation_sent_at : null
         });
         
         // Handle the case where user exists but no session is created
         if (data.user && !data.session) {
-          // Log the full user object to understand what fields are available
-          console.log('Full user object:', data.user);
-          
-          // Try to access confirmation status through different possible field names
           const user = data.user as any;
-          const isConfirmed = user.email_confirmed_at || user.confirmed_at || user.email_confirm;
+          const userCreatedAt = new Date(user.created_at);
+          const now = new Date();
+          const ageInSeconds = (now.getTime() - userCreatedAt.getTime()) / 1000;
           
-          console.log('User confirmation check:', {
-            email_confirmed_at: user.email_confirmed_at,
-            confirmed_at: user.confirmed_at, 
-            email_confirm: user.email_confirm,
-            isConfirmed: !!isConfirmed
+          console.log('User age check:', {
+            createdAt: user.created_at,
+            ageInSeconds: ageInSeconds,
+            isVeryRecent: ageInSeconds < 5
           });
           
-          if (isConfirmed) {
-            // User is confirmed - existing account
-            toast({ 
-              title: "Account Already Exists", 
-              description: "An account with this email already exists and is confirmed. Please sign in instead.", 
-              variant: "destructive" 
-            });
-            setHasAuthError(true);
-          } else {
-            // User not confirmed - new signup or unconfirmed existing user
+          // If user was created more than 5 seconds ago, it's likely an existing account
+          // If user was created very recently (< 5 seconds), it's likely a new signup
+          if (ageInSeconds < 5) {
+            // Very recent creation - likely a new user signup
             toast({ 
               title: "Check Your Email", 
               description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.", 
               variant: "default" 
             });
             setHasAuthError(false);
+          } else {
+            // Older user - likely existing account
+            toast({ 
+              title: "Account Already Exists", 
+              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need to reset your password.", 
+              variant: "destructive" 
+            });
+            setHasAuthError(true);
           }
           return;
         }
