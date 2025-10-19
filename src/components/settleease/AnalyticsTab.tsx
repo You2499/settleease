@@ -516,13 +516,18 @@ export default function AnalyticsTab({
     return (
       <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
         <CardHeader className="pb-2 pt-4">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">
+          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
             <BarChartBig className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm sm:text-md text-muted-foreground">No expenses recorded yet to analyze.</p>
-          <p className="text-xs sm:text-sm">Add some expenses to see detailed analytics here.</p>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
+            <BarChartBig className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+            <p className="font-medium text-base sm:text-lg mb-2">No Data to Analyze</p>
+            <p className="text-sm sm:text-base max-w-md">
+              Add some expenses to see detailed analytics and insights here.
+            </p>
+          </div>
         </CardContent>
       </Card>
     );
