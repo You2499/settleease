@@ -107,10 +107,18 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
 
     case 'user_already_exists':
     case 'email_exists':
-      return {
-        title: "Account Already Exists",
-        description: "An account with this email already exists. Please sign in instead or use 'Forgot Password' if you need to reset your password."
-      };
+      if (isSignIn) {
+        return {
+          title: "Sign In Failed",
+          description: "Please check your email and password, or create a new account if you're new to SettleEase."
+        };
+      } else {
+        // For signup, this usually means email confirmation is needed
+        return {
+          title: "Check Your Email",
+          description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead."
+        };
+      }
 
     case 'signup_disabled':
       return {
@@ -150,6 +158,21 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
           title: "Email Not Verified",
           description: "Please check your email and click the verification link before signing in."
         };
+      }
+
+      if (errorMessage.toLowerCase().includes('email already registered') || 
+          errorMessage.toLowerCase().includes('user already registered')) {
+        if (isSignIn) {
+          return {
+            title: "Sign In Failed",
+            description: "Please check your credentials or reset your password if needed."
+          };
+        } else {
+          return {
+            title: "Check Your Email",
+            description: "We've sent a confirmation link to your email. If you already have an account, please sign in instead."
+          };
+        }
       }
 
       if (errorMessage.toLowerCase().includes('network')) {

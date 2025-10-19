@@ -204,11 +204,43 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             },
           },
         });
-        if (signUpError) throw signUpError;
-        // If user exists but no session, likely already registered (via Google or email)
+        
+        // Handle specific signup errors that still result in email being sent
+        if (signUpError) {
+          console.log('Signup error:', signUpError);
+          
+          // Check if this is an "email already exists" error but email confirmation is still sent
+          if (signUpError.message?.toLowerCase().includes('already') || 
+              signUpError.code === 'user_already_exists' ||
+              signUpError.code === 'email_exists') {
+            
+            // Even with error, Supabase still sends confirmation email for security
+            toast({ 
+              title: "Check Your Email", 
+              description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
+              variant: "default" 
+            });
+            setHasAuthError(false);
+            return;
+          }
+          
+          // For other errors, throw them to be handled by the catch block
+          throw signUpError;
+        }
+        
+        console.log('Signup response:', { user: !!data.user, session: !!data.session, userConfirmed: data.user?.email_confirmed_at });
+        
+        // Handle the case where user exists but no session is created
+        // This happens when signing up with an existing email - Supabase still sends confirmation email for security
         if (data.user && !data.session) {
-          const errorMessage = "An account with this email already exists. Please sign in or use 'Forgot Password'.";
-          toast({ title: "Authentication Error", description: errorMessage, variant: "destructive" });
+          // For security and UX, we'll always show the "check email" message
+          // This prevents email enumeration while providing clear guidance
+          toast({ 
+            title: "Check Your Email", 
+            description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
+            variant: "default" 
+          });
+          setHasAuthError(false);
           return;
         }
 
@@ -232,19 +264,45 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
         }
 
-        toast({ 
-          title: "Account Created Successfully!", 
-          description: data.session ? "Welcome to SettleEase! You're now signed in." : "Please check your email to verify your account before signing in.",
-          variant: "default"
-        });
-        setHasAuthError(false);
-        if (data.user && onAuthSuccess) onAuthSuccess(data.user);
+        // Handle successful signup with immediate session
+        if (data.session) {
+          toast({ 
+            title: "Welcome to SettleEase!", 
+            description: "Your account has been created and you're now signed in.",
+            variant: "default"
+          });
+          setHasAuthError(false);
+          if (data.user && onAuthSuccess) onAuthSuccess(data.user);
+        } else {
+          // This case should be handled above, but keeping as fallback
+          toast({ 
+            title: "Check Your Email", 
+            description: "Please check your email and click the confirmation link to activate your account.",
+            variant: "default"
+          });
+          setHasAuthError(false);
+        }
       }
     } catch (err: any) {
       console.error("Auth error (email/password):", err);
-      const { title, description } = getAuthErrorMessage(err, isLoginView);
-      toast({ title, description, variant: "destructive" });
-      setHasAuthError(true);
+      
+      // Special handling for signup email confirmation scenarios
+      if (!isLoginView && (
+        err.code === 'user_already_exists' || 
+        err.code === 'email_exists' ||
+        err.message?.toLowerCase().includes('already')
+      )) {
+        toast({ 
+          title: "Check Your Email", 
+          description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account. If you already have an account, please sign in instead.", 
+          variant: "default" 
+        });
+        setHasAuthError(false);
+      } else {
+        const { title, description } = getAuthErrorMessage(err, isLoginView);
+        toast({ title, description, variant: "destructive" });
+        setHasAuthError(true);
+      }
     } finally {
       setIsLoading(false);
     }
