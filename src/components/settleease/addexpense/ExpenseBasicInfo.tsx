@@ -44,7 +44,7 @@ const DescriptionInputComponent = ({ description, setDescription }: { descriptio
         value={description}
         onChange={(e) => setDescription(e.target.value)}
         placeholder="e.g., Dinner, Groceries"
-        className="mt-1 text-sm sm:text-base h-10 sm:h-11"
+        className="mt-1 h-10 sm:h-11"
       />
     </div>
   );
@@ -66,7 +66,7 @@ const AmountInputComponent = ({ totalAmount, setTotalAmount }: { totalAmount: st
         value={totalAmount}
         onChange={(e) => setTotalAmount(e.target.value)}
         placeholder="e.g., 100.00"
-        className="mt-1 text-sm sm:text-base h-10 sm:h-11"
+        className="mt-1 h-10 sm:h-11"
       />
     </div>
   );

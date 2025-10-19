@@ -52,7 +52,7 @@ export default function PayerInputSection({
                   <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select payer" /></SelectTrigger>
                   <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
                 </Select>
-                <Input type="number" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-full sm:w-28 h-10 text-sm" />
+                <Input type="number" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-full sm:w-28 h-10" />
                 <Button 
                   variant="ghost" 
                   size="icon" 

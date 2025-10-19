@@ -624,7 +624,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                           onChange={(e) => setFirstName(e.target.value)}
                           disabled={isLoading || isGoogleLoading}
                           required
-                          className="h-10 text-sm sm:h-11 sm:text-base"
+                          className="h-10 sm:h-11"
                         />
                       </div>
                       <div className="space-y-1 sm:space-y-1.5">
@@ -638,7 +638,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                           onChange={(e) => setLastName(e.target.value)}
                           disabled={isLoading || isGoogleLoading}
                           required
-                          className="h-10 text-sm sm:h-11 sm:text-base"
+                          className="h-10 sm:h-11"
                         />
                       </div>
                     </div>
@@ -662,7 +662,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                       }}
                       disabled={isLoading || isGoogleLoading}
                       required
-                      className="h-10 text-sm sm:h-11 sm:text-base"
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   <div className="space-y-1 sm:space-y-1.5">
@@ -684,7 +684,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                       disabled={isLoading || isGoogleLoading}
                       required
                       minLength={6}
-                      className="h-10 text-sm sm:h-11 sm:text-base"
+                      className="h-10 sm:h-11"
                     />
                   </div>
                   {/* Conditional button/resend section */}
