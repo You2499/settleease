@@ -207,6 +207,10 @@ export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorTyp
     return "💡 Tip: If you don't have an account yet, try clicking 'Don't have an account? Sign Up' below.";
   }
   if (hasError && !isSignIn) {
+    // Check if this is an unconfirmed account error
+    if (errorType === 'unconfirmed') {
+      return "💡 Tip: Check your email inbox (including spam folder) for the confirmation link, or try signing in if you've already confirmed.";
+    }
     return "💡 Tip: If you already have an account, try clicking 'Already have an account? Sign In' below.";
   }
   return null;

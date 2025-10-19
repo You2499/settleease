@@ -154,6 +154,71 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
+  // Function to check email status using enhanced database function
+  const checkEmailStatus = async (email: string): Promise<{ shouldProceed: boolean; toastConfig?: any }> => {
+    try {
+      // Use the enhanced database function to get detailed email status
+      const { data, error } = await db!.rpc('check_email_status', { 
+        email_to_check: email 
+      });
+      
+      if (error) {
+        console.warn('Email status check RPC error:', error);
+        return { shouldProceed: true }; // If we can't check, allow signup to proceed
+      }
+      
+      const status = data?.status;
+      console.log('Email status check result:', data);
+      
+      switch (status) {
+        case 'new':
+          // Email doesn't exist - proceed with signup
+          return { shouldProceed: true };
+          
+        case 'confirmed':
+          // Email exists and is confirmed - show error
+          return {
+            shouldProceed: false,
+            toastConfig: {
+              title: "Account Already Exists",
+              description: "An account with this email already exists and is confirmed. Please sign in instead, or use 'Forgot Password' if you need to reset your password.",
+              variant: "destructive"
+            }
+          };
+          
+        case 'unconfirmed':
+          // Email exists but not confirmed - show helpful message
+          return {
+            shouldProceed: false,
+            toastConfig: {
+              title: "Account Exists - Confirmation Needed",
+              description: "An account with this email exists but hasn't been confirmed yet. Please check your email for the confirmation link, or we can send a new one.",
+              variant: "destructive"
+            }
+          };
+          
+        case 'pending':
+          // Edge case - email exists but no confirmation sent
+          return {
+            shouldProceed: false,
+            toastConfig: {
+              title: "Account Already Exists",
+              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need help accessing your account.",
+              variant: "destructive"
+            }
+          };
+          
+        default:
+          // Unknown status - allow signup to proceed
+          return { shouldProceed: true };
+      }
+      
+    } catch (err) {
+      console.warn('Email status check failed:', err);
+      return { shouldProceed: true }; // If we can't check, allow signup to proceed
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!db) {
@@ -177,6 +242,21 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       });
       return;
     }
+    
+    // For signup, check email status for enhanced user guidance
+    if (!isLoginView) {
+      setIsLoading(true);
+      console.log('Checking email status:', email);
+      const { shouldProceed, toastConfig } = await checkEmailStatus(email);
+      
+      if (!shouldProceed && toastConfig) {
+        toast(toastConfig);
+        setHasAuthError(true);
+        setIsLoading(false);
+        return;
+      }
+    }
+    
     setIsLoading(true);
 
     const productionSiteUrl = "https://settleease.netlify.app/";
@@ -244,36 +324,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         
         // Handle the case where user exists but no session is created
         if (data.user && !data.session) {
-          const user = data.user as any;
-          const userCreatedAt = new Date(user.created_at);
-          const now = new Date();
-          const ageInSeconds = (now.getTime() - userCreatedAt.getTime()) / 1000;
-          
-          console.log('User age check:', {
-            createdAt: user.created_at,
-            ageInSeconds: ageInSeconds,
-            isVeryRecent: ageInSeconds < 5
+          // This should now only happen for legitimate new signups requiring email confirmation
+          toast({ 
+            title: "Check Your Email", 
+            description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.", 
+            variant: "default" 
           });
-          
-          // If user was created more than 5 seconds ago, it's likely an existing account
-          // If user was created very recently (< 5 seconds), it's likely a new signup
-          if (ageInSeconds < 5) {
-            // Very recent creation - likely a new user signup
-            toast({ 
-              title: "Check Your Email", 
-              description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.", 
-              variant: "default" 
-            });
-            setHasAuthError(false);
-          } else {
-            // Older user - likely existing account
-            toast({ 
-              title: "Account Already Exists", 
-              description: "An account with this email already exists. Please sign in instead, or use 'Forgot Password' if you need to reset your password.", 
-              variant: "destructive" 
-            });
-            setHasAuthError(true);
-          }
+          setHasAuthError(false);
           return;
         }
 
