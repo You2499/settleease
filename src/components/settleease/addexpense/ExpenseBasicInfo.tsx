@@ -140,6 +140,16 @@ const DatePickerComponent = ({ expenseDate, setExpenseDate, calendarOpen, setCal
             }}
             initialFocus
             className="rounded-lg"
+            classNames={{
+              day: "h-8 w-8 p-0 font-normal rounded-md transition-colors cursor-pointer hover:bg-muted hover:text-foreground focus:outline-none focus:bg-muted focus:text-foreground active:bg-muted/80",
+              cell: "relative p-0 text-center text-sm h-8 w-8 flex items-center justify-center",
+              head_cell: "text-muted-foreground w-8 h-8 font-normal text-xs flex items-center justify-center",
+              row: "flex w-full mt-1 gap-1",
+              head_row: "flex w-full mb-2 gap-1",
+              table: "w-full border-collapse space-y-1",
+              month: "space-y-4",
+              caption: "flex justify-center pt-1 relative items-center mb-4"
+            }}
           />
         </PopoverContent>
       </Popover>

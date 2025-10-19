@@ -18,11 +18,11 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-3 min-w-[280px]", className)}
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-        month: "space-y-3",
-        caption: "flex justify-center pt-1 relative items-center mb-3",
+        month: "space-y-4",
+        caption: "flex justify-center pt-1 relative items-center mb-4",
         caption_label: "text-sm font-medium text-foreground",
         nav: "space-x-1 flex items-center",
         nav_button: cn(
@@ -33,10 +33,10 @@ function Calendar({
         ),
         nav_button_previous: "absolute left-1",
         nav_button_next: "absolute right-1",
-        table: "w-full border-collapse mt-1",
-        head_row: "flex w-full mb-1",
+        table: "w-full border-collapse space-y-1",
+        head_row: "flex w-full mb-2 gap-1",
         head_cell: "text-muted-foreground w-9 h-8 font-normal text-xs flex items-center justify-center",
-        row: "flex w-full mt-0",
+        row: "flex w-full gap-1",
         cell: "relative p-0 text-center text-sm h-9 w-9 flex items-center justify-center",
         day: cn(
           "h-9 w-9 p-0 font-normal rounded-md transition-colors cursor-pointer",

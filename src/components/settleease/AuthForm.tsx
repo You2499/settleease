@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { AlertTriangle, LogIn, UserPlus, HandCoins, Zap, Users, PieChart, Handshake as HandshakeIcon, PartyPopper, Settings2 } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2 } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 // Google Icon SVG as a React component
@@ -129,11 +129,28 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [isLoginView, setIsLoginView] = useState(false);
+  const [isLoginView, setIsLoginView] = useState(true); // Changed default to true (Sign In)
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
+  // Refs for auto-focus
+  const firstNameRef = useRef<HTMLInputElement>(null);
+  const emailRef = useRef<HTMLInputElement>(null);
 
+  // Auto-focus effect when view changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (isLoginView) {
+        // Focus on email for sign in
+        emailRef.current?.focus();
+      } else {
+        // Focus on first name for sign up
+        firstNameRef.current?.focus();
+      }
+    }, 100); // Small delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
+  }, [isLoginView]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -293,6 +310,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     <div className="space-y-1 sm:space-y-1.5">
                       <Label htmlFor="firstName" className="text-sm">First Name</Label>
                       <Input
+                        ref={firstNameRef}
                         id="firstName"
                         type="text"
                         autoComplete="given-name"
@@ -323,6 +341,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 <div className="space-y-1 sm:space-y-1.5">
                   <Label htmlFor="email" className="text-sm">Email Address</Label>
                   <Input
+                    ref={emailRef}
                     id="email"
                     type="email"
                     autoComplete="email"
@@ -383,8 +402,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
               <Button variant="link" onClick={() => {
                 setIsLoginView(!isLoginView);
+                // Clear form fields when switching views
                 setFirstName('');
                 setLastName('');
+                setEmail('');
+                setPassword('');
               }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
