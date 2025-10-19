@@ -105,7 +105,7 @@ export default function AddExpenseTab({
     return Math.max(0, currentTotal - actualCelebrationAmount);
   }, [totalAmount, actualCelebrationAmount]);
 
-  const defaultItemCategory = useMemo(() => category || (dynamicCategories.length > 0 ? dynamicCategories[0].name : ''), [category, dynamicCategories]);
+  const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
 
   const { handleSubmitExpense } = useExpenseFormLogic({
     db,
@@ -205,10 +205,10 @@ export default function AddExpenseTab({
           name: item.name,
           price: item.price.toString(),
           sharedBy: item.sharedBy || [],
-          categoryName: item.categoryName || defaultItemCategory,
+          categoryName: item.categoryName || category || defaultItemCategory,
         })));
       } else {
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
       }
 
     } else if (isTransitioningToNewExpense || isInitialMount) {
@@ -228,7 +228,7 @@ export default function AddExpenseTab({
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
 
       // Logic for setting default selected people for equal split
       const currentPeopleIds = people.map(p => p.id);
@@ -258,7 +258,7 @@ export default function AddExpenseTab({
 
     // Update the ref to track the current expenseToEdit for next render
     previousExpenseToEdit.current = expenseToEdit;
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
 
   // Effect to manage payer amount(s) based on totalAmount and isMultiplePayers
   useEffect(() => {
@@ -313,9 +313,9 @@ export default function AddExpenseTab({
     }
 
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0) {
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares, defaultItemCategory]);
+  }, [splitMethod, people, expenseToEdit, items, unequalShares]);
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -366,7 +366,7 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
