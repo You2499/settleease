@@ -11,6 +11,7 @@ import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings
 import { Separator } from '@/components/ui/separator';
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -564,6 +565,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   return (
     <>
+      {/* Theme Toggle - Top Right of Page */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
+      
       <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
         <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
           {/* Left Pane: Branding & Features */}
