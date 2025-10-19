@@ -231,6 +231,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   // Function to verify password for existing accounts (security check)
+  // Note: This function is kept for unconfirmed accounts only to prevent hijacking
   const verifyExistingAccountPassword = async (email: string, password: string): Promise<boolean> => {
     try {
       // Try to sign in with the provided credentials
@@ -302,24 +303,18 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             };
           }
 
-          // Regular email account - verify password before revealing this
-          const isPasswordCorrect = await verifyExistingAccountPassword(email, password);
-
-          if (isPasswordCorrect) {
-            // Password is correct - user should sign in instead
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Account Already Exists",
-                description: "You already have a confirmed account with this email and password. Please use the 'Sign In' page instead.",
-                variant: "destructive"
-              }
-            };
-          } else {
-            // Password is wrong - don't reveal account exists, just proceed with signup
-            // This will fail at Supabase level but won't reveal account existence
-            return { shouldProceed: true };
-          }
+          // For confirmed regular email accounts, we know they exist from the database
+          // No need to verify password as it would cause auth state changes
+          // Just show the account exists message
+          return {
+            shouldProceed: false,
+            toastConfig: {
+              title: "Account Already Exists",
+              description: "An account with this email already exists. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need to reset your password.",
+              variant: "destructive"
+            },
+            showResendOption: false
+          };
 
         case 'unconfirmed':
           // Check if this is a Google OAuth account
@@ -380,20 +375,16 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
 
           // Edge case - treat same as confirmed for security
-          const isPendingPasswordCorrect = await verifyExistingAccountPassword(email, password);
-
-          if (isPendingPasswordCorrect) {
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Account Already Exists",
-                description: "You already have an account with this email. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need help.",
-                variant: "destructive"
-              }
-            };
-          } else {
-            return { shouldProceed: true };
-          }
+          // No need to verify password as it would cause auth state changes
+          return {
+            shouldProceed: false,
+            toastConfig: {
+              title: "Account Already Exists",
+              description: "An account with this email already exists. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need help.",
+              variant: "destructive"
+            },
+            showResendOption: false
+          };
 
         default:
           // Unknown status - allow signup to proceed
