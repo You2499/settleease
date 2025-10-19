@@ -455,7 +455,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
     setIsLoading(true);
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    const productionSiteUrl = "https://settleease-navy.vercel.app/";
 
     try {
       if (isLoginView) {
@@ -623,7 +623,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
 
-    const productionSiteUrl = "https://settleease.netlify.app/";
+    const productionSiteUrl = "https://settleease-navy.vercel.app/";
 
     try {
       console.log("Google OAuth: Calling signInWithOAuth");

@@ -132,6 +132,12 @@ export function useSupabaseAuth() {
         if (isMounted) {
           const newAuthUser = session?.user ?? null;
           
+          // Clean up URL hash fragments after successful authentication
+          if (newAuthUser && typeof window !== 'undefined' && window.location.hash) {
+            console.log("Auth effect: Cleaning up URL hash fragment after successful authentication");
+            window.history.replaceState(null, '', window.location.pathname + window.location.search);
+          }
+          
           setCurrentUser(prevLocalUser => { 
             if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
                 console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
