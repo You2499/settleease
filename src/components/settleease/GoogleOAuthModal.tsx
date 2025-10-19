@@ -133,6 +133,9 @@ export default function GoogleOAuthModal({
     isSignIn,
     isLoading = false
 }: GoogleOAuthModalProps) {
+    // Debug logging
+    console.log("GoogleOAuthModal render:", { isOpen, isLoading, isSignIn });
+    
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
             <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
@@ -246,7 +249,11 @@ export default function GoogleOAuthModal({
                                     <GoogleIcon />
                                 </div>
                                 <span className="ml-2.5">
-                                    {isLoading ? "Redirecting to Google..." : "Continue with Google"}
+                                    {(() => {
+                                        const text = isLoading ? "Redirecting to Google..." : "Continue with Google";
+                                        console.log("Button text should be:", text, "isLoading:", isLoading);
+                                        return text;
+                                    })()}
                                 </span>
                             </Button>
                             <Button

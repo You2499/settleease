@@ -613,6 +613,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const handleGoogleOAuthConfirm = async () => {
     console.log("Google OAuth: Starting authentication process");
     setIsGoogleLoading(true);
+    
+    // Add a small delay to ensure the loading state is rendered before redirect
+    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
 
     const productionSiteUrl = "https://settleease.netlify.app/";
 
