@@ -7,12 +7,10 @@ import { FileText } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
-import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
@@ -52,9 +50,6 @@ export default function DashboardView({
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
-  const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
-  const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
-  const isMobile = useIsMobile();
 
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
     if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
@@ -155,55 +150,6 @@ export default function DashboardView({
 
   return (
     <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
-      <div className="flex items-center justify-end">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            if (isMobile) {
-              setIsDebugSheetOpen(true)
-            } else {
-              setShowComprehensiveDebug((s) => !s)
-            }
-          }}
-        >
-          {isMobile ? 'Show Debug' : (showComprehensiveDebug ? 'Hide Debug' : 'Show Debug')}
-        </Button>
-      </div>
-      {/* Mobile: Debug in a bottom sheet */}
-      {isMobile && (
-        <Sheet open={isDebugSheetOpen} onOpenChange={setIsDebugSheetOpen}>
-          <SheetContent side="bottom" className="w-full max-w-full p-0">
-            <SheetHeader className="px-4 pt-4">
-              <SheetTitle>Comprehensive Debug</SheetTitle>
-            </SheetHeader>
-            <div className="h-[80vh] flex flex-col p-4 pt-2">
-              <div className="flex-1 min-h-0 overflow-y-auto">
-                <ComprehensiveDebug
-                  people={people}
-                  expenses={expenses}
-                  settlementPayments={settlementPayments}
-                  peopleMap={peopleMap}
-                  categories={dynamicCategories}
-                  userRole={userRole}
-                />
-              </div>
-            </div>
-          </SheetContent>
-        </Sheet>
-      )}
-      {!isMobile && showComprehensiveDebug && (
-        <div className="flex-1 min-h-0">
-          <ComprehensiveDebug
-            people={people}
-            expenses={expenses}
-            settlementPayments={settlementPayments}
-            peopleMap={peopleMap}
-            categories={dynamicCategories}
-            userRole={userRole}
-          />
-        </div>
-      )}
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}

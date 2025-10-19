@@ -9,21 +9,35 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
-import type { ActiveView } from '@/lib/settleease/types';
+import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
+import type { ActiveView, Person, Expense, Category, SettlementPayment } from '@/lib/settleease/types';
 
 interface TestErrorBoundaryTabProps {
   userRole: 'admin' | 'user' | null;
   setActiveView: (view: ActiveView) => void;
+  people: Person[];
+  expenses: Expense[];
+  settlementPayments: SettlementPayment[];
+  peopleMap: Record<string, string>;
+  categories: Category[];
 }
 
 export default function TestErrorBoundaryTab({
   userRole,
-  setActiveView
+  setActiveView,
+  people,
+  expenses,
+  settlementPayments,
+  peopleMap,
+  categories
 }: TestErrorBoundaryTabProps) {
   const isMobile = useIsMobile();
   const [crashStates, setCrashStates] = useState(crashTestManager.getAllStates());
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
+  const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
+  const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
 
   // Subscribe to crash state changes
   useEffect(() => {
@@ -318,14 +332,68 @@ export default function TestErrorBoundaryTab({
               Visually test error boundary coverage by forcing component crashes
             </p>
           </div>
-          <Button onClick={resetAll} variant="outline" size="sm" className="flex items-center gap-2 w-full sm:w-auto">
-            <RefreshCw className="h-4 w-4" />
-            Reset All Tests
-          </Button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button 
+              onClick={() => {
+                if (isMobile) {
+                  setIsDebugSheetOpen(true)
+                } else {
+                  setShowComprehensiveDebug((s) => !s)
+                }
+              }}
+              variant="outline" 
+              size="sm" 
+              className="flex items-center gap-2 flex-1 sm:flex-initial"
+            >
+              <BarChart4 className="h-4 w-4" />
+              {isMobile ? 'Show Debug' : (showComprehensiveDebug ? 'Hide Debug' : 'Show Debug')}
+            </Button>
+            <Button onClick={resetAll} variant="outline" size="sm" className="flex items-center gap-2 flex-1 sm:flex-initial">
+              <RefreshCw className="h-4 w-4" />
+              Reset All Tests
+            </Button>
+          </div>
         </div>
       </CardHeader>
 
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pt-4 sm:pt-6">
+        {/* Mobile: Debug in a bottom sheet */}
+        {isMobile && (
+          <Sheet open={isDebugSheetOpen} onOpenChange={setIsDebugSheetOpen}>
+            <SheetContent side="bottom" className="w-full max-w-full p-0">
+              <SheetHeader className="px-4 pt-4">
+                <SheetTitle>Comprehensive Debug</SheetTitle>
+              </SheetHeader>
+              <div className="h-[80vh] flex flex-col p-4 pt-2">
+                <div className="flex-1 min-h-0 overflow-y-auto">
+                  <ComprehensiveDebug
+                    people={people}
+                    expenses={expenses}
+                    settlementPayments={settlementPayments}
+                    peopleMap={peopleMap}
+                    categories={categories}
+                    userRole={userRole}
+                  />
+                </div>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
+
+        {/* Desktop: Debug inline */}
+        {!isMobile && showComprehensiveDebug && (
+          <div className="mb-6">
+            <ComprehensiveDebug
+              people={people}
+              expenses={expenses}
+              settlementPayments={settlementPayments}
+              peopleMap={peopleMap}
+              categories={categories}
+              userRole={userRole}
+            />
+          </div>
+        )}
+
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Testing Instructions</AlertTitle>

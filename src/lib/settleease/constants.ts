@@ -5,8 +5,6 @@ export const EXPENSES_TABLE = 'expenses';
 export const CATEGORIES_TABLE = 'categories';
 export const USER_PROFILES_TABLE = 'user_profiles';
 export const SETTLEMENT_PAYMENTS_TABLE = 'settlement_payments';
-export const FEATURE_FLAGS_TABLE = 'feature_flags';
-export const FEATURE_NOTIFICATIONS_TABLE = 'feature_notifications';
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;

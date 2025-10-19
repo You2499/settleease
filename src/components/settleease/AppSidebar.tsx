@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, ToggleLeft
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 
@@ -26,7 +26,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-import { useFeatureInteractions } from '@/hooks/useFeatureInteractions';
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -58,23 +57,14 @@ interface AppSidebarProps {
   currentUserName?: string;
   userRole: UserRole;
   onEditName?: () => void;
-  isFeatureEnabled?: (featureName: string) => boolean;
-  featureFlags?: any[]; // Add this to trigger re-renders
-  lastUpdated?: Date | null; // Add this to trigger re-renders on feature changes
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isFeatureEnabled, featureFlags, lastUpdated }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
-  const { markFeatureClicked, shouldShowIndicator } = useFeatureInteractions();
 
   const handleNavigation = (view: ActiveView) => {
-    // Track feature clicks for analytics and activityFeed
-    if (view === 'analytics' || view === 'activityFeed') {
-      markFeatureClicked(view);
-    }
-
     setActiveView(view);
     if (isMobile) {
       setOpenMobile(false);
@@ -107,49 +97,31 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           </SidebarMenuItem>
 
           {/* Insights Section */}
-          {(isFeatureEnabled?.('analytics') || isFeatureEnabled?.('activityFeed')) && (
-            <>
-              <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insights</p>
-              </div>
-              {isFeatureEnabled?.('analytics') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation('analytics')}
-                    isActive={activeView === 'analytics'}
-                    tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                    className="justify-start h-8 relative"
-                  >
-                    <BarChartBig className="h-4 w-4" />
-                    <span className="group-data-[state=collapsed]:hidden">Analytics</span>
-                    {shouldShowIndicator('analytics') && (
-                      <div className="absolute -top-1 -right-1 group-data-[state=collapsed]:hidden">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-              {isFeatureEnabled?.('activityFeed') && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation('activityFeed')}
-                    isActive={activeView === 'activityFeed'}
-                    tooltip={{ content: "Activity Feed", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                    className="justify-start h-8 relative"
-                  >
-                    <Edit3 className="h-4 w-4" />
-                    <span className="group-data-[state=collapsed]:hidden">Activity Feed</span>
-                    {shouldShowIndicator('activityFeed') && (
-                      <div className="absolute -top-1 -right-1 group-data-[state=collapsed]:hidden">
-                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      </div>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-            </>
-          )}
+          <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insights</p>
+          </div>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => handleNavigation('analytics')}
+              isActive={activeView === 'analytics'}
+              tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+              className="justify-start h-8"
+            >
+              <BarChartBig className="h-4 w-4" />
+              <span className="group-data-[state=collapsed]:hidden">Analytics</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={() => handleNavigation('activityFeed')}
+              isActive={activeView === 'activityFeed'}
+              tooltip={{ content: "Activity Feed", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+              className="justify-start h-8"
+            >
+              <Edit3 className="h-4 w-4" />
+              <span className="group-data-[state=collapsed]:hidden">Activity Feed</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
 
           {/* Admin Only Sections */}
           {userRole === 'admin' && (
@@ -223,17 +195,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
                 <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">System</p>
               </div>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('featureRollout')}
-                  isActive={activeView === 'featureRollout'}
-                  tooltip={{ content: "Feature Rollout", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <ToggleLeft className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Features</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => handleNavigation('testErrorBoundary')}
