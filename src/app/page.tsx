@@ -18,7 +18,6 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
-import ActivityFeedTab from '@/components/settleease/ActivityFeedTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
@@ -381,23 +380,6 @@ export default function SettleEasePage() {
                   db={db}
                   currentUserId={currentUser.id}
                   onActionComplete={handleActionComplete}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {activeView === 'activityFeed' && (
-              <SettleEaseErrorBoundary
-                componentName="Activity Feed"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <ActivityFeedTab
-                  db={db}
-                  people={people}
-                  peopleMap={peopleMap}
-                  onViewExpenseDetails={(expenseId) => {
-                    // TODO: Implement expense detail view from activity feed
-                    console.log('View expense details:', expenseId);
-                  }}
                 />
               </SettleEaseErrorBoundary>
             )}

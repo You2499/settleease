@@ -360,21 +360,20 @@ export default function TestErrorBoundaryTab({
         {/* Mobile: Debug in a bottom sheet */}
         {isMobile && (
           <Sheet open={isDebugSheetOpen} onOpenChange={setIsDebugSheetOpen}>
-            <SheetContent side="bottom" className="w-full max-w-full p-0">
-              <SheetHeader className="px-4 pt-4">
+            <SheetContent side="bottom" className="w-full max-w-full h-[90vh] p-0 flex flex-col">
+              <SheetHeader className="px-4 pt-4 pb-2 border-b flex-shrink-0">
                 <SheetTitle>Comprehensive Debug</SheetTitle>
               </SheetHeader>
-              <div className="h-[80vh] flex flex-col p-4 pt-2">
-                <div className="flex-1 min-h-0 overflow-y-auto">
-                  <ComprehensiveDebug
-                    people={people}
-                    expenses={expenses}
-                    settlementPayments={settlementPayments}
-                    peopleMap={peopleMap}
-                    categories={categories}
-                    userRole={userRole}
-                  />
-                </div>
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
+                <ComprehensiveDebug
+                  people={people}
+                  expenses={expenses}
+                  settlementPayments={settlementPayments}
+                  peopleMap={peopleMap}
+                  categories={categories}
+                  userRole={userRole}
+                  isInSheet={true}
+                />
               </div>
             </SheetContent>
           </Sheet>

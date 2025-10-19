@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, Users, FileText, TrendingUp, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Copy, Download, Users, FileText, TrendingUp, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import {
   calculateNetBalances,
@@ -28,6 +28,7 @@ interface ComprehensiveDebugProps {
   peopleMap: Record<string, string>;
   categories: Category[];
   userRole: UserRole;
+  isInSheet?: boolean; // Flag to indicate if rendered inside a Sheet
 }
 
 type PersonBalanceRow = {
@@ -45,9 +46,9 @@ export default function ComprehensiveDebug({
   peopleMap,
   categories,
   userRole,
+  isInSheet = false,
 }: ComprehensiveDebugProps) {
   const [showBalancedPeople, setShowBalancedPeople] = useState(false);
-  const [showJson, setShowJson] = useState(false);
 
   // Calculate person balances
   const personBalances: Record<string, PersonBalanceRow> = useMemo(() => {
@@ -269,11 +270,11 @@ export default function ComprehensiveDebug({
   };
 
   return (
-    <Card className="shadow-lg">
-      <CardHeader>
+    <Card className={isInSheet ? "shadow-none border-0" : "shadow-lg"}>
+      <CardHeader className={isInSheet ? "p-0 pb-4" : ""}>
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <CardTitle className="text-xl sm:text-2xl font-bold">Debug Information</CardTitle>
+            <CardTitle className={isInSheet ? "text-lg font-bold" : "text-xl sm:text-2xl font-bold"}>Debug Information</CardTitle>
             <CardDescription>
               Comprehensive view of all calculations and data
             </CardDescription>
@@ -307,15 +308,15 @@ export default function ComprehensiveDebug({
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className={isInSheet ? "p-0" : ""}>
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="balances">Balances</TabsTrigger>
-            <TabsTrigger value="transactions">Transactions</TabsTrigger>
-            <TabsTrigger value="perPerson">Per Person</TabsTrigger>
-            <TabsTrigger value="expenses">Expenses</TabsTrigger>
-            <TabsTrigger value="json">Raw JSON</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 gap-1">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="balances" className="text-xs sm:text-sm">Balances</TabsTrigger>
+            <TabsTrigger value="transactions" className="text-xs sm:text-sm">Transactions</TabsTrigger>
+            <TabsTrigger value="perPerson" className="text-xs sm:text-sm">Per Person</TabsTrigger>
+            <TabsTrigger value="expenses" className="text-xs sm:text-sm">Expenses</TabsTrigger>
+            <TabsTrigger value="json" className="text-xs sm:text-sm">Raw JSON</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-4 mt-4">
