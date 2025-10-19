@@ -8,11 +8,11 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { AlertTriangle, CheckCircle, UserPlus, LogIn, Shield, Mail } from 'lucide-react';
+import { AlertTriangle, CheckCircle, UserPlus, LogIn, HandCoins } from 'lucide-react';
 
 // Google Icon SVG as a React component (detailed version from AuthForm)
 const GoogleIcon = () => (
-    <svg width="20" height="20" viewBox="0 0 268.1522 273.8827" overflow="hidden" xmlSpace="preserve" xmlns="http://www.w3.org/2000/svg">
+    <svg width="24" height="24" viewBox="0 0 268.1522 273.8827" overflow="hidden" xmlSpace="preserve" xmlns="http://www.w3.org/2000/svg">
         <defs>
             <linearGradient id="modal-a">
                 <stop offset="0" stopColor="#0fbc5c" />
@@ -138,29 +138,35 @@ export default function GoogleOAuthModal({
                 <div className="bg-white dark:bg-gray-900 border border-[#4285F4]/20 dark:border-[#4285F4]/30 shadow-2xl relative rounded-lg -m-6 p-6">
                     {/* Flowing Google Gradient Threads Background */}
                     <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-lg">
-                        {/* Blue Thread */}
-                        <div className="absolute -top-10 -right-20 w-96 h-4 bg-gradient-to-r from-[#4285F4]/20 via-[#1893dd]/15 to-[#3086ff]/10 transform rotate-12 rounded-full blur-sm"></div>
-                        <div className="absolute top-20 -left-16 w-80 h-3 bg-gradient-to-r from-[#3086ff]/15 via-[#4285F4]/20 to-[#1893dd]/10 transform -rotate-6 rounded-full blur-sm"></div>
+                        {/* Blue Threads */}
+                        <div className="absolute -top-10 -right-20 w-96 h-4 bg-gradient-to-r from-[#4285F4]/25 via-[#1893dd]/20 to-[#3086ff]/15 transform rotate-12 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute top-20 -left-16 w-80 h-3 bg-gradient-to-r from-[#3086ff]/20 via-[#4285F4]/25 to-[#1893dd]/15 transform -rotate-6 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute top-48 -right-24 w-64 h-2 bg-gradient-to-r from-[#1893dd]/15 via-[#3086ff]/20 to-[#4285F4]/15 transform rotate-25 rounded-full blur-sm"></div>
 
-                        {/* Green Thread */}
-                        <div className="absolute top-32 -right-12 w-72 h-3 bg-gradient-to-r from-[#34A853]/20 via-[#0fbc5c]/15 to-[#0cba65]/10 transform rotate-8 rounded-full blur-sm"></div>
-                        <div className="absolute bottom-40 -left-20 w-88 h-4 bg-gradient-to-r from-[#0cba65]/15 via-[#34A853]/20 to-[#0fbc5c]/10 transform -rotate-10 rounded-full blur-sm"></div>
+                        {/* Green Threads */}
+                        <div className="absolute top-32 -right-12 w-72 h-3 bg-gradient-to-r from-[#34A853]/25 via-[#0fbc5c]/20 to-[#0cba65]/15 transform rotate-8 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute bottom-40 -left-20 w-88 h-4 bg-gradient-to-r from-[#0cba65]/20 via-[#34A853]/25 to-[#0fbc5c]/15 transform -rotate-10 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute top-72 -left-8 w-56 h-2 bg-gradient-to-r from-[#0fbc5c]/15 via-[#0cba65]/20 to-[#34A853]/15 transform -rotate-18 rounded-full blur-sm"></div>
 
-                        {/* Red-Orange Thread */}
-                        <div className="absolute bottom-20 -right-16 w-64 h-3 bg-gradient-to-r from-[#EA4335]/20 via-[#ff692c]/15 to-[#ff8d1b]/10 transform rotate-15 rounded-full blur-sm"></div>
-                        <div className="absolute top-60 -left-12 w-56 h-2 bg-gradient-to-r from-[#ff8d1b]/15 via-[#EA4335]/20 to-[#ff692c]/10 transform -rotate-12 rounded-full blur-sm"></div>
+                        {/* Red Threads */}
+                        <div className="absolute bottom-20 -right-16 w-64 h-3 bg-gradient-to-r from-[#EA4335]/25 via-[#ff692c]/20 to-[#ff8d1b]/15 transform rotate-15 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute top-60 -left-12 w-56 h-2 bg-gradient-to-r from-[#ff8d1b]/20 via-[#EA4335]/25 to-[#ff692c]/15 transform -rotate-12 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute bottom-64 -left-16 w-48 h-2 bg-gradient-to-r from-[#ff692c]/15 via-[#ff8d1b]/20 to-[#EA4335]/15 transform rotate-22 rounded-full blur-sm"></div>
 
-                        {/* Yellow Thread */}
-                        <div className="absolute bottom-60 -right-8 w-48 h-2 bg-gradient-to-r from-[#FBBC05]/20 via-[#fdcd04]/15 to-[#ffce0a]/10 transform rotate-20 rounded-full blur-sm"></div>
+                        {/* Yellow Threads */}
+                        <div className="absolute bottom-60 -right-8 w-48 h-2 bg-gradient-to-r from-[#FBBC05]/25 via-[#fdcd04]/20 to-[#ffce0a]/15 transform rotate-20 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute top-16 -right-32 w-40 h-2 bg-gradient-to-r from-[#ffce0a]/20 via-[#FBBC05]/25 to-[#fdcd04]/15 transform -rotate-8 rounded-full blur-sm shadow-sm"></div>
+                        <div className="absolute bottom-32 -left-24 w-52 h-2 bg-gradient-to-r from-[#fdcd04]/15 via-[#ffce0a]/20 to-[#FBBC05]/15 transform rotate-28 rounded-full blur-sm"></div>
 
                         {/* Subtle overlay to ensure content readability */}
-                        <div className="absolute inset-0 bg-white/80 dark:bg-gray-900/80"></div>
+                        <div className="absolute inset-0 bg-white/75 dark:bg-gray-900/75"></div>
                     </div>
 
                     {/* Content with higher z-index */}
                     <div className="relative z-10">
-                        <DialogHeader className="pb-3">
-                            <DialogTitle className="flex items-center justify-center space-x-2 text-lg font-semibold">
+                        <DialogHeader className="pb-4">
+                            <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
+                                <HandCoins className="h-6 w-6 text-primary" />
                                 <GoogleIcon />
                             </DialogTitle>
                         </DialogHeader>
@@ -248,41 +254,19 @@ export default function GoogleOAuthModal({
                                 </div>
                             </div>
 
-                            {/* Security Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <Shield className="h-4 w-4 text-[#34A853]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            Secure & Private
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90 space-y-2">
-                                    <div className="flex items-center space-x-2">
-                                        <Mail className="h-4 w-4 text-[#34A853]" />
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            We only access your email and basic profile info
-                                        </p>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <Shield className="h-4 w-4 text-[#34A853]" />
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            Your Google password is never shared with us
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
+
                         </div>
 
                         {/* Action Button */}
                         <div className="flex justify-center pt-4">
                             <Button
+                                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
                                 onClick={onConfirm}
-                                className="w-full h-11 bg-[#4285F4] text-white font-medium"
                             >
                                 <GoogleIcon />
-                                <span className="ml-2">Continue with Google</span>
+                                <span className="ml-2.5">
+                                    Continue with Google
+                                </span>
                             </Button>
                         </div>
                     </div>
