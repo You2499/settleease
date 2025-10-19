@@ -156,28 +156,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
-  // Show resend confirmation toast
-  const showResendToast = () => {
-    toast({
-      title: "Need a new confirmation email?",
-      description: (
-        <div className="space-y-3">
-          <p className="text-sm">Click the button below to resend the verification link to your email.</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleResendConfirmation}
-            disabled={isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-          </Button>
-        </div>
-      ),
-      duration: 300000, // 5 minutes - very long but not infinite
-    });
-  };
-
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
     if (!db || !resendEmail || !password) return;
@@ -386,10 +364,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         if (showResendOption) {
           setShowResendConfirmation(true);
           setResendEmail(email);
-          // Show resend toast after error toast appears
-          setTimeout(() => {
-            showResendToast();
-          }, 200);
         }
         setIsLoading(false);
         return;
@@ -654,7 +628,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                       autoComplete="email"
                       placeholder="you@example.com"
                       value={email}
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e) => {
+                        setEmail(e.target.value);
+                        // Reset resend confirmation when email changes
+                        if (showResendConfirmation) {
+                          setShowResendConfirmation(false);
+                          setResendEmail('');
+                        }
+                      }}
                       disabled={isLoading || isGoogleLoading}
                       required
                       className="h-10 text-sm sm:h-11 sm:text-base"
@@ -668,16 +649,46 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                       autoComplete={isLoginView ? "current-password" : "new-password"}
                       placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={(e) => {
+                        setPassword(e.target.value);
+                        // Reset resend confirmation when password changes
+                        if (showResendConfirmation) {
+                          setShowResendConfirmation(false);
+                          setResendEmail('');
+                        }
+                      }}
                       disabled={isLoading || isGoogleLoading}
                       required
                       minLength={6}
                       className="h-10 text-sm sm:h-11 sm:text-base"
                     />
                   </div>
-                  <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
-                    {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
-                  </Button>
+                  {/* Conditional button/resend section */}
+                  {!isLoginView && showResendConfirmation ? (
+                    // Show resend section instead of Create Account button
+                    <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                      <div className="text-center">
+                        <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
+                          Account Exists - Email Confirmation Needed
+                        </h3>
+                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                          Your account exists but hasn't been verified yet. Please check your email for the confirmation link, or resend it below.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={handleResendConfirmation}
+                        disabled={isLoading}
+                        className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800"
+                      >
+                        {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+                      </Button>
+                    </div>
+                  ) : (
+                    // Show normal submit button
+                    <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
+                      {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
+                    </Button>
+                  )}
                 </form>
 
                 <div className="relative my-3 sm:my-4">
