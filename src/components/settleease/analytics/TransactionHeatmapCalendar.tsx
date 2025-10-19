@@ -263,7 +263,7 @@ export default function TransactionHeatmapCalendar({
                 </div>
 
                 {/* Calendar */}
-                <div className="p-3 border rounded-lg bg-background">
+                <div className="p-3 border rounded-lg bg-background max-w-md mx-auto">
                     {/* Calendar Header */}
                     <div className="flex justify-between items-center mb-4">
                         <Button
@@ -290,7 +290,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-1 mb-2">
                         {dayNames.map(day => (
-                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-8 flex items-center justify-center">
+                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center">
                                 {day}
                             </div>
                         ))}
@@ -299,7 +299,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-1">
                         {calendarDays.map((date, index) => {
-                            if (!date) return <div key={index} className="aspect-square" />;
+                            if (!date) return <div key={index} className="h-8 w-8" />;
 
                             const dateKey = date.toDateString();
                             const dayData = dayDataMap.get(dateKey);
@@ -323,13 +323,13 @@ export default function TransactionHeatmapCalendar({
                             };
 
                             return (
-                                <div key={index} className="relative group aspect-square">
+                                <div key={index} className="relative group">
                                     <div
                                         className={cn(
-                                            "w-full h-full p-0 font-normal rounded-md transition-all duration-200 cursor-pointer",
-                                            "flex items-center justify-center text-sm",
+                                            "h-8 w-8 p-0 font-normal rounded-md transition-all duration-200 cursor-pointer",
+                                            "flex items-center justify-center text-xs",
                                             getHeatmapColor(intensityLevel),
-                                            isToday && "ring-2 ring-primary ring-offset-2 ring-offset-background"
+                                            isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background"
                                         )}
                                     >
                                         {date.getDate()}
