@@ -6,11 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, X } from 'lucide-react';
+import { toast, useToast } from "@/hooks/use-toast";
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { showGoogleOAuthConfirmation, getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
-import { createPortal } from 'react-dom';
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -138,6 +137,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [authErrorType, setAuthErrorType] = useState<string>('');
   const [showResendConfirmation, setShowResendConfirmation] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
+  const [resendToastId, setResendToastId] = useState<string | null>(null);
+  const { dismiss } = useToast();
 
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -158,6 +159,30 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     return () => clearTimeout(timer);
   }, [isLoginView]);
 
+  // Show resend confirmation toast
+  const showResendToast = () => {
+    const toastResult = toast({
+      title: "Need a new confirmation email?",
+      description: (
+        <div className="space-y-2">
+          <p>Click below to resend the verification link to your email.</p>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleResendConfirmation}
+            disabled={isLoading}
+            className="text-xs w-full"
+          >
+            {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+          </Button>
+        </div>
+      ),
+      variant: "default",
+      duration: Infinity, // No timeout
+    });
+    setResendToastId(toastResult.id);
+  };
+
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
     if (!db || !resendEmail || !password) return;
@@ -170,7 +195,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         password: password, // Use the actual password that was verified
       });
       
-      // We expect this to "fail" but still send the email
+      // Dismiss the resend toast
+      if (resendToastId) {
+        dismiss(resendToastId);
+        setResendToastId(null);
+      }
+      
+      // Show success toast
       toast({
         title: "Confirmation Email Sent",
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
@@ -182,7 +213,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       setAuthErrorType('');
       
     } catch (err) {
-      // Even if there's an error, the email is likely sent
+      // Dismiss the resend toast
+      if (resendToastId) {
+        dismiss(resendToastId);
+        setResendToastId(null);
+      }
+      
+      // Show success toast (email likely sent even if API "fails")
       toast({
         title: "Confirmation Email Sent", 
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
@@ -366,6 +403,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         if (showResendOption) {
           setShowResendConfirmation(true);
           setResendEmail(email);
+          // Show the resend toast after a short delay to let the error toast appear first
+          setTimeout(() => {
+            showResendToast();
+          }, 100);
         }
         setIsLoading(false);
         return;
@@ -705,6 +746,11 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 setAuthErrorType(''); // Reset error type
                 setShowResendConfirmation(false); // Reset resend state
                 setResendEmail('');
+                // Dismiss resend toast if active
+                if (resendToastId) {
+                  dismiss(resendToastId);
+                  setResendToastId(null);
+                }
               }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
                 {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
               </Button>
@@ -714,46 +760,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       </div>
       </Card>
       
-      {/* Floating Resend Confirmation Notification */}
-    {showResendConfirmation && typeof window !== 'undefined' && createPortal(
-      <div className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px] pointer-events-none">
-        <div className="group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-4 pr-8 shadow-lg transition-all bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 animate-in slide-in-from-top-full sm:slide-in-from-bottom-full">
-          <div className="flex-1">
-            <div className="grid gap-1">
-              <div className="text-sm font-semibold text-amber-800 dark:text-amber-200">
-                Need a new confirmation email?
-              </div>
-              <div className="text-sm text-amber-700 dark:text-amber-300">
-                Click below to resend the verification link to your email.
-              </div>
-            </div>
-            <div className="mt-3">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleResendConfirmation}
-                disabled={isLoading}
-                className="text-xs bg-amber-100 dark:bg-amber-900/50 border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/70"
-              >
-                {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-              </Button>
-            </div>
-          </div>
-          <button
-            onClick={() => {
-              setShowResendConfirmation(false);
-              setHasAuthError(false);
-              setAuthErrorType('');
-              setResendEmail('');
-            }}
-            className="absolute right-2 top-2 rounded-md p-1 text-amber-600/70 dark:text-amber-400/70 opacity-70 transition-opacity hover:text-amber-800 dark:hover:text-amber-200 focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>,
-      document.body
-    )}
+
     </>
   );
 }
