@@ -245,7 +245,7 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
                             type="text"
                             value={editingPersonNewName}
                             onChange={(e) => setEditingPersonNewName(e.target.value)}
-                            className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm"
+                            className="flex-grow mr-2 h-8 sm:h-9 text-xs sm:text-sm focus:outline-none"
                             autoFocus
                             disabled={isLoading}
                             onKeyDown={(e) => e.key === 'Enter' && handleSavePersonName()}

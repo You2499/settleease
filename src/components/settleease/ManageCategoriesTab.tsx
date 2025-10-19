@@ -355,7 +355,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
                                 type="text"
                                 value={editingName}
                                 onChange={(e) => setEditingName(e.target.value)}
-                                className="flex-1 min-w-0 h-8 sm:h-9 text-xs sm:text-sm"
+                                className="flex-1 min-w-0 h-8 sm:h-9 text-xs sm:text-sm focus:outline-none"
                                 autoFocus
                                 disabled={isLoading}
                               />

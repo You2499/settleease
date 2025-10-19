@@ -105,7 +105,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
             placeholder={`Search ${filteredIconNames.length} icons ...`}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full text-base px-4 py-3 rounded-lg border border-border bg-muted dark:bg-neutral-800 dark:border-neutral-700"
+            className="w-full text-base px-4 py-3 rounded-lg border border-border bg-muted dark:bg-neutral-800 dark:border-neutral-700 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           />
         </div>
         {/* Main Content: Icon Grid + Details Panel */}

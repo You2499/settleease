@@ -268,7 +268,7 @@ const UserNameModal = React.memo(function UserNameModal({
                                         disabled={isLoading}
                                         required
                                         autoFocus
-                                        className="h-11 border-border/30 focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
+                                        className="h-11 border-border/30 focus:outline-none focus:border-primary focus:ring-primary focus:ring-1 focus:ring-offset-0"
                                     />
                                 </div>
                                 <div className="space-y-2">

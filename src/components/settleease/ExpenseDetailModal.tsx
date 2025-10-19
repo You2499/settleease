@@ -220,7 +220,7 @@ export default function ExpenseDetailModal({
       >
         {showBackButton && (
           <button
-            className="absolute top-4 right-4 z-50 bg-background border border-border shadow-sm rounded-md p-2"
+            className="absolute top-4 right-4 z-50 bg-background border border-border shadow-sm rounded-md p-2 hover:bg-accent hover:text-accent-foreground transition-colors focus:outline-none"
             title="Back to Step 2"
             onClick={onBack}
           >
