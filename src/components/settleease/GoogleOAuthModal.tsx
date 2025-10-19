@@ -131,10 +131,31 @@ export default function GoogleOAuthModal({
     onConfirm,
     isSignIn
 }: GoogleOAuthModalProps) {
+    const [isLoading, setIsLoading] = React.useState(false);
+
+    const handleConfirm = async () => {
+        setIsLoading(true);
+        
+        // Show loading state for a brief moment before redirecting
+        setTimeout(() => {
+            onConfirm();
+            // Reset loading state after a delay (in case user comes back)
+            setTimeout(() => {
+                setIsLoading(false);
+            }, 3000);
+        }, 500);
+    };
+
+    // Reset loading state when modal closes
+    React.useEffect(() => {
+        if (!isOpen) {
+            setIsLoading(false);
+        }
+    }, [isOpen]);
     return (
         <Dialog open={isOpen} onOpenChange={() => {}}>
             <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
-                <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+                <div className={`bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6 transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
                     <div>
                         <DialogHeader className="pb-4">
                             <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
@@ -232,18 +253,20 @@ export default function GoogleOAuthModal({
                         {/* Action Buttons */}
                         <div className="flex flex-col space-y-2 pt-4">
                             <Button
-                                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
-                                onClick={onConfirm}
+                                className={`w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 ${isLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                onClick={handleConfirm}
+                                disabled={isLoading}
                             >
                                 <GoogleIcon />
                                 <span className="ml-2.5">
-                                    Continue with Google
+                                    {isLoading ? "Redirecting to Google..." : "Continue with Google"}
                                 </span>
                             </Button>
                             <Button
                                 variant="outline"
                                 className="w-full h-10 text-sm sm:h-11 sm:text-base"
                                 onClick={onClose}
+                                disabled={isLoading}
                             >
                                 Cancel
                             </Button>

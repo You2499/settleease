@@ -165,12 +165,12 @@ const UserNameModal = React.memo(function UserNameModal({
 
     // Memoize handlers to prevent re-renders
     const handleFirstNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setFirstName(e.target.value);
-    }, []);
+        setFirstName(capitalizeName(e.target.value));
+    }, [capitalizeName]);
 
     const handleLastNameChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        setLastName(e.target.value);
-    }, []);
+        setLastName(capitalizeName(e.target.value));
+    }, [capitalizeName]);
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();

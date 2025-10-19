@@ -28,6 +28,7 @@ import CategoryAnalyticsTable from './analytics/CategoryAnalyticsTable';
 import ParticipantSummaryTable from './analytics/ParticipantSummaryTable';
 import CategorySpendingPieChart from './analytics/CategorySpendingPieChart';
 import ExpenseDistributionChart from './analytics/ExpenseDistributionChart';
+import TransactionHeatmapCalendar from './analytics/TransactionHeatmapCalendar';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 
@@ -627,6 +628,13 @@ export default function AnalyticsTab({
                 selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
               />
             </div>
+
+            <TransactionHeatmapCalendar
+              expenses={displayedExpenses}
+              analyticsViewMode={analyticsViewMode}
+              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              peopleMap={peopleMap}
+            />
             
             {topExpensesData.length > 0 && (
               <TopExpensesTable

@@ -27,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
+import CustomSettlementForm from './CustomSettlementForm';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -177,14 +178,41 @@ export default function ManageSettlementsTab({
     <>
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <Handshake className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Settlements
-          </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1">
+              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                <Handshake className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Settlements
+              </CardTitle>
+              <CardDescription className="text-xs sm:text-sm mt-1">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
+            </div>
+            <div className="flex-shrink-0">
+              <CustomSettlementForm
+                people={people}
+                peopleMap={peopleMap}
+                db={db}
+                currentUserId={currentUserId}
+                onActionComplete={onActionComplete}
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-6">
+              
+              {/* Custom Settlement Info */}
+              <div className="border rounded-lg shadow-sm bg-primary/5 p-3 sm:p-4">
+                <div className="flex items-start space-x-3">
+                  <Info className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div className="text-sm">
+                    <p className="font-medium text-primary mb-1">Custom Payment Recording</p>
+                    <p className="text-muted-foreground text-xs">
+                      Use the "Add Custom Payment" button above to manually record direct payments between people. 
+                      These payments will be included in all settlement calculations and affect outstanding balances.
+                    </p>
+                  </div>
+                </div>
+              </div>
               
               <div className="border rounded-lg shadow-sm bg-card/50 p-3 sm:p-5">
                 <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
@@ -220,7 +248,10 @@ export default function ManageSettlementsTab({
                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
                     <Handshake className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
                     <p className="font-medium text-sm sm:text-base">All Settled Up!</p>
-                    <p className="text-xs">No outstanding debts based on current data.</p>
+                    <p className="text-xs mb-4">No outstanding debts based on current data.</p>
+                    <p className="text-xs text-primary/70">
+                      Need to record a direct payment? Use the "Add Custom Payment" button above.
+                    </p>
                   </div>
                 )}
               </div>
@@ -243,8 +274,21 @@ export default function ManageSettlementsTab({
                                 <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
                               </div>
                               <div className="text-xs text-muted-foreground mt-1">
-                                Paid on: {new Date(payment.settled_at).toLocaleDateString()}
-                                {payment.notes && <span className="ml-2 italic">({payment.notes})</span>}
+                                <span>Paid on: {new Date(payment.settled_at).toLocaleDateString()}</span>
+                                {payment.notes && (
+                                  <>
+                                    <span className="mx-2">•</span>
+                                    <span className="italic">{payment.notes}</span>
+                                    <span className="mx-2">•</span>
+                                    <span className="text-primary/70 font-medium">Custom Payment</span>
+                                  </>
+                                )}
+                                {!payment.notes && (
+                                  <>
+                                    <span className="mx-2">•</span>
+                                    <span className="text-green-600/70 font-medium">Auto Settlement</span>
+                                  </>
+                                )}
                               </div>
                             </div>
                             <Button

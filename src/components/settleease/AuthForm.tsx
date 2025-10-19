@@ -144,6 +144,15 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
+  // Helper function to properly capitalize names (first letter uppercase, rest lowercase)
+  const capitalizeFirstLetter = (str: string): string => {
+    return str
+      .toLowerCase()
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  };
+
   // Auto-focus effect when view changes
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -699,7 +708,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                           autoComplete="given-name"
                           placeholder="John"
                           value={firstName}
-                          onChange={(e) => setFirstName(e.target.value)}
+                          onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
                           disabled={isLoading || isGoogleLoading}
                           required
                           className="h-10 sm:h-11"
@@ -713,7 +722,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                           autoComplete="family-name"
                           placeholder="Doe"
                           value={lastName}
-                          onChange={(e) => setLastName(e.target.value)}
+                          onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
                           disabled={isLoading || isGoogleLoading}
                           required
                           className="h-10 sm:h-11"
