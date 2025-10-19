@@ -239,7 +239,10 @@ const UserNameModal = React.memo(function UserNameModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={() => { }}>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
+            <DialogContent 
+                className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto"
+                hideCloseButton={true}
+            >
                 {/* Modal styling wrapper */}
                 <div className="bg-white dark:bg-gray-900 border border-[#4285F4]/20 dark:border-[#4285F4]/30 shadow-2xl relative rounded-lg -m-6 p-6">
                     {/* Flowing Google Gradient Threads Background */}
