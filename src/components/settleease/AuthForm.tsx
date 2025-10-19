@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle } from 'lucide-react';
+import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
@@ -751,7 +751,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
                 {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
                   <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
-                    {getAuthSuggestion(isLoginView, hasAuthError, authErrorType)}
+                    <div className="flex items-center justify-center space-x-2">
+                      <Lightbulb className="h-4 w-4 shrink-0" />
+                      <span>{getAuthSuggestion(isLoginView, hasAuthError, authErrorType)?.text}</span>
+                    </div>
                   </div>
                 )}
                 <Button variant="link" onClick={() => {

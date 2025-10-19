@@ -12,7 +12,8 @@ import {
   DollarSign,
   Receipt,
   ExternalLink,
-  Info
+  Info,
+  PartyPopper
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense } from '@/lib/settleease/types';
@@ -224,7 +225,7 @@ export default function RelevantExpensesModal({
                                 {expense.celebration_contribution && Number(expense.celebration_contribution.amount) > 0 && (
                                   <div className="pt-2 border-t border-border/50">
                                     <div className="flex items-center space-x-2 text-xs text-yellow-600 dark:text-yellow-400">
-                                      <span>🎉</span>
+                                      <PartyPopper className="h-4 w-4 shrink-0" />
                                       <span>
                                         Includes {formatCurrency(expense.celebration_contribution.amount)} celebration contribution
                                       </span>

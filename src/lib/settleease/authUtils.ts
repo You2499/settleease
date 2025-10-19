@@ -197,22 +197,37 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
 /**
  * Get helpful suggestions based on the current context and error
  */
-export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorType?: string): string | null {
+export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorType?: string): { icon: string; text: string } | null {
   if (hasError && isSignIn) {
     if (errorType === 'email_not_confirmed') {
-      return "💡 Tip: Check your email inbox (including spam folder) for the verification link. You may need to sign up again if you can't find the original email.";
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Check your email inbox (including spam folder) for the verification link. You may need to sign up again if you can't find the original email."
+      };
     }
     if (errorType === 'invalid_credentials') {
-      return "💡 Tip: Check your email and password, or try 'Don't have an account? Sign Up' if you're new to SettleEase.";
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Check your email and password, or try 'Don't have an account? Sign Up' if you're new to SettleEase."
+      };
     }
-    return "💡 Tip: If you don't have an account yet, try clicking 'Don't have an account? Sign Up' below.";
+    return {
+      icon: "Lightbulb",
+      text: "Tip: If you don't have an account yet, try clicking 'Don't have an account? Sign Up' below."
+    };
   }
   if (hasError && !isSignIn) {
     // Check if this is an unconfirmed account error
     if (errorType === 'unconfirmed') {
-      return "💡 Tip: Check your email inbox (including spam folder) for the confirmation link, or try signing in if you've already confirmed.";
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Check your email inbox (including spam folder) for the confirmation link, or try signing in if you've already confirmed."
+      };
     }
-    return "💡 Tip: If you already have an account, try clicking 'Already have an account? Sign In' below.";
+    return {
+      icon: "Lightbulb",
+      text: "Tip: If you already have an account, try clicking 'Already have an account? Sign In' below."
+    };
   }
   return null;
 }
