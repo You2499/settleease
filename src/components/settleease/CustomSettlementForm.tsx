@@ -21,7 +21,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, DollarSign, ArrowRight, Users } from 'lucide-react';
+import { Plus, DollarSign, ArrowRight, Users, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease';
 import type { Person } from '@/lib/settleease';
@@ -59,8 +59,8 @@ export default function CustomSettlementForm({
         });
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleSubmit = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
 
         if (!db || !currentUserId) {
             toast({
@@ -157,139 +157,170 @@ export default function CustomSettlementForm({
                     Add Custom Payment
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center text-lg font-semibold">
-                        <DollarSign className="mr-2 h-5 w-5 text-primary" />
-                        Record Custom Payment
-                    </DialogTitle>
-                </DialogHeader>
+            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
+                <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+                    <div>
+                        <DialogHeader className="pb-4">
+                            <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
+                                <HandCoins className="h-6 w-6 text-primary" />
+                                <DollarSign className="h-6 w-6 text-primary" />
+                            </DialogTitle>
+                        </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Payer Selection */}
-                    <div className="space-y-2">
-                        <Label htmlFor="debtor" className="text-sm font-medium">
-                            From (Payer) *
-                        </Label>
-                        <Select
-                            value={formData.debtorId}
-                            onValueChange={(value) => setFormData(prev => ({ ...prev, debtorId: value }))}
-                            disabled={isLoading}
-                        >
-                            <SelectTrigger id="debtor">
-                                <SelectValue placeholder="Select who is paying..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableDebtors.map(person => (
-                                    <SelectItem key={person.id} value={person.id}>
-                                        {person.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                        <div className="space-y-3">
+                            {/* Payment Details Section */}
+                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
+                                    <div className="flex items-center space-x-2">
+                                        <DollarSign className="h-4 w-4 text-[#4285F4]" />
+                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                                            Payment Details
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
+                                        Record a direct payment between two people
+                                    </p>
 
-                    {/* Visual Arrow */}
-                    {formData.debtorId && formData.creditorId && (
-                        <div className="flex items-center justify-center py-2">
-                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                                <span className="font-medium">{peopleMap[formData.debtorId]}</span>
-                                <ArrowRight className="h-4 w-4 text-primary" />
-                                <span className="font-medium">{peopleMap[formData.creditorId]}</span>
+                                    <form onSubmit={handleSubmit} className="space-y-4">
+                                        {/* Payer Selection */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="debtor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                From (Payer) *
+                                            </Label>
+                                            <Select
+                                                value={formData.debtorId}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, debtorId: value }))}
+                                                disabled={isLoading}
+                                            >
+                                                <SelectTrigger id="debtor" className="h-10 text-sm">
+                                                    <SelectValue placeholder="Select who is paying..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableDebtors.map(person => (
+                                                        <SelectItem key={person.id} value={person.id}>
+                                                            {person.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Visual Arrow */}
+                                        {formData.debtorId && formData.creditorId && (
+                                            <div className="flex items-center justify-center py-2">
+                                                <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                                    <span className="font-medium">{peopleMap[formData.debtorId]}</span>
+                                                    <ArrowRight className="h-4 w-4 text-primary" />
+                                                    <span className="font-medium">{peopleMap[formData.creditorId]}</span>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Receiver Selection */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="creditor" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                To (Receiver) *
+                                            </Label>
+                                            <Select
+                                                value={formData.creditorId}
+                                                onValueChange={(value) => setFormData(prev => ({ ...prev, creditorId: value }))}
+                                                disabled={isLoading}
+                                            >
+                                                <SelectTrigger id="creditor" className="h-10 text-sm">
+                                                    <SelectValue placeholder="Select who is receiving..." />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {availableCreditors.map(person => (
+                                                        <SelectItem key={person.id} value={person.id}>
+                                                            {person.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Amount Input */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Amount *
+                                            </Label>
+                                            <div className="relative">
+                                                <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    id="amount"
+                                                    type="number"
+                                                    inputMode="decimal"
+                                                    pattern="[0-9]*\.?[0-9]*"
+                                                    step="0.01"
+                                                    min="0.01"
+                                                    placeholder="0.00"
+                                                    value={formData.amount}
+                                                    onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                                                    disabled={isLoading}
+                                                    className="pl-10 h-10 text-sm"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Notes Input */}
+                                        <div className="space-y-2">
+                                            <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Notes (Optional)
+                                            </Label>
+                                            <Textarea
+                                                id="notes"
+                                                placeholder="Add any additional notes about this payment..."
+                                                value={formData.notes}
+                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
+                                                disabled={isLoading}
+                                                rows={3}
+                                                className="resize-none text-sm"
+                                            />
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            {/* Help Information Section */}
+                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
+                                <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
+                                    <div className="flex items-center space-x-2">
+                                        <Users className="h-4 w-4 text-[#34A853]" />
+                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                                            How it works
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                                        This records a direct payment between two people. It will be included in all settlement calculations and affect outstanding balances.
+                                    </p>
+                                </div>
                             </div>
                         </div>
-                    )}
 
-                    {/* Receiver Selection */}
-                    <div className="space-y-2">
-                        <Label htmlFor="creditor" className="text-sm font-medium">
-                            To (Receiver) *
-                        </Label>
-                        <Select
-                            value={formData.creditorId}
-                            onValueChange={(value) => setFormData(prev => ({ ...prev, creditorId: value }))}
-                            disabled={isLoading}
-                        >
-                            <SelectTrigger id="creditor">
-                                <SelectValue placeholder="Select who is receiving..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {availableCreditors.map(person => (
-                                    <SelectItem key={person.id} value={person.id}>
-                                        {person.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-
-                    {/* Amount Input */}
-                    <div className="space-y-2">
-                        <Label htmlFor="amount" className="text-sm font-medium">
-                            Amount *
-                        </Label>
-                        <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                id="amount"
-                                type="number"
-                                inputMode="decimal"
-                                pattern="[0-9]*\.?[0-9]*"
-                                step="0.01"
-                                min="0.01"
-                                placeholder="0.00"
-                                value={formData.amount}
-                                onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+                        {/* Action Buttons */}
+                        <div className="flex flex-col space-y-2 pt-4">
+                            <Button
+                                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
+                                onClick={handleSubmit}
+                                disabled={isLoading || !formData.debtorId || !formData.creditorId || !formData.amount}
+                            >
+                                <DollarSign className="h-5 w-5" />
+                                <span className="ml-2.5">
+                                    {isLoading ? "Recording Payment..." : "Record Payment"}
+                                </span>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                className="w-full h-10 text-sm sm:h-11 sm:text-base"
+                                onClick={handleCancel}
                                 disabled={isLoading}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Notes Input */}
-                    <div className="space-y-2">
-                        <Label htmlFor="notes" className="text-sm font-medium">
-                            Notes (Optional)
-                        </Label>
-                        <Textarea
-                            id="notes"
-                            placeholder="Add any additional notes about this payment..."
-                            value={formData.notes}
-                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
-                            disabled={isLoading}
-                            rows={3}
-                            className="resize-none"
-                        />
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex space-x-2 pt-2">
-                        <Button
-                            type="button"
-                            variant="outline"
-                            onClick={handleCancel}
-                            disabled={isLoading}
-                            className="flex-1"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            disabled={isLoading || !formData.debtorId || !formData.creditorId || !formData.amount}
-                            className="flex-1"
-                        >
-                            {isLoading ? "Recording..." : "Record Payment"}
-                        </Button>
-                    </div>
-                </form>
-
-                {/* Help Text */}
-                <div className="mt-4 p-3 bg-muted/50 rounded-md">
-                    <div className="flex items-start space-x-2">
-                        <Users className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-                        <div className="text-xs text-muted-foreground">
-                            <p className="font-medium mb-1">Custom Payment Info:</p>
-                            <p>This records a direct payment between two people. It will be included in all settlement calculations and affect outstanding balances.</p>
+                            >
+                                Cancel
+                            </Button>
                         </div>
                     </div>
                 </div>
