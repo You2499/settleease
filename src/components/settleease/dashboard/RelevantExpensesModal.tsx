@@ -75,68 +75,81 @@ export default function RelevantExpensesModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-4xl w-[95vw] sm:w-full">
-        <DialogHeader className="pb-3 border-b">
-          <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-            <FileText className="mr-2 h-5 w-5" />
-            {modalTitle || "Related Expenses"}
-          </DialogTitle>
-          <DialogDescription className="text-sm">
-            These are the expenses contributing to the selected debt or credit. Click any expense for full details.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={false}>
+        <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+          <div className="space-y-3">
+            {/* Header Section */}
+            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
+              <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
+                <div className="flex items-center space-x-2">
+                  <FileText className="h-4 w-4 text-[#4285F4]" />
+                  <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                    {modalTitle || "Related Expenses"}
+                  </span>
+                </div>
+              </div>
+              <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  These are the expenses contributing to the selected debt or credit. Click any expense for full details.
+                </p>
+              </div>
+            </div>
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
-          <div className="space-y-4 sm:space-y-6 pt-2">
             {sortedExpenses.length > 0 ? (
               <>
-                {/* Summary Card */}
-                <Card>
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-lg sm:text-xl font-bold">
-                      <Info className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Summary
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-2 pt-0">
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground">Total Expenses:</span>
-                      <span className="font-medium">{sortedExpenses.length}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground">Combined Amount:</span>
-                      <span className="font-bold text-lg text-primary">
-                        {formatCurrency(
-                          sortedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0)
-                        )}
+                {/* Summary Section */}
+                <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
+                    <div className="flex items-center space-x-2">
+                      <Info className="h-4 w-4 text-[#34A853]" />
+                      <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                        Summary
                       </span>
                     </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between">
-                      <span className="text-muted-foreground">Date Range:</span>
-                      <span className="font-medium">
-                        {sortedExpenses.length > 1 ? (
-                          <>
-                            {new Date(sortedExpenses[sortedExpenses.length - 1].created_at || 0).toLocaleDateString()} 
-                            {" - "}
-                            {new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()}
-                          </>
-                        ) : (
-                          new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()
-                        )}
-                      </span>
+                  </div>
+                  <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                    <div className="text-sm space-y-2">
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="text-gray-700 dark:text-gray-300">Total Expenses:</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-100">{sortedExpenses.length}</span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="text-gray-700 dark:text-gray-300">Combined Amount:</span>
+                        <span className="font-bold text-lg text-primary">
+                          {formatCurrency(
+                            sortedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0)
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-col sm:flex-row sm:justify-between">
+                        <span className="text-gray-700 dark:text-gray-300">Date Range:</span>
+                        <span className="font-medium text-gray-800 dark:text-gray-100">
+                          {sortedExpenses.length > 1 ? (
+                            <>
+                              {new Date(sortedExpenses[sortedExpenses.length - 1].created_at || 0).toLocaleDateString()} 
+                              {" - "}
+                              {new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()}
+                            </>
+                          ) : (
+                            new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()
+                          )}
+                        </span>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
 
-                {/* Expenses List */}
-                <Card>
-                  <CardHeader className="pt-3 sm:pt-4 pb-2">
-                    <CardTitle className="flex items-center text-lg sm:text-xl font-bold">
-                      <Receipt className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Expense Details
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-3 pt-0">
+                {/* Expenses List Section */}
+                <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
+                    <div className="flex items-center space-x-2">
+                      <Receipt className="h-4 w-4 text-[#EA4335]" />
+                      <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                        Expense Details
+                      </span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
                     <div className="space-y-3">
                       {sortedExpenses.map((expense) => {
                         const payerInfo = getPayerInfo(expense);
@@ -238,19 +251,27 @@ export default function RelevantExpensesModal({
                         );
                       })}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </>
             ) : (
-              <Card>
-                <CardContent className="text-center py-8">
+              <div className="bg-white/95 dark:bg-gray-800/95 border border-[#EA4335]/30 dark:border-[#EA4335]/20 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-[#EA4335]/10 dark:bg-[#EA4335]/5">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="h-4 w-4 text-[#EA4335]" />
+                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                      No Expenses Found
+                    </span>
+                  </div>
+                </div>
+                <div className="px-4 py-8 bg-white/90 dark:bg-gray-800/90 text-center">
                   <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>
-                  <p className="text-sm text-muted-foreground">
+                  <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-100">No Expenses Found</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     No specific contributing expenses found for this transaction, or the transaction is fully settled by direct payments.
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             )}
           </div>
         </div>

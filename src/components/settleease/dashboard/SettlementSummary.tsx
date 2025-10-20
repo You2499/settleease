@@ -440,71 +440,80 @@ export default function SettlementSummary({
 
       {/* Mobile-Responsive Settlement Explanation Modal */}
       <Dialog open={isInfoModalOpen} onOpenChange={setIsInfoModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar max-w-6xl w-[95vw] sm:w-full">
-          <DialogHeader className="pb-3 border-b">
-            <div className="flex items-center">
-              <DialogTitle className="text-xl sm:text-2xl text-primary flex items-center">
-                <Calculator className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                How Settlement Works - Simple & Transparent
-              </DialogTitle>
-            </div>
-          </DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={false}>
+          <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+            <div className="space-y-3">
+              {/* How Settlement Works Section */}
+              <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
+                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
+                  <div className="flex items-center space-x-2">
+                    <Calculator className="h-4 w-4 text-[#4285F4]" />
+                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                      How Settlement Works - Simple & Transparent
+                    </span>
+                  </div>
+                </div>
+                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
 
-          {/* Toggle for balanced people */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-0">
-            <div className="flex items-center space-x-3 min-w-0 flex-1">
-              {showBalancedPeople ? (
-                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-              )}
-              <Label
-                htmlFor="show-balanced"
-                className="text-sm font-medium cursor-pointer truncate"
-              >
-                Show balanced people
-              </Label>
-              {!showBalancedPeople &&
-                people.length - filteredPeople.length > 0 && (
-                  <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    {people.length - filteredPeople.length} hidden
-                  </span>
-                )}
-            </div>
-            <Switch
-              id="show-balanced"
-              checked={showBalancedPeople}
-              onCheckedChange={setShowBalancedPeople}
-              className="flex-shrink-0"
-            />
-          </div>
+                  {/* Toggle for balanced people */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-0">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      {showBalancedPeople ? (
+                        <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                      ) : (
+                        <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                      )}
+                      <Label
+                        htmlFor="show-balanced"
+                        className="text-sm font-medium cursor-pointer truncate"
+                      >
+                        Show balanced people
+                      </Label>
+                      {!showBalancedPeople &&
+                        people.length - filteredPeople.length > 0 && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                            {people.length - filteredPeople.length} hidden
+                          </span>
+                        )}
+                    </div>
+                    <Switch
+                      id="show-balanced"
+                      checked={showBalancedPeople}
+                      onCheckedChange={setShowBalancedPeople}
+                      className="flex-shrink-0"
+                    />
+                  </div>
 
-          <div className="space-y-4 sm:space-y-6 overflow-x-hidden min-w-0">
-            <div className="min-w-0">
-              <Step1BalanceOverview
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
-              />
-            </div>
+                  <div className="space-y-4 sm:space-y-6 overflow-x-hidden min-w-0">
+                    <div className="min-w-0">
+                      <Step1BalanceOverview
+                        personBalances={filteredPersonBalances}
+                        people={filteredPeople}
+                      />
+                    </div>
 
-            <div className="min-w-0">
-              <Step2DirectDebtAnalysis
-                allExpenses={allExpenses}
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
-                peopleMap={peopleMap}
-                onExpenseClick={onViewExpenseDetailsFromStep2}
-              />
-            </div>
+                    <div className="min-w-0">
+                      <Step2DirectDebtAnalysis
+                        allExpenses={allExpenses}
+                        personBalances={filteredPersonBalances}
+                        people={filteredPeople}
+                        peopleMap={peopleMap}
+                        onExpenseClick={onViewExpenseDetailsFromStep2}
+                      />
+                    </div>
 
-            <div className="min-w-0">
-              <Step3SimplificationProcess
-                pairwiseTransactions={pairwiseTransactions}
-                unpaidSimplifiedTransactions={modalUnpaidSimplifiedTransactions}
-                personBalances={filteredPersonBalances}
-                people={filteredPeople}
-                peopleMap={peopleMap}
-              />
+                    <div className="min-w-0">
+                      <Step3SimplificationProcess
+                        pairwiseTransactions={pairwiseTransactions}
+                        unpaidSimplifiedTransactions={modalUnpaidSimplifiedTransactions}
+                        personBalances={filteredPersonBalances}
+                        people={filteredPeople}
+                        peopleMap={peopleMap}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </DialogContent>
