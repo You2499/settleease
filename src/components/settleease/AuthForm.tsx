@@ -282,6 +282,25 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
   };
 
+  // Function to check if email is associated with a Google account (for Sign In error handling)
+  const checkIfGoogleAccount = async (email: string): Promise<boolean> => {
+    try {
+      const { data, error } = await db!.rpc('check_email_status', {
+        email_to_check: email
+      });
+
+      if (error) {
+        console.warn('Email status check RPC error:', error);
+        return false;
+      }
+
+      return data?.is_google_account === true;
+    } catch (err) {
+      console.warn('Google account check failed:', err);
+      return false;
+    }
+  };
+
   // Function to check email status with password verification for security
   const checkEmailStatusSecure = async (email: string, password: string): Promise<{ shouldProceed: boolean; toastConfig?: any; showResendOption?: boolean }> => {
     try {
@@ -480,6 +499,27 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             setIsLoading(false);
             return;
           }
+
+          // Check if this is an invalid credentials error and if the email is associated with a Google account
+          if (signInError.code === 'invalid_login_credentials' || 
+              (signInError.message && signInError.message.toLowerCase().includes('invalid') && signInError.message.toLowerCase().includes('credentials'))) {
+            
+            // Check if this email is associated with a Google account
+            const isGoogleAccount = await checkIfGoogleAccount(email);
+            
+            if (isGoogleAccount) {
+              toast({
+                title: "Google Account Detected",
+                description: "This email is associated with a Google account. Please use 'Continue with Google' to sign in instead of entering a password.",
+                variant: "destructive"
+              });
+              setHasAuthError(true);
+              setAuthErrorType('google_account_detected');
+              setIsLoading(false);
+              return;
+            }
+          }
+
           throw signInError;
         }
 
