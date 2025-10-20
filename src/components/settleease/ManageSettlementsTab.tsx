@@ -219,31 +219,45 @@ export default function ManageSettlementsTab({
                     <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Outstanding Simplified Debts
                 </h3>
                 {calculatedSimplifiedSettlements.length > 0 ? (
-                  <ul className="space-y-2.5 sm:space-y-3">
+                  <div className="space-y-2">
                     {calculatedSimplifiedSettlements.map((settlement, index) => (
-                      <li key={`${settlement.from}-${settlement.to}-${index}`}>
-                        <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                            <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
-                              <span className="font-medium text-foreground">{peopleMap[settlement.from] || 'Unknown'}</span>
-                              <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-accent mx-1 sm:mx-1.5 inline-block" />
-                              <span className="font-medium text-foreground">{peopleMap[settlement.to] || 'Unknown'}</span>
-                              <span className="block sm:inline sm:ml-2 text-primary font-semibold text-sm sm:text-base">{formatCurrency(settlement.amount)}</span>
-                            </div>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setSettlementToConfirm(settlement)}
-                              disabled={isLoading}
-                              className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                            >
-                              <CheckCircle2 className="mr-1 h-4 w-4" /> Mark as Paid
-                            </Button>
+                      <div
+                        key={`${settlement.from}-${settlement.to}-${index}`}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm gap-3 sm:gap-4"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                              {(peopleMap[settlement.from] || 'Unknown').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                              {(peopleMap[settlement.to] || 'Unknown').charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="text-sm min-w-0 flex-1">
+                            <span className="font-medium break-words">{peopleMap[settlement.from] || 'Unknown'}</span>
+                            <span className="text-gray-600 dark:text-gray-400"> pays </span>
+                            <span className="font-medium break-words">{peopleMap[settlement.to] || 'Unknown'}</span>
+                          </div>
+                          <div className="font-bold text-green-600 dark:text-green-400 flex-shrink-0 text-lg">
+                            {formatCurrency(settlement.amount)}
                           </div>
                         </div>
-                      </li>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSettlementToConfirm(settlement)}
+                          disabled={isLoading}
+                          className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto flex-shrink-0"
+                        >
+                          <CheckCircle2 className="mr-1 h-4 w-4" /> Mark as Paid
+                        </Button>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
                     <Handshake className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
