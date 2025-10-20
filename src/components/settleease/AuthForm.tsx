@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import SettleSecureTooltip from './SettleSecureTooltip';
+
 
 // Google Icon SVG as a React component
 const GoogleIcon = () => (
@@ -687,14 +687,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   
                   {/* Mobile Security Badge - Only show on mobile for login view */}
                   <div className="md:hidden mt-6">
-                    <SettleSecureTooltip>
-                      <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm cursor-help hover:bg-background/90 transition-colors">
-                        <Shield className="h-4 w-4 text-primary" />
-                        <span className="text-xs text-muted-foreground font-medium">
-                          Protected by <span className="text-primary font-semibold">SettleSecure</span>
-                        </span>
-                      </div>
-                    </SettleSecureTooltip>
+                    <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+                      <Shield className="h-4 w-4 text-primary" />
+                      <span className="text-xs text-muted-foreground font-medium">
+                        Protected by <span className="text-primary font-semibold">SettleSecure</span>
+                      </span>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -910,14 +908,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
       {/* Security Branding Footer - Hidden on mobile */}
       <div className="hidden md:block fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40">
-        <SettleSecureTooltip>
-          <div className="flex items-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm cursor-help hover:bg-background/90 transition-colors">
-            <Shield className="h-4 w-4 text-primary" />
-            <span className="text-xs text-muted-foreground font-medium">
-              Protected by <span className="text-primary font-semibold">SettleSecure</span>
-            </span>
-          </div>
-        </SettleSecureTooltip>
+        <div className="flex items-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+          <Shield className="h-4 w-4 text-primary" />
+          <span className="text-xs text-muted-foreground font-medium">
+            Protected by <span className="text-primary font-semibold">SettleSecure</span>
+          </span>
+        </div>
       </div>
 
       {/* Google OAuth Confirmation Modal */}
