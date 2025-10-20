@@ -161,7 +161,7 @@ export default function ManageSettlementsTab({
 
   if (!db) {
     return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6 pb-4 border-b">
           <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
@@ -176,7 +176,7 @@ export default function ManageSettlementsTab({
   
   return (
     <>
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1">

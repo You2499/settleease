@@ -438,7 +438,7 @@ export default function TestErrorBoundaryTab({
                     const isActive = crashStates[test.id];
 
                     return (
-                      <Card key={test.id} className="overflow-hidden transition-all duration-200 hover:shadow-md">
+                      <Card key={test.id} className="overflow-hidden">
                         <CardHeader className="pb-3">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                             <div className="space-y-2">
@@ -471,7 +471,7 @@ export default function TestErrorBoundaryTab({
                                 onClick={() => navigateToTab(test.tabName)}
                                 variant="outline"
                                 size={isMobile ? "sm" : "sm"}
-                                className="flex items-center gap-2 flex-1 md:flex-initial transition-all duration-200 hover:shadow-sm"
+                                className="flex items-center gap-2 flex-1 md:flex-initial"
                                 disabled={!isActive}
                               >
                                 <IconComponent className="h-3 w-3 md:h-4 md:w-4" />
@@ -481,7 +481,7 @@ export default function TestErrorBoundaryTab({
                                 onClick={() => toggleCrash(test.id)}
                                 variant={isActive ? "destructive" : "default"}
                                 size={isMobile ? "sm" : "sm"}
-                                className="flex items-center gap-2 flex-1 md:flex-initial transition-all duration-200 hover:shadow-sm"
+                                className="flex items-center gap-2 flex-1 md:flex-initial"
                               >
                                 <Zap className="h-3 w-3 md:h-4 md:w-4" />
                                 <span className="text-xs md:text-sm">{isActive ? 'Stop Crash' : 'Force Crash'}</span>

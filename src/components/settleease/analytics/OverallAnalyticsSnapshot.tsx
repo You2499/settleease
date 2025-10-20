@@ -22,7 +22,7 @@ export default function OverallAnalyticsSnapshot({
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
 
   return (
-    <Card className="shadow-md rounded-lg">
+    <Card className="shadow-lg rounded-lg">
       <CardHeader className="px-4 sm:px-5 pt-4 sm:pt-5 pb-2">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <Sigma className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />

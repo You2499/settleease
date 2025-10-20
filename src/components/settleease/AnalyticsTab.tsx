@@ -556,7 +556,7 @@ export default function AnalyticsTab({
           <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
           </TabsContent>
           <TabsContent value="personal" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
-            <Card className="mb-4 sm:mb-6 px-3 py-2 sm:px-4 sm:py-3 shadow-md"> {/* Adjusted padding */}
+            <Card className="mb-4 sm:mb-6 px-3 py-2 sm:px-4 sm:py-3 shadow-lg"> {/* Adjusted padding */}
               <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
                 Select Person for Detailed Insights:
               </Label>
@@ -574,7 +574,7 @@ export default function AnalyticsTab({
               </Select>
             </Card>
              {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
-              <Card className="shadow-md rounded-lg text-center py-6">
+              <Card className="shadow-lg rounded-lg text-center py-6">
                 <CardContent className="pt-0">
                   <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
                 </CardContent>
@@ -584,7 +584,7 @@ export default function AnalyticsTab({
         </Tabs>
 
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
-            <Card className="shadow-md rounded-lg text-center py-6">
+            <Card className="shadow-lg rounded-lg text-center py-6">
                 <CardContent className="pt-0"> 
                 <p className="text-sm sm:text-md text-muted-foreground">
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 

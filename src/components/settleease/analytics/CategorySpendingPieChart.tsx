@@ -16,7 +16,7 @@ interface CategorySpendingPieChartProps {
 
 export default function CategorySpendingPieChart({ pieChartData, analyticsViewMode }: CategorySpendingPieChartProps) {
   return (
-    <Card className="shadow-md rounded-lg">
+    <Card className="shadow-lg rounded-lg">
       <CardHeader className="px-4 py-3">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <PieChartIconLucide className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />

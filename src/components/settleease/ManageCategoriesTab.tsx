@@ -252,7 +252,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   if (supabaseInitializationError && !db) {
     return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
             <AlertTriangle className="mr-2 h-5 w-5" /> Error
@@ -269,7 +269,7 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
 
   return (
     <>
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6 pb-4 border-b">
           <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
             <ListChecks className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Categories
