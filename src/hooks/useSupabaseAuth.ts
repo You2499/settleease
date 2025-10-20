@@ -26,6 +26,7 @@ export function useSupabaseAuth() {
   const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
   const [isLoadingRole, setIsLoadingRole] = useState(false);
+  const [hasShownWelcomeToast, setHasShownWelcomeToast] = useState(false);
 
   const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
     if (!db || !userId) return 'user';
@@ -91,6 +92,7 @@ export function useSupabaseAuth() {
       // Always clear local state regardless of error to ensure logout on mobile
       setCurrentUser(null);
       setUserRole(null);
+      setHasShownWelcomeToast(false);
       
       // Clear any stored session data
       if (typeof window !== 'undefined') {
@@ -112,6 +114,7 @@ export function useSupabaseAuth() {
       // Force logout even if there's an error
       setCurrentUser(null);
       setUserRole(null);
+      setHasShownWelcomeToast(false);
     }
   };
 
@@ -143,7 +146,7 @@ export function useSupabaseAuth() {
                 console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
                 
                 // Handle Google OAuth sign-in success toast
-                if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
+                if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN" && !hasShownWelcomeToast) {
                   // Check if this is a Google OAuth user (consistent with getGoogleUserInfo)
                   const isGoogleUser = newAuthUser.app_metadata?.provider === 'google' || 
                                      newAuthUser.user_metadata?.iss === 'https://accounts.google.com' ||
@@ -175,11 +178,15 @@ export function useSupabaseAuth() {
                         variant: "default"
                       });
                     }
+                    
+                    // Mark that we've shown the welcome toast for this session
+                    setHasShownWelcomeToast(true);
                   }
                 }
                 
                 if (!newAuthUser) {
                   setUserRole(null);
+                  setHasShownWelcomeToast(false);
                 }
                 return newAuthUser;
             }
