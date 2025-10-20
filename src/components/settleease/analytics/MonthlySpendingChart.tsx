@@ -81,14 +81,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
     : (isMonthly ? 'Group Expenses Over Time (Monthly)' : 'Group Expenses Over Time (Weekly)');
   const ToggleIcon = isMonthly ? CalendarRange : Calendar;
 
-  // DEBUG: Log chart data
-  console.log('MonthlySpendingChart DEBUG:', {
-    expensesCount: expenses.length,
-    chartDataLength: chartData.length,
-    chartData: chartData,
-    analyticsViewMode,
-    selectedPersonIdForAnalytics
-  });
+
 
   if (chartData.length === 0) {
     return (

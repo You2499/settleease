@@ -74,12 +74,6 @@ export default function AnalyticsTab({
   getCategoryIconFromName,
   settlementPayments,
 }: AnalyticsTabProps) {
-  // DEBUG: Component mounted
-  useEffect(() => {
-    console.log('🔴 AnalyticsTab MOUNTED - This should appear in console!');
-    console.log('🔴 Expenses count:', allExpenses.length);
-  }, []);
-  
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('analytics', 'Analytics Tab crashed: Chart rendering failed with invalid data processing');
@@ -89,22 +83,13 @@ export default function AnalyticsTab({
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
 
   const displayedExpenses = useMemo(() => {
-    console.log('AnalyticsTab DEBUG - displayedExpenses calculation:', {
-      allExpensesCount: allExpenses.length,
-      analyticsViewMode,
-      selectedPersonIdForAnalytics
-    });
-    
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      const filtered = allExpenses.filter(exp => {
+      return allExpenses.filter(exp => {
         const personPaid = exp.paid_by.some(p => p.personId === selectedPersonIdForAnalytics);
         const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001);
         return personPaid || personShared;
       });
-      console.log('AnalyticsTab DEBUG - Filtered for personal:', filtered.length);
-      return filtered;
     }
-    console.log('AnalyticsTab DEBUG - Returning all expenses:', allExpenses.length);
     return allExpenses;
   }, [allExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
