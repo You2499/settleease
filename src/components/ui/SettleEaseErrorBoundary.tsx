@@ -115,7 +115,7 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
                         Test
                       </Badge>
                     )}
-                    <Badge variant="destructive" className={`${styles.badge} animate-pulse`}>
+                    <Badge variant="destructive" className={`${styles.badge}`}>
                       <Shield className="w-3 h-3 mr-1" />
                       Protected
                     </Badge>
@@ -219,7 +219,7 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
                     Test
                   </Badge>
                 )}
-                <Badge variant="destructive" className={`${styles.badge} animate-pulse`}>
+                <Badge variant="destructive" className={`${styles.badge}`}>
                   <Shield className="w-3 h-3 mr-1" />
                   Protected
                 </Badge>
