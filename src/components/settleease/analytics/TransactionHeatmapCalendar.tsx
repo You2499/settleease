@@ -243,7 +243,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-1 mb-2">
                         {dayNames.map(day => (
-                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center">
+                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center w-8">
                                 {day}
                             </div>
                         ))}
@@ -263,30 +263,31 @@ export default function TransactionHeatmapCalendar({
 
                             // Heatmap colors - from light to dark based on transaction density
                             const getHeatmapColor = (level: number) => {
-                                if (!isCurrentMonth) return 'bg-muted/20 text-muted-foreground/40';
+                                if (!isCurrentMonth) return 'text-muted-foreground/40 opacity-50';
 
                                 switch (level) {
-                                    case 0: return 'bg-background hover:bg-muted/50';
-                                    case 1: return 'bg-primary/20 hover:bg-primary/30 text-primary-foreground';
-                                    case 2: return 'bg-primary/40 hover:bg-primary/50 text-primary-foreground';
-                                    case 3: return 'bg-primary/60 hover:bg-primary/70 text-primary-foreground';
-                                    case 4: return 'bg-primary/80 hover:bg-primary/90 text-primary-foreground';
-                                    default: return 'bg-background hover:bg-muted/50';
+                                    case 0: return 'hover:bg-muted hover:text-foreground focus:outline-none focus:bg-muted focus:text-foreground active:bg-muted/80';
+                                    case 1: return 'bg-primary/20 hover:bg-primary/30 text-primary-foreground focus:outline-none focus:bg-primary/30 active:bg-primary/40';
+                                    case 2: return 'bg-primary/40 hover:bg-primary/50 text-primary-foreground focus:outline-none focus:bg-primary/50 active:bg-primary/60';
+                                    case 3: return 'bg-primary/60 hover:bg-primary/70 text-primary-foreground focus:outline-none focus:bg-primary/70 active:bg-primary/80';
+                                    case 4: return 'bg-primary/80 hover:bg-primary/90 text-primary-foreground focus:outline-none focus:bg-primary/90 active:bg-primary';
+                                    default: return 'hover:bg-muted hover:text-foreground focus:outline-none focus:bg-muted focus:text-foreground active:bg-muted/80';
                                 }
                             };
 
                             return (
                                 <div key={index} className="relative group">
-                                    <div
+                                    <button
                                         className={cn(
-                                            "h-8 w-8 p-0 font-normal rounded-md transition-all duration-200 cursor-pointer",
+                                            "h-8 w-8 p-0 font-normal rounded-md transition-colors cursor-pointer",
                                             "flex items-center justify-center text-xs",
                                             getHeatmapColor(intensityLevel),
-                                            isToday && "ring-2 ring-primary ring-offset-1 ring-offset-background"
+                                            isToday && !dayData && "bg-muted/60 text-foreground font-medium",
+                                            isToday && dayData && "font-medium"
                                         )}
                                     >
                                         {date.getDate()}
-                                    </div>
+                                    </button>
 
                                     {/* Tooltip */}
                                     {dayData && (

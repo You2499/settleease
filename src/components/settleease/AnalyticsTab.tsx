@@ -631,12 +631,23 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <TransactionHeatmapCalendar
-              expenses={displayedExpenses}
-              analyticsViewMode={analyticsViewMode}
-              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              peopleMap={peopleMap}
-            />
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <TransactionHeatmapCalendar
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                peopleMap={peopleMap}
+              />
+              <Card className="shadow-lg rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/10">
+                <CardContent className="flex flex-col items-center justify-center text-center p-6 h-full min-h-[400px]">
+                  <BarChartBig className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+                  <p className="font-medium text-base sm:text-lg mb-2 text-muted-foreground">More Visualizations Coming Soon</p>
+                  <p className="text-sm sm:text-base max-w-md text-muted-foreground/80">
+                    We're working on additional charts and insights to help you better understand your expense patterns.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
             
             {topExpensesData.length > 0 && (
               <TopExpensesTable
