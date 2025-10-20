@@ -80,7 +80,7 @@ export function FixedCalendar({ selected, onSelect, className }: FixedCalendarPr
     };
 
     return (
-        <div className={cn("p-3 border rounded-lg bg-background w-[280px]", className)}>
+        <div className={cn("p-3 border rounded-lg bg-background", className)}>
             {/* Calendar Header */}
             <div className="flex justify-between items-center mb-4">
                 <Button
@@ -107,7 +107,7 @@ export function FixedCalendar({ selected, onSelect, className }: FixedCalendarPr
             {/* Day Headers */}
             <div className="grid grid-cols-7 gap-1 mb-2">
                 {dayNames.map(day => (
-                    <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center">
+                    <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center w-8">
                         {day}
                     </div>
                 ))}
@@ -116,7 +116,7 @@ export function FixedCalendar({ selected, onSelect, className }: FixedCalendarPr
             {/* Calendar Grid */}
             <div className="grid grid-cols-7 gap-1">
                 {calendarDays.map((date, index) => {
-                    if (!date) return <div key={index} className="h-9 w-9" />;
+                    if (!date) return <div key={index} className="h-8 w-8" />;
 
                     const isCurrentMonth = date.getMonth() === currentMonth.getMonth();
                     const isToday = date.toDateString() === new Date().toDateString();
@@ -127,8 +127,8 @@ export function FixedCalendar({ selected, onSelect, className }: FixedCalendarPr
                             key={index}
                             onClick={() => handleDateSelect(date)}
                             className={cn(
-                                "h-9 w-9 p-0 font-normal rounded-md transition-colors cursor-pointer",
-                                "flex items-center justify-center text-sm",
+                                "h-8 w-8 p-0 font-normal rounded-md transition-colors cursor-pointer",
+                                "flex items-center justify-center text-xs",
                                 "hover:bg-muted hover:text-foreground",
                                 "focus:outline-none focus:bg-muted focus:text-foreground",
                                 "active:bg-muted/80",
