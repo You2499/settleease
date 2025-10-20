@@ -163,11 +163,7 @@ export default function DebtCreditBalanceOverTime({
           {isPositive ? <TrendingUp className={ANALYTICS_STYLES.icon} /> : <TrendingDown className={ANALYTICS_STYLES.icon} />}
           Your Balance Over Time
         </CardTitle>
-        <div className={ANALYTICS_STYLES.subtitle}>
-          Current balance: <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
-            {formatCurrency(currentBalance)}
-          </span> {isPositive ? '(you are owed)' : '(you owe)'}
-        </div>
+
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">

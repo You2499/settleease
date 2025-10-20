@@ -92,9 +92,7 @@ export default function ExpenseVelocity({
           <Zap className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-        <div className={ANALYTICS_STYLES.subtitle}>
-          Weekly expense creation rate • Avg: {averageVelocity.toFixed(1)} expenses/week
-        </div>
+
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">

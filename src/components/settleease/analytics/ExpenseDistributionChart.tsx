@@ -76,10 +76,10 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMargins}>
+          <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMarginsCompact}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
-            <YAxis type="category" dataKey="range" width={65} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
+            <YAxis type="category" dataKey="range" width={55} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 7 }} />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
                 formatter={(value: number) => [value, "Number of Expenses/Shares"]} />

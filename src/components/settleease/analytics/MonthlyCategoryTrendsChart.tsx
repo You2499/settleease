@@ -147,9 +147,7 @@ export default function MonthlyCategoryTrendsChart({
                     <TrendingUp className={ANALYTICS_STYLES.icon} />
                     {chartTitle}
                 </CardTitle>
-                <div className={ANALYTICS_STYLES.subtitle}>
-                    Monthly spending trends across top {topCategories.length} categories
-                </div>
+
             </CardHeader>
             <CardContent className={ANALYTICS_STYLES.chartContent}>
                 <ResponsiveContainer width="100%" height="100%">

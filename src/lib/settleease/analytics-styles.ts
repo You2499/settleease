@@ -18,7 +18,8 @@ export const ANALYTICS_STYLES = {
   
   // Chart specific
   chartContainer: "w-full h-full flex items-center justify-center",
-  chartMargins: { top: 5, right: 10, left: -15, bottom: 0 },
+  chartMargins: { top: 5, right: 10, left: -10, bottom: 0 },
+  chartMarginsCompact: { top: 5, right: 5, left: -5, bottom: 0 },
   
   // Empty state
   emptyState: "text-muted-foreground text-xs sm:text-sm text-center",

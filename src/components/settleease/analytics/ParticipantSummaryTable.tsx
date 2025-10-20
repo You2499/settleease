@@ -40,24 +40,24 @@ export default function ParticipantSummaryTable({
               <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Paid</TableHead>
               <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Shared</TableHead>
               <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden sm:table-cell`}>Net</TableHead>
-              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden md:table-cell`}># Paid</TableHead>
-              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden md:table-cell`}># Shared</TableHead>
-              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden lg:table-cell`}>Avg. Share</TableHead>
-              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden sm:table-cell`}>Top Category (Shared)</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden sm:table-cell`}># Paid</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden sm:table-cell`}># Shared</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden md:table-cell`}>Avg. Share</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden md:table-cell`}>Top Category (Shared)</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {detailedParticipantAnalytics.map(p => (
                 <TableRow key={p.name}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[80px] sm:max-w-xs`}>{p.name}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[100px] sm:max-w-xs`}>{p.name}</TableCell>
                   <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right`}>{formatCurrency(p.totalPaid)}</TableCell>
                   <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right`}>{formatCurrency(p.totalShared)}</TableCell>
                   <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold hidden sm:table-cell ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {formatCurrency(p.netBalance)}
                   </TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell`}>{p.expensesPaidCount}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell`}>{p.expensesSharedCount}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden lg:table-cell`}>{formatCurrency(p.averageShareAmount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} truncate max-w-[100px] sm:max-w-[150px] hidden sm:table-cell`} title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell`}>{p.expensesPaidCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell`}>{p.expensesSharedCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell`}>{formatCurrency(p.averageShareAmount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} truncate max-w-[120px] sm:max-w-[150px] hidden md:table-cell`} title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
                     {p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name}` : 'N/A'}
                   </TableCell>
                 </TableRow>

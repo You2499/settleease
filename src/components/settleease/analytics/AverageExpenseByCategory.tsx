@@ -118,16 +118,14 @@ export default function AverageExpenseByCategory({
           <Target className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-        <div className={ANALYTICS_STYLES.subtitle}>
-          Average expense amount per category
-        </div>
+
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             data={chartData} 
             layout="horizontal"
-            margin={ANALYTICS_STYLES.chartMargins}
+            margin={ANALYTICS_STYLES.chartMarginsCompact}
           >
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
@@ -138,8 +136,8 @@ export default function AverageExpenseByCategory({
             <YAxis 
               type="category"
               dataKey="category"
-              tick={ANALYTICS_STYLES.axisTick} 
-              width={80}
+              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
+              width={70}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}

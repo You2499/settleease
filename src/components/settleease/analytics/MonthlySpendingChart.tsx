@@ -99,20 +99,22 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
 
   return (
     <Card className={ANALYTICS_STYLES.card}>
-      <CardHeader className={`${ANALYTICS_STYLES.header} flex flex-row items-center justify-between`}>
-        <CardTitle className={ANALYTICS_STYLES.title}>
-          <TrendingUp className={ANALYTICS_STYLES.icon} />
-          {chartLabel}
-        </CardTitle>
-        <Button
-          size="icon"
-          variant="ghost"
-          className="ml-2 h-8 w-8 text-muted-foreground hover:text-primary"
-          onClick={() => setView(isMonthly ? 'weekly' : 'monthly')}
-          aria-label={isMonthly ? 'Switch to weekly view' : 'Switch to monthly view'}
-        >
-          <ToggleIcon className="h-5 w-5" />
-        </Button>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <div className="flex items-center justify-between">
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <TrendingUp className={ANALYTICS_STYLES.icon} />
+            {chartLabel}
+          </CardTitle>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary"
+            onClick={() => setView(isMonthly ? 'weekly' : 'monthly')}
+            aria-label={isMonthly ? 'Switch to weekly view' : 'Switch to monthly view'}
+          >
+            <ToggleIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
