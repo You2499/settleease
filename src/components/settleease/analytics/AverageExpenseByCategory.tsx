@@ -5,7 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
-import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
+import { createEmptyState } from '@/lib/settleease/analytics-helpers';
 import type { Expense } from '@/lib/settleease/types';
 
 interface AverageExpenseByCategoryProps {

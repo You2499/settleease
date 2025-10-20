@@ -4,7 +4,8 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChartBig } from 'lucide-react';
-import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
+import { createEmptyState } from '@/lib/settleease/analytics-helpers';
 import type { Expense, ExpenseAmountDistributionData } from '@/lib/settleease/types';
 
 interface ExpenseDistributionChartProps {

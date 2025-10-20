@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
+import { createEmptyState } from '@/lib/settleease/analytics-helpers';
 import type { Expense } from '@/lib/settleease/types';
 
 interface TransactionHeatmapCalendarProps {

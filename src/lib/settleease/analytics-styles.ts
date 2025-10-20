@@ -1,5 +1,3 @@
-import React from 'react';
-
 /**
  * Analytics Design System Constants
  * 
@@ -89,16 +87,3 @@ export const ANALYTICS_STYLES = {
  * 7. Colors: Use positiveColor/negativeColor for balance indicators instead of hardcoded values
  */
 
-// Helper function to create consistent empty state
-export const createEmptyState = (
-  _title: string,
-  IconComponent: React.ComponentType<any>,
-  message: string
-) => {
-  return React.createElement('div', { className: ANALYTICS_STYLES.chartContainer },
-    React.createElement('div', { className: 'text-center' },
-      React.createElement(IconComponent, { className: 'h-12 w-12 mx-auto mb-4 text-primary/30' }),
-      React.createElement('p', { className: ANALYTICS_STYLES.emptyState }, message)
-    )
-  );
-};

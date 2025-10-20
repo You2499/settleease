@@ -5,7 +5,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
-import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
+import { createEmptyState } from '@/lib/settleease/analytics-helpers';
 import type { Expense, SettlementPayment } from '@/lib/settleease/types';
 
 interface DebtCreditBalanceOverTimeProps {

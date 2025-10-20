@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
-import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
+import { createEmptyState } from '@/lib/settleease/analytics-helpers';
 import type { Expense } from '@/lib/settleease/types';
 
 interface MonthlyCategoryTrendsChartProps {
