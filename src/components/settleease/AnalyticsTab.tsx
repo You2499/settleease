@@ -29,6 +29,12 @@ import ParticipantSummaryTable from './analytics/ParticipantSummaryTable';
 import CategorySpendingPieChart from './analytics/CategorySpendingPieChart';
 import ExpenseDistributionChart from './analytics/ExpenseDistributionChart';
 import TransactionHeatmapCalendar from './analytics/TransactionHeatmapCalendar';
+import MonthlyCategoryTrendsChart from './analytics/MonthlyCategoryTrendsChart';
+import ExpenseFrequencyTimeline from './analytics/ExpenseFrequencyTimeline';
+import ExpenseSizeDistribution from './analytics/ExpenseSizeDistribution';
+import AverageExpenseByCategory from './analytics/AverageExpenseByCategory';
+import ExpenseVelocity from './analytics/ExpenseVelocity';
+import DebtCreditBalanceOverTime from './analytics/DebtCreditBalanceOverTime';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 
@@ -638,16 +644,46 @@ export default function AnalyticsTab({
                 selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
                 peopleMap={peopleMap}
               />
-              <Card className="shadow-lg rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/10">
-                <CardContent className="flex flex-col items-center justify-center text-center p-6 h-full min-h-[400px]">
-                  <BarChartBig className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                  <p className="font-medium text-base sm:text-lg mb-2 text-muted-foreground">More Visualizations Coming Soon</p>
-                  <p className="text-sm sm:text-base max-w-md text-muted-foreground/80">
-                    We're working on additional charts and insights to help you better understand your expense patterns.
-                  </p>
-                </CardContent>
-              </Card>
+              <MonthlyCategoryTrendsChart
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
             </div>
+
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <ExpenseFrequencyTimeline
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
+              <ExpenseVelocity
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
+              <ExpenseSizeDistribution
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
+              <AverageExpenseByCategory
+                expenses={displayedExpenses}
+                analyticsViewMode={analyticsViewMode}
+                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              />
+            </div>
+
+            <DebtCreditBalanceOverTime
+              expenses={displayedExpenses}
+              settlementPayments={settlementPayments}
+              analyticsViewMode={analyticsViewMode}
+              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              peopleMap={peopleMap}
+            />
             
             {topExpensesData.length > 0 && (
               <TopExpensesTable
