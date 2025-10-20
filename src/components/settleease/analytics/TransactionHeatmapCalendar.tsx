@@ -5,14 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import type { Expense, SettlementPayment } from '@/lib/settleease/types';
+import type { Expense } from '@/lib/settleease/types';
 
 interface TransactionHeatmapCalendarProps {
     expenses: Expense[];
     analyticsViewMode: 'group' | 'personal';
     selectedPersonIdForAnalytics?: string | null;
     peopleMap: Record<string, string>;
-    settlementPayments: SettlementPayment[];
 }
 
 interface DayData {
@@ -30,8 +29,7 @@ export default function TransactionHeatmapCalendar({
     expenses,
     analyticsViewMode,
     selectedPersonIdForAnalytics,
-    peopleMap,
-    settlementPayments
+    peopleMap
 }: TransactionHeatmapCalendarProps) {
     const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
 
@@ -78,55 +76,10 @@ export default function TransactionHeatmapCalendar({
             }
         });
 
-        // Process settlement payments
-        settlementPayments.forEach(payment => {
-            const paymentDate = new Date(payment.settled_at);
-            const dateKey = paymentDate.toDateString();
 
-            let amount = 0;
-            let shouldInclude = false;
-            let description = '';
-
-            if (analyticsViewMode === 'group') {
-                amount = Number(payment.amount_settled);
-                shouldInclude = true;
-                description = `Payment: ${peopleMap[payment.debtor_id]} → ${peopleMap[payment.creditor_id]}`;
-            } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-                // For personal view, include if the person was involved in the payment
-                if (payment.debtor_id === selectedPersonIdForAnalytics || payment.creditor_id === selectedPersonIdForAnalytics) {
-                    amount = Number(payment.amount_settled);
-                    shouldInclude = true;
-                    if (payment.debtor_id === selectedPersonIdForAnalytics) {
-                        description = `Payment to ${peopleMap[payment.creditor_id]}`;
-                    } else {
-                        description = `Payment from ${peopleMap[payment.debtor_id]}`;
-                    }
-                }
-            }
-
-            if (shouldInclude) {
-                if (!dataMap.has(dateKey)) {
-                    dataMap.set(dateKey, {
-                        date: paymentDate,
-                        transactionCount: 0,
-                        totalAmount: 0,
-                        transactions: []
-                    });
-                }
-
-                const dayData = dataMap.get(dateKey)!;
-                dayData.transactionCount += 1;
-                dayData.totalAmount += amount;
-                dayData.transactions.push({
-                    description: description,
-                    amount: amount,
-                    category: payment.notes ? 'Custom Payment' : 'Settlement Payment'
-                });
-            }
-        });
 
         return dataMap;
-    }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, settlementPayments, peopleMap]);
+    }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, peopleMap]);
 
     // Calculate intensity levels for heatmap coloring
     const { maxTransactionCount } = useMemo(() => {
@@ -230,12 +183,12 @@ export default function TransactionHeatmapCalendar({
             <CardHeader className="pb-4">
                 <CardTitle className="flex items-center text-lg sm:text-xl font-bold text-primary">
                     <CalendarDays className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
-                    Transaction Heatmap
+                    Expense Activity Heatmap
                 </CardTitle>
                 <div className="text-sm text-muted-foreground">
                     {analyticsViewMode === 'group'
-                        ? 'Group transaction activity by day'
-                        : `${peopleMap[selectedPersonIdForAnalytics!] || 'Personal'} transaction activity by day`
+                        ? 'Group expense activity by day (settlements excluded)'
+                        : `${peopleMap[selectedPersonIdForAnalytics!] || 'Personal'} expense activity by day (settlements excluded)`
                     }
                 </div>
             </CardHeader>
@@ -246,7 +199,7 @@ export default function TransactionHeatmapCalendar({
                         <div className="text-lg font-semibold text-primary">
                             {monthStats.totalTransactions}
                         </div>
-                        <div className="text-xs text-muted-foreground">Transactions</div>
+                        <div className="text-xs text-muted-foreground">Expenses</div>
                     </div>
                     <div className="text-center">
                         <div className="text-lg font-semibold text-primary">
@@ -346,7 +299,7 @@ export default function TransactionHeatmapCalendar({
                                                 })}
                                             </div>
                                             <div className="text-xs text-muted-foreground mb-2">
-                                                {dayData.transactionCount} transaction{dayData.transactionCount !== 1 ? 's' : ''} •
+                                                {dayData.transactionCount} expense{dayData.transactionCount !== 1 ? 's' : ''} •
                                                 ${dayData.totalAmount.toFixed(2)}
                                             </div>
                                             <div className="space-y-1 max-h-32 overflow-y-auto">
@@ -396,7 +349,7 @@ export default function TransactionHeatmapCalendar({
                 {expenses.length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                         <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p className="text-sm">No transaction data available</p>
+                        <p className="text-sm">No expense data available</p>
                     </div>
                 )}
             </CardContent>

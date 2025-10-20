@@ -636,7 +636,6 @@ export default function AnalyticsTab({
               analyticsViewMode={analyticsViewMode}
               selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
               peopleMap={peopleMap}
-              settlementPayments={settlementPayments}
             />
             
             {topExpensesData.length > 0 && (

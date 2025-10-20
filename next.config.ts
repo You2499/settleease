@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Optimize for deployment
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
+  // Reduce bundle size
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
 };
 
 export default nextConfig;
