@@ -74,6 +74,12 @@ export default function AnalyticsTab({
   getCategoryIconFromName,
   settlementPayments,
 }: AnalyticsTabProps) {
+  // DEBUG: Component mounted
+  useEffect(() => {
+    console.log('🔴 AnalyticsTab MOUNTED - This should appear in console!');
+    console.log('🔴 Expenses count:', allExpenses.length);
+  }, []);
+  
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('analytics', 'Analytics Tab crashed: Chart rendering failed with invalid data processing');
