@@ -30,7 +30,7 @@ export default function OverallAnalyticsSnapshot({
           {analyticsViewMode === 'personal' && personName ? `${personName}'s Snapshot` : 'Overall Snapshot'}
         </CardTitle>
       </CardHeader>
-      <CardContent className={`${ANALYTICS_STYLES.snapshotContent} grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3 text-xs sm:text-sm`}>
+      <CardContent className={`${ANALYTICS_STYLES.snapshotContent} grid grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm`}>
         <div className={ANALYTICS_STYLES.snapshotCard}>
           <p className={ANALYTICS_STYLES.snapshotLabel}>Total Spent {analyticsViewMode === 'personal' ? '(Your Share)' : '(Group Total)'}</p>
           <p className={`${ANALYTICS_STYLES.snapshotValue} text-accent`}>{formatCurrency(enhancedOverallStats.totalAmount)}</p>

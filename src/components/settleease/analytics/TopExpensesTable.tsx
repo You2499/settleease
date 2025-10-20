@@ -37,11 +37,11 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
             <TableBody>
               {topExpensesData.map(exp => (
                 <TableRow key={exp.id}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[100px] sm:max-w-xs`} title={exp.description}>{exp.description}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[120px] sm:max-w-[200px]`} title={exp.description}>{exp.description}</TableCell>
                   <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary`}>{formatCurrency(exp.total_amount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell`}>{exp.category}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate max-w-[100px]`} title={exp.category}>{exp.category}</TableCell>
                   <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} truncate max-w-[80px] sm:max-w-[150px] hidden sm:table-cell`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate max-w-[150px]`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
                     {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
                   </TableCell>
                 </TableRow>

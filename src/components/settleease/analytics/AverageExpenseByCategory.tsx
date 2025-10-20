@@ -118,7 +118,6 @@ export default function AverageExpenseByCategory({
           <Target className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
@@ -136,7 +135,7 @@ export default function AverageExpenseByCategory({
             <YAxis 
               type="category"
               dataKey="category"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
+              tick={ANALYTICS_STYLES.axisTickSmall} 
               width={70}
             />
             <Tooltip 

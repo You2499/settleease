@@ -78,13 +78,13 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMarginsCompact}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
-            <YAxis type="category" dataKey="range" width={55} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 7 }} />
+            <XAxis type="number" allowDecimals={false} tick={ANALYTICS_STYLES.axisTickSmall} />
+            <YAxis type="category" dataKey="range" width={55} tick={{ ...ANALYTICS_STYLES.axisTickSmall, fontSize: 7 }} />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
                 formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={15} />
+            <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={ANALYTICS_STYLES.barSizeCompact} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

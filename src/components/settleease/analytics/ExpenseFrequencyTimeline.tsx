@@ -78,7 +78,6 @@ export default function ExpenseFrequencyTimeline({
           <Activity className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">

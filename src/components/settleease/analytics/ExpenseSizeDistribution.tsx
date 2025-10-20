@@ -93,7 +93,6 @@ export default function ExpenseSizeDistribution({
           <BarChart3 className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
@@ -101,7 +100,7 @@ export default function ExpenseSizeDistribution({
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
               dataKey="range" 
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
+              tick={ANALYTICS_STYLES.axisTickSmall} 
               angle={-45}
               textAnchor="end"
               height={50}

@@ -76,7 +76,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
                 {...ANALYTICS_STYLES.tooltip}
                 formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={20} />
+            <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

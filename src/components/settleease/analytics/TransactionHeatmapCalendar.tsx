@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -186,72 +186,66 @@ export default function TransactionHeatmapCalendar({
                     <CalendarDays className={ANALYTICS_STYLES.icon} />
                     Expense Activity Heatmap
                 </CardTitle>
-                <div className={ANALYTICS_STYLES.subtitle}>
+                <CardDescription className={ANALYTICS_STYLES.subtitle}>
                     {analyticsViewMode === 'group'
                         ? 'Group expense activity by day (settlements excluded)'
                         : `${peopleMap[selectedPersonIdForAnalytics!] || 'Personal'} expense activity by day (settlements excluded)`
                     }
-                </div>
+                </CardDescription>
             </CardHeader>
             <CardContent className={ANALYTICS_STYLES.chartContent}>
                 {/* Month Stats */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 p-2 sm:p-3 bg-muted/30 rounded-lg mb-4">
-                    <div className="text-center">
-                        <div className="text-sm sm:text-lg font-semibold text-primary">
-                            {monthStats.totalTransactions}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Expenses</div>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                    <div className={ANALYTICS_STYLES.snapshotCard}>
+                        <p className={ANALYTICS_STYLES.snapshotLabel}>Expenses</p>
+                        <p className={ANALYTICS_STYLES.snapshotValue}>{monthStats.totalTransactions}</p>
                     </div>
-                    <div className="text-center">
-                        <div className="text-sm sm:text-lg font-semibold text-primary">
-                            ${monthStats.totalAmount.toFixed(0)}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Total Amount</div>
+                    <div className={ANALYTICS_STYLES.snapshotCard}>
+                        <p className={ANALYTICS_STYLES.snapshotLabel}>Total Amount</p>
+                        <p className={ANALYTICS_STYLES.snapshotValue}>${monthStats.totalAmount.toFixed(0)}</p>
                     </div>
-                    <div className="text-center">
-                        <div className="text-sm sm:text-lg font-semibold text-primary">
-                            {monthStats.activeDays}
-                        </div>
-                        <div className="text-xs text-muted-foreground">Active Days</div>
+                    <div className={ANALYTICS_STYLES.snapshotCard}>
+                        <p className={ANALYTICS_STYLES.snapshotLabel}>Active Days</p>
+                        <p className={ANALYTICS_STYLES.snapshotValue}>{monthStats.activeDays}</p>
                     </div>
                 </div>
 
                 {/* Calendar */}
-                <div className="p-2 sm:p-3 border rounded-lg bg-background max-w-sm sm:max-w-md mx-auto">
+                <div className="border rounded-lg bg-background max-w-sm sm:max-w-md mx-auto p-3">
                     {/* Calendar Header */}
-                    <div className="flex justify-between items-center mb-3 sm:mb-4">
+                    <div className="flex justify-between items-center mb-4">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={goToPreviousMonth}
-                            className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                            className="h-7 w-7 p-0"
                         >
-                            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <ChevronLeft className="h-4 w-4" />
                         </Button>
-                        <h3 className="text-xs sm:text-sm font-medium">
+                        <h3 className="text-sm font-medium">
                             {monthNames[selectedMonth.getMonth()]} {selectedMonth.getFullYear()}
                         </h3>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={goToNextMonth}
-                            className="h-6 w-6 sm:h-7 sm:w-7 p-0"
+                            className="h-7 w-7 p-0"
                         >
-                            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
 
                     {/* Day Headers */}
-                    <div className="grid grid-cols-7 gap-0.5 sm:gap-1 mb-2">
+                    <div className="grid grid-cols-7 gap-1 mb-2">
                         {dayNames.map(day => (
-                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-5 sm:h-6 flex items-center justify-center w-6 sm:w-8">
+                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center w-8">
                                 {day}
                             </div>
                         ))}
                     </div>
 
                     {/* Calendar Grid */}
-                    <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
+                    <div className="grid grid-cols-7 gap-1">
                         {calendarDays.map((date, index) => {
                             if (!date) return <div key={index} className="h-8 w-8" />;
 
@@ -280,7 +274,7 @@ export default function TransactionHeatmapCalendar({
                                 <div key={index} className="relative group">
                                     <button
                                         className={cn(
-                                            "h-6 w-6 sm:h-8 sm:w-8 p-0 font-normal rounded-sm sm:rounded-md transition-colors cursor-pointer",
+                                            "h-8 w-8 p-0 font-normal rounded-md transition-colors cursor-pointer",
                                             "flex items-center justify-center text-xs",
                                             getHeatmapColor(intensityLevel),
                                             isToday && !dayData && "bg-muted/60 text-foreground font-medium",

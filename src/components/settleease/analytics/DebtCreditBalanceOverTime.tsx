@@ -163,7 +163,6 @@ export default function DebtCreditBalanceOverTime({
           {isPositive ? <TrendingUp className={ANALYTICS_STYLES.icon} /> : <TrendingDown className={ANALYTICS_STYLES.icon} />}
           Your Balance Over Time
         </CardTitle>
-
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
@@ -199,7 +198,7 @@ export default function DebtCreditBalanceOverTime({
               type="monotone" 
               dataKey="balance" 
               name="Your Balance"
-              stroke={isPositive ? "hsl(142, 76%, 36%)" : "hsl(0, 84%, 60%)"} 
+              stroke={isPositive ? ANALYTICS_STYLES.positiveColor : ANALYTICS_STYLES.negativeColor} 
               strokeWidth={2} 
               dot={{ r: 3 }} 
               activeDot={{ r: 5 }} 

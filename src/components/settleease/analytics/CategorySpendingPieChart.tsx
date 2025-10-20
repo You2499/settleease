@@ -29,7 +29,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         {pieChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+            <RechartsPieChart margin={ANALYTICS_STYLES.chartMarginsPie}>
               <Pie
                 data={pieChartData}
                 dataKey="totalAmount"
@@ -52,7 +52,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
             </RechartsPieChart>
           </ResponsiveContainer>
         ) : (
-          createEmptyState(title, PieChartIconLucide, "No category data to display for this view.")
+          createEmptyState(title, PieChartIconLucide, "No category spending data available.")
         )}
       </CardContent>
     </Card>

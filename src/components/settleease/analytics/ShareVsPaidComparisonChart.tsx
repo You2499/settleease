@@ -58,8 +58,8 @@ export default function ShareVsPaidComparisonChart({
               {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number) => [formatCurrency(value), 'Amount']} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={20} />
-            <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={20} />
+            <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />
+            <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
