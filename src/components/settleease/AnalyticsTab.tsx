@@ -83,13 +83,22 @@ export default function AnalyticsTab({
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
 
   const displayedExpenses = useMemo(() => {
+    console.log('AnalyticsTab DEBUG - displayedExpenses calculation:', {
+      allExpensesCount: allExpenses.length,
+      analyticsViewMode,
+      selectedPersonIdForAnalytics
+    });
+    
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      return allExpenses.filter(exp => {
+      const filtered = allExpenses.filter(exp => {
         const personPaid = exp.paid_by.some(p => p.personId === selectedPersonIdForAnalytics);
         const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001);
         return personPaid || personShared;
       });
+      console.log('AnalyticsTab DEBUG - Filtered for personal:', filtered.length);
+      return filtered;
     }
+    console.log('AnalyticsTab DEBUG - Returning all expenses:', allExpenses.length);
     return allExpenses;
   }, [allExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 

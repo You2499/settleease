@@ -16,6 +16,12 @@ interface SpendingByDayChartProps {
 
 export default function SpendingByDayChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: SpendingByDayChartProps) {
   const spendingByDayOfWeekData: SpendingByDayOfWeekData[] = useMemo(() => {
+    console.log('SpendingByDayChart DEBUG - Input:', {
+      expensesCount: expenses.length,
+      analyticsViewMode,
+      selectedPersonIdForAnalytics
+    });
+    
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const spending: Record<string, number> = days.reduce((acc, day) => { acc[day] = 0; return acc; }, {} as Record<string, number>);
     
@@ -37,7 +43,13 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
       }
     });
     
-    return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
+    const result = days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
+    console.log('SpendingByDayChart DEBUG - Output:', {
+      spending,
+      resultLength: result.length,
+      result
+    });
+    return result;
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const title = analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day';
@@ -67,6 +79,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
+        {console.log('SpendingByDayChart DEBUG - Rendering chart with data:', spendingByDayOfWeekData)}
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={spendingByDayOfWeekData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
