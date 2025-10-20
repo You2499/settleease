@@ -152,7 +152,7 @@ export default function AverageExpenseByCategory({
                 color: 'hsl(var(--popover-foreground))' 
               }} 
               labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
-              formatter={(value: number, name: string, props: any) => [
+              formatter={(value: number, _name: string, props: any) => [
                 formatCurrency(value), 
                 `Average (${props.payload.count} expense${props.payload.count !== 1 ? 's' : ''})`
               ]}

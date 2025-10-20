@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from 'lucide-react';
-import { formatCurrency } from '@/lib/settleease/utils';
+// formatCurrency not needed for this component
 import type { Expense } from '@/lib/settleease/types';
 
 interface ExpenseSizeDistributionProps {
