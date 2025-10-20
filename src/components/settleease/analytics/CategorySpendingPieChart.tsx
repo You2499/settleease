@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart as PieChartIconLucide } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { CategorySpendingPieChartDataPoint } from '@/lib/settleease/types';
 
 
@@ -15,15 +16,17 @@ interface CategorySpendingPieChartProps {
 }
 
 export default function CategorySpendingPieChart({ pieChartData, analyticsViewMode }: CategorySpendingPieChartProps) {
+  const title = `Category Spending Breakdown ${analyticsViewMode === 'personal' ? '(Your Spending)' : ''}`;
+  
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <PieChartIconLucide className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          Category Spending Breakdown {analyticsViewMode === 'personal' ? '(Your Spending)' : ''}
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <PieChartIconLucide className={ANALYTICS_STYLES.icon} />
+          {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         {pieChartData.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <RechartsPieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -43,15 +46,13 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
                 ))}
               </Pie>
               <RechartsTooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
-                labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                {...ANALYTICS_STYLES.tooltip}
                 formatter={(value:number) => [formatCurrency(value), "Amount"]} />
-              <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+              <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             </RechartsPieChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-muted-foreground h-full flex items-center justify-center text-xs sm:text-sm">No category data to display for this view.</p>
+          createEmptyState(title, PieChartIconLucide, "No category data to display for this view.")
         )}
       </CardContent>
     </Card>

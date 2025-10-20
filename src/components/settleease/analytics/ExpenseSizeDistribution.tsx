@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from 'lucide-react';
-// formatCurrency not needed for this component
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense } from '@/lib/settleease/types';
 
 interface ExpenseSizeDistributionProps {
@@ -72,37 +72,35 @@ export default function ExpenseSizeDistribution({
 
   if (chartData.length === 0) {
     return (
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="px-4 py-3">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <BarChart3 className={ANALYTICS_STYLES.icon} />
             {chartTitle}
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            No expense size data available.
-          </p>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState(chartTitle, BarChart3, "No expense size data available.")}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <BarChart3 className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <BarChart3 className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-        <div className="text-sm text-muted-foreground">
+        <div className={ANALYTICS_STYLES.subtitle}>
           Distribution of expenses by amount ranges
         </div>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <BarChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
               dataKey="range" 
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
@@ -111,24 +109,16 @@ export default function ExpenseSizeDistribution({
               height={50}
             />
             <YAxis 
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
+              tick={ANALYTICS_STYLES.axisTick} 
             />
             <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))', 
-                borderColor: 'hsl(var(--border))', 
-                borderRadius: 'var(--radius)', 
-                fontSize: '11px', 
-                padding: '8px', 
-                color: 'hsl(var(--popover-foreground))' 
-              }} 
-              labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+              {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number) => [
                 `${value} expense${value !== 1 ? 's' : ''}`, 
                 'Count'
               ]}
             />
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar 
               dataKey="count" 
               name="Number of Expenses"

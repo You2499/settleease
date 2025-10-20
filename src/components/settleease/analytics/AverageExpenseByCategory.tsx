@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense } from '@/lib/settleease/types';
 
 interface AverageExpenseByCategoryProps {
@@ -96,68 +97,58 @@ export default function AverageExpenseByCategory({
 
   if (chartData.length === 0) {
     return (
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="px-4 py-3">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <Target className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <Target className={ANALYTICS_STYLES.icon} />
             {chartTitle}
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            No category average data available.
-          </p>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState(chartTitle, Target, "No category average data available.")}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <Target className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <Target className={ANALYTICS_STYLES.icon} />
           {chartTitle}
         </CardTitle>
-        <div className="text-sm text-muted-foreground">
+        <div className={ANALYTICS_STYLES.subtitle}>
           Average expense amount per category
         </div>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart 
             data={chartData} 
             layout="horizontal"
-            margin={{ top: 5, right: 10, left: -15, bottom: 0 }}
+            margin={ANALYTICS_STYLES.chartMargins}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
               type="number"
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
+              tick={ANALYTICS_STYLES.axisTick} 
             />
             <YAxis 
               type="category"
               dataKey="category"
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
+              tick={ANALYTICS_STYLES.axisTick} 
               width={80}
             />
             <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))', 
-                borderColor: 'hsl(var(--border))', 
-                borderRadius: 'var(--radius)', 
-                fontSize: '11px', 
-                padding: '8px', 
-                color: 'hsl(var(--popover-foreground))' 
-              }} 
-              labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+              {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number, _name: string, props: any) => [
                 formatCurrency(value), 
                 `Average (${props.payload.count} expense${props.payload.count !== 1 ? 's' : ''})`
               ]}
             />
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar 
               dataKey="average" 
               name="Average Amount"

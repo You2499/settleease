@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, CalendarRange } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense } from '@/lib/settleease/types';
 import { Button } from '@/components/ui/button';
 
@@ -80,13 +81,29 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
     : (isMonthly ? 'Group Expenses Over Time (Monthly)' : 'Group Expenses Over Time (Weekly)');
   const ToggleIcon = isMonthly ? CalendarRange : Calendar;
 
+  if (chartData.length === 0) {
+    return (
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <TrendingUp className={ANALYTICS_STYLES.icon} />
+            {chartLabel}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState(chartLabel, TrendingUp, "No spending data available for this view.")}
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3 flex flex-row items-center justify-between">
-        <div className="flex items-center text-xl sm:text-2xl font-bold">
-          <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={`${ANALYTICS_STYLES.header} flex flex-row items-center justify-between`}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <TrendingUp className={ANALYTICS_STYLES.icon} />
           {chartLabel}
-        </div>
+        </CardTitle>
         <Button
           size="icon"
           variant="ghost"
@@ -97,18 +114,16 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
           <ToggleIcon className="h-5 w-5" />
         </Button>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey={xKey} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+          <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
+            <XAxis dataKey={xKey} tick={ANALYTICS_STYLES.axisTick} />
+            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={ANALYTICS_STYLES.axisTick} />
             <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
-                labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                {...ANALYTICS_STYLES.tooltip}
                 formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Line type="monotone" dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
           </LineChart>
         </ResponsiveContainer>

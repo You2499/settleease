@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense, SpendingByDayOfWeekData } from '@/lib/settleease/types';
 
 interface SpendingByDayChartProps {
@@ -39,30 +40,42 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
     return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
+  const title = analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day';
+
   if (spendingByDayOfWeekData.length === 0) {
-    return null; // Don't render the card if there's no data
+    return (
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <CalendarClock className={ANALYTICS_STYLES.icon} />
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState(title, CalendarClock, "No daily spending data available.")}
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <CalendarClock className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          {analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day'}
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <CalendarClock className={ANALYTICS_STYLES.icon} />
+          {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={spendingByDayOfWeekData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-            <XAxis dataKey="day" tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} />
+          <BarChart data={spendingByDayOfWeekData} margin={ANALYTICS_STYLES.chartMargins}>
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
+            <XAxis dataKey="day" tick={ANALYTICS_STYLES.axisTick} />
+            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={ANALYTICS_STYLES.axisTick} />
             <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
-                labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                {...ANALYTICS_STYLES.tooltip}
                 formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={20} />
           </BarChart>
         </ResponsiveContainer>

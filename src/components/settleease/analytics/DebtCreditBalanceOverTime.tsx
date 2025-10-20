@@ -5,6 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense, SettlementPayment } from '@/lib/settleease/types';
 
 interface DebtCreditBalanceOverTimeProps {
@@ -125,17 +126,15 @@ export default function DebtCreditBalanceOverTime({
 
   if (analyticsViewMode === 'group') {
     return (
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="px-4 py-3">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <TrendingUp className={ANALYTICS_STYLES.icon} />
             Balance Over Time
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            Balance tracking is available in Personal view only.
-          </p>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState("Balance Over Time", TrendingUp, "Balance tracking is available in Personal view only.")}
         </CardContent>
       </Card>
     );
@@ -143,63 +142,53 @@ export default function DebtCreditBalanceOverTime({
 
   if (chartData.length === 0) {
     return (
-      <Card className="shadow-lg rounded-lg">
-        <CardHeader className="px-4 py-3">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            {isPositive ? <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" /> : <TrendingDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            {isPositive ? <TrendingUp className={ANALYTICS_STYLES.icon} /> : <TrendingDown className={ANALYTICS_STYLES.icon} />}
             Your Balance Over Time
           </CardTitle>
         </CardHeader>
-        <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
-          <p className="text-muted-foreground text-xs sm:text-sm">
-            No balance history available.
-          </p>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState("Your Balance Over Time", isPositive ? TrendingUp : TrendingDown, "No balance history available.")}
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          {isPositive ? <TrendingUp className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" /> : <TrendingDown className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />}
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          {isPositive ? <TrendingUp className={ANALYTICS_STYLES.icon} /> : <TrendingDown className={ANALYTICS_STYLES.icon} />}
           Your Balance Over Time
         </CardTitle>
-        <div className="text-sm text-muted-foreground">
+        <div className={ANALYTICS_STYLES.subtitle}>
           Current balance: <span className={isPositive ? 'text-green-600' : 'text-red-600'}>
             {formatCurrency(currentBalance)}
           </span> {isPositive ? '(you are owed)' : '(you owe)'}
         </div>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
               dataKey="displayWeek" 
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
+              tick={ANALYTICS_STYLES.axisTick} 
             />
             <YAxis 
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
-              tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
+              tick={ANALYTICS_STYLES.axisTick} 
             />
             <Tooltip 
-              contentStyle={{ 
-                backgroundColor: 'hsl(var(--popover))', 
-                borderColor: 'hsl(var(--border))', 
-                borderRadius: 'var(--radius)', 
-                fontSize: '11px', 
-                padding: '8px', 
-                color: 'hsl(var(--popover-foreground))' 
-              }} 
-              labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
+              {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number) => [
                 formatCurrency(value), 
                 value >= 0 ? 'You are owed' : 'You owe'
               ]}
             />
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             {/* Zero line */}
             <Line 
               type="monotone" 

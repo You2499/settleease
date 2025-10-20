@@ -36,6 +36,7 @@ import AverageExpenseByCategory from './analytics/AverageExpenseByCategory';
 import ExpenseVelocity from './analytics/ExpenseVelocity';
 import DebtCreditBalanceOverTime from './analytics/DebtCreditBalanceOverTime';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 
 
 interface AnalyticsTabProps {
@@ -523,13 +524,13 @@ export default function AnalyticsTab({
 
   if (allExpenses.length === 0) {
     return (
-      <Card className="shadow-lg rounded-lg text-center py-6 sm:py-10">
-        <CardHeader className="pb-2 pt-4">
-          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
+      <Card className={`${ANALYTICS_STYLES.card} text-center py-6 sm:py-10`}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={`${ANALYTICS_STYLES.title} justify-center text-primary`}>
             <BarChartBig className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 pt-0">
           <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
             <BarChartBig className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
             <p className="font-medium text-base sm:text-lg mb-2">No Data to Analyze</p>
@@ -562,7 +563,8 @@ export default function AnalyticsTab({
           <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
           </TabsContent>
           <TabsContent value="personal" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
-            <Card className="mb-4 sm:mb-6 px-3 py-2 sm:px-4 sm:py-3 shadow-lg"> {/* Adjusted padding */}
+            <Card className={`${ANALYTICS_STYLES.card} mb-4 sm:mb-6`}>
+              <CardContent className={ANALYTICS_STYLES.header}>
               <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
                 Select Person for Detailed Insights:
               </Label>
@@ -578,10 +580,11 @@ export default function AnalyticsTab({
                   {people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              </CardContent>
             </Card>
              {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
-              <Card className="shadow-lg rounded-lg text-center py-6">
-                <CardContent className="pt-0">
+              <Card className={`${ANALYTICS_STYLES.card} text-center py-6`}>
+                <CardContent className={ANALYTICS_STYLES.tableContent}>
                   <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
                 </CardContent>
               </Card>
@@ -590,8 +593,8 @@ export default function AnalyticsTab({
         </Tabs>
 
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
-            <Card className="shadow-lg rounded-lg text-center py-6">
-                <CardContent className="pt-0"> 
+            <Card className={`${ANALYTICS_STYLES.card} text-center py-6`}>
+                <CardContent className={ANALYTICS_STYLES.tableContent}> 
                 <p className="text-sm sm:text-md text-muted-foreground">
                     {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ? 
                     `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :

@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Award } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import type { TopExpenseData } from '@/lib/settleease/types';
 
 interface TopExpensesTableProps {
@@ -16,31 +17,31 @@ interface TopExpensesTableProps {
 
 export default function TopExpensesTable({ topExpensesData, analyticsViewMode, peopleMap }: TopExpensesTableProps) {
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <Award className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <Award className={ANALYTICS_STYLES.icon} />
           Top 10 Largest Expenses {analyticsViewMode === 'personal' ? '(By Your Share)' : ''}
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className={ANALYTICS_STYLES.tableContent}>
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
             <TableHeader><TableRow>
-              <TableHead className="py-2 px-2 text-xs">Description</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right">Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>
-              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Category</TableHead>
-              <TableHead className="py-2 px-2 text-xs hidden md:table-cell">Date</TableHead>
-              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Paid By</TableHead>
+              <TableHead className={ANALYTICS_STYLES.tableHeader}>Description</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden sm:table-cell`}>Category</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden md:table-cell`}>Date</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden sm:table-cell`}>Paid By</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {topExpensesData.map(exp => (
                 <TableRow key={exp.id}>
-                  <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[100px] sm:max-w-xs" title={exp.description}>{exp.description}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right font-semibold text-primary">{formatCurrency(exp.total_amount)}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs hidden sm:table-cell">{exp.category}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs hidden md:table-cell">{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs truncate max-w-[80px] sm:max-w-[150px] hidden sm:table-cell" title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[100px] sm:max-w-xs`} title={exp.description}>{exp.description}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary`}>{formatCurrency(exp.total_amount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell`}>{exp.category}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} truncate max-w-[80px] sm:max-w-[150px] hidden sm:table-cell`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
                     {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
                   </TableCell>
                 </TableRow>

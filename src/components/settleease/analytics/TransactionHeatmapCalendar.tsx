@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense } from '@/lib/settleease/types';
 
 interface TransactionHeatmapCalendarProps {
@@ -179,20 +180,20 @@ export default function TransactionHeatmapCalendar({
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     return (
-        <Card className="shadow-lg rounded-lg">
-            <CardHeader className="px-4 py-3">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">
-                    <CalendarDays className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+        <Card className={ANALYTICS_STYLES.card}>
+            <CardHeader className={ANALYTICS_STYLES.header}>
+                <CardTitle className={ANALYTICS_STYLES.title}>
+                    <CalendarDays className={ANALYTICS_STYLES.icon} />
                     Expense Activity Heatmap
                 </CardTitle>
-                <div className="text-sm text-muted-foreground">
+                <div className={ANALYTICS_STYLES.subtitle}>
                     {analyticsViewMode === 'group'
                         ? 'Group expense activity by day (settlements excluded)'
                         : `${peopleMap[selectedPersonIdForAnalytics!] || 'Personal'} expense activity by day (settlements excluded)`
                     }
                 </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-4 pt-0 space-y-4">
                 {/* Month Stats */}
                 <div className="grid grid-cols-3 gap-4 p-3 bg-muted/30 rounded-lg">
                     <div className="text-center">
@@ -348,9 +349,8 @@ export default function TransactionHeatmapCalendar({
                 </div>
 
                 {expenses.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                        <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p className="text-sm">No expense data available</p>
+                    <div className="py-8">
+                        {createEmptyState("Expense Activity Heatmap", TrendingUp, "No expense data available")}
                     </div>
                 )}
             </CardContent>

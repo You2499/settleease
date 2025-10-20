@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChartBig } from 'lucide-react';
+import { ANALYTICS_STYLES, createEmptyState } from '@/lib/settleease/analytics-styles';
 import type { Expense, ExpenseAmountDistributionData } from '@/lib/settleease/types';
 
 interface ExpenseDistributionChartProps {
@@ -47,30 +48,42 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
     return Object.entries(distribution).map(([range, count]) => ({ range, count })).filter(d => d.count > 0);
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
+  const title = `Expense Share Distribution ${analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}`;
+
   if (expenseAmountDistributionData.length === 0) {
-    return null; // Don't render the card if there's no data
+    return (
+      <Card className={ANALYTICS_STYLES.card}>
+        <CardHeader className={ANALYTICS_STYLES.header}>
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <BarChartBig className={ANALYTICS_STYLES.icon} />
+            {title}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className={ANALYTICS_STYLES.chartContent}>
+          {createEmptyState(title, BarChartBig, "No expense distribution data available.")}
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <BarChartBig className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-          Expense Share Distribution {analyticsViewMode === 'personal' ? '(Your Shares)' : '(Total Amounts)'}
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <BarChartBig className={ANALYTICS_STYLES.icon} />
+          {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[250px] sm:h-[300px] p-4 pt-0 pb-1 flex items-center justify-center">
+      <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={expenseAmountDistributionData} layout="vertical" margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+          <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMargins}>
+            <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
             <YAxis type="category" dataKey="range" width={65} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
             <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
-                labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
-                itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
+                {...ANALYTICS_STYLES.tooltip}
                 formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "5px" }} />
+            <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={15} />
           </BarChart>
         </ResponsiveContainer>

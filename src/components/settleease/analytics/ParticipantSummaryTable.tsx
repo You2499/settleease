@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { User } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
+import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import type { ParticipantAnalyticsData } from '@/lib/settleease/types';
 
 interface ParticipantSummaryTableProps {
@@ -23,40 +24,40 @@ export default function ParticipantSummaryTable({
 }: ParticipantSummaryTableProps) {
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
   return (
-    <Card className="shadow-lg rounded-lg">
-      <CardHeader className="px-4 py-3">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <User className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+    <Card className={ANALYTICS_STYLES.card}>
+      <CardHeader className={ANALYTICS_STYLES.header}>
+        <CardTitle className={ANALYTICS_STYLES.title}>
+          <User className={ANALYTICS_STYLES.icon} />
           {analyticsViewMode === 'personal' && personName ? `${personName}'s Financial Summary` : 'Participant Financial Summary'}
         </CardTitle>
-        <CardDescription className="text-xs">Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
+        <CardDescription className={ANALYTICS_STYLES.subtitle}>Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
       </CardHeader>
-      <CardContent className="p-4 pt-0">
+      <CardContent className={ANALYTICS_STYLES.tableContent}>
         <ScrollArea className="h-auto max-h-[400px]">
           <Table>
             <TableHeader><TableRow>
-              <TableHead className="py-2 px-2 text-xs">Participant</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right">Paid</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right">Shared</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right hidden sm:table-cell">Net</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Paid</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right hidden md:table-cell"># Shared</TableHead>
-              <TableHead className="py-2 px-2 text-xs text-right hidden lg:table-cell">Avg. Share</TableHead>
-              <TableHead className="py-2 px-2 text-xs hidden sm:table-cell">Top Category (Shared)</TableHead>
+              <TableHead className={ANALYTICS_STYLES.tableHeader}>Participant</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Paid</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Shared</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden sm:table-cell`}>Net</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden md:table-cell`}># Paid</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden md:table-cell`}># Shared</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right hidden lg:table-cell`}>Avg. Share</TableHead>
+              <TableHead className={`${ANALYTICS_STYLES.tableHeader} hidden sm:table-cell`}>Top Category (Shared)</TableHead>
             </TableRow></TableHeader>
             <TableBody>
               {detailedParticipantAnalytics.map(p => (
                 <TableRow key={p.name}>
-                  <TableCell className="py-1.5 px-2 text-xs font-medium truncate max-w-[80px] sm:max-w-xs">{p.name}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(p.totalPaid)}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right">{formatCurrency(p.totalShared)}</TableCell>
-                  <TableCell className={`py-1.5 px-2 text-xs text-right font-semibold hidden sm:table-cell ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[80px] sm:max-w-xs`}>{p.name}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right`}>{formatCurrency(p.totalPaid)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right`}>{formatCurrency(p.totalShared)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold hidden sm:table-cell ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {formatCurrency(p.netBalance)}
                   </TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right hidden md:table-cell">{p.expensesPaidCount}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right hidden md:table-cell">{p.expensesSharedCount}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs text-right hidden lg:table-cell">{formatCurrency(p.averageShareAmount)}</TableCell>
-                  <TableCell className="py-1.5 px-2 text-xs truncate max-w-[100px] sm:max-w-[150px] hidden sm:table-cell" title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell`}>{p.expensesPaidCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell`}>{p.expensesSharedCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden lg:table-cell`}>{formatCurrency(p.averageShareAmount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} truncate max-w-[100px] sm:max-w-[150px] hidden sm:table-cell`} title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
                     {p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name}` : 'N/A'}
                   </TableCell>
                 </TableRow>
