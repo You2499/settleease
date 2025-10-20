@@ -66,7 +66,7 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
             <XAxis type="number" allowDecimals={false} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
             <YAxis type="category" dataKey="range" width={65} tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} />
             <Tooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px', color: 'hsl(var(--popover-foreground))' }} 
+                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
                 labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 formatter={(value: number) => [value, "Number of Expenses/Shares"]} />

@@ -128,7 +128,7 @@ export default function AverageExpenseByCategory({
           <BarChart 
             data={chartData} 
             layout="horizontal"
-            margin={{ top: 5, right: 30, left: 60, bottom: 5 }}
+            margin={{ top: 5, right: 10, left: -15, bottom: 0 }}
           >
             <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
             <XAxis 
@@ -140,7 +140,7 @@ export default function AverageExpenseByCategory({
               type="category"
               dataKey="category"
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 
-              width={60}
+              width={80}
             />
             <Tooltip 
               contentStyle={{ 

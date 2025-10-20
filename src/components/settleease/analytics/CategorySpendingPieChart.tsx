@@ -43,7 +43,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
                 ))}
               </Pie>
               <RechartsTooltip 
-                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '2px 6px', color: 'hsl(var(--popover-foreground))' }} 
+                contentStyle={{ backgroundColor: 'hsl(var(--popover))', borderColor: 'hsl(var(--border))', borderRadius: 'var(--radius)', fontSize: '11px', padding: '8px', color: 'hsl(var(--popover-foreground))' }} 
                 labelStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 itemStyle={{ color: 'hsl(var(--popover-foreground))' }}
                 formatter={(value:number) => [formatCurrency(value), "Amount"]} />

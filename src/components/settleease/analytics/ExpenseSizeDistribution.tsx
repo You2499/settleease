@@ -108,7 +108,7 @@ export default function ExpenseSizeDistribution({
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 8 }} 
               angle={-45}
               textAnchor="end"
-              height={60}
+              height={50}
             />
             <YAxis 
               tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 9 }} 

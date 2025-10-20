@@ -180,9 +180,9 @@ export default function TransactionHeatmapCalendar({
 
     return (
         <Card className="shadow-lg rounded-lg">
-            <CardHeader className="pb-4">
-                <CardTitle className="flex items-center text-lg sm:text-xl font-bold text-primary">
-                    <CalendarDays className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6" />
+            <CardHeader className="px-4 py-3">
+                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-primary">
+                    <CalendarDays className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                     Expense Activity Heatmap
                 </CardTitle>
                 <div className="text-sm text-muted-foreground">
