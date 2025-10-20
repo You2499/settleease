@@ -25,8 +25,8 @@ export const ANALYTICS_STYLES = {
   
   // Chart specific - Use with Recharts components
   chartContainer: "w-full h-full flex items-center justify-center",
-  chartMargins: { top: 5, right: 10, left: -10, bottom: 0 }, // Standard charts (LineChart, BarChart, AreaChart)
-  chartMarginsCompact: { top: 5, right: 5, left: -5, bottom: 0 }, // Compact charts with rotated labels or horizontal layout
+  chartMargins: { top: 5, right: 10, left: 0, bottom: 0 }, // Standard charts (LineChart, BarChart, AreaChart)
+  chartMarginsCompact: { top: 5, right: 5, left: 0, bottom: 0 }, // Compact charts with rotated labels or horizontal layout
   chartMarginsPie: { top: 0, right: 0, bottom: 0, left: 0 }, // Pie charts
   
   // Empty state
