@@ -5,7 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart3 } from 'lucide-react';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-import { createEmptyState } from '@/lib/settleease/analytics-helpers';
+import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
 
 interface ExpenseSizeDistributionProps {

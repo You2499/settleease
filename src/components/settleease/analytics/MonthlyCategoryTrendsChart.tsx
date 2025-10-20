@@ -7,7 +7,7 @@ import { TrendingUp } from 'lucide-react';
 import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-import { createEmptyState } from '@/lib/settleease/analytics-helpers';
+import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
 
 interface MonthlyCategoryTrendsChartProps {

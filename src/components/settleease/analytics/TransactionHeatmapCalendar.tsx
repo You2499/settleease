@@ -6,7 +6,7 @@ import { CalendarDays, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-reac
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-import { createEmptyState } from '@/lib/settleease/analytics-helpers';
+import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
 
 interface TransactionHeatmapCalendarProps {

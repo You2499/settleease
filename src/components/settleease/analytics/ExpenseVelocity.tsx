@@ -5,7 +5,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Zap } from 'lucide-react';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-import { createEmptyState } from '@/lib/settleease/analytics-helpers';
+import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
 
 interface ExpenseVelocityProps {

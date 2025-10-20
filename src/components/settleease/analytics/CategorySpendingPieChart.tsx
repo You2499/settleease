@@ -7,7 +7,7 @@ import { PieChart as PieChartIconLucide } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-import { createEmptyState } from '@/lib/settleease/analytics-helpers';
+import { createEmptyState } from './EmptyState';
 import type { CategorySpendingPieChartDataPoint } from '@/lib/settleease/types';
 
 
