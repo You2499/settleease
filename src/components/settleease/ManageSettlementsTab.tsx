@@ -22,7 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle } from 'lucide-react';
+import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
@@ -320,39 +320,125 @@ export default function ManageSettlementsTab({
 
       {settlementToConfirm && (
         <AlertDialog open={settlementToConfirm !== null} onOpenChange={(open) => !open && setSettlementToConfirm(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Settlement</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to mark the payment of <strong className="text-primary">{formatCurrency(settlementToConfirm.amount)}</strong> from <strong>{peopleMap[settlementToConfirm.from]}</strong> to <strong>{peopleMap[settlementToConfirm.to]}</strong> as complete?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setSettlementToConfirm(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleMarkAsPaid} disabled={isLoading} className="bg-primary hover:bg-primary/90">
-                {isLoading ? "Recording..." : "Yes, Mark as Paid"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
+            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+              <div>
+                <AlertDialogHeader className="pb-4">
+                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
+                    Confirm Settlement
+                  </AlertDialogTitle>
+                </AlertDialogHeader>
+
+                <div className="space-y-3">
+                  {/* Confirmation Section */}
+                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
+                      <div className="flex items-center space-x-2">
+                        <CheckCircle2 className="h-4 w-4 text-[#34A853]" />
+                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                          Confirm Settlement
+                        </span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        Are you sure you want to mark this payment as complete?
+                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-sm">
+                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                          {formatCurrency(settlementToConfirm.amount)}
+                        </p>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          From <strong>{peopleMap[settlementToConfirm.from]}</strong> to <strong>{peopleMap[settlementToConfirm.to]}</strong>
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col space-y-2 pt-4">
+                  <button
+                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-primary hover:bg-primary/90 text-primary-foreground border border-primary rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleMarkAsPaid}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Recording..." : "Yes, Mark as Paid"}
+                  </button>
+                  <button
+                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setSettlementToConfirm(null)}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </AlertDialogContent>
         </AlertDialog>
       )}
 
       {paymentToUnmark && (
         <AlertDialog open={paymentToUnmark !== null} onOpenChange={(open) => !open && setPaymentToUnmark(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Confirm Unmark Payment</AlertDialogTitle>
-              <AlertDialogDescription>
-                Are you sure you want to unmark (delete) the recorded payment of <strong className="text-primary">{formatCurrency(paymentToUnmark.amount_settled)}</strong> from <strong>{peopleMap[paymentToUnmark.debtor_id]}</strong> to <strong>{peopleMap[paymentToUnmark.creditor_id]}</strong>?
-                This action will make this debt appear as outstanding again.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setPaymentToUnmark(null)} disabled={isLoading}>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleUnmarkAsPaid} disabled={isLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
+            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+              <div>
+                <AlertDialogHeader className="pb-4">
+                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
+                    Unmark Payment
+                  </AlertDialogTitle>
+                </AlertDialogHeader>
+
+                <div className="space-y-3">
+                  {/* Warning Section */}
+                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
+                    <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
+                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                          Unmark Payment
+                        </span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                        Are you sure you want to unmark (delete) this recorded payment?
+                      </p>
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-sm mb-2">
+                        <p className="font-medium text-gray-800 dark:text-gray-100">
+                          {formatCurrency(paymentToUnmark.amount_settled)}
+                        </p>
+                        <p className="text-gray-600 dark:text-gray-400">
+                          From <strong>{peopleMap[paymentToUnmark.debtor_id]}</strong> to <strong>{peopleMap[paymentToUnmark.creditor_id]}</strong>
+                        </p>
+                      </div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">
+                        This action will make this debt appear as outstanding again.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col space-y-2 pt-4">
+                  <button
+                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleUnmarkAsPaid}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
+                  </button>
+                  <button
+                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => setPaymentToUnmark(null)}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
           </AlertDialogContent>
         </AlertDialog>
       )}

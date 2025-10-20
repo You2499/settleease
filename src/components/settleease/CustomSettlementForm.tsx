@@ -157,13 +157,12 @@ export default function CustomSettlementForm({
                     Add Custom Payment
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
+            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={true}>
                 <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
                     <div>
                         <DialogHeader className="pb-4">
-                            <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
-                                <HandCoins className="h-6 w-6 text-primary" />
-                                <DollarSign className="h-6 w-6 text-primary" />
+                            <DialogTitle className="flex items-center justify-center text-lg font-semibold">
+                                Record Custom Payment
                             </DialogTitle>
                         </DialogHeader>
 
@@ -308,10 +307,7 @@ export default function CustomSettlementForm({
                                 onClick={handleSubmit}
                                 disabled={isLoading || !formData.debtorId || !formData.creditorId || !formData.amount}
                             >
-                                <DollarSign className="h-5 w-5" />
-                                <span className="ml-2.5">
-                                    {isLoading ? "Recording Payment..." : "Record Payment"}
-                                </span>
+                                {isLoading ? "Recording Payment..." : "Record Payment"}
                             </Button>
                             <Button
                                 variant="outline"
