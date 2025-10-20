@@ -483,11 +483,22 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           throw signInError;
         }
 
-        toast({
-          title: "Welcome Back!",
-          description: "You've successfully signed in to SettleEase.",
-          variant: "default"
-        });
+        // Only show toast if we haven't shown it in this session
+        const hasShownToast = typeof window !== 'undefined' && 
+          sessionStorage.getItem('settleease_welcome_toast_shown') === 'true';
+        
+        if (!hasShownToast) {
+          toast({
+            title: "Welcome Back!",
+            description: "You've successfully signed in to SettleEase.",
+            variant: "default"
+          });
+          
+          // Mark that we've shown the welcome toast for this session
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('settleease_welcome_toast_shown', 'true');
+          }
+        }
         setHasAuthError(false);
         setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
