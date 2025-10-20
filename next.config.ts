@@ -22,10 +22,7 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
-  // Reduce bundle size
-  compiler: {
-    removeConsole: process.env.NODE_ENV === 'production',
-  },
+
 };
 
 export default nextConfig;
