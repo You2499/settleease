@@ -38,7 +38,7 @@ interface PersonSettlementStatusProps {
     transaction: CalculatedTransaction,
     type: "debt" | "credit"
   ) => void;
-  onOpenHowItWorksModal: () => void;
+  onOpenHowItWorksModal?: () => void;
 }
 
 export default function PersonSettlementStatus({
@@ -68,14 +68,14 @@ export default function PersonSettlementStatus({
                 : "Outstanding debts and credits requiring settlement"}
             </CardDescription>
           </div>
-          <Button
+          {/* <Button
             size="sm"
             variant="outline"
             onClick={onOpenHowItWorksModal}
             className="flex-shrink-0 ml-4"
           >
             <Info className="mr-1 h-4 w-4" /> How it Works
-          </Button>
+          </Button> */}
         </div>
       </CardHeader>
       <CardContent className="pt-0">

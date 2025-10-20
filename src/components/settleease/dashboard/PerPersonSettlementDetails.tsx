@@ -34,7 +34,7 @@ interface PerPersonSettlementDetailsProps {
   isLoadingParent: boolean;
   setIsLoadingParent: (loading: boolean) => void;
   userRole: UserRole;
-  onOpenHowItWorksModal: () => void;
+  onOpenHowItWorksModal?: () => void;
 }
 
 export default function PerPersonSettlementDetails({

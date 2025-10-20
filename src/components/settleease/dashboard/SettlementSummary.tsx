@@ -282,13 +282,13 @@ export default function SettlementSummary({
                 <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement
                 Hub
               </CardTitle>
-              <Button
+              {/* <Button
                 size="sm"
                 variant="outline"
                 onClick={() => setIsInfoModalOpen(true)}
               >
                 <Info className="mr-1 h-4 w-4" /> How it Works
-              </Button>
+              </Button> */}
             </div>
             <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
               <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -426,7 +426,7 @@ export default function SettlementSummary({
                 isLoadingParent={isLoading}
                 setIsLoadingParent={setIsLoading}
                 userRole={userRole}
-                onOpenHowItWorksModal={() => setIsInfoModalOpen(true)}
+                // onOpenHowItWorksModal={() => setIsInfoModalOpen(true)}
               />
             ) : (
               <div className="text-sm text-muted-foreground p-3 text-center min-h-[100px] flex items-center justify-center">
