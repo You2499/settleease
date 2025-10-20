@@ -150,7 +150,7 @@ export default function MonthlyCategoryTrendsChart({
                 </CardTitle>
             </CardHeader>
             <CardContent className={ANALYTICS_STYLES.chartContent}>
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height={300}>
                     <AreaChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
                         <CartesianGrid {...ANALYTICS_STYLES.grid} />
                         <XAxis

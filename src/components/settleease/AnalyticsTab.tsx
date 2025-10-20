@@ -74,16 +74,7 @@ export default function AnalyticsTab({
   getCategoryIconFromName,
   settlementPayments,
 }: AnalyticsTabProps) {
-  // DEBUG: Component mounted
-  useEffect(() => {
-    console.log('🔴 AnalyticsTab MOUNTED');
-    console.log('🔴 Props received:', {
-      allExpensesCount: allExpenses.length,
-      peopleCount: people.length,
-      categoriesCount: dynamicCategories.length,
-      settlementsCount: settlementPayments.length
-    });
-  }, []);
+
   
   // Check for crash test
   useEffect(() => {
@@ -94,22 +85,13 @@ export default function AnalyticsTab({
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
 
   const displayedExpenses = useMemo(() => {
-    console.log('🔴 displayedExpenses calculation:', {
-      allExpensesCount: allExpenses.length,
-      analyticsViewMode,
-      selectedPersonIdForAnalytics
-    });
-    
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      const filtered = allExpenses.filter(exp => {
+      return allExpenses.filter(exp => {
         const personPaid = exp.paid_by.some(p => p.personId === selectedPersonIdForAnalytics);
         const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001);
         return personPaid || personShared;
       });
-      console.log('🔴 Filtered for personal:', filtered.length);
-      return filtered;
     }
-    console.log('🔴 Returning all expenses:', allExpenses.length);
     return allExpenses;
   }, [allExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 

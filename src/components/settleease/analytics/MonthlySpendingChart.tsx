@@ -28,16 +28,6 @@ function getISOWeek(date: Date) {
 export default function MonthlySpendingChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: MonthlySpendingChartProps) {
   const [view, setView] = React.useState<'monthly' | 'weekly'>('monthly');
 
-  // DEBUG: Component mounted
-  React.useEffect(() => {
-    console.log('🔴 MonthlySpendingChart MOUNTED');
-    console.log('🔴 Props:', {
-      expensesCount: expenses.length,
-      analyticsViewMode,
-      selectedPersonIdForAnalytics
-    });
-  }, []);
-
   // Compute monthly data
   const monthlyExpenseData = React.useMemo(() => {
     const data: Record<string, number> = {};
@@ -92,16 +82,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
     : (isMonthly ? 'Group Expenses Over Time (Monthly)' : 'Group Expenses Over Time (Weekly)');
   const ToggleIcon = isMonthly ? CalendarRange : Calendar;
 
-  // DEBUG: Chart data
-  console.log('🔴 MonthlySpendingChart chartData:', {
-    chartDataLength: chartData.length,
-    chartData: chartData.slice(0, 3), // First 3 items
-    isMonthly,
-    view
-  });
-  
-  // DEBUG: About to render
-  console.log('🔴 MonthlySpendingChart RENDERING with data:', chartData);
+
 
 
 

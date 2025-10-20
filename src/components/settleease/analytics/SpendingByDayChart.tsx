@@ -16,16 +16,6 @@ interface SpendingByDayChartProps {
 }
 
 export default function SpendingByDayChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: SpendingByDayChartProps) {
-  // DEBUG: Component mounted
-  useEffect(() => {
-    console.log('🔴 SpendingByDayChart MOUNTED');
-    console.log('🔴 Props:', {
-      expensesCount: expenses.length,
-      analyticsViewMode,
-      selectedPersonIdForAnalytics
-    });
-  }, []);
-
   const spendingByDayOfWeekData: SpendingByDayOfWeekData[] = useMemo(() => {
     const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const spending: Record<string, number> = days.reduce((acc, day) => { acc[day] = 0; return acc; }, {} as Record<string, number>);
@@ -48,14 +38,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
       }
     });
     
-    const result = days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
-    console.log('🔴 SpendingByDayChart result:', {
-      spending,
-      resultLength: result.length,
-      result
-    });
-    console.log('🔴 SpendingByDayChart RENDERING with data:', result);
-    return result;
+    return days.map(day => ({ day, totalAmount: spending[day] })).filter(d => d.totalAmount > 0);
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const title = analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day';
