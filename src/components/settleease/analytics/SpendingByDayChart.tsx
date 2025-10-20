@@ -54,6 +54,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
       resultLength: result.length,
       result
     });
+    console.log('🔴 SpendingByDayChart RENDERING with data:', result);
     return result;
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
@@ -84,7 +85,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart data={spendingByDayOfWeekData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey="day" tick={ANALYTICS_STYLES.axisTick} />

@@ -17,14 +17,14 @@ export const ANALYTICS_STYLES = {
   subtitle: "text-sm text-muted-foreground mt-1",
   
   // Content styles - Apply to CardContent based on content type
-  chartContent: "h-[280px] sm:h-[320px] p-4 pt-0 pb-2", // For chart containers
+  chartContent: "h-[400px] p-4 pt-0 pb-2", // For chart containers
   tableContent: "p-4 pt-0", // For table containers
   snapshotContent: "p-4 pt-0", // For snapshot/stats grids
   
   // Chart specific - Use with Recharts components
   chartContainer: "w-full h-full flex items-center justify-center",
-  chartMargins: { top: 5, right: 10, left: 0, bottom: 0 }, // Standard charts (LineChart, BarChart, AreaChart)
-  chartMarginsCompact: { top: 5, right: 5, left: 0, bottom: 0 }, // Compact charts with rotated labels or horizontal layout
+  chartMargins: { top: 20, right: 30, left: 20, bottom: 5 }, // Standard charts (LineChart, BarChart, AreaChart)
+  chartMarginsCompact: { top: 20, right: 30, left: 20, bottom: 5 }, // Compact charts with rotated labels or horizontal layout
   chartMarginsPie: { top: 0, right: 0, bottom: 0, left: 0 }, // Pie charts
   
   // Empty state

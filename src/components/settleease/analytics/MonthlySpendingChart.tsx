@@ -99,6 +99,9 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
     isMonthly,
     view
   });
+  
+  // DEBUG: About to render
+  console.log('🔴 MonthlySpendingChart RENDERING with data:', chartData);
 
 
 
@@ -138,7 +141,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
         </div>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey={xKey} tick={ANALYTICS_STYLES.axisTick} />
