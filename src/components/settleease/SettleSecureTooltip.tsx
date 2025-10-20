@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Shield, Database, Zap, Calculator, Users, Lock, CheckCircle, Key, Mail, UserCheck, RefreshCw, AlertTriangle, Eye, X } from 'lucide-react';
+import { Shield, Database, Users, Lock, CheckCircle, Key, Mail, UserCheck, RefreshCw, AlertTriangle, Eye, X } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
