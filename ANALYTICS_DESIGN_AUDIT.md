@@ -437,20 +437,33 @@ Addressing these issues will create a more cohesive, maintainable, and professio
 ### ✅ Stage 8: Fix Card Shadow Clipping (COMPLETED)
 
 **Changes Made:**
-1. Increased ScrollArea padding from `p-0.5` (2px) to `px-1 py-2` (4px horizontal, 8px vertical)
+1. Increased ScrollArea padding from `p-0.5` (2px) to `px-2 py-4` (8px horizontal, 16px vertical)
 2. This ensures `shadow-lg` on cards is fully visible and not clipped
+3. Initial attempt with `px-1 py-2` was insufficient for the large shadow
 
 **Components Updated:**
-- ✅ AnalyticsTab.tsx - Fixed ScrollArea padding
+- ✅ AnalyticsTab.tsx - Fixed ScrollArea padding (revised)
 
-**Impact:** Card shadows now display properly on all cards, including the last row (CategorySpendingPieChart and ExpenseDistributionChart), matching the shadow behavior in other tabs.
+**Impact:** Card shadows now display properly on all cards, including the last row (CategorySpendingPieChart and ExpenseDistributionChart), matching the shadow behavior in other tabs. The `shadow-lg` now has adequate space to render fully.
+
+### ✅ Stage 9: Fix Calendar Alignment (COMPLETED)
+
+**Changes Made:**
+1. Removed fixed width (`w-8`) from day name headers to allow proper centering
+2. Added `flex items-center justify-center` to calendar cell wrapper divs
+3. Fixed empty cell alignment to match filled cells
+
+**Components Updated:**
+- ✅ TransactionHeatmapCalendar.tsx - Fixed calendar grid alignment
+
+**Impact:** Calendar day names and date cells are now properly centered within the grid, creating a more polished and professional appearance.
 
 ---
 
 ## Summary of All Fixes
 
 ### Total Components Updated: 17
-### Total Stages Completed: 8
+### Total Stages Completed: 9
 
 **Design System Enhancements:**
 - ✅ Added `chartMarginsPie` for pie chart consistency

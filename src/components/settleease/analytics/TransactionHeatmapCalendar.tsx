@@ -238,7 +238,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Day Headers */}
                     <div className="grid grid-cols-7 gap-1 mb-2">
                         {dayNames.map(day => (
-                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center w-8">
+                            <div key={day} className="text-center text-xs font-normal text-muted-foreground h-6 flex items-center justify-center">
                                 {day}
                             </div>
                         ))}
@@ -247,7 +247,7 @@ export default function TransactionHeatmapCalendar({
                     {/* Calendar Grid */}
                     <div className="grid grid-cols-7 gap-1">
                         {calendarDays.map((date, index) => {
-                            if (!date) return <div key={index} className="h-8 w-8" />;
+                            if (!date) return <div key={index} className="h-8 flex items-center justify-center" />;
 
                             const dateKey = date.toDateString();
                             const dayData = dayDataMap.get(dateKey);
@@ -271,7 +271,7 @@ export default function TransactionHeatmapCalendar({
                             };
 
                             return (
-                                <div key={index} className="relative group">
+                                <div key={index} className="relative group flex items-center justify-center">
                                     <button
                                         className={cn(
                                             "h-8 w-8 p-0 font-normal rounded-md transition-colors cursor-pointer",

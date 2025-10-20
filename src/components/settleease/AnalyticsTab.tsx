@@ -544,7 +544,7 @@ export default function AnalyticsTab({
   }
 
   return (
-    <ScrollArea className="h-full px-1 py-2">
+    <ScrollArea className="h-full px-2 py-4">
       <div className="space-y-4 md:space-y-6">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');

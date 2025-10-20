@@ -64,9 +64,20 @@ Successfully completed a comprehensive design audit and fix of all analytics vis
 
 ### Stage 8: Card Shadow Fix ✅
 **Problem**: Card shadows were being clipped on the last row of cards
-**Solution**: Increased ScrollArea padding from `p-0.5` (2px) to `px-1 py-2` (4px/8px) to accommodate `shadow-lg`
+**Solution**: Increased ScrollArea padding from `p-0.5` (2px) to `px-2 py-4` (8px/16px) to accommodate `shadow-lg`
+- Initial fix with `px-1 py-2` was insufficient
+- Revised to `px-2 py-4` for proper shadow rendering
 
 **Components Updated**: AnalyticsTab.tsx
+
+### Stage 9: Calendar Alignment Fix ✅
+**Problem**: Calendar day names and date cells were not properly centered in the grid
+**Solution**: 
+- Removed fixed width from day headers
+- Added flex centering to calendar cell wrappers
+- Fixed empty cell alignment
+
+**Components Updated**: TransactionHeatmapCalendar.tsx
 **Problem**: No guidance on when to use which styles
 **Solution**: Added comprehensive JSDoc comments and usage guidelines to ANALYTICS_STYLES
 
