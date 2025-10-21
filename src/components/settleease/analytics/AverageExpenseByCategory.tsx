@@ -110,6 +110,9 @@ export default function AverageExpenseByCategory({
     ? 'Your Average Expense by Category'
     : 'Group Average Expense by Category';
 
+  // Debug: Log chart data to console
+  console.log('AverageExpenseByCategory chartData:', chartData);
+
   if (chartData.length === 0) {
     return (
       <Card className={ANALYTICS_STYLES.card}>
@@ -139,13 +142,14 @@ export default function AverageExpenseByCategory({
           <BarChart
             data={chartData}
             layout="horizontal"
-            margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
+            margin={ANALYTICS_STYLES.chartMarginsCompact}
           >
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis
               type="number"
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
               tick={ANALYTICS_STYLES.axisTick}
+              domain={[0, 'dataMax + 1']}
             />
             <YAxis
               type="category"
@@ -165,8 +169,8 @@ export default function AverageExpenseByCategory({
               dataKey="average"
               name="Average Amount"
               fill="#22c55e"
-              radius={[0, 4, 4, 0]}
-              barSize={30}
+              radius={[0, 2, 2, 0]}
+              barSize={ANALYTICS_STYLES.barSizeCompact}
             />
           </BarChart>
         </ResponsiveContainer>
