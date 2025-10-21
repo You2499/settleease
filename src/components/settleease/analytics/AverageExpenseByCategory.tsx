@@ -136,39 +136,18 @@ export default function AverageExpenseByCategory({
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height={380}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={ANALYTICS_STYLES.chartMarginsCompact}
-          >
+          <BarChart data={chartData} layout="vertical" margin={ANALYTICS_STYLES.chartMarginsCompact}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis
-              type="number"
-              tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
-              tick={ANALYTICS_STYLES.axisTick}
-              domain={[0, 'dataMax + 1']}
-            />
-            <YAxis
-              type="category"
-              dataKey="category"
-              tick={ANALYTICS_STYLES.axisTickSmall}
-              width={90}
-            />
-            <Tooltip
-              {...ANALYTICS_STYLES.tooltip}
-              formatter={(value: number, _name: string, props: any) => [
+            <XAxis type="number" allowDecimals={false} tick={ANALYTICS_STYLES.axisTickSmall} domain={[0, 'dataMax + 1']} />
+            <YAxis type="category" dataKey="category" width={90} tick={ANALYTICS_STYLES.axisTickSmall} />
+            <Tooltip 
+                {...ANALYTICS_STYLES.tooltip}
+                formatter={(value: number, _name: string, props: any) => [
                 formatCurrency(value),
                 `Average (${props.payload.count} expense${props.payload.count !== 1 ? 's' : ''})`
-              ]}
-            />
+              ]} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Bar
-              dataKey="average"
-              name="Average Amount"
-              fill="#22c55e"
-              radius={[0, 2, 2, 0]}
-              barSize={ANALYTICS_STYLES.barSizeCompact}
-            />
+            <Bar dataKey="average" name="Average Amount" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={ANALYTICS_STYLES.barSizeCompact} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
