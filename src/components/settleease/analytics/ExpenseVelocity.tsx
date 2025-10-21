@@ -14,6 +14,15 @@ interface ExpenseVelocityProps {
   selectedPersonIdForAnalytics?: string | null;
 }
 
+function getWeekKey(date: Date) {
+  // Use a simpler approach that's consistent with timezone handling
+  // Group by week start (Monday) in local timezone
+  const dayOfWeek = date.getDay();
+  const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday
+  const weekStart = new Date(date.getFullYear(), date.getMonth(), diff);
+  return weekStart.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+}
+
 export default function ExpenseVelocity({ 
   expenses, 
   analyticsViewMode, 
@@ -51,28 +60,37 @@ export default function ExpenseVelocity({
       }
     });
 
-    // Convert to array and calculate velocity (expenses per day/week)
-    const sortedDates = Object.entries(weeklyData)
-      .map(([dateKey, data]) => {
-        // Show the actual expense date
-        const displayDate = data.actualDates[0].toLocaleDateString('default', { month: 'short', day: 'numeric' });
-        
-        return { 
-          week: dateKey, 
-          velocity: data.count,
-          displayWeek: data.count === 1 ? displayDate : `${displayDate} (${data.count} expenses)`
-        };
-      })
-      .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
-      .slice(-12); // Show last 12 data points
-
-    return sortedDates;
+    // Fill in missing weeks with 0 velocity for better visualization
+    const today = new Date();
+    const twelveWeeksAgo = new Date(today);
+    twelveWeeksAgo.setDate(today.getDate() - (12 * 7));
+    
+    const allWeeks = [];
+    for (let d = new Date(twelveWeeksAgo); d <= today; d.setDate(d.getDate() + 7)) {
+      const weekKey = getWeekKey(d);
+      const weekData = weeklyData[weekKey];
+      const velocity = weekData ? weekData.count : 0;
+      
+      // Calculate week start for display
+      const dayOfWeek = d.getDay();
+      const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const weekStart = new Date(d.getFullYear(), d.getMonth(), diff);
+      const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      
+      allWeeks.push({
+        week: weekKey,
+        velocity: velocity,
+        displayWeek: velocity === 0 ? displayDate : (velocity === 1 ? displayDate : `${displayDate} (${velocity} expenses)`)
+      });
+    }
+    
+    return allWeeks.sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const averageVelocity = useMemo(() => {
-    if (chartData.length === 0) return 1;
+    if (chartData.length === 0) return 0;
     const totalVelocity = chartData.reduce((sum, week) => sum + week.velocity, 0);
-    return Math.max(1, totalVelocity / chartData.length);
+    return totalVelocity / chartData.length;
   }, [chartData]);
 
   const chartTitle = analyticsViewMode === 'personal'
@@ -113,7 +131,7 @@ export default function ExpenseVelocity({
             />
             <YAxis 
               tick={ANALYTICS_STYLES.axisTick}
-              domain={[1, 'dataMax']}
+              domain={[0, 'dataMax + 1']}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}

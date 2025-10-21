@@ -41,15 +41,22 @@ export default function ExpenseFrequencyTimeline({
       }
     });
 
-    // Convert to array and sort by date
-    return Object.entries(dailyFrequency)
-      .map(([date, frequency]) => ({ 
-        date, 
-        frequency,
-        displayDate: new Date(date).toLocaleDateString('default', { month: 'short', day: 'numeric' })
-      }))
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      .slice(-30); // Show last 30 days with activity
+    // Fill in missing dates with 0 frequency for better visualization
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+    
+    const allDates = [];
+    for (let d = new Date(thirtyDaysAgo); d <= today; d.setDate(d.getDate() + 1)) {
+      const dateKey = d.toLocaleDateString('en-CA');
+      allDates.push({
+        date: dateKey,
+        frequency: dailyFrequency[dateKey] || 0,
+        displayDate: new Date(dateKey).toLocaleDateString('default', { month: 'short', day: 'numeric' })
+      });
+    }
+    
+    return allDates;
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const chartTitle = analyticsViewMode === 'personal'
@@ -90,7 +97,7 @@ export default function ExpenseFrequencyTimeline({
             />
             <YAxis 
               tick={ANALYTICS_STYLES.axisTick}
-              domain={[1, 'dataMax']}
+              domain={[0, 'dataMax + 1']}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
