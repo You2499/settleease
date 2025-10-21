@@ -24,20 +24,20 @@ function getWeekKey(date: Date) {
   return weekStart.toLocaleDateString('en-CA'); // YYYY-MM-DD format
 }
 
-export default function ExpenseVelocity({ 
-  expenses, 
-  analyticsViewMode, 
-  selectedPersonIdForAnalytics 
+export default function ExpenseVelocity({
+  expenses,
+  analyticsViewMode,
+  selectedPersonIdForAnalytics
 }: ExpenseVelocityProps) {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('1M');
-  
+
   const chartData = useMemo(() => {
     const weeklyData: Record<string, { count: number, actualDates: Date[] }> = {};
 
     expenses.forEach(exp => {
       if (!exp.created_at) return;
-      
+
       let shouldInclude = false;
       if (analyticsViewMode === 'group') {
         shouldInclude = true;
@@ -50,11 +50,10 @@ export default function ExpenseVelocity({
       if (shouldInclude) {
         // Create date in local timezone (JavaScript automatically converts UTC to local)
         const date = new Date(exp.created_at);
-        
-        // For consistency with other charts, use the actual expense date for grouping
-        // instead of calculating week starts
-        const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local timezone
-        
+
+        // Use week grouping for velocity chart
+        const dateKey = getWeekKey(date);
+
         if (!weeklyData[dateKey]) {
           weeklyData[dateKey] = { count: 0, actualDates: [] };
         }
@@ -75,31 +74,59 @@ export default function ExpenseVelocity({
     };
 
     const weeksToShow = getWeeksToShow();
+    // Ensure we include the current week by using the end of the selected date
     const endDate = new Date(selectedDate);
+    endDate.setHours(23, 59, 59, 999); // End of day
     const startDate = new Date(endDate);
     startDate.setDate(endDate.getDate() - ((weeksToShow - 1) * 7));
-    
-    const allWeeks = [];
+
+    // Generate all weeks in the range, ensuring we include the current week
+    const allWeeks: Array<{ week: string, velocity: number, displayWeek: string }> = [];
     const currentDate = new Date(startDate);
+
+    // Make sure we include all weeks up to and including the week containing endDate
     while (currentDate <= endDate) {
       const weekKey = getWeekKey(currentDate);
-      const weekData = weeklyData[weekKey];
+
+      // Check if we already added this week
+      if (!allWeeks.find(w => w.week === weekKey)) {
+        const weekData = weeklyData[weekKey];
+        const velocity = weekData ? weekData.count : 0;
+
+        // Calculate week start for display
+        const dayOfWeek = currentDate.getDay();
+        const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const weekStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), diff);
+        const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+
+        allWeeks.push({
+          week: weekKey,
+          velocity: velocity,
+          displayWeek: velocity === 0 ? displayDate : (velocity === 1 ? displayDate : `${displayDate} (${velocity} expenses)`)
+        });
+      }
+
+      currentDate.setDate(currentDate.getDate() + 7);
+    }
+
+    // Also ensure we include the week containing the endDate
+    const endWeekKey = getWeekKey(endDate);
+    if (!allWeeks.find(w => w.week === endWeekKey)) {
+      const weekData = weeklyData[endWeekKey];
       const velocity = weekData ? weekData.count : 0;
-      
-      // Calculate week start for display
-      const dayOfWeek = currentDate.getDay();
-      const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const weekStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), diff);
+
+      const dayOfWeek = endDate.getDay();
+      const diff = endDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const weekStart = new Date(endDate.getFullYear(), endDate.getMonth(), diff);
       const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
-      
+
       allWeeks.push({
-        week: weekKey,
+        week: endWeekKey,
         velocity: velocity,
         displayWeek: velocity === 0 ? displayDate : (velocity === 1 ? displayDate : `${displayDate} (${velocity} expenses)`)
       });
-      currentDate.setDate(currentDate.getDate() + 7);
     }
-    
+
     return allWeeks.sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, selectedDate, timePeriod]);
 
@@ -193,15 +220,15 @@ export default function ExpenseVelocity({
         <ResponsiveContainer width="100%" height={380}>
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis 
-              dataKey="displayWeek" 
-              tick={ANALYTICS_STYLES.axisTick} 
+            <XAxis
+              dataKey="displayWeek"
+              tick={ANALYTICS_STYLES.axisTick}
             />
-            <YAxis 
+            <YAxis
               tick={ANALYTICS_STYLES.axisTick}
               domain={[0, 'dataMax + 1']}
             />
-            <Tooltip 
+            <Tooltip
               {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number, name: string) => {
                 if (name === 'Average') {
@@ -211,22 +238,22 @@ export default function ExpenseVelocity({
               }}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Line 
-              type="monotone" 
-              dataKey="velocity" 
+            <Line
+              type="monotone"
+              dataKey="velocity"
               name="Expenses per Week"
-              stroke="hsl(var(--primary))" 
-              strokeWidth={2} 
-              dot={{ r: 3 }} 
-              activeDot={{ r: 5 }} 
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              dot={{ r: 3 }}
+              activeDot={{ r: 5 }}
             />
             {/* Average line */}
-            <Line 
-              type="monotone" 
-              dataKey={() => averageVelocity} 
+            <Line
+              type="monotone"
+              dataKey={() => averageVelocity}
               name="Average"
-              stroke="#94a3b8" 
-              strokeWidth={2} 
+              stroke="#94a3b8"
+              strokeWidth={2}
               strokeDasharray="8 4"
               dot={false}
             />

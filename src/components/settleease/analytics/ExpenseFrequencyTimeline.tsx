@@ -76,8 +76,8 @@ export default function ExpenseFrequencyTimeline({
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, selectedDate, timePeriod]);
 
   const chartTitle = analyticsViewMode === 'personal'
-    ? 'Your Expense Frequency Timeline'
-    : 'Group Expense Frequency Timeline';
+    ? 'Your Expense Frequency'
+    : 'Group Expense Frequency';
 
   const goToPreviousMonth = () => {
     const newDate = new Date(selectedDate);
