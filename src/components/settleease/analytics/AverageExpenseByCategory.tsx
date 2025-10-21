@@ -110,9 +110,6 @@ export default function AverageExpenseByCategory({
     ? 'Your Average Expense by Category'
     : 'Group Average Expense by Category';
 
-  // Debug: Log chart data to console
-  console.log('AverageExpenseByCategory chartData:', chartData);
-
   if (chartData.length === 0) {
     return (
       <Card className={ANALYTICS_STYLES.card}>
@@ -141,7 +138,7 @@ export default function AverageExpenseByCategory({
         <ResponsiveContainer width="100%" height={380}>
           <BarChart
             data={chartData}
-            layout="horizontal"
+            layout="vertical"
             margin={ANALYTICS_STYLES.chartMarginsCompact}
           >
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
