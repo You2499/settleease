@@ -93,11 +93,19 @@ export default function ExpenseVelocity({
         const weekData = weeklyData[weekKey];
         const velocity = weekData ? weekData.count : 0;
 
-        // Calculate week start for display
-        const dayOfWeek = currentDate.getDay();
-        const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const weekStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), diff);
-        const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        // Use the actual expense date for display instead of week start
+        let displayDate: string;
+        if (velocity > 0 && weekData && weekData.actualDates.length > 0) {
+          // Show the latest expense date in this week
+          const latestDate = weekData.actualDates.sort((a, b) => b.getTime() - a.getTime())[0];
+          displayDate = latestDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        } else {
+          // For weeks with no expenses, show week start
+          const dayOfWeek = currentDate.getDay();
+          const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+          const weekStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), diff);
+          displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        }
 
         allWeeks.push({
           week: weekKey,
@@ -115,10 +123,19 @@ export default function ExpenseVelocity({
       const weekData = weeklyData[endWeekKey];
       const velocity = weekData ? weekData.count : 0;
 
-      const dayOfWeek = endDate.getDay();
-      const diff = endDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const weekStart = new Date(endDate.getFullYear(), endDate.getMonth(), diff);
-      const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      // Use the actual expense date for display instead of week start
+      let displayDate: string;
+      if (velocity > 0 && weekData && weekData.actualDates.length > 0) {
+        // Show the latest expense date in this week
+        const latestDate = weekData.actualDates.sort((a, b) => b.getTime() - a.getTime())[0];
+        displayDate = latestDate.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      } else {
+        // For weeks with no expenses, show week start
+        const dayOfWeek = endDate.getDay();
+        const diff = endDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        const weekStart = new Date(endDate.getFullYear(), endDate.getMonth(), diff);
+        displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+      }
 
       allWeeks.push({
         week: endWeekKey,
