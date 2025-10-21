@@ -546,8 +546,8 @@ export default function AnalyticsTab({
   }
 
   return (
-    <ScrollArea className="h-full w-full prevent-horizontal-scroll">
-      <div className="space-y-4 md:space-y-6 px-4 py-4 pb-8 prevent-horizontal-scroll">
+    <div className="h-full w-full prevent-horizontal-scroll overflow-y-auto">
+      <div className="space-y-4 md:space-y-6 p-6 pb-12 prevent-horizontal-scroll">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
@@ -724,6 +724,6 @@ export default function AnalyticsTab({
           </>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 }
