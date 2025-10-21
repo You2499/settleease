@@ -116,10 +116,12 @@ export default function ExpenseVelocity({
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value: number) => [
-                `${value} expense${value !== 1 ? 's' : ''}/week`, 
-                'Velocity'
-              ]}
+              formatter={(value: number, name: string) => {
+                if (name === 'Average') {
+                  return [`${value.toFixed(1)} expenses/week`, 'Average'];
+                }
+                return [`${value} expense${value !== 1 ? 's' : ''}/week`, 'Velocity'];
+              }}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Line 

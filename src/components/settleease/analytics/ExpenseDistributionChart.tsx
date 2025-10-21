@@ -17,12 +17,12 @@ interface ExpenseDistributionChartProps {
 export default function ExpenseDistributionChart({ expenses, analyticsViewMode, selectedPersonIdForAnalytics }: ExpenseDistributionChartProps) {
   const expenseAmountDistributionData: ExpenseAmountDistributionData[] = useMemo(() => {
     const ranges = [
-      { label: `₹0-₹500`, min: 0, max: 500 },
+      { label: `₹0-₹100`, min: 0, max: 100 },
+      { label: `₹101-₹500`, min: 101, max: 500 },
       { label: `₹501-₹1k`, min: 501, max: 1000 },
       { label: `₹1k-₹2.5k`, min: 1001, max: 2500 },
       { label: `₹2.5k-₹5k`, min: 2501, max: 5000 },
-      { label: `₹5k-₹10k`, min: 5001, max: 10000 },
-      { label: `₹10k+`, min: 10001, max: Infinity },
+      { label: `₹5k+`, min: 5001, max: Infinity },
     ];
     const distribution: Record<string, number> = ranges.reduce((acc, range) => {
       acc[range.label] = 0;
@@ -79,7 +79,7 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
         <ResponsiveContainer width="100%" height={380}>
           <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMarginsCompact}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis type="number" allowDecimals={false} tick={ANALYTICS_STYLES.axisTickSmall} />
+            <XAxis type="number" allowDecimals={false} tick={ANALYTICS_STYLES.axisTickSmall} domain={[0, 'dataMax + 1']} />
             <YAxis type="category" dataKey="range" width={55} tick={{ ...ANALYTICS_STYLES.axisTickSmall, fontSize: 7 }} />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}

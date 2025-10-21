@@ -17,12 +17,12 @@ interface AverageExpenseByCategoryProps {
 
 const UNCATEGORIZED = "Uncategorized";
 
-export default function AverageExpenseByCategory({ 
-  expenses, 
-  analyticsViewMode, 
-  selectedPersonIdForAnalytics 
+export default function AverageExpenseByCategory({
+  expenses,
+  analyticsViewMode,
+  selectedPersonIdForAnalytics
 }: AverageExpenseByCategoryProps) {
-  
+
   const chartData = useMemo(() => {
     const categoryData: Record<string, { total: number; count: number }> = {};
 
@@ -42,7 +42,7 @@ export default function AverageExpenseByCategory({
           const celebrationContribution = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
           const amountEffectivelySplit = Math.max(0, originalTotalBill - celebrationContribution);
           const sumOfOriginalItemPrices = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-          
+
           const reductionFactor = (sumOfOriginalItemPrices > 0.001 && amountEffectivelySplit >= 0)
             ? (amountEffectivelySplit / sumOfOriginalItemPrices)
             : (sumOfOriginalItemPrices === 0 && amountEffectivelySplit === 0 ? 1 : 0);
@@ -53,7 +53,7 @@ export default function AverageExpenseByCategory({
 
             const category = item.categoryName || exp.category || UNCATEGORIZED;
             let categoryAmount = 0;
-            
+
             if (analyticsViewMode === 'group') {
               categoryAmount = originalItemPrice;
             } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics)) {
@@ -92,6 +92,20 @@ export default function AverageExpenseByCategory({
       .slice(0, 8); // Show top 8 categories
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
+  // Calculate intelligent X-axis domain for horizontal bar chart
+  const xAxisDomain = useMemo(() => {
+    if (chartData.length === 0) return [0, 100];
+
+    const values = chartData.map(d => d.average);
+    const maxValue = Math.max(...values);
+
+    if (maxValue === 0) return [0, 100];
+
+    // Add 10% padding to the right for horizontal bar charts, start from 0
+    const paddedMax = maxValue * 1.1;
+    return [0, paddedMax];
+  }, [chartData]);
+
   const chartTitle = analyticsViewMode === 'personal'
     ? 'Your Average Expense by Category'
     : 'Group Average Expense by Category';
@@ -122,35 +136,38 @@ export default function AverageExpenseByCategory({
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height={380}>
-          <BarChart 
-            data={chartData} 
+          <BarChart
+            data={chartData}
             layout="horizontal"
             margin={ANALYTICS_STYLES.chartMarginsCompact}
           >
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis 
+            <XAxis
               type="number"
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
-              tick={ANALYTICS_STYLES.axisTick} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={xAxisDomain}
             />
-            <YAxis 
+            <YAxis
               type="category"
               dataKey="category"
-              tick={ANALYTICS_STYLES.axisTickSmall} 
-              width={70}
+              tick={ANALYTICS_STYLES.axisTickSmall}
+              width={90}
             />
-            <Tooltip 
+            <Tooltip
               {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number, _name: string, props: any) => [
-                formatCurrency(value), 
+                formatCurrency(value),
                 `Average (${props.payload.count} expense${props.payload.count !== 1 ? 's' : ''})`
               ]}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
-            <Bar 
-              dataKey="average" 
+            <Bar
+              dataKey="average"
               name="Average Amount"
-              fill="hsl(var(--primary))" 
+              fill="hsl(var(--primary))"
+              radius={[0, 4, 4, 0]}
+              barSize={ANALYTICS_STYLES.barSizeCompact}
             />
           </BarChart>
         </ResponsiveContainer>

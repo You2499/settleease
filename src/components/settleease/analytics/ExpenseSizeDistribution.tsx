@@ -39,31 +39,29 @@ export default function ExpenseSizeDistribution({
 
     if (amounts.length === 0) return [];
 
-    // Calculate distribution ranges
-    const maxAmount = Math.max(...amounts);
-    const minAmount = Math.min(...amounts);
-    
-    // Create 6 buckets for distribution
-    const bucketSize = (maxAmount - minAmount) / 6;
-    const buckets = [
-      { range: `₹0 - ₹${Math.round(minAmount + bucketSize)}`, count: 0, min: 0, max: minAmount + bucketSize },
-      { range: `₹${Math.round(minAmount + bucketSize)} - ₹${Math.round(minAmount + bucketSize * 2)}`, count: 0, min: minAmount + bucketSize, max: minAmount + bucketSize * 2 },
-      { range: `₹${Math.round(minAmount + bucketSize * 2)} - ₹${Math.round(minAmount + bucketSize * 3)}`, count: 0, min: minAmount + bucketSize * 2, max: minAmount + bucketSize * 3 },
-      { range: `₹${Math.round(minAmount + bucketSize * 3)} - ₹${Math.round(minAmount + bucketSize * 4)}`, count: 0, min: minAmount + bucketSize * 3, max: minAmount + bucketSize * 4 },
-      { range: `₹${Math.round(minAmount + bucketSize * 4)} - ₹${Math.round(minAmount + bucketSize * 5)}`, count: 0, min: minAmount + bucketSize * 4, max: minAmount + bucketSize * 5 },
-      { range: `₹${Math.round(minAmount + bucketSize * 5)}+`, count: 0, min: minAmount + bucketSize * 5, max: Infinity }
+    // Use fixed, meaningful ranges instead of dynamic buckets
+    const ranges = [
+      { range: `₹0-₹100`, min: 0, max: 100 },
+      { range: `₹101-₹500`, min: 101, max: 500 },
+      { range: `₹501-₹1k`, min: 501, max: 1000 },
+      { range: `₹1k-₹2.5k`, min: 1001, max: 2500 },
+      { range: `₹2.5k-₹5k`, min: 2501, max: 5000 },
+      { range: `₹5k+`, min: 5001, max: Infinity }
     ];
+
+    const buckets = ranges.map(r => ({ ...r, count: 0 }));
 
     // Distribute amounts into buckets
     amounts.forEach(amount => {
       for (let i = 0; i < buckets.length; i++) {
-        if (amount >= buckets[i].min && (amount < buckets[i].max || i === buckets.length - 1)) {
+        if (amount >= buckets[i].min && (amount <= buckets[i].max || i === buckets.length - 1)) {
           buckets[i].count++;
           break;
         }
       }
     });
 
+    // Only return buckets with data
     return buckets.filter(bucket => bucket.count > 0);
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
@@ -107,7 +105,8 @@ export default function ExpenseSizeDistribution({
               height={50}
             />
             <YAxis 
-              tick={ANALYTICS_STYLES.axisTick} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={[0, 'dataMax + 1']}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
@@ -121,6 +120,8 @@ export default function ExpenseSizeDistribution({
               dataKey="count" 
               name="Number of Expenses"
               fill="hsl(var(--primary))" 
+              radius={[4, 4, 0, 0]}
+              barSize={ANALYTICS_STYLES.barSize}
             />
           </BarChart>
         </ResponsiveContainer>
