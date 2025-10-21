@@ -89,7 +89,8 @@ export default function ExpenseFrequencyTimeline({
               tick={ANALYTICS_STYLES.axisTick} 
             />
             <YAxis 
-              tick={ANALYTICS_STYLES.axisTick} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={[1, 'dataMax']}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}

@@ -70,9 +70,9 @@ export default function ExpenseVelocity({
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const averageVelocity = useMemo(() => {
-    if (chartData.length === 0) return 0;
+    if (chartData.length === 0) return 1;
     const totalVelocity = chartData.reduce((sum, week) => sum + week.velocity, 0);
-    return totalVelocity / chartData.length;
+    return Math.max(1, totalVelocity / chartData.length);
   }, [chartData]);
 
   const chartTitle = analyticsViewMode === 'personal'
@@ -112,7 +112,8 @@ export default function ExpenseVelocity({
               tick={ANALYTICS_STYLES.axisTick} 
             />
             <YAxis 
-              tick={ANALYTICS_STYLES.axisTick} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={[1, 'dataMax']}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
