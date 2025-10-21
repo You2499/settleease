@@ -18,7 +18,8 @@
         "list_migrations",
         "apply_migration",
         "get_project_url",
-        "search_docs"
+        "search_docs",
+        "generate_typescript_types"
       ]
     }
   }
