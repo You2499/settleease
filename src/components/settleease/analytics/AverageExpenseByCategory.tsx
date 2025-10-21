@@ -139,14 +139,13 @@ export default function AverageExpenseByCategory({
           <BarChart
             data={chartData}
             layout="horizontal"
-            margin={ANALYTICS_STYLES.chartMarginsCompact}
+            margin={{ top: 20, right: 30, left: 100, bottom: 20 }}
           >
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis
               type="number"
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
               tick={ANALYTICS_STYLES.axisTick}
-              domain={xAxisDomain}
             />
             <YAxis
               type="category"
@@ -165,9 +164,9 @@ export default function AverageExpenseByCategory({
             <Bar
               dataKey="average"
               name="Average Amount"
-              fill="hsl(var(--primary))"
+              fill="#22c55e"
               radius={[0, 4, 4, 0]}
-              barSize={ANALYTICS_STYLES.barSizeCompact}
+              barSize={30}
             />
           </BarChart>
         </ResponsiveContainer>
