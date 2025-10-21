@@ -17,7 +17,7 @@ interface TopExpensesTableProps {
 
 export default function TopExpensesTable({ topExpensesData, analyticsViewMode, peopleMap }: TopExpensesTableProps) {
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <Award className={ANALYTICS_STYLES.icon} />
@@ -25,8 +25,8 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.tableContent}>
-        <ScrollArea className="h-auto max-h-[400px] w-full">
-          <div className="min-w-[650px]">
+        <ScrollArea className="h-auto max-h-[400px] w-full prevent-horizontal-scroll">
+          <div className="w-full max-w-full overflow-x-auto">
             <Table>
             <TableHeader><TableRow>
               <TableHead className={ANALYTICS_STYLES.tableHeader}>Description</TableHead>
@@ -38,12 +38,18 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
             <TableBody>
               {topExpensesData.map(exp => (
                 <TableRow key={exp.id}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate min-w-[120px] max-w-[120px] sm:max-w-[200px]`} title={exp.description}>{exp.description}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary min-w-[80px]`}>{formatCurrency(exp.total_amount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate min-w-[100px] max-w-[100px]`} title={exp.category}>{exp.category}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell min-w-[100px]`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate min-w-[150px] max-w-[150px]`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
-                    {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium`} title={exp.description}>
+                    <div className="truncate max-w-[120px] sm:max-w-[200px]">{exp.description}</div>
+                  </TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary whitespace-nowrap`}>{formatCurrency(exp.total_amount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell`} title={exp.category}>
+                    <div className="truncate max-w-[100px]">{exp.category}</div>
+                  </TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell whitespace-nowrap`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
+                    <div className="truncate max-w-[150px]">
+                      {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

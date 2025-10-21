@@ -16,7 +16,7 @@ interface CategoryAnalyticsTableProps {
 
 export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, analyticsViewMode }: CategoryAnalyticsTableProps) {
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <SearchCheck className={ANALYTICS_STYLES.icon} />
@@ -24,8 +24,8 @@ export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, anal
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.tableContent}>
-        <ScrollArea className="h-auto max-h-[400px] w-full">
-          <div className="min-w-[650px]">
+        <ScrollArea className="h-auto max-h-[400px] w-full prevent-horizontal-scroll">
+          <div className="w-full max-w-full overflow-x-auto">
             <Table>
             <TableHeader><TableRow>
               <TableHead className={ANALYTICS_STYLES.tableHeader}>Category</TableHead>
@@ -39,17 +39,24 @@ export default function CategoryAnalyticsTable({ detailedCategoryAnalytics, anal
             <TableBody>
               {detailedCategoryAnalytics.filter(cat => cat.totalAmount > 0).map(cat => (
                 <TableRow key={cat.name}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium flex items-center truncate min-w-[120px] max-w-[120px]`} title={cat.name}>
-                    <cat.Icon className="mr-1.5 h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />{cat.name}
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium`} title={cat.name}>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <cat.Icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                      <span className="truncate max-w-[100px] sm:max-w-[120px]">{cat.name}</span>
+                    </div>
                   </TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right min-w-[80px]`}>{formatCurrency(cat.totalAmount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell min-w-[60px]`}>{cat.expenseCount}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell min-w-[80px]`}>{formatCurrency(cat.averageAmount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell truncate min-w-[200px] max-w-[200px]`} title={cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description} (${formatCurrency(cat.mostExpensiveItem.amount)}) on ${cat.mostExpensiveItem.date}` : 'N/A'}>
-                    {cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description.substring(0, 20)}... (${formatCurrency(cat.mostExpensiveItem.amount)})` : 'N/A'}
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right whitespace-nowrap`}>{formatCurrency(cat.totalAmount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell whitespace-nowrap`}>{cat.expenseCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell whitespace-nowrap`}>{formatCurrency(cat.averageAmount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`} title={cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description} (${formatCurrency(cat.mostExpensiveItem.amount)}) on ${cat.mostExpensiveItem.date}` : 'N/A'}>
+                    <div className="truncate max-w-[150px] lg:max-w-[200px]">
+                      {cat.mostExpensiveItem ? `${cat.mostExpensiveItem.description.substring(0, 20)}... (${formatCurrency(cat.mostExpensiveItem.amount)})` : 'N/A'}
+                    </div>
                   </TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell truncate min-w-[150px] max-w-[150px]`} title={cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}>
-                    {cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`} title={cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}>
+                    <div className="truncate max-w-[120px] lg:max-w-[150px]">
+                      {cat.largestPayer ? `${cat.largestPayer.name} (${formatCurrency(cat.largestPayer.amount)})` : 'N/A'}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

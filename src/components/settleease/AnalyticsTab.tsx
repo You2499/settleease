@@ -546,13 +546,13 @@ export default function AnalyticsTab({
   }
 
   return (
-    <ScrollArea className="h-full w-full">
-      <div className="space-y-4 md:space-y-6 px-2 py-4 max-w-full overflow-hidden">
+    <ScrollArea className="h-full w-full prevent-horizontal-scroll">
+      <div className="space-y-4 md:space-y-6 px-2 py-4 prevent-horizontal-scroll">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
-        }} className="w-full max-w-full">
+        }} className="w-full max-w-full prevent-horizontal-scroll">
           <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
             <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
@@ -615,7 +615,7 @@ export default function AnalyticsTab({
               peopleMap={peopleMap}
             />
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <MonthlySpendingChart
                 expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
@@ -629,7 +629,7 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <SpendingByDayChart
                 expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
@@ -642,7 +642,7 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <TransactionHeatmapCalendar
                 expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
@@ -656,7 +656,7 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <ExpenseFrequencyTimeline
                 expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
@@ -669,7 +669,7 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <ExpenseSizeDistribution
                 expenses={displayedExpenses}
                 analyticsViewMode={analyticsViewMode}
@@ -710,7 +710,7 @@ export default function AnalyticsTab({
               peopleMap={peopleMap}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
               <CategorySpendingPieChart
                 pieChartData={pieChartData}
                 analyticsViewMode={analyticsViewMode}

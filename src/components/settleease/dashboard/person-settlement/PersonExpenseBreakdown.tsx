@@ -38,7 +38,7 @@ export default function PersonExpenseBreakdown({
   onViewExpenseDetails,
 }: PersonExpenseBreakdownProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden prevent-horizontal-scroll">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <FileText className="mr-2 h-5 w-5 text-orange-600" />
@@ -53,7 +53,7 @@ export default function PersonExpenseBreakdown({
         <div className="space-y-4 p-2 overflow-x-hidden w-full min-w-0">
           {/* Single person breakdown with same design as Step2DirectDebtAnalysis */}
           <div
-            className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
+            className={`relative p-4 rounded-xl border-2 shadow-sm transition-all overflow-hidden w-full max-w-full ${
               personSummary.netBalance > 0.01
                 ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                 : personSummary.netBalance < -0.01
@@ -78,11 +78,11 @@ export default function PersonExpenseBreakdown({
                 : "BALANCED"}
             </div>
 
-            {/* Person Header - Compact */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-3">
+            {/* Person Header - Mobile Optimized */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
+              <div className="flex items-center gap-3 min-w-0 flex-1">
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-lg ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-lg font-bold shadow-lg flex-shrink-0 ${
                     personSummary.netBalance > 0.01
                       ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
                       : personSummary.netBalance < -0.01
@@ -92,8 +92,8 @@ export default function PersonExpenseBreakdown({
                 >
                   {selectedPerson.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
                     {selectedPerson.name}
                   </h3>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -105,7 +105,7 @@ export default function PersonExpenseBreakdown({
                   </p>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-center sm:text-right flex-shrink-0">
                 <div
                   className={`text-2xl font-bold ${
                     personSummary.netBalance > 0.01
@@ -131,7 +131,7 @@ export default function PersonExpenseBreakdown({
                 {personExpenses.length} expense
                 {personExpenses.length !== 1 ? "s" : ""} found
               </div>
-              <div className="grid grid-cols-1 gap-2">
+              <div className="space-y-2 w-full max-w-full">
                 {personExpenses.map((expense) => {
                   // Calculate this person's involvement in this expense
                   const amountPaid = Array.isArray(expense.paid_by)

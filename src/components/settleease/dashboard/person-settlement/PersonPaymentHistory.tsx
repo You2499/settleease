@@ -45,7 +45,7 @@ export default function PersonPaymentHistory({
   }
 
   return (
-    <Card>
+    <Card className="prevent-horizontal-scroll">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center text-lg font-bold">
           <Receipt className="mr-2 h-5 w-5 text-green-600" />

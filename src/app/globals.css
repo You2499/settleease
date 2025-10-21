@@ -161,5 +161,18 @@
       font-size: 16px !important;
     }
   }
+
+  /* Prevent horizontal scrolling utility class */
+  .prevent-horizontal-scroll {
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .prevent-horizontal-scroll * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
 }
 

@@ -24,7 +24,7 @@ export default function ParticipantSummaryTable({
 }: ParticipantSummaryTableProps) {
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <User className={ANALYTICS_STYLES.icon} />
@@ -33,8 +33,8 @@ export default function ParticipantSummaryTable({
         <CardDescription className={ANALYTICS_STYLES.subtitle}>Financial details derived from expense records (paid vs. share), not reflecting simplified settlements.</CardDescription>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.tableContent}>
-        <ScrollArea className="h-auto max-h-[400px] w-full">
-          <div className="min-w-[750px]">
+        <ScrollArea className="h-auto max-h-[400px] w-full prevent-horizontal-scroll">
+          <div className="w-full max-w-full overflow-x-auto">
             <Table>
             <TableHeader><TableRow>
               <TableHead className={ANALYTICS_STYLES.tableHeader}>Participant</TableHead>
@@ -49,17 +49,21 @@ export default function ParticipantSummaryTable({
             <TableBody>
               {detailedParticipantAnalytics.map(p => (
                 <TableRow key={p.name}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate min-w-[120px] max-w-[120px]`} title={p.name}>{p.name}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right min-w-[80px]`}>{formatCurrency(p.totalPaid)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right min-w-[80px]`}>{formatCurrency(p.totalShared)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold hidden sm:table-cell min-w-[80px] ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium`} title={p.name}>
+                    <div className="truncate max-w-[100px] sm:max-w-[120px]">{p.name}</div>
+                  </TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right whitespace-nowrap`}>{formatCurrency(p.totalPaid)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right whitespace-nowrap`}>{formatCurrency(p.totalShared)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold hidden sm:table-cell whitespace-nowrap ${p.netBalance < 0 ? 'text-destructive' : 'text-green-600'}`}>
                     {formatCurrency(p.netBalance)}
                   </TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell min-w-[60px]`}>{p.expensesPaidCount}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell min-w-[60px]`}>{p.expensesSharedCount}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell min-w-[80px]`}>{formatCurrency(p.averageShareAmount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell truncate min-w-[150px] max-w-[150px]`} title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
-                    {p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name}` : 'N/A'}
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell whitespace-nowrap`}>{p.expensesPaidCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden sm:table-cell whitespace-nowrap`}>{p.expensesSharedCount}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right hidden md:table-cell whitespace-nowrap`}>{formatCurrency(p.averageShareAmount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`} title={p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name} (${formatCurrency(p.mostFrequentCategoryShared.amount)})` : 'N/A'}>
+                    <div className="truncate max-w-[120px] lg:max-w-[150px]">
+                      {p.mostFrequentCategoryShared ? `${p.mostFrequentCategoryShared.name}` : 'N/A'}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

@@ -54,7 +54,7 @@ export default function PersonSettlementStatus({
   onOpenHowItWorksModal,
 }: PersonSettlementStatusProps) {
   return (
-    <Card>
+    <Card className="prevent-horizontal-scroll">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -91,8 +91,8 @@ export default function PersonSettlementStatus({
                     {selectedPerson.name} is All Balanced!
                   </h4>
                   <p className="text-sm text-green-800 dark:text-green-200">
-                    Their total payments ({formatCurrency(personSummary.totalPaid)}) minus their total obligations ({formatCurrency(personSummary.totalOwed)}) 
-                    {(personSummary.totalSettledAsDebtor > 0 || personSummary.totalSettledAsCreditor > 0) && 
+                    Their total payments ({formatCurrency(personSummary.totalPaid)}) minus their total obligations ({formatCurrency(personSummary.totalOwed)})
+                    {(personSummary.totalSettledAsDebtor > 0 || personSummary.totalSettledAsCreditor > 0) &&
                       ` plus settlement adjustments (${formatCurrency(personSummary.totalSettledAsDebtor - personSummary.totalSettledAsCreditor)})`
                     } equals {formatCurrency(personSummary.netBalance)}.
                   </p>
@@ -217,7 +217,7 @@ export default function PersonSettlementStatus({
                         No Active Settlements Required
                       </h4>
                       <p className="text-sm text-gray-800 dark:text-gray-200">
-                        While {selectedPerson.name} has a net balance of {formatCurrency(Math.abs(personSummary.netBalance))}, 
+                        While {selectedPerson.name} has a net balance of {formatCurrency(Math.abs(personSummary.netBalance))},
                         the settlement algorithm has optimized the payments so that no direct action is required from them.
                       </p>
                     </div>

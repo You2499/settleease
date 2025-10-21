@@ -20,7 +20,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
   const title = `Category Spending Breakdown ${analyticsViewMode === 'personal' ? '(Your Spending)' : ''}`;
   
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <PieChartIconLucide className={ANALYTICS_STYLES.icon} />

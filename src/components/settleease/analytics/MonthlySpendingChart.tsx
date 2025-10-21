@@ -144,7 +144,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
   }
 
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <div className="flex items-center justify-between">
           <CardTitle className={ANALYTICS_STYLES.title}>

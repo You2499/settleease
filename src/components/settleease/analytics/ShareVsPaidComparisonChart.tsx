@@ -56,7 +56,7 @@ export default function ShareVsPaidComparisonChart({
   }
 
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <BarChart4 className={ANALYTICS_STYLES.icon} />

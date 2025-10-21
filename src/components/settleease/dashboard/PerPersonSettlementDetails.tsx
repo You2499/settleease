@@ -240,7 +240,7 @@ export default function PerPersonSettlementDetails({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-6 overflow-x-hidden w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 prevent-horizontal-scroll">
       {/* Step 1: Person Balance Overview */}
       <PersonBalanceOverview
         selectedPerson={selectedPerson}

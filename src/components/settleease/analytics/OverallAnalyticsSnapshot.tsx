@@ -23,14 +23,14 @@ export default function OverallAnalyticsSnapshot({
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
 
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <Sigma className={ANALYTICS_STYLES.icon} />
           {analyticsViewMode === 'personal' && personName ? `${personName}'s Snapshot` : 'Overall Snapshot'}
         </CardTitle>
       </CardHeader>
-      <CardContent className={`${ANALYTICS_STYLES.snapshotContent} grid grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm`}>
+      <CardContent className={`${ANALYTICS_STYLES.snapshotContent} grid grid-cols-2 md:grid-cols-3 gap-3 text-xs sm:text-sm w-full max-w-full prevent-horizontal-scroll`}>
         <div className={ANALYTICS_STYLES.snapshotCard}>
           <p className={ANALYTICS_STYLES.snapshotLabel}>Total Spent {analyticsViewMode === 'personal' ? '(Your Share)' : '(Group Total)'}</p>
           <p className={`${ANALYTICS_STYLES.snapshotValue} text-accent`}>{formatCurrency(enhancedOverallStats.totalAmount)}</p>

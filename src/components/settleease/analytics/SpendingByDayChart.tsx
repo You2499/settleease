@@ -74,7 +74,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
   }
 
   return (
-    <Card className={ANALYTICS_STYLES.card}>
+    <Card className={`${ANALYTICS_STYLES.card} prevent-horizontal-scroll`}>
       <CardHeader className={ANALYTICS_STYLES.header}>
         <CardTitle className={ANALYTICS_STYLES.title}>
           <CalendarClock className={ANALYTICS_STYLES.icon} />
