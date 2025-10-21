@@ -49,8 +49,8 @@ export default function PersonExpenseBreakdown({
           balance
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-2 overflow-x-hidden">
-        <div className="space-y-4 p-2">
+      <CardContent className="pt-2 overflow-x-hidden w-full min-w-0">
+        <div className="space-y-4 p-2 overflow-x-hidden w-full min-w-0">
           {/* Single person breakdown with same design as Step2DirectDebtAnalysis */}
           <div
             className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
@@ -168,95 +168,97 @@ export default function PersonExpenseBreakdown({
                   return (
                     <div
                       key={expense.id}
-                      className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors overflow-hidden"
                       onClick={() => onViewExpenseDetails(expense)}
                     >
-                      <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm hover:text-blue-600 dark:hover:text-blue-400">
-                            {expense.description}
-                            <ExternalLink className="inline ml-1 h-3 w-3 text-blue-500 dark:text-blue-400" />
-                          </h5>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
-                            <div>
-                              {expense.created_at
-                                ? new Date(
-                                    expense.created_at
-                                  ).toLocaleDateString()
-                                : "No date"}{" "}
-                              • Total: {formatCurrency(expense.total_amount)}
-                            </div>
-                            {payers.length > 0 && (
-                              <div className="flex items-center gap-1">
-                                <User className="w-3 h-3 flex-shrink-0" />
-                                <span className="truncate">
-                                  Paid by: {payers.join(", ")}
-                                </span>
-                              </div>
-                            )}
+                      <div className="flex flex-col gap-2 mb-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm hover:text-blue-600 dark:hover:text-blue-400">
+                              {expense.description}
+                              <ExternalLink className="inline ml-1 h-3 w-3 text-blue-500 dark:text-blue-400" />
+                            </h5>
+                          </div>
+                          <div
+                            className={`px-2 py-1 rounded text-xs font-bold flex-shrink-0 ${
+                              netForThisExpense > 0.01
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
+                                : netForThisExpense < -0.01
+                                ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
+                                : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
+                            }`}
+                          >
+                            {netForThisExpense > 0.01
+                              ? "+"
+                              : netForThisExpense < -0.01
+                              ? "-"
+                              : ""}
+                            {formatCurrency(Math.abs(netForThisExpense))}
                           </div>
                         </div>
-                        <div
-                          className={`text-right sm:ml-3 px-2 py-1 rounded text-xs font-bold flex-shrink-0 self-end sm:self-start ${
-                            netForThisExpense > 0.01
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200"
-                              : netForThisExpense < -0.01
-                              ? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200"
-                              : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-200"
-                          }`}
-                        >
-                          {netForThisExpense > 0.01
-                            ? "+"
-                            : netForThisExpense < -0.01
-                            ? "-"
-                            : ""}
-                          {formatCurrency(Math.abs(netForThisExpense))}
+                        <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
+                          <div className="truncate">
+                            {expense.created_at
+                              ? new Date(
+                                  expense.created_at
+                                ).toLocaleDateString()
+                              : "No date"}{" "}
+                            • Total: {formatCurrency(expense.total_amount)}
+                          </div>
+                          {payers.length > 0 && (
+                            <div className="flex items-center gap-1 min-w-0">
+                              <User className="w-3 h-3 flex-shrink-0" />
+                              <span className="truncate">
+                                Paid by: {payers.join(", ")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
-                      <div className="space-y-1 text-xs">
+                      <div className="space-y-1 text-xs overflow-hidden">
                         {amountPaid > 0 && (
-                          <div className="flex justify-between items-center gap-2">
+                          <div className="flex justify-between items-center gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
                               <CreditCard className="w-3 h-3 flex-shrink-0" />
                               <span className="truncate">Amount paid:</span>
                             </span>
-                            <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0">
+                            <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0 whitespace-nowrap">
                               +{formatCurrency(amountPaid)}
                             </span>
                           </div>
                         )}
 
                         {shareAmount > 0 && (
-                          <div className="flex justify-between items-center gap-2">
+                          <div className="flex justify-between items-center gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
                               <Receipt className="w-3 h-3 flex-shrink-0" />
                               <span className="truncate">Share owed:</span>
                             </span>
-                            <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
+                            <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0 whitespace-nowrap">
                               -{formatCurrency(shareAmount)}
                             </span>
                           </div>
                         )}
 
                         {celebrationAmount > 0 && (
-                          <div className="flex justify-between items-center gap-2">
+                          <div className="flex justify-between items-center gap-2 min-w-0">
                             <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1 min-w-0 flex-1">
                               <PartyPopper className="w-3 h-3 flex-shrink-0" />
                               <span className="truncate">Celebration:</span>
                             </span>
-                            <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
+                            <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0 whitespace-nowrap">
                               -{formatCurrency(celebrationAmount)}
                             </span>
                           </div>
                         )}
 
-                        <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700 gap-2">
-                          <span className="font-medium text-gray-800 dark:text-gray-200 min-w-0 flex-1">
+                        <div className="flex justify-between items-center pt-1 border-t border-gray-200 dark:border-gray-700 gap-2 min-w-0">
+                          <span className="font-medium text-gray-800 dark:text-gray-200 min-w-0 flex-1 truncate">
                             Net for this expense:
                           </span>
                           <span
-                            className={`font-bold ${
+                            className={`font-bold flex-shrink-0 whitespace-nowrap ${
                               netForThisExpense > 0.01
                                 ? "text-green-700 dark:text-green-300"
                                 : netForThisExpense < -0.01
@@ -280,7 +282,7 @@ export default function PersonExpenseBreakdown({
 
               {/* Final Calculation Summary - Compact */}
               <div
-                className={`mt-4 p-3 rounded-lg border-2 ${
+                className={`mt-4 p-3 rounded-lg border-2 overflow-hidden ${
                   personSummary.netBalance > 0.01
                     ? "bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700"
                     : personSummary.netBalance < -0.01
@@ -289,27 +291,27 @@ export default function PersonExpenseBreakdown({
                 }`}
               >
                 <h5 className="font-bold text-gray-900 dark:text-gray-100 mb-2 flex items-center text-sm">
-                  <DollarSign className="w-4 h-4 mr-2" />
-                  Final Calculation
+                  <DollarSign className="w-4 h-4 mr-2 flex-shrink-0" />
+                  <span className="truncate">Final Calculation</span>
                 </h5>
-                <div className="space-y-1 text-xs">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="min-w-0 flex-1">Total paid:</span>
-                    <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0">
+                <div className="space-y-1 text-xs overflow-hidden">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="min-w-0 flex-1 truncate">Total paid:</span>
+                    <span className="font-medium text-green-600 dark:text-green-400 flex-shrink-0 whitespace-nowrap">
                       +{formatCurrency(personSummary.totalPaid)}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="min-w-0 flex-1">Total owed:</span>
-                    <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0">
+                  <div className="flex justify-between items-center gap-2 min-w-0">
+                    <span className="min-w-0 flex-1 truncate">Total owed:</span>
+                    <span className="font-medium text-red-600 dark:text-red-400 flex-shrink-0 whitespace-nowrap">
                       -{formatCurrency(personSummary.totalOwed)}
                     </span>
                   </div>
                   {(personSummary.totalSettledAsDebtor > 0 ||
                     personSummary.totalSettledAsCreditor > 0) && (
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="min-w-0 flex-1">Net settlements:</span>
-                      <span className="font-medium text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    <div className="flex justify-between items-center gap-2 min-w-0">
+                      <span className="min-w-0 flex-1 truncate">Net settlements:</span>
+                      <span className="font-medium text-blue-600 dark:text-blue-400 flex-shrink-0 whitespace-nowrap">
                         {personSummary.totalSettledAsDebtor -
                           personSummary.totalSettledAsCreditor >=
                         0
@@ -322,10 +324,10 @@ export default function PersonExpenseBreakdown({
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600 gap-2">
-                    <span className="font-bold">Final Balance:</span>
+                  <div className="flex justify-between items-center pt-2 border-t-2 border-gray-300 dark:border-gray-600 gap-2 min-w-0">
+                    <span className="font-bold truncate">Final Balance:</span>
                     <span
-                      className={`font-bold text-lg ${
+                      className={`font-bold text-lg flex-shrink-0 whitespace-nowrap ${
                         personSummary.netBalance > 0.01
                           ? "text-green-700 dark:text-green-300"
                           : personSummary.netBalance < -0.01

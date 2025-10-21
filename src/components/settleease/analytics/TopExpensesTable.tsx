@@ -25,8 +25,9 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.tableContent}>
-        <ScrollArea className="h-auto max-h-[400px]">
-          <Table>
+        <ScrollArea className="h-auto max-h-[400px] w-full">
+          <div className="min-w-[650px]">
+            <Table>
             <TableHeader><TableRow>
               <TableHead className={ANALYTICS_STYLES.tableHeader}>Description</TableHead>
               <TableHead className={`${ANALYTICS_STYLES.tableHeader} text-right`}>Amount {analyticsViewMode === 'personal' ? '(Share)' : '(Total)'}</TableHead>
@@ -37,17 +38,18 @@ export default function TopExpensesTable({ topExpensesData, analyticsViewMode, p
             <TableBody>
               {topExpensesData.map(exp => (
                 <TableRow key={exp.id}>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate max-w-[120px] sm:max-w-[200px]`} title={exp.description}>{exp.description}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary`}>{formatCurrency(exp.total_amount)}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate max-w-[100px]`} title={exp.category}>{exp.category}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
-                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate max-w-[150px]`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} font-medium truncate min-w-[120px] max-w-[120px] sm:max-w-[200px]`} title={exp.description}>{exp.description}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} text-right font-semibold text-primary min-w-[80px]`}>{formatCurrency(exp.total_amount)}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate min-w-[100px] max-w-[100px]`} title={exp.category}>{exp.category}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden md:table-cell min-w-[100px]`}>{new Date(exp.created_at || '').toLocaleDateString()}</TableCell>
+                  <TableCell className={`${ANALYTICS_STYLES.tableCell} hidden sm:table-cell truncate min-w-[150px] max-w-[150px]`} title={exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}>
                     {exp.paid_by.map(p => peopleMap[p.personId] || 'Unknown').join(', ')}
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          </div>
         </ScrollArea>
       </CardContent>
     </Card>

@@ -44,8 +44,8 @@ export default function PersonBalanceOverview({
           share
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-2 overflow-x-hidden">
-        <div className="p-2">
+      <CardContent className="pt-2 overflow-x-hidden w-full min-w-0">
+        <div className="p-2 overflow-x-hidden w-full min-w-0">
           {/* Single person card with same design as Step1BalanceOverview */}
           <div
             className={`relative p-4 rounded-xl border-2 shadow-sm transition-all h-64 flex flex-col ${

@@ -380,7 +380,7 @@ export default function SettlementSummary({
           </TabsContent>
           <TabsContent
             value="person"
-            className="mt-0 flex-1 flex flex-col min-h-0 space-y-3"
+            className="mt-0 flex-1 flex flex-col min-h-0 space-y-3 overflow-x-hidden w-full"
           >
             <div className="flex flex-col gap-3 bg-muted/50 px-3 py-2 rounded-md">
               <Label

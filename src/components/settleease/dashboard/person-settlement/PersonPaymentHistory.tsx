@@ -55,35 +55,35 @@ export default function PersonPaymentHistory({
           Recorded settlement payments involving {selectedPerson.name}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-x-hidden w-full min-w-0">
         <ScrollArea className="h-auto max-h-60">
           <div className="space-y-2">
             {personRecordedPayments.map((payment) => (
               <Card key={payment.id} className="bg-card/50 p-3 shadow-sm">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <div className="flex-grow text-sm">
-                    <div className="flex items-center space-x-2">
+                <div className="flex flex-col gap-2 overflow-hidden">
+                  <div className="flex-grow text-sm min-w-0">
+                    <div className="flex items-center space-x-2 min-w-0">
                       {payment.debtor_id === selectedPerson.id ? (
-                        <TrendingDown className="h-4 w-4 text-red-600" />
+                        <TrendingDown className="h-4 w-4 text-red-600 flex-shrink-0" />
                       ) : (
-                        <TrendingUp className="h-4 w-4 text-green-600" />
+                        <TrendingUp className="h-4 w-4 text-green-600 flex-shrink-0" />
                       )}
-                      <span>
+                      <span className="min-w-0 flex-1">
                         {payment.debtor_id === selectedPerson.id ? (
                           <>
                             Paid{" "}
-                            <strong>
+                            <strong className="truncate inline-block max-w-[100px] align-bottom">
                               {peopleMap[payment.creditor_id]}
                             </strong>
                           </>
                         ) : (
                           <>
-                            <strong>{peopleMap[payment.debtor_id]}</strong>{" "}
+                            <strong className="truncate inline-block max-w-[100px] align-bottom">{peopleMap[payment.debtor_id]}</strong>{" "}
                             paid you
                           </>
                         )}
                       </span>
-                      <span className="font-semibold text-green-600">
+                      <span className="font-semibold text-green-600 flex-shrink-0 whitespace-nowrap">
                         {formatCurrency(payment.amount_settled)}
                       </span>
                     </div>
@@ -97,7 +97,7 @@ export default function PersonPaymentHistory({
                       variant="destructive"
                       onClick={() => onUnmarkPayment(payment)}
                       disabled={isLoadingParent}
-                      className="text-xs"
+                      className="text-xs w-full"
                     >
                       <Undo2 className="mr-1 h-4 w-4" />
                       Unmark

@@ -78,7 +78,7 @@ export default function PersonSettlementStatus({
           </Button> */}
         </div>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 overflow-x-hidden w-full min-w-0">
         {/* Settlement Status - Consistent for all people */}
         <div className="space-y-4">
           {personSummary.isBalanced ? (
@@ -121,28 +121,28 @@ export default function PersonSettlementStatus({
                         key={i}
                         className="bg-red-50 dark:bg-red-950/20 p-3 border-red-200 dark:border-red-800"
                       >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 overflow-hidden">
+                          <div className="flex items-center space-x-2 min-w-0">
                             <ArrowRight className="h-4 w-4 text-red-600 flex-shrink-0" />
-                            <span className="text-sm min-w-0">
+                            <span className="text-sm min-w-0 flex-1">
                               Pay{" "}
-                              <strong className="truncate">
+                              <strong className="truncate inline-block max-w-[120px] align-bottom">
                                 {peopleMap[debt.to]}
                               </strong>
                               :{" "}
-                              <span className="font-semibold">
+                              <span className="font-semibold whitespace-nowrap">
                                 {formatCurrency(debt.amount)}
                               </span>
                             </span>
                           </div>
-                          <div className="flex space-x-2 flex-shrink-0 w-full sm:w-auto">
+                          <div className="flex space-x-2 flex-shrink-0">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() =>
                                 onViewRelevantExpenses(debt, "debt")
                               }
-                              className="text-xs flex-1 sm:flex-none"
+                              className="text-xs flex-1"
                             >
                               <ExternalLink className="mr-1 h-4 w-4" />
                               Expenses
@@ -152,7 +152,7 @@ export default function PersonSettlementStatus({
                                 size="sm"
                                 onClick={() => onMarkAsPaid(debt)}
                                 disabled={isLoadingParent}
-                                className="text-xs bg-green-600 hover:bg-green-700 text-white flex-1 sm:flex-none"
+                                className="text-xs bg-green-600 hover:bg-green-700 text-white flex-1"
                               >
                                 <CheckCircle2 className="mr-1 h-4 w-4" />
                                 Mark Paid
@@ -177,15 +177,15 @@ export default function PersonSettlementStatus({
                         key={i}
                         className="bg-green-50 dark:bg-green-950/20 p-3 border-green-200 dark:border-green-800"
                       >
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <div className="flex items-center space-x-2 min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 overflow-hidden">
+                          <div className="flex items-center space-x-2 min-w-0">
                             <ArrowRight className="h-4 w-4 text-green-600 rotate-180 flex-shrink-0" />
-                            <span className="text-sm min-w-0">
-                              <strong className="truncate">
+                            <span className="text-sm min-w-0 flex-1">
+                              <strong className="truncate inline-block max-w-[120px] align-bottom">
                                 {peopleMap[credit.from]}
                               </strong>{" "}
                               will pay:{" "}
-                              <span className="font-semibold">
+                              <span className="font-semibold whitespace-nowrap">
                                 {formatCurrency(credit.amount)}
                               </span>
                             </span>
@@ -196,7 +196,7 @@ export default function PersonSettlementStatus({
                             onClick={() =>
                               onViewRelevantExpenses(credit, "credit")
                             }
-                            className="text-xs w-full sm:w-auto flex-shrink-0"
+                            className="text-xs w-full flex-shrink-0"
                           >
                             <ExternalLink className="mr-1 h-4 w-4" />
                             Expenses
