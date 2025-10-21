@@ -121,7 +121,7 @@ export default function AverageExpenseByCategory({
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={360}>
           <BarChart 
             data={chartData} 
             layout="horizontal"

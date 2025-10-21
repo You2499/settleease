@@ -57,7 +57,7 @@ export default function SplitMethodChart({ expenses, analyticsViewMode, selected
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={360}>
           <PieChart margin={ANALYTICS_STYLES.chartMarginsPie}>
             <Pie data={splitMethodDistributionData} dataKey="count" nameKey="method" cx="50%" cy="50%" outerRadius={90} labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} fontSize={12}>
               {splitMethodDistributionData.map((entry, index) => (

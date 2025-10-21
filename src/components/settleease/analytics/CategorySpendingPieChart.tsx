@@ -29,7 +29,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         {pieChartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={360}>
             <RechartsPieChart margin={ANALYTICS_STYLES.chartMarginsPie}>
               <Pie
                 data={pieChartData}

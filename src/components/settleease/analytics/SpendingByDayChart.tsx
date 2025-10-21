@@ -82,7 +82,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height="100%">
+        <ResponsiveContainer width="100%" height={360}>
           <BarChart data={spendingByDayOfWeekData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey="day" tick={ANALYTICS_STYLES.axisTick} />
