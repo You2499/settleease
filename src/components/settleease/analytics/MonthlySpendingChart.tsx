@@ -163,7 +163,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
         </div>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={360}>
+        <ResponsiveContainer width="100%" height={380}>
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey={xKey} tick={ANALYTICS_STYLES.axisTick} />

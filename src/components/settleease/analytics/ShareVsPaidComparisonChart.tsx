@@ -64,7 +64,7 @@ export default function ShareVsPaidComparisonChart({
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={360}>
+        <ResponsiveContainer width="100%" height={380}>
           <BarChart data={shareVsPaidData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey="name" tick={ANALYTICS_STYLES.axisTick} interval={0} />

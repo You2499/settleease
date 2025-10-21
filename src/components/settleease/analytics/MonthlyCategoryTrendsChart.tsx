@@ -170,8 +170,8 @@ export default function MonthlyCategoryTrendsChart({
                 </CardTitle>
             </CardHeader>
             <CardContent className={ANALYTICS_STYLES.chartContent}>
-                <ResponsiveContainer width="100%" height={360}>
-                    <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
+                <ResponsiveContainer width="100%" height={380}>
+                    <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 40, bottom: 10 }}>
                         <CartesianGrid {...ANALYTICS_STYLES.grid} />
                         <XAxis
                             dataKey="month"
@@ -190,7 +190,7 @@ export default function MonthlyCategoryTrendsChart({
                             ]}
                         />
                         <Legend 
-                            wrapperStyle={{ ...ANALYTICS_STYLES.legend, marginTop: '10px' }}
+                            wrapperStyle={{ ...ANALYTICS_STYLES.legend, marginTop: '5px' }}
                             iconType="rect"
                         />
                         {topCategories.map((category, index) => (
