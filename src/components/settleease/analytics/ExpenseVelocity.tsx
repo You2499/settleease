@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Zap } from 'lucide-react';
+import { Zap, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
@@ -28,6 +29,8 @@ export default function ExpenseVelocity({
   analyticsViewMode, 
   selectedPersonIdForAnalytics 
 }: ExpenseVelocityProps) {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('1M');
   
   const chartData = useMemo(() => {
     const weeklyData: Record<string, { count: number, actualDates: Date[] }> = {};
@@ -60,21 +63,33 @@ export default function ExpenseVelocity({
       }
     });
 
-    // Fill in missing weeks with 0 velocity for better visualization
-    const today = new Date();
-    const twelveWeeksAgo = new Date(today);
-    twelveWeeksAgo.setDate(today.getDate() - (12 * 7));
+    // Calculate date range based on selected period and date
+    const getWeeksToShow = () => {
+      switch (timePeriod) {
+        case '1M': return 4;
+        case '3M': return 12;
+        case '6M': return 24;
+        case '1Y': return 52;
+        default: return 4;
+      }
+    };
+
+    const weeksToShow = getWeeksToShow();
+    const endDate = new Date(selectedDate);
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - ((weeksToShow - 1) * 7));
     
     const allWeeks = [];
-    for (let d = new Date(twelveWeeksAgo); d <= today; d.setDate(d.getDate() + 7)) {
-      const weekKey = getWeekKey(d);
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const weekKey = getWeekKey(currentDate);
       const weekData = weeklyData[weekKey];
       const velocity = weekData ? weekData.count : 0;
       
       // Calculate week start for display
-      const dayOfWeek = d.getDay();
-      const diff = d.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const weekStart = new Date(d.getFullYear(), d.getMonth(), diff);
+      const dayOfWeek = currentDate.getDay();
+      const diff = currentDate.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+      const weekStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), diff);
       const displayDate = weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' });
       
       allWeeks.push({
@@ -82,10 +97,11 @@ export default function ExpenseVelocity({
         velocity: velocity,
         displayWeek: velocity === 0 ? displayDate : (velocity === 1 ? displayDate : `${displayDate} (${velocity} expenses)`)
       });
+      currentDate.setDate(currentDate.getDate() + 7);
     }
     
     return allWeeks.sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime());
-  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, selectedDate, timePeriod]);
 
   const averageVelocity = useMemo(() => {
     if (chartData.length === 0) return 0;
@@ -96,6 +112,18 @@ export default function ExpenseVelocity({
   const chartTitle = analyticsViewMode === 'personal'
     ? 'Your Expense Velocity'
     : 'Group Expense Velocity';
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setSelectedDate(newDate);
+  };
 
   if (chartData.length === 0) {
     return (
@@ -116,10 +144,50 @@ export default function ExpenseVelocity({
   return (
     <Card className={ANALYTICS_STYLES.card}>
       <CardHeader className={ANALYTICS_STYLES.header}>
-        <CardTitle className={ANALYTICS_STYLES.title}>
-          <Zap className={ANALYTICS_STYLES.icon} />
-          {chartTitle}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <Zap className={ANALYTICS_STYLES.icon} />
+            {chartTitle}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {/* Time period buttons */}
+            <div className="flex gap-1">
+              {(['1M', '3M', '6M', '1Y'] as const).map((period) => (
+                <Button
+                  key={period}
+                  size="sm"
+                  variant={timePeriod === period ? "default" : "outline"}
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setTimePeriod(period)}
+                >
+                  {period}
+                </Button>
+              ))}
+            </div>
+            {/* Month navigation */}
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={goToPreviousMonth}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <span className="text-sm font-medium min-w-[80px] text-center">
+                {selectedDate.toLocaleDateString('default', { month: 'short', year: 'numeric' })}
+              </span>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={goToNextMonth}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height={380}>
@@ -157,9 +225,9 @@ export default function ExpenseVelocity({
               type="monotone" 
               dataKey={() => averageVelocity} 
               name="Average"
-              stroke="hsl(var(--muted-foreground))" 
-              strokeWidth={1} 
-              strokeDasharray="5 5"
+              stroke="#94a3b8" 
+              strokeWidth={2} 
+              strokeDasharray="8 4"
               dot={false}
             />
           </LineChart>

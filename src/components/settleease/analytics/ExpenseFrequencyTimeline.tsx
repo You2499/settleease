@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Activity } from 'lucide-react';
+import { Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
@@ -19,6 +20,8 @@ export default function ExpenseFrequencyTimeline({
   analyticsViewMode, 
   selectedPersonIdForAnalytics 
 }: ExpenseFrequencyTimelineProps) {
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [timePeriod, setTimePeriod] = useState<'1M' | '3M' | '6M' | '1Y'>('1M');
   
   const chartData = useMemo(() => {
     const dailyFrequency: Record<string, number> = {};
@@ -41,27 +44,52 @@ export default function ExpenseFrequencyTimeline({
       }
     });
 
-    // Fill in missing dates with 0 frequency for better visualization
-    const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 30);
+    // Calculate date range based on selected period and date
+    const getDaysToShow = () => {
+      switch (timePeriod) {
+        case '1M': return 30;
+        case '3M': return 90;
+        case '6M': return 180;
+        case '1Y': return 365;
+        default: return 30;
+      }
+    };
+
+    const daysToShow = getDaysToShow();
+    const endDate = new Date(selectedDate);
+    const startDate = new Date(endDate);
+    startDate.setDate(endDate.getDate() - (daysToShow - 1));
     
     const allDates = [];
-    for (let d = new Date(thirtyDaysAgo); d <= today; d.setDate(d.getDate() + 1)) {
-      const dateKey = d.toLocaleDateString('en-CA');
+    const currentDate = new Date(startDate);
+    while (currentDate <= endDate) {
+      const dateKey = currentDate.toLocaleDateString('en-CA');
       allDates.push({
         date: dateKey,
         frequency: dailyFrequency[dateKey] || 0,
         displayDate: new Date(dateKey).toLocaleDateString('default', { month: 'short', day: 'numeric' })
       });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return allDates;
-  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+  }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics, selectedDate, timePeriod]);
 
   const chartTitle = analyticsViewMode === 'personal'
     ? 'Your Expense Frequency Timeline'
     : 'Group Expense Frequency Timeline';
+
+  const goToPreviousMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() - 1);
+    setSelectedDate(newDate);
+  };
+
+  const goToNextMonth = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setMonth(newDate.getMonth() + 1);
+    setSelectedDate(newDate);
+  };
 
   if (chartData.length === 0) {
     return (
@@ -82,10 +110,50 @@ export default function ExpenseFrequencyTimeline({
   return (
     <Card className={ANALYTICS_STYLES.card}>
       <CardHeader className={ANALYTICS_STYLES.header}>
-        <CardTitle className={ANALYTICS_STYLES.title}>
-          <Activity className={ANALYTICS_STYLES.icon} />
-          {chartTitle}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className={ANALYTICS_STYLES.title}>
+            <Activity className={ANALYTICS_STYLES.icon} />
+            {chartTitle}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {/* Time period buttons */}
+            <div className="flex gap-1">
+              {(['1M', '3M', '6M', '1Y'] as const).map((period) => (
+                <Button
+                  key={period}
+                  size="sm"
+                  variant={timePeriod === period ? "default" : "outline"}
+                  className="h-6 px-2 text-xs"
+                  onClick={() => setTimePeriod(period)}
+                >
+                  {period}
+                </Button>
+              ))}
+            </div>
+            {/* Month navigation */}
+            <div className="flex items-center gap-1">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={goToPreviousMonth}
+              >
+                <ChevronLeft className="h-3 w-3" />
+              </Button>
+              <span className="text-sm font-medium min-w-[80px] text-center">
+                {selectedDate.toLocaleDateString('default', { month: 'short', year: 'numeric' })}
+              </span>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6"
+                onClick={goToNextMonth}
+              >
+                <ChevronRight className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
         <ResponsiveContainer width="100%" height={380}>
