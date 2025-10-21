@@ -25,6 +25,20 @@ export default function ShareVsPaidComparisonChart({
   const personName = selectedPersonIdForAnalytics ? peopleMap[selectedPersonIdForAnalytics] : '';
   const title = analyticsViewMode === 'personal' && personName ? `Share vs. Paid (For ${personName})` : 'Share vs. Paid';
 
+  // Calculate intelligent Y-axis domain
+  const yAxisDomain = React.useMemo(() => {
+    if (shareVsPaidData.length === 0) return [0, 100];
+
+    const allValues = shareVsPaidData.flatMap(d => [d.paid, d.share]);
+    const maxValue = Math.max(...allValues);
+
+    if (maxValue === 0) return [0, 100];
+
+    // Add 10% padding to the top for bar charts, start from 0
+    const paddedMax = maxValue * 1.1;
+    return [0, paddedMax];
+  }, [shareVsPaidData]);
+
   if (shareVsPaidData.length === 0) {
     return (
       <Card className={ANALYTICS_STYLES.card}>
@@ -50,11 +64,15 @@ export default function ShareVsPaidComparisonChart({
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={shareVsPaidData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey="name" tick={ANALYTICS_STYLES.axisTick} interval={0} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} tick={ANALYTICS_STYLES.axisTick} />
+            <YAxis 
+              tickFormatter={(value) => formatCurrencyForAxis(value, '\u20b9')} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={yAxisDomain}
+            />
             <Tooltip
               {...ANALYTICS_STYLES.tooltip}
               formatter={(value: number) => [formatCurrency(value), 'Amount']} />

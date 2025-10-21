@@ -43,6 +43,20 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
 
   const title = analyticsViewMode === 'personal' ? 'Your Spending by Day' : 'Group Spending by Day';
 
+  // Calculate intelligent Y-axis domain
+  const yAxisDomain = React.useMemo(() => {
+    if (spendingByDayOfWeekData.length === 0) return [0, 100];
+
+    const values = spendingByDayOfWeekData.map(d => d.totalAmount);
+    const maxValue = Math.max(...values);
+
+    if (maxValue === 0) return [0, 100];
+
+    // Add 10% padding to the top for bar charts, start from 0
+    const paddedMax = maxValue * 1.1;
+    return [0, paddedMax];
+  }, [spendingByDayOfWeekData]);
+
   if (spendingByDayOfWeekData.length === 0) {
     return (
       <Card className={ANALYTICS_STYLES.card}>
@@ -68,11 +82,15 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={spendingByDayOfWeekData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis dataKey="day" tick={ANALYTICS_STYLES.axisTick} />
-            <YAxis tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} tick={ANALYTICS_STYLES.axisTick} />
+            <YAxis 
+              tickFormatter={(value) => formatCurrencyForAxis(value, '₹')} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={yAxisDomain}
+            />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
                 formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>

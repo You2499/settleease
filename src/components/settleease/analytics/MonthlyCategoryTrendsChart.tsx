@@ -121,6 +121,26 @@ export default function MonthlyCategoryTrendsChart({
             .map(([category]) => category);
     }, [chartData]);
 
+    // Calculate intelligent Y-axis domain
+    const yAxisDomain = useMemo(() => {
+        if (chartData.length === 0) return [0, 100];
+
+        let maxValue = 0;
+        chartData.forEach(monthData => {
+            let monthTotal = 0;
+            topCategories.forEach(category => {
+                monthTotal += monthData[category] || 0;
+            });
+            maxValue = Math.max(maxValue, monthTotal);
+        });
+
+        if (maxValue === 0) return [0, 100];
+
+        // Add 10% padding to the top, but start from 0 for area charts
+        const paddedMax = maxValue * 1.1;
+        return [0, paddedMax];
+    }, [chartData, topCategories]);
+
     const chartTitle = analyticsViewMode === 'personal'
         ? 'Your Category Spending Trends'
         : 'Group Category Spending Trends';
@@ -150,8 +170,8 @@ export default function MonthlyCategoryTrendsChart({
                 </CardTitle>
             </CardHeader>
             <CardContent className={ANALYTICS_STYLES.chartContent}>
-                <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
                         <CartesianGrid {...ANALYTICS_STYLES.grid} />
                         <XAxis
                             dataKey="month"
@@ -160,6 +180,7 @@ export default function MonthlyCategoryTrendsChart({
                         <YAxis
                             tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
                             tick={ANALYTICS_STYLES.axisTick}
+                            domain={yAxisDomain}
                         />
                         <Tooltip
                             {...ANALYTICS_STYLES.tooltip}
@@ -168,7 +189,10 @@ export default function MonthlyCategoryTrendsChart({
                                 name
                             ]}
                         />
-                        <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
+                        <Legend 
+                            wrapperStyle={{ ...ANALYTICS_STYLES.legend, marginTop: '10px' }}
+                            iconType="rect"
+                        />
                         {topCategories.map((category, index) => (
                             <Area
                                 key={category}

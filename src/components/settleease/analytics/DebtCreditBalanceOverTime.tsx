@@ -100,30 +100,54 @@ export default function DebtCreditBalanceOverTime({
       });
     });
 
-    // Group by week to reduce data points
-    const weeklyBalances: Record<string, number> = {};
+    // Use actual dates instead of week grouping for more accurate representation
+    const dailyBalances: Record<string, number> = {};
     balanceOverTime.forEach(point => {
+      // Create date in local timezone (JavaScript automatically converts UTC to local)
       const date = new Date(point.date);
-      const dayOfWeek = date.getDay();
-      const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-      const weekStart = new Date(date.setDate(diff));
-      const weekKey = weekStart.toLocaleDateString('en-CA');
+      const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local timezone
       
-      weeklyBalances[weekKey] = point.balance; // Use latest balance for the week
+      dailyBalances[dateKey] = point.balance; // Use the balance for the actual date
     });
 
-    return Object.entries(weeklyBalances)
-      .map(([week, balance]) => ({
-        week,
-        balance,
-        displayWeek: new Date(week).toLocaleDateString('default', { month: 'short', day: 'numeric' })
-      }))
+    return Object.entries(dailyBalances)
+      .map(([dateKey, balance]) => {
+        const date = new Date(dateKey);
+        // Show the actual date for more precision
+        const displayWeek = date.toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        return {
+          week: dateKey,
+          balance,
+          displayWeek
+        };
+      })
       .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
-      .slice(-12); // Show last 12 weeks
+      .slice(-12); // Show last 12 data points
   }, [expenses, settlementPayments, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const currentBalance = chartData.length > 0 ? chartData[chartData.length - 1].balance : 0;
   const isPositive = currentBalance >= 0;
+
+  // Calculate intelligent Y-axis domain for balance chart
+  const yAxisDomain = useMemo(() => {
+    if (chartData.length === 0) return [-100, 100];
+
+    const values = chartData.map(d => d.balance);
+    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values);
+
+    // Always include zero for balance charts
+    const actualMax = Math.max(maxValue, 0);
+    const actualMin = Math.min(minValue, 0);
+
+    if (actualMax === 0 && actualMin === 0) return [-100, 100];
+
+    // Add 20% padding to both sides
+    const range = actualMax - actualMin;
+    const padding = Math.max(range * 0.2, Math.max(Math.abs(actualMax), Math.abs(actualMin)) * 0.1);
+    
+    return [actualMin - padding, actualMax + padding];
+  }, [chartData]);
 
   if (analyticsViewMode === 'group') {
     return (
@@ -166,7 +190,7 @@ export default function DebtCreditBalanceOverTime({
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
@@ -175,7 +199,8 @@ export default function DebtCreditBalanceOverTime({
             />
             <YAxis 
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
-              tick={ANALYTICS_STYLES.axisTick} 
+              tick={ANALYTICS_STYLES.axisTick}
+              domain={yAxisDomain}
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}

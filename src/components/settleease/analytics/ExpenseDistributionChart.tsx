@@ -76,7 +76,7 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <BarChart data={expenseAmountDistributionData} layout="vertical" margin={ANALYTICS_STYLES.chartMarginsCompact}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis type="number" allowDecimals={false} tick={ANALYTICS_STYLES.axisTickSmall} />

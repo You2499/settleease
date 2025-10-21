@@ -21,7 +21,7 @@ export default function ExpenseVelocity({
 }: ExpenseVelocityProps) {
   
   const chartData = useMemo(() => {
-    const weeklyData: Record<string, number> = {};
+    const weeklyData: Record<string, { count: number, actualDates: Date[] }> = {};
 
     expenses.forEach(exp => {
       if (!exp.created_at) return;
@@ -36,28 +36,37 @@ export default function ExpenseVelocity({
       }
 
       if (shouldInclude) {
+        // Create date in local timezone (JavaScript automatically converts UTC to local)
         const date = new Date(exp.created_at);
-        // Get week start (Monday)
-        const dayOfWeek = date.getDay();
-        const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        const weekStart = new Date(date.setDate(diff));
-        const weekKey = weekStart.toLocaleDateString('en-CA'); // YYYY-MM-DD format
         
-        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
+        // For consistency with other charts, use the actual expense date for grouping
+        // instead of calculating week starts
+        const dateKey = date.toLocaleDateString('en-CA'); // YYYY-MM-DD format in local timezone
+        
+        if (!weeklyData[dateKey]) {
+          weeklyData[dateKey] = { count: 0, actualDates: [] };
+        }
+        weeklyData[dateKey].count += 1;
+        weeklyData[dateKey].actualDates.push(date);
       }
     });
 
-    // Convert to array and calculate velocity (expenses per week)
-    const sortedWeeks = Object.entries(weeklyData)
-      .map(([week, count]) => ({ 
-        week, 
-        velocity: count,
-        displayWeek: new Date(week).toLocaleDateString('default', { month: 'short', day: 'numeric' })
-      }))
+    // Convert to array and calculate velocity (expenses per day/week)
+    const sortedDates = Object.entries(weeklyData)
+      .map(([dateKey, data]) => {
+        // Show the actual expense date
+        const displayDate = data.actualDates[0].toLocaleDateString('default', { month: 'short', day: 'numeric' });
+        
+        return { 
+          week: dateKey, 
+          velocity: data.count,
+          displayWeek: data.count === 1 ? displayDate : `${displayDate} (${data.count} expenses)`
+        };
+      })
       .sort((a, b) => new Date(a.week).getTime() - new Date(b.week).getTime())
-      .slice(-12); // Show last 12 weeks
+      .slice(-12); // Show last 12 data points
 
-    return sortedWeeks;
+    return sortedDates;
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   const averageVelocity = useMemo(() => {
@@ -95,7 +104,7 @@ export default function ExpenseVelocity({
         </CardTitle>
       </CardHeader>
       <CardContent className={ANALYTICS_STYLES.chartContent}>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
             <XAxis 
