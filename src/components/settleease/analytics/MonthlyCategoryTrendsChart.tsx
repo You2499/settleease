@@ -268,7 +268,7 @@ export default function MonthlyCategoryTrendsChart({
     return (
         <Card className={ANALYTICS_STYLES.card}>
             <CardHeader className={ANALYTICS_STYLES.header}>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2 w-full">
                     <CardTitle className={ANALYTICS_STYLES.title}>
                         <TrendingUp className={ANALYTICS_STYLES.icon} />
                         {chartTitle}
