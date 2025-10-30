@@ -188,14 +188,14 @@ export default function ExpenseVelocity({
   return (
     <Card className={ANALYTICS_STYLES.card}>
       <CardHeader className={ANALYTICS_STYLES.header}>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center justify-between gap-2 w-full">
           <CardTitle className={ANALYTICS_STYLES.title}>
             <Zap className={ANALYTICS_STYLES.icon} />
             {chartTitle}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2 w-full sm:w-auto">
             {/* Time period buttons */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 flex-wrap w-full sm:w-auto">
               {(['1M', '3M', '6M', '1Y'] as const).map((period) => (
                 <Button
                   key={period}
@@ -209,7 +209,7 @@ export default function ExpenseVelocity({
               ))}
             </div>
             {/* Month navigation */}
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 w-full sm:w-auto">
               <Button
                 size="icon"
                 variant="ghost"
