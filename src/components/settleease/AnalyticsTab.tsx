@@ -546,7 +546,7 @@ export default function AnalyticsTab({
   }
 
   return (
-    <div className="h-full w-full overflow-y-auto">
+    <div className="h-full w-full overflow-x-hidden overflow-y-auto">
       <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4 min-h-0">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
