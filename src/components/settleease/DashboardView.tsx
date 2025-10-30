@@ -190,6 +190,7 @@ export default function DashboardView({
       <div className="flex-1 flex flex-col">
         <ExpenseLog
           expenses={expenses}
+          settlementPayments={settlementPayments}
           peopleMap={peopleMap}
           handleExpenseCardClick={handleExpenseCardClick}
           getCategoryIconFromName={getCategoryIconFromName}
