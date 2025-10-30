@@ -546,13 +546,13 @@ export default function AnalyticsTab({
   }
 
   return (
-    <div className="h-full w-full prevent-horizontal-scroll overflow-y-auto">
-      <div className="space-y-4 md:space-y-6 p-6 pb-12 prevent-horizontal-scroll">
+    <div className="h-full w-full overflow-y-auto">
+      <div className="flex flex-col space-y-4 md:space-y-6 px-2 sm:px-4 pb-8 pt-4 min-h-0">
         <Tabs value={analyticsViewMode} onValueChange={(value) => {
           setAnalyticsViewMode(value as 'group' | 'personal');
           if (value === 'group') setSelectedPersonIdForAnalytics(null);
           else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
-        }} className="w-full max-w-full prevent-horizontal-scroll">
+        }} className="w-full max-w-full">
           <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
             <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
               <Eye className="h-4 w-4"/> Group Overview
@@ -564,7 +564,7 @@ export default function AnalyticsTab({
           
           <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
           </TabsContent>
-          <TabsContent value="personal" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
+          <TabsContent value="personal" className="mt-0">
             <Card className={`${ANALYTICS_STYLES.card} mb-4 sm:mb-6`}>
               <CardContent className={ANALYTICS_STYLES.header}>
               <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
@@ -606,120 +606,139 @@ export default function AnalyticsTab({
             </Card>
         )}
 
+        {/* ========== ANALYTICS CARD GRIDS ========== */}
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
           <>
-            <OverallAnalyticsSnapshot
-              enhancedOverallStats={enhancedOverallStats}
-              analyticsViewMode={analyticsViewMode}
-              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              peopleMap={peopleMap}
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <MonthlySpendingChart
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-              <ShareVsPaidComparisonChart
-                shareVsPaidData={shareVsPaidData}
+            <div className="px-1 md:px-2">
+              <OverallAnalyticsSnapshot
+                enhancedOverallStats={enhancedOverallStats}
                 analyticsViewMode={analyticsViewMode}
                 selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
                 peopleMap={peopleMap}
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <SpendingByDayChart
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-              <SplitMethodChart
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
+            <div className="px-1 md:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <MonthlySpendingChart
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+                <ShareVsPaidComparisonChart
+                  shareVsPaidData={shareVsPaidData}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                  peopleMap={peopleMap}
+                />
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <TransactionHeatmapCalendar
+            <div className="px-1 md:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <SpendingByDayChart
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+                <SplitMethodChart
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+              </div>
+            </div>
+
+            <div className="px-1 md:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <TransactionHeatmapCalendar
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                  peopleMap={peopleMap}
+                />
+                <MonthlyCategoryTrendsChart
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+              </div>
+            </div>
+
+            <div className="px-1 md:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <ExpenseFrequencyTimeline
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+                <ExpenseVelocity
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+              </div>
+            </div>
+
+            <div className="px-1 md:px-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <ExpenseSizeDistribution
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+                <AverageExpenseByCategory
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+              </div>
+            </div>
+
+            <div className="px-1 md:px-2">
+              <DebtCreditBalanceOverTime
                 expenses={displayedExpenses}
+                settlementPayments={settlementPayments}
                 analyticsViewMode={analyticsViewMode}
                 selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
                 peopleMap={peopleMap}
               />
-              <MonthlyCategoryTrendsChart
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <ExpenseFrequencyTimeline
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-              <ExpenseVelocity
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <ExpenseSizeDistribution
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-              <AverageExpenseByCategory
-                expenses={displayedExpenses}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              />
-            </div>
-
-            <DebtCreditBalanceOverTime
-              expenses={displayedExpenses}
-              settlementPayments={settlementPayments}
-              analyticsViewMode={analyticsViewMode}
-              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              peopleMap={peopleMap}
-            />
-            
-            {topExpensesData.length > 0 && (
-              <TopExpensesTable
-                topExpensesData={topExpensesData}
-                analyticsViewMode={analyticsViewMode}
-                peopleMap={peopleMap}
-              />
+            {!!topExpensesData.length && (
+              <div className="px-1 md:px-2">
+                <TopExpensesTable
+                  topExpensesData={topExpensesData}
+                  analyticsViewMode={analyticsViewMode}
+                  peopleMap={peopleMap}
+                />
+              </div>
             )}
-
-            <CategoryAnalyticsTable
-              detailedCategoryAnalytics={detailedCategoryAnalytics}
-              analyticsViewMode={analyticsViewMode}
-            />
-            
-            <ParticipantSummaryTable
-              detailedParticipantAnalytics={detailedParticipantAnalytics}
-              analyticsViewMode={analyticsViewMode}
-              selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-              peopleMap={peopleMap}
-            />
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-full prevent-horizontal-scroll">
-              <CategorySpendingPieChart
-                pieChartData={pieChartData}
+            <div className="px-1 md:px-2">
+              <CategoryAnalyticsTable
+                detailedCategoryAnalytics={detailedCategoryAnalytics}
                 analyticsViewMode={analyticsViewMode}
               />
-              <ExpenseDistributionChart
-                expenses={displayedExpenses}
+            </div>
+            <div className="px-1 md:px-2">
+              <ParticipantSummaryTable
+                detailedParticipantAnalytics={detailedParticipantAnalytics}
                 analyticsViewMode={analyticsViewMode}
                 selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                peopleMap={peopleMap}
               />
+            </div>
+            <div className="px-1 md:px-2 mb-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
+                <CategorySpendingPieChart
+                  pieChartData={pieChartData}
+                  analyticsViewMode={analyticsViewMode}
+                />
+                <ExpenseDistributionChart
+                  expenses={displayedExpenses}
+                  analyticsViewMode={analyticsViewMode}
+                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+                />
+              </div>
             </div>
           </>
         )}
