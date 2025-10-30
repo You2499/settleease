@@ -609,7 +609,7 @@ export default function AnalyticsTab({
         {/* ========== ANALYTICS CARD GRIDS ========== */}
         {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
           <>
-            <div className="px-1 md:px-2">
+            <div className="">
               <OverallAnalyticsSnapshot
                 enhancedOverallStats={enhancedOverallStats}
                 analyticsViewMode={analyticsViewMode}
@@ -618,7 +618,7 @@ export default function AnalyticsTab({
               />
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <MonthlySpendingChart
                   expenses={displayedExpenses}
@@ -634,7 +634,7 @@ export default function AnalyticsTab({
               </div>
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <SpendingByDayChart
                   expenses={displayedExpenses}
@@ -649,7 +649,7 @@ export default function AnalyticsTab({
               </div>
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <TransactionHeatmapCalendar
                   expenses={displayedExpenses}
@@ -665,7 +665,7 @@ export default function AnalyticsTab({
               </div>
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <ExpenseFrequencyTimeline
                   expenses={displayedExpenses}
@@ -680,7 +680,7 @@ export default function AnalyticsTab({
               </div>
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <ExpenseSizeDistribution
                   expenses={displayedExpenses}
@@ -695,7 +695,7 @@ export default function AnalyticsTab({
               </div>
             </div>
 
-            <div className="px-1 md:px-2">
+            <div className="">
               <DebtCreditBalanceOverTime
                 expenses={displayedExpenses}
                 settlementPayments={settlementPayments}
@@ -705,7 +705,7 @@ export default function AnalyticsTab({
               />
             </div>
             {!!topExpensesData.length && (
-              <div className="px-1 md:px-2">
+              <div className="">
                 <TopExpensesTable
                   topExpensesData={topExpensesData}
                   analyticsViewMode={analyticsViewMode}
@@ -713,13 +713,13 @@ export default function AnalyticsTab({
                 />
               </div>
             )}
-            <div className="px-1 md:px-2">
+            <div className="">
               <CategoryAnalyticsTable
                 detailedCategoryAnalytics={detailedCategoryAnalytics}
                 analyticsViewMode={analyticsViewMode}
               />
             </div>
-            <div className="px-1 md:px-2">
+            <div className="">
               <ParticipantSummaryTable
                 detailedParticipantAnalytics={detailedParticipantAnalytics}
                 analyticsViewMode={analyticsViewMode}
@@ -727,7 +727,7 @@ export default function AnalyticsTab({
                 peopleMap={peopleMap}
               />
             </div>
-            <div className="px-1 md:px-2 mb-3">
+            <div className="mb-3">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
                 <CategorySpendingPieChart
                   pieChartData={pieChartData}
