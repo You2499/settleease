@@ -185,7 +185,9 @@ export default function DashboardView({
         onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
         getCategoryIconFromName={getCategoryIconFromName}
         categories={dynamicCategories}
-        userRole={userRole} 
+        userRole={userRole}
+        db={db}
+        currentUserId={currentUserId}
       />
       <div className="flex-1 flex flex-col">
         <ExpenseLog

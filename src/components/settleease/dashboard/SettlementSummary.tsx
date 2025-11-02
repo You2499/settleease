@@ -31,7 +31,12 @@ import {
   Calculator,
   EyeOff,
   Eye,
+  Sparkles,
 } from "lucide-react";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { computeJsonHash } from "@/lib/settleease/hashUtils";
+import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
+import AISummaryDialog from "./AISummaryDialog";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +72,8 @@ interface SettlementSummaryProps {
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   categories: any[];
   userRole: UserRole;
+  db?: SupabaseClient;
+  currentUserId?: string;
 }
 
 export default function SettlementSummary({
@@ -83,6 +90,8 @@ export default function SettlementSummary({
   getCategoryIconFromName,
   categories,
   userRole,
+  db,
+  currentUserId,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<"overview" | "person">("overview");
   const [simplifySettlement, setSimplifySettlement] = useState(true);
@@ -90,6 +99,9 @@ export default function SettlementSummary({
   const [isLoading, setIsLoading] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [showBalancedPeople, setShowBalancedPeople] = useState(false);
+  const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
+  const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
+  const [summaryHash, setSummaryHash] = useState<string>("");
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -215,6 +227,55 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
+  // Build full debug object similar to ComprehensiveDebug
+  const fullDebug = useMemo(() => {
+    const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
+    const filteredPeopleIds = filteredPeople.map((p) => p.id);
+    
+    return {
+      generatedAt: new Date().toISOString(),
+      ui: {
+        userRole,
+        canMarkAsPaid: userRole === "admin",
+        showBalancedPeople,
+      },
+      counts: {
+        people: people.length,
+        expenses: allExpenses.length,
+        settlementPayments: settlementPayments.length,
+        pairwiseTransactions: pairwiseTransactions.length,
+        simplifiedTransactions: simplifiedTransactions.length,
+      },
+      overviewDescriptions: {
+        simplifyOn: "Minimum transactions required to settle all debts.",
+        simplifyOff: "Detailed pairwise debts reflecting direct expense involvements and payments.",
+      },
+      personBalances,
+      filteredPeopleIdsWhenHidingBalanced: filteredPeopleIds,
+      transactions: {
+        pairwise: pairwiseTransactions,
+        simplified: simplifiedTransactions,
+      },
+      categories,
+      settlementPayments,
+      expenses: allExpenses,
+      people,
+    };
+  }, [people, allExpenses, settlementPayments, pairwiseTransactions, simplifiedTransactions, personBalances, categories, userRole, showBalancedPeople, filteredPeople]);
+
+  const handleSummarise = async () => {
+    if (!fullDebug) return;
+    
+    try {
+      const hash = await computeJsonHash(fullDebug);
+      setSummaryJsonData(fullDebug);
+      setSummaryHash(hash);
+      setIsSummaryDialogOpen(true);
+    } catch (error: any) {
+      console.error("Error computing hash:", error);
+    }
+  };
+
   const transactionsToDisplay = useMemo(() => {
     if (simplifySettlement) {
       // For simplified transactions, always show all transactions
@@ -282,6 +343,15 @@ export default function SettlementSummary({
                 <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement
                 Hub
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleSummarise}
+                className="gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Summarise
+              </Button>
               {/* <Button
                 size="sm"
                 variant="outline"
@@ -516,6 +586,18 @@ export default function SettlementSummary({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* AI Summary Dialog */}
+      {summaryJsonData && (
+        <AISummaryDialog
+          open={isSummaryDialogOpen}
+          onOpenChange={setIsSummaryDialogOpen}
+          jsonData={summaryJsonData}
+          hash={summaryHash}
+          db={db}
+          currentUserId={currentUserId || ""}
+        />
+      )}
     </Card>
   );
 }
