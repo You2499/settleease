@@ -509,13 +509,140 @@ export default function AISummaryTooltip({
 
 
 
-  const renderSkeletonLines = () => {
-    return Array.from({ length: 8 }).map((_, i) => (
-      <Skeleton
-        key={i}
-        className={`h-4 mb-2 ${i === 7 ? "w-3/4" : i % 2 === 0 ? "w-full" : "w-5/6"}`}
-      />
-    ));
+  const renderEnhancedSkeleton = () => {
+    return (
+      <div className="space-y-4 animate-pulse">
+        {/* Main Header - THE BIG PICTURE */}
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-3/4 bg-slate-300 rounded" />
+          <Skeleton className="h-3 w-full bg-slate-200 rounded" />
+          <Skeleton className="h-3 w-5/6 bg-slate-200 rounded" />
+        </div>
+
+        {/* Section 1: THE ABSOLUTE WINNERS */}
+        <div className="space-y-3">
+          {/* Section Header */}
+          <Skeleton className="h-4 w-2/3 bg-slate-300 rounded" />
+          
+          {/* Subsection Header */}
+          <Skeleton className="h-3 w-1/2 ml-2 bg-slate-250 rounded" />
+          
+          {/* Main bullet points */}
+          <div className="ml-4 space-y-2">
+            <div className="flex items-start space-x-2">
+              <Skeleton className="h-2 w-2 rounded-full mt-1.5 flex-shrink-0 bg-slate-400" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-4/5 bg-slate-200 rounded" />
+                {/* Sub-bullets */}
+                <div className="ml-4 space-y-1">
+                  <div className="flex items-start space-x-2">
+                    <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 bg-slate-300" />
+                    <Skeleton className="h-3 w-3/4 bg-slate-100 rounded" />
+                  </div>
+                  <div className="flex items-start space-x-2">
+                    <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0 bg-slate-300" />
+                    <Skeleton className="h-3 w-2/3 bg-slate-100 rounded" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-2">
+              <Skeleton className="h-2 w-2 rounded-full mt-1.5 flex-shrink-0" />
+              <div className="flex-1 space-y-1">
+                <Skeleton className="h-3 w-3/5" />
+                {/* Sub-bullet */}
+                <div className="ml-4">
+                  <div className="flex items-start space-x-2">
+                    <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                    <Skeleton className="h-3 w-1/2" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: SPECIFIC EXPENSE STORIES */}
+        <div className="space-y-3">
+          {/* Section Header */}
+          <Skeleton className="h-4 w-3/5 bg-slate-300 rounded" />
+          
+          {/* Subsection */}
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-1/2 ml-2" />
+            <div className="ml-4 space-y-2">
+              <div className="flex items-start space-x-2">
+                <Skeleton className="h-2 w-2 rounded-full mt-1.5 flex-shrink-0" />
+                <Skeleton className="h-3 w-4/5" />
+              </div>
+              <div className="flex items-start space-x-2">
+                <Skeleton className="h-2 w-2 rounded-full mt-1.5 flex-shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-3 w-3/4" />
+                  {/* Nested items */}
+                  <div className="ml-4 space-y-1">
+                    <div className="flex items-start space-x-2">
+                      <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                    <div className="flex items-start space-x-2">
+                      <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                      <Skeleton className="h-3 w-3/5" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: SETTLEMENT STRATEGY */}
+        <div className="space-y-3">
+          {/* Section Header */}
+          <Skeleton className="h-4 w-1/2 bg-slate-300 rounded" />
+          
+          {/* Subsection Header */}
+          <Skeleton className="h-3 w-2/5 ml-2" />
+          
+          {/* Numbered list */}
+          <div className="ml-4 space-y-2">
+            {[1, 2, 3].map((num) => (
+              <div key={num} className="flex items-start space-x-3">
+                <Skeleton className="h-4 w-4 rounded-sm mt-0.5 flex-shrink-0" />
+                <div className="flex-1 space-y-1">
+                  <Skeleton className="h-3 w-4/5" />
+                  {/* Sub-items for numbered list */}
+                  <div className="ml-4 space-y-1">
+                    <div className="flex items-start space-x-2">
+                      <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                      <Skeleton className="h-3 w-2/3" />
+                    </div>
+                    {num === 1 && (
+                      <div className="flex items-start space-x-2">
+                        <Skeleton className="h-1.5 w-1.5 rounded-full mt-1.5 flex-shrink-0" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Final paragraph */}
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-4/5" />
+          <Skeleton className="h-3 w-2/3" />
+        </div>
+      </div>
+    );
   };
 
   if (!open) return null;
@@ -611,8 +738,8 @@ export default function AISummaryTooltip({
           >
             <div className="p-4">
               {!summary ? (
-                <div className="space-y-3">
-                  {renderSkeletonLines()}
+                <div className="h-full">
+                  {renderEnhancedSkeleton()}
                 </div>
               ) : (
                 <div className="prose prose-sm max-w-none">
