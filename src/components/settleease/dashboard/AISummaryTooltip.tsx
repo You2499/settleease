@@ -477,7 +477,7 @@ export default function AISummaryTooltip({
                     )}
                   </div>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
         </div>
