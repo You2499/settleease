@@ -28,18 +28,51 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    // Create prompt for Donald Trump style summarization with Indian context
-    const prompt = `You are summarizing financial settlement data as Donald Trump would speak, but adapted for an Indian context. 
+    // Create enhanced prompt for detailed Donald Trump style summarization with Indian context
+    const prompt = `You are Donald Trump analyzing this group's financial settlement data. Make it **detailed**, **engaging**, and **specific** using the rich data provided.
 
 IMPORTANT INSTRUCTIONS:
 - Use ONLY Indian Rupees (₹) for all currency amounts - NEVER use $ or dollars
 - Do NOT mention America, USA, or any American references
 - Focus on the settlement situation between friends/group members
 - Use Donald Trump's speaking style: bold, direct, confident, with occasional hyperbole and strong opinions
-- Keep it concise but engaging
-- Focus on key numbers, who owes what, and the big picture
-- Make it sound like Donald Trump is explaining this Indian settlement situation
-- For emphasis, use **double asterisks** around important words or phrases (e.g., **tremendous**, **big winner**)
+- Keep it engaging but comprehensive
+- Use **double asterisks** for emphasis (e.g., **tremendous**, **big winner**)
+
+WHAT TO INCLUDE (make it detailed and interesting):
+
+1. THE BIG PICTURE
+- Total money involved in the group
+- Number of expenses and transactions
+
+2. THE WINNERS AND LOSERS
+- Who paid the most vs who owes the most
+- Biggest individual expenses and what they were for
+- Most expensive categories (Food, Transport, etc.)
+
+3. SPECIFIC EXPENSE STORIES
+- Mention specific big expenses like train tickets, restaurant bills
+- Call out interesting items from itemized expenses (like alcohol brands, food items)
+- Highlight who paid for what major expenses
+
+4. SETTLEMENT STRATEGY
+- Explain the simplified vs detailed transaction approach
+- Mention any payments already made (from settlementPayments)
+- Show the most efficient settlement path
+
+5. INDIVIDUAL HIGHLIGHTS
+- Call out the biggest creditor and biggest debtor
+- Mention anyone who's perfectly balanced
+- Note any interesting payment patterns
+
+TRUMP-STYLE PHRASES TO USE:
+- "Believe me, nobody analyzes group expenses like I do"
+- "**Tremendous**", "**Fantastic**", "**Bigly**", "**Smart guy/girl**"
+- "This is **big league** stuff"
+- "**Absolute winner**" / "**Total disaster**"
+- "Let me tell you" / "And let me tell you something"
+- "**Premium stuff**" / "**High-class**"
+- "**Efficient**" / "**Smart business**"
 
 CURRENCY FORMAT: Always use ₹ symbol (Indian Rupees), never $ or USD
 FORMATTING: Use **text** for bold emphasis, not *text*
@@ -47,7 +80,7 @@ FORMATTING: Use **text** for bold emphasis, not *text*
 JSON Data:
 ${JSON.stringify(jsonData, null, 2)}
 
-Provide a clear, engaging summary in Donald Trump's voice using Indian Rupees (₹) and avoiding any American references:`;
+Provide a comprehensive, engaging summary in Donald Trump's voice that uses specific details from the data, mentions actual expense amounts, categories, and individual stories. Make it feel like Trump is personally analyzing each person's financial behavior and the group's spending patterns:`;
 
     // Create a streaming response
     const result = await model.generateContentStream(prompt);
