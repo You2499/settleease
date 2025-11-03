@@ -108,12 +108,12 @@ export default function AISummaryTooltip({
     }
   }, [open, triggerRef]);
 
-  // Auto-scroll to bottom when content changes
+  // Auto-scroll to bottom only when streaming (not for cached content)
   useEffect(() => {
-    if (scrollAreaRef.current) {
+    if (scrollAreaRef.current && isStreaming) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
-  }, [summary]);
+  }, [summary, isStreaming]);
 
   // Handle click outside to close (only on desktop)
   useEffect(() => {
