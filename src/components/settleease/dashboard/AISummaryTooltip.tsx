@@ -456,11 +456,11 @@ export default function AISummaryTooltip({
             }}
           >
             <div className="p-4">
-              {isLoading && summary === "" ? (
+              {!summary ? (
                 <div className="space-y-3">
                   {renderSkeletonLines()}
                 </div>
-              ) : summary ? (
+              ) : (
                 <div className="text-sm leading-relaxed">
                   <div 
                     className="text-left" 
