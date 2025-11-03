@@ -8,10 +8,9 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, X, Copy, Check } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -35,7 +34,6 @@ export default function AISummaryDialog({
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
-  const [copied, setCopied] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when content changes
@@ -65,49 +63,55 @@ export default function AISummaryDialog({
   }, [open, hash, db, jsonData]);
 
   const checkExistingSummary = async () => {
-    if (!db || !hash || !currentUserId) {
-      // If no db, just fetch new summary
+    if (!hash) {
+      console.log("❌ No hash provided, fetching new summary");
       if (jsonData) {
         fetchSummary();
       }
       return;
     }
 
-    try {
-      const { data, error } = await db
-        .from("ai_summaries")
-        .select("summary")
-        .eq("data_hash", hash)
-        .eq("user_id", currentUserId)
-        .single();
+    console.log("🔍 Checking for existing summary with hash:", hash);
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 is "not found" which is fine
-        console.error("Error checking summary:", error);
-        // Still try to fetch new summary
-        if (jsonData) {
-          fetchSummary();
+    // Check database for existing summary
+    if (db && currentUserId) {
+      try {
+        const { data, error } = await db
+          .from("ai_summaries")
+          .select("summary")
+          .eq("data_hash", hash)
+          .eq("user_id", currentUserId)
+          .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
+
+        if (error) {
+          console.error("❌ Error checking summary:", error);
+          // Still try to fetch new summary
+          if (jsonData) {
+            fetchSummary();
+          }
+          return;
         }
-        return;
-      }
 
-      if (data && data.summary) {
-        setSummary(data.summary);
-        setIsLoading(false);
-        setIsStreaming(false);
-        return;
+        if (data && data.summary) {
+          console.log("✅ Found cached summary, using existing data");
+          setSummary(data.summary);
+          setIsLoading(false);
+          setIsStreaming(false);
+          return;
+        } else {
+          console.log("❌ No cached summary found for this hash");
+        }
+      } catch (error: any) {
+        console.error("❌ Error checking summary:", error);
       }
+    } else {
+      console.log("❌ No database connection or user ID");
+    }
 
-      // No existing summary, fetch new one
-      if (jsonData) {
-        fetchSummary();
-      }
-    } catch (error: any) {
-      console.error("Error checking summary:", error);
-      // Still try to fetch new summary
-      if (jsonData) {
-        fetchSummary();
-      }
+    // No existing summary found, fetch new one
+    console.log("🚀 Fetching new summary from API");
+    if (jsonData) {
+      fetchSummary();
     }
   };
 
@@ -147,7 +151,7 @@ export default function AISummaryDialog({
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split("\n\n");
-        
+
         // Keep the last incomplete line in buffer
         buffer = lines.pop() || "";
 
@@ -174,7 +178,7 @@ export default function AISummaryDialog({
           }
         }
       }
-      
+
       // Process any remaining buffer
       if (buffer.startsWith("data: ")) {
         try {
@@ -206,7 +210,12 @@ export default function AISummaryDialog({
   };
 
   const storeSummary = async (summaryText: string, dataHash: string) => {
-    if (!db || !currentUserId || !summaryText || !dataHash) return;
+    if (!summaryText || !dataHash || !db || !currentUserId) {
+      console.log("❌ Cannot store summary - missing required data");
+      return;
+    }
+
+    console.log("💾 Storing summary in database with hash:", dataHash);
 
     try {
       await db.from("ai_summaries").upsert({
@@ -217,107 +226,59 @@ export default function AISummaryDialog({
       }, {
         onConflict: 'user_id,data_hash'
       });
+      console.log("✅ Summary stored successfully");
     } catch (error: any) {
-      console.error("Error storing summary:", error);
+      console.error("❌ Error storing summary in database:", error);
     }
   };
 
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(summary);
-      setCopied(true);
-      toast({
-        title: "Copied!",
-        description: "Summary copied to clipboard",
-      });
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to copy summary",
-        variant: "destructive",
-      });
-    }
-  };
+
 
   const renderSkeletonLines = () => {
     return Array.from({ length: 8 }).map((_, i) => (
       <Skeleton
         key={i}
-        className={`h-4 mb-2 ${
-          i === 7 ? "w-3/4" : i % 2 === 0 ? "w-full" : "w-5/6"
-        }`}
+        className={`h-4 mb-2 ${i === 7 ? "w-3/4" : i % 2 === 0 ? "w-full" : "w-5/6"
+          }`}
       />
     ));
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-primary" />
-              <DialogTitle>AI Summary</DialogTitle>
-            </div>
-            <div className="flex items-center gap-2">
-              {summary && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopy}
-                  className="gap-2"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="h-4 w-4" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="h-4 w-4" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
+      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col" hideCloseButton={true}>
+        <DialogHeader className="pb-4">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <DialogTitle className="text-xl">AI Summary</DialogTitle>
           </div>
-          <DialogDescription>
+          <DialogDescription className="text-sm text-muted-foreground">
             Summarized as Donald Trump would explain it
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 min-h-0 pr-4">
-          <div
-            ref={scrollAreaRef}
-            className="prose prose-sm dark:prose-invert max-w-none"
-          >
-            {isLoading && summary === "" ? (
-              <div className="space-y-3">
-                {renderSkeletonLines()}
-              </div>
-            ) : summary ? (
-              <div className="text-base leading-relaxed">
-                <p className="whitespace-pre-wrap">
-                  {summary}
-                  {isStreaming && (
-                    <span className="inline-block w-2 h-5 bg-primary ml-1 animate-pulse">
-                      |
-                    </span>
-                  )}
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </ScrollArea>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <ScrollArea className="h-full w-full">
+            <div className="pr-4 pb-4">
+              {isLoading && summary === "" ? (
+                <div className="space-y-3">
+                  {renderSkeletonLines()}
+                </div>
+              ) : summary ? (
+                <div className="text-base leading-relaxed space-y-4">
+                  <div className="whitespace-pre-wrap text-foreground">
+                    {summary}
+                    {isStreaming && (
+                      <span className="inline-block w-2 h-5 bg-primary ml-1 animate-pulse">
+                        |
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

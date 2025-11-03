@@ -101,6 +101,7 @@ export default function SettlementSummary({
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
   const [summaryHash, setSummaryHash] = useState<string>("");
+  const [isComputingHash, setIsComputingHash] = useState(false);
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -226,13 +227,13 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
-  // Build full debug object similar to ComprehensiveDebug
+  // Build full debug object for hashing (excluding timestamp to ensure consistent hashing)
   const fullDebug = useMemo(() => {
     const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
     const filteredPeopleIds = filteredPeople.map((p) => p.id);
     
     return {
-      generatedAt: new Date().toISOString(),
+      // NOTE: No timestamp here to ensure consistent hashing for same data
       ui: {
         userRole,
         canMarkAsPaid: userRole === "admin",
@@ -263,15 +264,21 @@ export default function SettlementSummary({
   }, [people, allExpenses, settlementPayments, pairwiseTransactions, simplifiedTransactions, personBalances, categories, userRole, showBalancedPeople, filteredPeople]);
 
   const handleSummarise = async () => {
-    if (!fullDebug) return;
+    if (!fullDebug || isComputingHash) return;
     
     try {
+      setIsComputingHash(true);
+      console.log("🔄 Computing hash for current data...");
       const hash = await computeJsonHash(fullDebug);
+      console.log("🔑 Generated hash:", hash);
+      
       setSummaryJsonData(fullDebug);
       setSummaryHash(hash);
       setIsSummaryDialogOpen(true);
     } catch (error: any) {
-      console.error("Error computing hash:", error);
+      console.error("❌ Error computing hash:", error);
+    } finally {
+      setIsComputingHash(false);
     }
   };
 
@@ -346,10 +353,11 @@ export default function SettlementSummary({
                 size="sm"
                 variant="outline"
                 onClick={handleSummarise}
+                disabled={isComputingHash}
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                Summarise
+                {isComputingHash ? "Computing..." : "Summarise"}
               </Button>
               {/* <Button
                 size="sm"
