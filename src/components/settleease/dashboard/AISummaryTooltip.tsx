@@ -18,40 +18,82 @@ interface AISummaryTooltipProps {
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-// Enhanced markdown renderer with support for headers, lists, bold text, and proper formatting
+// Enhanced markdown renderer with support for headers, nested lists, sub-bullets, and proper formatting
 const renderMarkdown = (text: string) => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
-  let currentListItems: string[] = [];
-  let currentNumberedItems: string[] = [];
-  let listType: 'bullet' | 'numbered' | null = null;
+  
+  // Enhanced list tracking for nested lists
+  interface ListItem {
+    text: string;
+    level: number;
+    type: 'bullet' | 'numbered';
+  }
+  
+  let currentListItems: ListItem[] = [];
+  let inList = false;
+
+  const getIndentLevel = (line: string): number => {
+    const match = line.match(/^(\s*)/);
+    return match ? Math.floor(match[1].length / 2) : 0; // 2 spaces = 1 level
+  };
 
   const flushList = () => {
     if (currentListItems.length > 0) {
-      elements.push(
-        <ul key={`ul-${elements.length}`} className="list-disc list-inside ml-4 mb-3 space-y-1">
-          {currentListItems.map((item, idx) => (
-            <li key={idx} className="text-sm leading-relaxed">
-              {renderInlineMarkdown(item)}
-            </li>
-          ))}
-        </ul>
-      );
+      elements.push(renderNestedList(currentListItems, elements.length));
       currentListItems = [];
     }
-    if (currentNumberedItems.length > 0) {
-      elements.push(
-        <ol key={`ol-${elements.length}`} className="list-decimal list-inside ml-4 mb-3 space-y-1">
-          {currentNumberedItems.map((item, idx) => (
-            <li key={idx} className="text-sm leading-relaxed">
-              {renderInlineMarkdown(item)}
-            </li>
-          ))}
-        </ol>
-      );
-      currentNumberedItems = [];
-    }
-    listType = null;
+    inList = false;
+  };
+
+  const renderNestedList = (items: ListItem[], key: number): React.ReactNode => {
+    if (items.length === 0) return null;
+
+    const renderListLevel = (items: ListItem[], level: number = 0): React.ReactNode[] => {
+      const result: React.ReactNode[] = [];
+      let i = 0;
+
+      while (i < items.length) {
+        const item = items[i];
+        
+        if (item.level === level) {
+          // Find all sub-items for this item
+          const subItems: ListItem[] = [];
+          let j = i + 1;
+          
+          while (j < items.length && items[j].level > level) {
+            subItems.push(items[j]);
+            j++;
+          }
+
+          const ListTag = item.type === 'numbered' ? 'ol' : 'ul';
+          const listClass = item.type === 'numbered' 
+            ? `list-decimal list-inside ml-${level * 4 + 4} mb-2 space-y-1`
+            : `list-disc list-inside ml-${level * 4 + 4} mb-2 space-y-1`;
+
+          result.push(
+            <ListTag key={`${key}-${level}-${i}`} className={listClass}>
+              <li className="text-sm leading-relaxed">
+                {renderInlineMarkdown(item.text)}
+                {subItems.length > 0 && (
+                  <div className="mt-1">
+                    {renderListLevel(subItems, level + 1)}
+                  </div>
+                )}
+              </li>
+            </ListTag>
+          );
+
+          i = j;
+        } else {
+          i++;
+        }
+      }
+
+      return result;
+    };
+
+    return <div key={`nested-list-${key}`}>{renderListLevel(items)}</div>;
   };
 
   const renderInlineMarkdown = (text: string) => {
@@ -81,6 +123,7 @@ const renderMarkdown = (text: string) => {
 
   lines.forEach((line, lineIndex) => {
     const trimmedLine = line.trim();
+    const originalLine = line;
     
     // Skip empty lines but add spacing
     if (!trimmedLine) {
@@ -91,8 +134,8 @@ const renderMarkdown = (text: string) => {
       return;
     }
 
-    // Headers (# ## ###)
-    if (trimmedLine.match(/^#{1,3}\s+/)) {
+    // Headers (# ## ### ####) - Enhanced to support more levels
+    if (trimmedLine.match(/^#{1,4}\s+/)) {
       flushList();
       const headerLevel = trimmedLine.match(/^#+/)?.[0].length || 1;
       const headerText = trimmedLine.replace(/^#+\s+/, '');
@@ -100,10 +143,11 @@ const renderMarkdown = (text: string) => {
       const headerClasses = {
         1: "text-lg font-bold text-foreground mb-3 mt-4 first:mt-0",
         2: "text-base font-bold text-foreground mb-2 mt-3 first:mt-0", 
-        3: "text-sm font-semibold text-foreground mb-2 mt-2 first:mt-0"
+        3: "text-sm font-semibold text-foreground mb-2 mt-2 first:mt-0",
+        4: "text-xs font-semibold text-muted-foreground mb-1 mt-2 first:mt-0"
       };
       
-      const HeaderTag = `h${Math.min(headerLevel, 3)}` as keyof JSX.IntrinsicElements;
+      const HeaderTag = `h${Math.min(headerLevel, 4)}` as keyof JSX.IntrinsicElements;
       
       elements.push(
         <HeaderTag key={lineIndex} className={headerClasses[headerLevel as keyof typeof headerClasses]}>
@@ -113,25 +157,30 @@ const renderMarkdown = (text: string) => {
       return;
     }
 
-    // Bullet points (- or *)
+    // Enhanced list detection with indentation support
+    const indentLevel = getIndentLevel(originalLine);
+    
+    // Bullet points (- or *) with indentation support
     if (trimmedLine.match(/^[-*]\s+/)) {
-      if (listType === 'numbered') {
-        flushList();
-      }
-      listType = 'bullet';
       const itemText = trimmedLine.replace(/^[-*]\s+/, '');
-      currentListItems.push(itemText);
+      currentListItems.push({
+        text: itemText,
+        level: indentLevel,
+        type: 'bullet'
+      });
+      inList = true;
       return;
     }
 
-    // Numbered lists (1. 2. etc.)
+    // Numbered lists (1. 2. etc.) with indentation support
     if (trimmedLine.match(/^\d+\.\s+/)) {
-      if (listType === 'bullet') {
-        flushList();
-      }
-      listType = 'numbered';
       const itemText = trimmedLine.replace(/^\d+\.\s+/, '');
-      currentNumberedItems.push(itemText);
+      currentListItems.push({
+        text: itemText,
+        level: indentLevel,
+        type: 'numbered'
+      });
+      inList = true;
       return;
     }
 

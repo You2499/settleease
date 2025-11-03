@@ -40,12 +40,18 @@ IMPORTANT INSTRUCTIONS:
 - Use **double asterisks** for emphasis (e.g., **tremendous**, **big winner**)
 
 FORMATTING GUIDELINES:
-- Use ## for section headers (e.g., ## THE BIG WINNERS)
+- Use ## for main section headers (e.g., ## THE BIG WINNERS)
+- Use ### for subsection headers (e.g., ### Individual Breakdown)
+- Use #### for minor subheadings (e.g., #### Payment Details)
 - Use - for bullet points when listing items
 - Use 1. 2. 3. for numbered lists when showing steps
+- Use indented sub-bullets with 2 spaces for nested items:
+  - Main point
+    - Sub-point (2 spaces before -)
+    - Another sub-point
 - Use **bold** for emphasis on key amounts, names, and important points
 - Structure your response with clear sections and good spacing
-- Make it scannable with headers and lists
+- Make it scannable with headers, lists, and sub-lists
 
 WHAT TO INCLUDE (make it detailed and interesting):
 
@@ -91,11 +97,21 @@ Folks, we're looking at **tremendous** numbers here...
 
 ## THE ABSOLUTE WINNERS
 - **Gagan**: This guy is owed ₹12,906.07 - **fantastic**!
+  - Paid for train tickets: ₹20,051.43
+  - **Smart** forward thinking!
 - **Prasang**: Smart move, owed ₹3,981
+  - Only one expense but paid it fully
+
+### Individual Breakdown
+#### Who Paid the Most:
+- **Gagan**: ₹26,074.43 total
+- **Nikhil**: ₹4,471 total
 
 ## SETTLEMENT STRATEGY
 Here's how we **efficiently** settle this:
 1. Sourav pays Gagan ₹5,178.36
+   - Already paid ₹3,000 (**smart start**!)
+   - Still owes ₹2,178.36
 2. Siddharth pays Gagan ₹5,012.86
 3. And so on...
 
