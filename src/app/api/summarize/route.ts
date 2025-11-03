@@ -39,8 +39,10 @@ IMPORTANT INSTRUCTIONS:
 - Keep it concise but engaging
 - Focus on key numbers, who owes what, and the big picture
 - Make it sound like Donald Trump is explaining this Indian settlement situation
+- For emphasis, use **double asterisks** around important words or phrases (e.g., **tremendous**, **big winner**)
 
 CURRENCY FORMAT: Always use ₹ symbol (Indian Rupees), never $ or USD
+FORMATTING: Use **text** for bold emphasis, not *text*
 
 JSON Data:
 ${JSON.stringify(jsonData, null, 2)}

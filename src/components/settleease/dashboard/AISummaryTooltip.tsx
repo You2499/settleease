@@ -24,13 +24,22 @@ const renderMarkdown = (text: string) => {
   const paragraphs = text.split('\n\n');
   
   return paragraphs.map((paragraph, pIndex) => {
-    // Handle bold text within each paragraph
-    const parts = paragraph.split(/(\*\*[^*]+\*\*)/);
+    // Handle both **text** and *text* patterns for bold text
+    const parts = paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
     const renderedParts = parts.map((part, index) => {
+      // Handle **text** (double asterisk)
       if (part.startsWith('**') && part.endsWith('**')) {
         return (
           <strong key={index} className="font-bold text-foreground">
             {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      // Handle *text* (single asterisk)
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+        return (
+          <strong key={index} className="font-bold text-foreground">
+            {part.slice(1, -1)}
           </strong>
         );
       }
@@ -383,7 +392,10 @@ export default function AISummaryTooltip({
           left: position.left,
           width: tooltipWidth,
           maxHeight: tooltipMaxHeight,
+          contain: 'layout style paint',
         }}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
@@ -404,10 +416,29 @@ export default function AISummaryTooltip({
         {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden">
           <div 
+            ref={scrollAreaRef}
             className="h-full overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
             style={{ 
               WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
               scrollbarWidth: 'thin'
+            }}
+            onWheel={(e) => {
+              // Prevent page scroll when scrolling inside tooltip
+              e.stopPropagation();
+              const element = e.currentTarget;
+              const { scrollTop, scrollHeight, clientHeight } = element;
+              
+              // Only prevent default if we're not at the boundaries
+              if (
+                (e.deltaY < 0 && scrollTop > 0) || // Scrolling up and not at top
+                (e.deltaY > 0 && scrollTop < scrollHeight - clientHeight) // Scrolling down and not at bottom
+              ) {
+                e.preventDefault();
+              }
+            }}
+            onTouchMove={(e) => {
+              // Prevent page scroll on mobile when scrolling inside tooltip
+              e.stopPropagation();
             }}
           >
             <div className="p-4">
@@ -417,9 +448,6 @@ export default function AISummaryTooltip({
                 </div>
               ) : summary ? (
                 <div className="text-sm leading-relaxed space-y-2">
-                  <p className="text-xs text-muted-foreground mb-3">
-                    Summarized as Donald Trump would explain it
-                  </p>
                   <div className="whitespace-pre-wrap text-foreground break-words hyphens-auto">
                     {renderMarkdown(summary)}
                     {isStreaming && (
