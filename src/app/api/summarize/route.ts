@@ -39,6 +39,14 @@ IMPORTANT INSTRUCTIONS:
 - Keep it engaging but comprehensive
 - Use **double asterisks** for emphasis (e.g., **tremendous**, **big winner**)
 
+FORMATTING GUIDELINES:
+- Use ## for section headers (e.g., ## THE BIG WINNERS)
+- Use - for bullet points when listing items
+- Use 1. 2. 3. for numbered lists when showing steps
+- Use **bold** for emphasis on key amounts, names, and important points
+- Structure your response with clear sections and good spacing
+- Make it scannable with headers and lists
+
 WHAT TO INCLUDE (make it detailed and interesting):
 
 1. THE BIG PICTURE
@@ -77,10 +85,24 @@ TRUMP-STYLE PHRASES TO USE:
 CURRENCY FORMAT: Always use ₹ symbol (Indian Rupees), never $ or USD
 FORMATTING: Use **text** for bold emphasis, not *text*
 
+EXAMPLE STRUCTURE:
+## THE BIG PICTURE
+Folks, we're looking at **tremendous** numbers here...
+
+## THE ABSOLUTE WINNERS
+- **Gagan**: This guy is owed ₹12,906.07 - **fantastic**!
+- **Prasang**: Smart move, owed ₹3,981
+
+## SETTLEMENT STRATEGY
+Here's how we **efficiently** settle this:
+1. Sourav pays Gagan ₹5,178.36
+2. Siddharth pays Gagan ₹5,012.86
+3. And so on...
+
 JSON Data:
 ${JSON.stringify(jsonData, null, 2)}
 
-Provide a comprehensive, engaging summary in Donald Trump's voice that uses specific details from the data, mentions actual expense amounts, categories, and individual stories. Make it feel like Trump is personally analyzing each person's financial behavior and the group's spending patterns:`;
+Provide a comprehensive, engaging summary in Donald Trump's voice that uses specific details from the data, mentions actual expense amounts, categories, and individual stories. Use the formatting structure above with headers, bullet points, and numbered lists to make it well-organized and scannable:`;
 
     // Create a streaming response
     const result = await model.generateContentStream(prompt);

@@ -18,30 +18,136 @@ interface AISummaryTooltipProps {
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-// Simple markdown renderer - just handle bold text, keep it simple
+// Enhanced markdown renderer with support for headers, lists, bold text, and proper formatting
 const renderMarkdown = (text: string) => {
-  // Handle both **text** and *text* patterns for bold text
-  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
-  
-  return parts.map((part, index) => {
-    // Handle **text** (double asterisk)
-    if (part.startsWith('**') && part.endsWith('**')) {
-      return (
-        <strong key={index}>
-          {part.slice(2, -2)}
-        </strong>
+  const lines = text.split('\n');
+  const elements: React.ReactNode[] = [];
+  let currentListItems: string[] = [];
+  let currentNumberedItems: string[] = [];
+  let listType: 'bullet' | 'numbered' | null = null;
+
+  const flushList = () => {
+    if (currentListItems.length > 0) {
+      elements.push(
+        <ul key={`ul-${elements.length}`} className="list-disc list-inside ml-4 mb-3 space-y-1">
+          {currentListItems.map((item, idx) => (
+            <li key={idx} className="text-sm leading-relaxed">
+              {renderInlineMarkdown(item)}
+            </li>
+          ))}
+        </ul>
       );
+      currentListItems = [];
     }
-    // Handle *text* (single asterisk)
-    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-      return (
-        <strong key={index}>
-          {part.slice(1, -1)}
-        </strong>
+    if (currentNumberedItems.length > 0) {
+      elements.push(
+        <ol key={`ol-${elements.length}`} className="list-decimal list-inside ml-4 mb-3 space-y-1">
+          {currentNumberedItems.map((item, idx) => (
+            <li key={idx} className="text-sm leading-relaxed">
+              {renderInlineMarkdown(item)}
+            </li>
+          ))}
+        </ol>
       );
+      currentNumberedItems = [];
     }
-    return part;
+    listType = null;
+  };
+
+  const renderInlineMarkdown = (text: string) => {
+    // Handle bold text (**text** and *text*)
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
+    
+    return parts.map((part, index) => {
+      // Handle **text** (double asterisk)
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={index} className="font-bold text-primary">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      // Handle *text* (single asterisk) - but not if it's a list marker
+      if (part.startsWith('*') && part.endsWith('*') && part.length > 2 && !part.match(/^\*\s/)) {
+        return (
+          <strong key={index} className="font-bold text-primary">
+            {part.slice(1, -1)}
+          </strong>
+        );
+      }
+      return part;
+    });
+  };
+
+  lines.forEach((line, lineIndex) => {
+    const trimmedLine = line.trim();
+    
+    // Skip empty lines but add spacing
+    if (!trimmedLine) {
+      if (elements.length > 0) {
+        flushList();
+        elements.push(<div key={`space-${lineIndex}`} className="mb-2" />);
+      }
+      return;
+    }
+
+    // Headers (# ## ###)
+    if (trimmedLine.match(/^#{1,3}\s+/)) {
+      flushList();
+      const headerLevel = trimmedLine.match(/^#+/)?.[0].length || 1;
+      const headerText = trimmedLine.replace(/^#+\s+/, '');
+      
+      const headerClasses = {
+        1: "text-lg font-bold text-foreground mb-3 mt-4 first:mt-0",
+        2: "text-base font-bold text-foreground mb-2 mt-3 first:mt-0", 
+        3: "text-sm font-semibold text-foreground mb-2 mt-2 first:mt-0"
+      };
+      
+      const HeaderTag = `h${Math.min(headerLevel, 3)}` as keyof JSX.IntrinsicElements;
+      
+      elements.push(
+        <HeaderTag key={lineIndex} className={headerClasses[headerLevel as keyof typeof headerClasses]}>
+          {renderInlineMarkdown(headerText)}
+        </HeaderTag>
+      );
+      return;
+    }
+
+    // Bullet points (- or *)
+    if (trimmedLine.match(/^[-*]\s+/)) {
+      if (listType === 'numbered') {
+        flushList();
+      }
+      listType = 'bullet';
+      const itemText = trimmedLine.replace(/^[-*]\s+/, '');
+      currentListItems.push(itemText);
+      return;
+    }
+
+    // Numbered lists (1. 2. etc.)
+    if (trimmedLine.match(/^\d+\.\s+/)) {
+      if (listType === 'bullet') {
+        flushList();
+      }
+      listType = 'numbered';
+      const itemText = trimmedLine.replace(/^\d+\.\s+/, '');
+      currentNumberedItems.push(itemText);
+      return;
+    }
+
+    // Regular paragraph text
+    flushList();
+    elements.push(
+      <p key={lineIndex} className="text-sm leading-relaxed mb-3 text-left">
+        {renderInlineMarkdown(trimmedLine)}
+      </p>
+    );
   });
+
+  // Flush any remaining list items
+  flushList();
+
+  return elements;
 };
 
 export default function AISummaryTooltip({
@@ -460,12 +566,11 @@ export default function AISummaryTooltip({
                   {renderSkeletonLines()}
                 </div>
               ) : (
-                <div className="text-sm leading-relaxed">
+                <div className="prose prose-sm max-w-none">
                   <div 
-                    className="text-left" 
+                    className="text-left space-y-1" 
                     style={{ 
                       textAlign: 'left',
-                      whiteSpace: 'pre-wrap',
                       wordWrap: 'break-word'
                     }}
                   >
