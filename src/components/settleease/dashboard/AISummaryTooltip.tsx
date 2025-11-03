@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sparkles, X } from "lucide-react";
@@ -384,7 +384,8 @@ export default function AISummaryTooltip({
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
   const tooltipWidth = isMobile ? window.innerWidth - 32 : 480;
-  const tooltipMaxHeight = isMobile ? window.innerHeight * 0.75 : 400;
+  const tooltipHeight = isMobile ? window.innerHeight * 0.75 : 400;
+  const tooltipMinHeight = isMobile ? 300 : 250;
 
   return (
     <>
@@ -404,13 +405,12 @@ export default function AISummaryTooltip({
           top: position.top,
           left: position.left,
           width: tooltipWidth,
-          maxHeight: tooltipMaxHeight,
-          contain: 'layout style paint size',
+          height: tooltipHeight,
+          minHeight: tooltipMinHeight,
         }}
         onWheel={(e) => {
-          // Completely stop all wheel events from propagating
+          // Stop propagation but don't preventDefault to avoid passive listener error
           e.stopPropagation();
-          e.preventDefault();
         }}
         onTouchStart={(e) => {
           e.stopPropagation();
@@ -463,13 +463,8 @@ export default function AISummaryTooltip({
               scrollbarColor: 'rgba(155, 155, 155, 0.5) transparent'
             }}
             onWheel={(e) => {
-              // Completely prevent wheel events from bubbling up
+              // Stop propagation to prevent page scroll
               e.stopPropagation();
-              e.preventDefault();
-              
-              // Manually handle scrolling
-              const element = e.currentTarget;
-              element.scrollTop += e.deltaY;
             }}
             onTouchMove={(e) => {
               // Prevent touch events from bubbling up
