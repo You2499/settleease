@@ -18,48 +18,29 @@ interface AISummaryTooltipProps {
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-// Enhanced markdown renderer for bold text and line breaks with proper alignment and spacing
+// Simple markdown renderer - just handle bold text, keep it simple
 const renderMarkdown = (text: string) => {
-  // Clean up any potential indentation issues but preserve paragraph structure
-  const cleanText = text.replace(/^\s+/gm, '').trim();
+  // Handle both **text** and *text* patterns for bold text
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
   
-  // Split by double line breaks for paragraphs, but also handle single line breaks
-  const paragraphs = cleanText.split(/\n\s*\n/);
-  
-  return paragraphs.map((paragraph, pIndex) => {
-    // Handle both **text** and *text* patterns for bold text
-    const parts = paragraph.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
-    const renderedParts = parts.map((part, index) => {
-      // Handle **text** (double asterisk)
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={index} className="font-bold text-foreground">
-            {part.slice(2, -2)}
-          </strong>
-        );
-      }
-      // Handle *text* (single asterisk)
-      if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
-        return (
-          <strong key={index} className="font-bold text-foreground">
-            {part.slice(1, -1)}
-          </strong>
-        );
-      }
-      // Handle line breaks within paragraphs - preserve single line breaks as spaces
-      return part.split('\n').map((line, lineIndex, lines) => (
-        <React.Fragment key={`${index}-${lineIndex}`}>
-          {line.trim()}
-          {lineIndex < lines.length - 1 && ' '}
-        </React.Fragment>
-      ));
-    });
-    
-    return (
-      <p key={pIndex} className={`${pIndex > 0 ? "mt-4" : ""} text-left leading-relaxed`} style={{ textAlign: 'left' }}>
-        {renderedParts}
-      </p>
-    );
+  return parts.map((part, index) => {
+    // Handle **text** (double asterisk)
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={index}>
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    // Handle *text* (single asterisk)
+    if (part.startsWith('*') && part.endsWith('*') && part.length > 2) {
+      return (
+        <strong key={index}>
+          {part.slice(1, -1)}
+        </strong>
+      );
+    }
+    return part;
   });
 };
 
@@ -480,8 +461,15 @@ export default function AISummaryTooltip({
                   {renderSkeletonLines()}
                 </div>
               ) : summary ? (
-                <div className="text-sm leading-relaxed text-left">
-                  <div className="text-foreground break-words hyphens-auto whitespace-pre-line" style={{ textAlign: 'left', whiteSpace: 'pre-line' }}>
+                <div className="text-sm leading-relaxed">
+                  <div 
+                    className="text-left" 
+                    style={{ 
+                      textAlign: 'left',
+                      whiteSpace: 'pre-wrap',
+                      wordWrap: 'break-word'
+                    }}
+                  >
                     {renderMarkdown(summary)}
                     {isStreaming && (
                       <span className="inline-block w-1 h-4 bg-primary ml-1 animate-pulse">
