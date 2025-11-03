@@ -358,8 +358,7 @@ export default function AISummaryTooltip({
     return Array.from({ length: 8 }).map((_, i) => (
       <Skeleton
         key={i}
-        className={`h-4 mb-2 ${i === 7 ? "w-3/4" : i % 2 === 0 ? "w-full" : "w-5/6"
-          }`}
+        className={`h-4 mb-2 ${i === 7 ? "w-3/4" : i % 2 === 0 ? "w-full" : "w-5/6"}`}
       />
     ));
   };
