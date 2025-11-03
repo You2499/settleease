@@ -166,6 +166,19 @@ export default function AISummaryTooltip({
     }
   }, [open, onOpenChange]);
 
+  // Prevent body scroll when tooltip is open (mobile)
+  useEffect(() => {
+    if (open && window.innerWidth < 768) {
+      // Prevent body scroll on mobile
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [open]);
+
   // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
@@ -392,10 +405,22 @@ export default function AISummaryTooltip({
           left: position.left,
           width: tooltipWidth,
           maxHeight: tooltipMaxHeight,
-          contain: 'layout style paint',
+          contain: 'layout style paint size',
         }}
-        onWheel={(e) => e.stopPropagation()}
-        onTouchMove={(e) => e.stopPropagation()}
+        onWheel={(e) => {
+          // Completely stop all wheel events from propagating
+          e.stopPropagation();
+          e.preventDefault();
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation();
+        }}
+        onTouchMove={(e) => {
+          e.stopPropagation();
+        }}
+        onTouchEnd={(e) => {
+          e.stopPropagation();
+        }}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
@@ -414,30 +439,40 @@ export default function AISummaryTooltip({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div 
+          className="flex-1 min-h-0 overflow-hidden"
+          onWheel={(e) => {
+            // Always stop propagation to prevent page scroll
+            e.stopPropagation();
+          }}
+          onTouchStart={(e) => {
+            // Stop propagation on touch events
+            e.stopPropagation();
+          }}
+          onTouchMove={(e) => {
+            // Stop propagation on touch events
+            e.stopPropagation();
+          }}
+        >
           <div 
             ref={scrollAreaRef}
-            className="h-full overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+            className="h-full overflow-y-scroll overscroll-contain"
             style={{ 
-              WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
-              scrollbarWidth: 'thin'
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'rgba(155, 155, 155, 0.5) transparent'
             }}
             onWheel={(e) => {
-              // Prevent page scroll when scrolling inside tooltip
+              // Completely prevent wheel events from bubbling up
               e.stopPropagation();
-              const element = e.currentTarget;
-              const { scrollTop, scrollHeight, clientHeight } = element;
+              e.preventDefault();
               
-              // Only prevent default if we're not at the boundaries
-              if (
-                (e.deltaY < 0 && scrollTop > 0) || // Scrolling up and not at top
-                (e.deltaY > 0 && scrollTop < scrollHeight - clientHeight) // Scrolling down and not at bottom
-              ) {
-                e.preventDefault();
-              }
+              // Manually handle scrolling
+              const element = e.currentTarget;
+              element.scrollTop += e.deltaY;
             }}
             onTouchMove={(e) => {
-              // Prevent page scroll on mobile when scrolling inside tooltip
+              // Prevent touch events from bubbling up
               e.stopPropagation();
             }}
           >
