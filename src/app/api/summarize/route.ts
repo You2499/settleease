@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const GEMINI_API_KEY = 'AIzaSyC93LxBK-kWs4C6uoyZpNFITxdkmRXawco';
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL_NAME = 'gemini-2.5-flash';
 
 export async function POST(request: NextRequest) {
@@ -11,6 +11,15 @@ export async function POST(request: NextRequest) {
     if (!jsonData) {
       return new Response(JSON.stringify({ error: 'JSON data is required' }), {
         status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Check if API key is configured
+    if (!GEMINI_API_KEY) {
+      console.error('GEMINI_API_KEY environment variable is not set');
+      return new Response(JSON.stringify({ error: 'AI service is not configured' }), {
+        status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
