@@ -44,7 +44,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { formatCurrency } from "@/lib/settleease/utils";
-import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
 import type {
   Person,
   Expense,
