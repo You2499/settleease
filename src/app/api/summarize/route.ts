@@ -19,17 +19,24 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-    // Create prompt for Donald Trump style summarization
-    const prompt = `You are summarizing financial settlement data as Donald Trump would speak. 
-    
-Summarize the following JSON data about expenses, people, and settlements in Donald Trump's speaking style - bold, direct, confident, with occasional hyperbole and strong opinions. 
-Keep it concise but engaging. Focus on key numbers, who owes what, and the big picture.
-Make it sound like Donald Trump is explaining this settlement situation.
+    // Create prompt for Donald Trump style summarization with Indian context
+    const prompt = `You are summarizing financial settlement data as Donald Trump would speak, but adapted for an Indian context. 
+
+IMPORTANT INSTRUCTIONS:
+- Use ONLY Indian Rupees (₹) for all currency amounts - NEVER use $ or dollars
+- Do NOT mention America, USA, or any American references
+- Focus on the settlement situation between friends/group members
+- Use Donald Trump's speaking style: bold, direct, confident, with occasional hyperbole and strong opinions
+- Keep it concise but engaging
+- Focus on key numbers, who owes what, and the big picture
+- Make it sound like Donald Trump is explaining this Indian settlement situation
+
+CURRENCY FORMAT: Always use ₹ symbol (Indian Rupees), never $ or USD
 
 JSON Data:
 ${JSON.stringify(jsonData, null, 2)}
 
-Provide a clear, engaging summary in Donald Trump's voice:`;
+Provide a clear, engaging summary in Donald Trump's voice using Indian Rupees (₹) and avoiding any American references:`;
 
     // Create a streaming response
     const result = await model.generateContentStream(prompt);

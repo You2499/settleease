@@ -1,40 +1,119 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-interface AISummaryDialogProps {
+interface AISummaryTooltipProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   jsonData: any;
   hash: string;
   db?: SupabaseClient;
   currentUserId: string;
+  triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-export default function AISummaryDialog({
+// Enhanced markdown renderer for bold text and line breaks
+const renderMarkdown = (text: string) => {
+  // Split by paragraphs first
+  const paragraphs = text.split('\n\n');
+  
+  return paragraphs.map((paragraph, pIndex) => {
+    // Handle bold text within each paragraph
+    const parts = paragraph.split(/(\*\*[^*]+\*\*)/);
+    const renderedParts = parts.map((part, index) => {
+      if (part.startsWith('**') && part.endsWith('**')) {
+        return (
+          <strong key={index} className="font-bold text-foreground">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      // Handle line breaks within paragraphs
+      return part.split('\n').map((line, lineIndex, lines) => (
+        <React.Fragment key={`${index}-${lineIndex}`}>
+          {line}
+          {lineIndex < lines.length - 1 && <br />}
+        </React.Fragment>
+      ));
+    });
+    
+    return (
+      <p key={pIndex} className={pIndex > 0 ? "mt-3" : ""}>
+        {renderedParts}
+      </p>
+    );
+  });
+};
+
+export default function AISummaryTooltip({
   open,
   onOpenChange,
   jsonData,
   hash,
   db,
   currentUserId,
-}: AISummaryDialogProps) {
+  triggerRef,
+}: AISummaryTooltipProps) {
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const tooltipRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+
+  // Position tooltip relative to trigger button
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const updatePosition = () => {
+        if (!triggerRef.current) return;
+        
+        const rect = triggerRef.current.getBoundingClientRect();
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        
+        // Calculate position
+        let top = rect.bottom + 8;
+        let left = rect.left;
+        
+        // Adjust for mobile - center on screen if not enough space
+        if (viewportWidth < 768) {
+          left = 16; // 16px margin on mobile
+          top = Math.min(top, viewportHeight * 0.15); // Don't go too far down
+        } else {
+          // Desktop positioning
+          const tooltipWidth = 480; // Actual tooltip width
+          if (left + tooltipWidth > viewportWidth - 16) {
+            left = viewportWidth - tooltipWidth - 16;
+          }
+          if (left < 16) left = 16;
+          
+          // Ensure tooltip doesn't go below viewport
+          if (top + 400 > viewportHeight - 16) {
+            top = rect.top - 400 - 8; // Position above button
+          }
+        }
+        
+        setPosition({ top, left });
+      };
+
+      updatePosition();
+      
+      // Update position on scroll/resize
+      window.addEventListener('scroll', updatePosition);
+      window.addEventListener('resize', updatePosition);
+      
+      return () => {
+        window.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [open, triggerRef]);
 
   // Auto-scroll to bottom when content changes
   useEffect(() => {
@@ -42,6 +121,41 @@ export default function AISummaryDialog({
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [summary]);
+
+  // Handle click outside to close (only on desktop)
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // Only handle click outside on desktop, mobile uses backdrop
+      if (window.innerWidth >= 768 && open && tooltipRef.current && triggerRef.current) {
+        const target = event.target as Node;
+        if (
+          !tooltipRef.current.contains(target) &&
+          !triggerRef.current.contains(target)
+        ) {
+          onOpenChange(false);
+        }
+      }
+    };
+
+    if (open) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [open, onOpenChange, triggerRef]);
+
+  // Handle escape key
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && open) {
+        onOpenChange(false);
+      }
+    };
+
+    if (open) {
+      document.addEventListener('keydown', handleEscape);
+      return () => document.removeEventListener('keydown', handleEscape);
+    }
+  }, [open, onOpenChange]);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -244,32 +358,72 @@ export default function AISummaryDialog({
     ));
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col" hideCloseButton={true}>
-        <DialogHeader className="pb-4">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <DialogTitle className="text-xl">AI Summary</DialogTitle>
-          </div>
-          <DialogDescription className="text-sm text-muted-foreground">
-            Summarized as Donald Trump would explain it
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const tooltipWidth = isMobile ? window.innerWidth - 32 : 480;
+  const tooltipMaxHeight = isMobile ? window.innerHeight * 0.75 : 400;
+
+  return (
+    <>
+      {/* Backdrop for mobile */}
+      {isMobile && (
+        <div 
+          className="fixed inset-0 bg-black/20 z-40"
+          onClick={() => onOpenChange(false)}
+        />
+      )}
+      
+      {/* Floating Tooltip */}
+      <div
+        ref={tooltipRef}
+        className="fixed z-50 bg-background border border-border rounded-lg shadow-xl flex flex-col"
+        style={{
+          top: position.top,
+          left: position.left,
+          width: tooltipWidth,
+          maxHeight: tooltipMaxHeight,
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <h3 className="font-semibold text-sm">AI Summary</h3>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={() => onOpenChange(false)}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Content */}
         <div className="flex-1 min-h-0 overflow-hidden">
-          <ScrollArea className="h-full w-full">
-            <div className="pr-4 pb-4">
+          <div 
+            className="h-full overflow-y-auto overscroll-contain scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent"
+            style={{ 
+              WebkitOverflowScrolling: 'touch', // Smooth scrolling on iOS
+              scrollbarWidth: 'thin'
+            }}
+          >
+            <div className="p-4">
               {isLoading && summary === "" ? (
                 <div className="space-y-3">
                   {renderSkeletonLines()}
                 </div>
               ) : summary ? (
-                <div className="text-base leading-relaxed space-y-4">
-                  <div className="whitespace-pre-wrap text-foreground">
-                    {summary}
+                <div className="text-sm leading-relaxed space-y-2">
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Summarized as Donald Trump would explain it
+                  </p>
+                  <div className="whitespace-pre-wrap text-foreground break-words hyphens-auto">
+                    {renderMarkdown(summary)}
                     {isStreaming && (
-                      <span className="inline-block w-2 h-5 bg-primary ml-1 animate-pulse">
+                      <span className="inline-block w-1 h-4 bg-primary ml-1 animate-pulse">
                         |
                       </span>
                     )}
@@ -277,10 +431,10 @@ export default function AISummaryDialog({
                 </div>
               ) : null}
             </div>
-          </ScrollArea>
+          </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </>
   );
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -36,7 +36,7 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeJsonHash } from "@/lib/settleease/hashUtils";
 import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
-import AISummaryDialog from "./AISummaryDialog";
+import AISummaryTooltip from "./AISummaryTooltip";
 import {
   Dialog,
   DialogContent,
@@ -102,6 +102,7 @@ export default function SettlementSummary({
   const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
   const [summaryHash, setSummaryHash] = useState<string>("");
   const [isComputingHash, setIsComputingHash] = useState(false);
+  const summaryButtonRef = useRef<HTMLButtonElement>(null);
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -350,6 +351,7 @@ export default function SettlementSummary({
                 Hub
               </CardTitle>
               <Button
+                ref={summaryButtonRef}
                 size="sm"
                 variant="outline"
                 onClick={handleSummarise}
@@ -596,13 +598,14 @@ export default function SettlementSummary({
 
       {/* AI Summary Dialog */}
       {summaryJsonData && (
-        <AISummaryDialog
+        <AISummaryTooltip
           open={isSummaryDialogOpen}
           onOpenChange={setIsSummaryDialogOpen}
           jsonData={summaryJsonData}
           hash={summaryHash}
           db={db}
           currentUserId={currentUserId || ""}
+          triggerRef={summaryButtonRef}
         />
       )}
     </Card>
