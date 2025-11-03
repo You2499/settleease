@@ -18,10 +18,11 @@ interface AISummaryTooltipProps {
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-// Enhanced markdown renderer for bold text and line breaks
+// Enhanced markdown renderer for bold text and line breaks with proper alignment
 const renderMarkdown = (text: string) => {
-  // Split by paragraphs first
-  const paragraphs = text.split('\n\n');
+  // Clean up any potential indentation issues and split by paragraphs
+  const cleanText = text.replace(/^\s+/gm, ''); // Remove leading whitespace from each line
+  const paragraphs = cleanText.split('\n\n');
   
   return paragraphs.map((paragraph, pIndex) => {
     // Handle both **text** and *text* patterns for bold text
@@ -43,17 +44,17 @@ const renderMarkdown = (text: string) => {
           </strong>
         );
       }
-      // Handle line breaks within paragraphs
+      // Handle line breaks within paragraphs, trim each line
       return part.split('\n').map((line, lineIndex, lines) => (
         <React.Fragment key={`${index}-${lineIndex}`}>
-          {line}
+          {line.trim()}
           {lineIndex < lines.length - 1 && <br />}
         </React.Fragment>
       ));
     });
     
     return (
-      <p key={pIndex} className={pIndex > 0 ? "mt-3" : ""}>
+      <p key={pIndex} className={`${pIndex > 0 ? "mt-3" : ""} text-left`} style={{ textAlign: 'left' }}>
         {renderedParts}
       </p>
     );
@@ -477,8 +478,8 @@ export default function AISummaryTooltip({
                   {renderSkeletonLines()}
                 </div>
               ) : summary ? (
-                <div className="text-sm leading-relaxed space-y-2">
-                  <div className="whitespace-pre-wrap text-foreground break-words hyphens-auto">
+                <div className="text-sm leading-relaxed space-y-2 text-left">
+                  <div className="text-foreground break-words hyphens-auto" style={{ textAlign: 'left' }}>
                     {renderMarkdown(summary)}
                     {isStreaming && (
                       <span className="inline-block w-1 h-4 bg-primary ml-1 animate-pulse">
