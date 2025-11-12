@@ -49,58 +49,57 @@ const renderMarkdown = (text: string) => {
   const renderNestedList = (items: ListItem[], key: number): React.ReactNode => {
     if (items.length === 0) return null;
 
-    const renderListLevel = (items: ListItem[], level: number = 0, parentKey: string = ''): React.ReactNode => {
-      // Group items by level
-      const itemsAtLevel: ListItem[] = [];
-      let i = 0;
+    // Group consecutive items at the same level and type
+    const groups: ListItem[][] = [];
+    let currentGroup: ListItem[] = [];
+    let currentLevel = items[0]?.level ?? 0;
+    let currentType = items[0]?.type ?? 'bullet';
 
-      while (i < items.length && items[i].level === level) {
-        itemsAtLevel.push(items[i]);
-        i++;
+    items.forEach((item, idx) => {
+      if (item.level === currentLevel && item.type === currentType) {
+        currentGroup.push(item);
+      } else {
+        if (currentGroup.length > 0) {
+          groups.push([...currentGroup]);
+        }
+        currentGroup = [item];
+        currentLevel = item.level;
+        currentType = item.type;
       }
+    });
+    
+    if (currentGroup.length > 0) {
+      groups.push(currentGroup);
+    }
 
-      if (itemsAtLevel.length === 0) return null;
+    return (
+      <div key={`nested-list-${key}`} className="my-1">
+        {groups.map((group, groupIdx) => {
+          const level = group[0].level;
+          const type = group[0].type;
+          const ListTag = type === 'numbered' ? 'ol' : 'ul';
+          const listClass = type === 'numbered' 
+            ? `list-decimal space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`
+            : `list-disc space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`;
 
-      const ListTag = itemsAtLevel[0].type === 'numbered' ? 'ol' : 'ul';
-      const listClass = itemsAtLevel[0].type === 'numbered' 
-        ? `list-decimal space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`
-        : `list-disc space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`;
+          return (
+            <ListTag key={`group-${groupIdx}`} className={listClass}>
+              {group.map((item, itemIdx) => {
+                const liClass = `text-sm leading-snug ${
+                  level === 0 ? 'mb-0.5' : 'mb-0'
+                }`;
 
-      return (
-        <ListTag key={`${parentKey}-list-${level}`} className={listClass}>
-          {itemsAtLevel.map((item, idx) => {
-            // Find sub-items for this item
-            const startIdx = items.indexOf(item) + 1;
-            const subItems: ListItem[] = [];
-            let j = startIdx;
-            
-            while (j < items.length && items[j].level > level) {
-              subItems.push(items[j]);
-              j++;
-            }
-
-            const liClass = `text-sm leading-snug ${
-              level === 0 ? 'mb-1' : 'mb-0.5'
-            } ${item.type === 'numbered' && level === 0 ? 'font-medium' : ''}`;
-
-            return (
-              <li key={`${parentKey}-${level}-${idx}`} className={liClass}>
-                <span className="inline-block">
-                  {renderInlineMarkdown(item.text)}
-                </span>
-                {subItems.length > 0 && (
-                  <div className="mt-0.5">
-                    {renderListLevel(subItems, level + 1, `${parentKey}-${idx}`)}
-                  </div>
-                )}
-              </li>
-            );
-          })}
-        </ListTag>
-      );
-    };
-
-    return <div key={`nested-list-${key}`} className="my-2">{renderListLevel(items, 0, `list-${key}`)}</div>;
+                return (
+                  <li key={`item-${groupIdx}-${itemIdx}`} className={liClass}>
+                    {renderInlineMarkdown(item.text)}
+                  </li>
+                );
+              })}
+            </ListTag>
+          );
+        })}
+      </div>
+    );
   };
 
   const renderInlineMarkdown = (text: string) => {

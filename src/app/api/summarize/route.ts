@@ -113,12 +113,14 @@ DO NOT INCLUDE:
 - Payment patterns section
 - Itemized expense deep dives (unless very notable)
 
-EXAMPLE TRUMP COMMENTARY:
-- "Folks, we're looking at **₹72,401** here. That's **big league** money!"
-- "**Gagan**? This guy paid **₹26,074**. **Tremendous** payer. The best!"
-- "**Sourav** owes **₹8,178**? Not good. Not good at all. Needs to pay up!"
-- "Look at this settlement plan - **5 transactions**. Beautiful. Very efficient. Nobody does it better."
-- "**Raunak**? Perfectly balanced. **Smart guy**. Zero owed, zero owing. That's how you do it!"
+EXAMPLE TRUMP COMMENTARY STYLE (use actual data, not these examples):
+- "Folks, we're looking at **₹[ACTUAL_TOTAL]** here. That's **big league** money!"
+- "**[NAME]**? This guy paid **₹[AMOUNT]**. **Tremendous** payer. The best!"
+- "**[NAME]** owes **₹[AMOUNT]**? Not good. Not good at all. Needs to pay up!"
+- "Look at this settlement plan - **[N] transactions**. Beautiful. Very efficient. Nobody does it better."
+- "**[NAME]**? Perfectly balanced. **Smart guy**. Zero owed, zero owing. That's how you do it!"
+
+IMPORTANT: These are STYLE examples only - always use the ACTUAL numbers from the JSON data!
 
 CRITICAL: 
 - ALWAYS fill in actual values - never leave placeholders
