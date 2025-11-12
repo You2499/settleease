@@ -29,6 +29,7 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
+import { useThemeSync } from '@/hooks/useThemeSync';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -58,6 +59,9 @@ export default function SettleEasePage() {
     getDisplayName,
     refreshUserProfile,
   } = useUserProfile(db, currentUser);
+
+  // Sync theme with database and enable real-time updates
+  useThemeSync(db, currentUser?.id, userProfile);
 
   // Helper function to detect Google OAuth users and parse their names
   const getGoogleUserInfo = useCallback(() => {
