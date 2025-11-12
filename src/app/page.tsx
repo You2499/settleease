@@ -40,25 +40,6 @@ export default function SettleEasePage() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
 
-  // Check for existing session BEFORE rendering to prevent flashing
-  const [hasSession] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    
-    // Check for Supabase session cookies
-    if (document.cookie.includes('sb-')) return true;
-    
-    // Check localStorage for Supabase auth tokens
-    try {
-      const keys = Object.keys(localStorage);
-      return keys.some(key => 
-        key.includes('supabase.auth.token') || 
-        (key.includes('sb-') && key.includes('auth-token'))
-      );
-    } catch {
-      return false;
-    }
-  });
-
   // Use custom hooks for auth, data, and realtime
   const {
     db,
@@ -69,6 +50,35 @@ export default function SettleEasePage() {
     isLoadingRole,
     handleLogout,
   } = useSupabaseAuth();
+
+  // Check for existing session to prevent flashing
+  // This updates when currentUser changes (including logout)
+  const hasSession = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    
+    // If we have a currentUser, we definitely have a session
+    if (currentUser) return true;
+    
+    // If auth is still loading, check storage
+    if (isLoadingAuth) {
+      // Check for Supabase session cookies
+      if (document.cookie.includes('sb-')) return true;
+      
+      // Check localStorage for Supabase auth tokens
+      try {
+        const keys = Object.keys(localStorage);
+        return keys.some(key => 
+          key.includes('supabase.auth.token') || 
+          (key.includes('sb-') && key.includes('auth-token'))
+        );
+      } catch {
+        return false;
+      }
+    }
+    
+    // Auth is done loading and no user = no session
+    return false;
+  }, [currentUser, isLoadingAuth]);
 
   // Use user profile hook
   const {
