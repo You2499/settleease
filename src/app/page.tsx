@@ -223,37 +223,31 @@ export default function SettleEasePage() {
     );
   }
 
-  // If still loading auth or no user yet, show minimal loading state
-  if (!currentUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="text-center">
-          <HandCoins className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
-          <p className="text-sm text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
+  // If auth is still loading (e.g., Google OAuth redirect), show app skeleton immediately
+  // The skeleton will handle the loading state gracefully
+  const isAuthenticating = isLoadingAuth && !currentUser;
 
-  // User is authenticated, show the app with skeleton loaders for data
+  // Show the app with skeleton loaders (works for both auth loading and data loading)
   return (
     <>
-      <UserNameModal
-        isOpen={showNameModal}
-        onClose={handleNameModalClose}
-        db={db}
-        userId={currentUser.id}
-        initialFirstName={isNameModalEditMode ? (userProfile?.first_name || '') : (getGoogleUserInfo()?.firstName || userProfile?.first_name || '')}
-        initialLastName={isNameModalEditMode ? (userProfile?.last_name || '') : (getGoogleUserInfo()?.lastName || userProfile?.last_name || '')}
-        isGoogleUser={!isNameModalEditMode && (getGoogleUserInfo()?.isGoogle || false)}
-        isEditMode={isNameModalEditMode}
-      />
+      {currentUser && (
+        <UserNameModal
+          isOpen={showNameModal}
+          onClose={handleNameModalClose}
+          db={db}
+          userId={currentUser.id}
+          initialFirstName={isNameModalEditMode ? (userProfile?.first_name || '') : (getGoogleUserInfo()?.firstName || userProfile?.first_name || '')}
+          initialLastName={isNameModalEditMode ? (userProfile?.last_name || '') : (getGoogleUserInfo()?.lastName || userProfile?.last_name || '')}
+          isGoogleUser={!isNameModalEditMode && (getGoogleUserInfo()?.isGoogle || false)}
+          isEditMode={isNameModalEditMode}
+        />
+      )}
       <SidebarProvider defaultOpen={true}>
         <AppSidebar 
           activeView={activeView} 
           setActiveView={handleSetActiveView} 
           handleLogout={handleLogout} 
-          currentUserEmail={currentUser.email}
+          currentUserEmail={currentUser?.email || null}
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
@@ -288,7 +282,7 @@ export default function SettleEasePage() {
                   getCategoryIconFromName={getCategoryIconFromName}
                   settlementPayments={settlementPayments}
                   db={db}
-                  currentUserId={currentUser.id}
+                  currentUserId={currentUser?.id || ''}
                   onActionComplete={handleActionComplete}
                   userRole={userRole}
                   isLoadingPeople={isLoadingPeople}
@@ -385,7 +379,7 @@ export default function SettleEasePage() {
                   peopleMap={peopleMap}
                   settlementPayments={settlementPayments}
                   db={db}
-                  currentUserId={currentUser.id}
+                  currentUserId={currentUser?.id || ''}
                   onActionComplete={handleActionComplete}
                 />
               </SettleEaseErrorBoundary>

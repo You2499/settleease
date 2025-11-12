@@ -142,14 +142,14 @@ export default function DashboardView({
   if (isLoading) {
     return (
       <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
-        {/* Settlement Summary Skeleton - Matches actual SettlementSummary structure */}
+        {/* Settlement Summary Skeleton - Mobile Optimized */}
         <Card className="w-full flex flex-col shadow-lg rounded-lg">
           <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 w-full">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 {/* Title with icon */}
-                <Skeleton className="h-7 w-56" /> {/* Settlement Hub title */}
-                <Skeleton className="h-8 w-28" /> {/* Summarise button */}
+                <Skeleton className="h-7 w-40 sm:w-56" /> {/* Settlement Hub title */}
+                <Skeleton className="h-8 w-24 sm:w-28" /> {/* Summarise button */}
               </div>
               {/* Tabs */}
               <Skeleton className="h-10 w-full sm:w-48" />
@@ -159,7 +159,7 @@ export default function DashboardView({
             {/* Description bar with toggle */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 px-3 py-2 rounded-md gap-2 mb-2">
               <Skeleton className="h-4 w-full sm:w-96" />
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 self-end sm:self-center">
                 <Skeleton className="h-5 w-10 rounded-full" /> {/* Switch */}
                 <Skeleton className="h-4 w-16" /> {/* Label */}
               </div>
@@ -169,19 +169,18 @@ export default function DashboardView({
               <div className="space-y-2 p-2">
                 {[1, 2, 3].map((i) => (
                   <Card key={i} className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
-                    <div className="flex flex-col sm:grid sm:grid-cols-5 items-start sm:items-center gap-2 sm:gap-1.5">
-                      {/* Person -> Person -> Amount structure */}
-                      <div className="col-span-1 sm:col-span-3 w-full">
-                        <div className="flex items-center justify-between sm:grid sm:grid-cols-3 w-full">
-                          <Skeleton className="h-4 w-20" /> {/* From person */}
-                          <div className="flex items-center justify-center w-5 mx-1">
-                            <Skeleton className="h-4 w-4" /> {/* Arrow */}
-                          </div>
-                          <Skeleton className="h-4 w-20" /> {/* To person */}
+                    <div className="flex flex-col gap-2 w-full">
+                      {/* Person -> Person -> Amount structure - Mobile stacked */}
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <Skeleton className="h-4 w-16 sm:w-20 flex-shrink-0" /> {/* From person */}
+                          <Skeleton className="h-4 w-4 flex-shrink-0" /> {/* Arrow */}
+                          <Skeleton className="h-4 w-16 sm:w-20 flex-shrink-0" /> {/* To person */}
                         </div>
+                        <Skeleton className="h-5 w-20 sm:w-24 flex-shrink-0" /> {/* Amount */}
                       </div>
-                      <Skeleton className="h-5 w-24 col-span-1" /> {/* Amount */}
-                      <Skeleton className="h-8 w-full sm:w-32 col-span-1" /> {/* Mark as Paid button */}
+                      {/* Button on mobile - full width */}
+                      <Skeleton className="h-8 w-full sm:w-32 sm:self-end" /> {/* Mark as Paid button */}
                     </div>
                   </Card>
                 ))}
@@ -190,10 +189,10 @@ export default function DashboardView({
           </CardContent>
         </Card>
 
-        {/* Expense Log Skeleton - Matches actual ExpenseLog structure */}
+        {/* Expense Log Skeleton - Mobile Optimized */}
         <Card className="w-full h-full flex flex-col shadow-lg rounded-lg flex-1 min-h-0">
           <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-            <Skeleton className="h-7 w-44" /> {/* Activity Feed title */}
+            <Skeleton className="h-7 w-36 sm:w-44" /> {/* Activity Feed title */}
             <Skeleton className="h-4 w-full sm:w-96 mt-1" /> {/* Description */}
           </CardHeader>
           <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
@@ -205,23 +204,23 @@ export default function DashboardView({
                     <Skeleton className="h-px w-full" />
                   </div>
                   <div className="relative flex justify-center">
-                    <Skeleton className="h-5 w-32" /> {/* Date badge */}
+                    <Skeleton className="h-5 w-28 sm:w-32" /> {/* Date badge */}
                   </div>
                 </div>
-                {/* Expense items */}
+                {/* Expense items - Mobile optimized */}
                 <div className="space-y-2.5 px-0.5 sm:px-1">
                   {[1, 2, 3].map((i) => (
                     <Card key={i} className="bg-card/70 rounded-md">
                       <CardHeader className="pb-1.5 pt-2.5 px-3">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-                          <Skeleton className="h-6 w-48" /> {/* Expense title */}
-                          <Skeleton className="h-5 w-20 mt-1 sm:mt-0" /> {/* Amount */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-1 w-full">
+                          <Skeleton className="h-6 w-full max-w-[200px] sm:w-48" /> {/* Expense title */}
+                          <Skeleton className="h-5 w-20 sm:mt-0" /> {/* Amount */}
                         </div>
                       </CardHeader>
                       <CardContent className="px-3 pb-2 space-y-0.5">
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
-                          <Skeleton className="h-4 w-24" /> {/* Category */}
-                          <Skeleton className="h-4 w-32 mt-0.5 sm:mt-0" /> {/* Paid by */}
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1 w-full">
+                          <Skeleton className="h-4 w-20 sm:w-24" /> {/* Category */}
+                          <Skeleton className="h-4 w-28 sm:w-32" /> {/* Paid by */}
                         </div>
                       </CardContent>
                     </Card>
