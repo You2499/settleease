@@ -214,15 +214,19 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show auth form when there's no user (including during initial auth check)
-  // This prevents any flash of the dashboard skeleton on the auth page
-  if (!currentUser) {
+  // Show auth form only when auth is done loading and there's no user
+  // This prevents dashboard flash on auth page
+  if (!isLoadingAuth && !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
       </div>
     );
   }
+
+  // If still loading auth OR user is authenticated, show the dashboard
+  // The dashboard will show skeleton loaders while data loads
+  // This prevents auth form flash on dashboard page during refresh
 
   // Show the app with skeleton loaders (works for both auth loading and data loading)
   return (
