@@ -26,11 +26,11 @@ export function useSupabaseData(
   const [categories, setCategories] = useState<Category[]>([]);
   const [settlementPayments, setSettlementPayments] = useState<SettlementPayment[]>([]);
   
-  // Individual loading states for progressive loading
-  const [isLoadingPeople, setIsLoadingPeople] = useState(false);
-  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
-  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
-  const [isLoadingSettlements, setIsLoadingSettlements] = useState(false);
+  // Individual loading states for progressive loading - start as true for initial load
+  const [isLoadingPeople, setIsLoadingPeople] = useState(true);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+  const [isLoadingSettlements, setIsLoadingSettlements] = useState(true);
   
   // Legacy loading state for backward compatibility
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -205,6 +205,11 @@ export function useSupabaseData(
   
     if (isLoadingAuth || isLoadingRole) {
       console.log("Data Effect: Still loading auth/role, skipping.");
+      // Don't show data loading skeletons while auth is loading
+      setIsLoadingPeople(false);
+      setIsLoadingExpenses(false);
+      setIsLoadingCategories(false);
+      setIsLoadingSettlements(false);
       return;
     }
   
@@ -225,6 +230,11 @@ export function useSupabaseData(
       setCategories([]);
       setSettlementPayments([]);
       setIsDataFetchedAtLeastOnce(false);
+      // Reset loading states when no user
+      setIsLoadingPeople(false);
+      setIsLoadingExpenses(false);
+      setIsLoadingCategories(false);
+      setIsLoadingSettlements(false);
     }
     
     return () => {

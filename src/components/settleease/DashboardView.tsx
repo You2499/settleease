@@ -132,56 +132,12 @@ export default function DashboardView({
     setIsExpenseModalOpen(false);
     setExpenseModalOpenedFromStep2(false);
   };
-  
-  if (people.length === 0 && expenses.length === 0) {
-    return (
-      <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
-            Welcome to SettleEase!
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
-            <FileText className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-            <p className="font-medium text-base sm:text-lg mb-2">No People or Expenses Yet</p>
-            <p className="text-sm sm:text-base max-w-md">
-              Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-  if (expenses.length === 0 && settlementPayments.length === 0 && !isLoadingExpenses && !isLoadingSettlements) {
-     return (
-      <Card className="text-center py-10 shadow-lg rounded-lg">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
-            Ready to Settle?
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
-            <FileText className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-            <p className="font-medium text-base sm:text-lg mb-2">No Expenses Recorded Yet</p>
-            <p className="text-sm sm:text-base max-w-md">
-              Navigate to "Add Expense" to start managing your group finances.
-            </p>
-            {people.length === 0 && (
-              <p className="text-sm sm:text-base mt-3 max-w-md">
-                First, go to "Manage People" to add participants to your group.
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
 
-  // Show skeleton loaders while data is loading
+  // Check if we're currently loading any data
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements;
-  if (isLoading && people.length === 0 && expenses.length === 0) {
+  
+  // Show skeleton loaders while data is loading (on initial load OR refresh)
+  if (isLoading) {
     return (
       <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
         {/* Settlement Summary Skeleton - Matches actual SettlementSummary structure */}
@@ -274,6 +230,54 @@ export default function DashboardView({
           </CardContent>
         </Card>
       </div>
+    );
+  }
+
+  // Show empty states only when NOT loading and no data exists
+  if (!isLoading && people.length === 0 && expenses.length === 0) {
+    return (
+      <Card className="text-center py-10 shadow-lg rounded-lg">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
+            Welcome to SettleEase!
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
+            <FileText className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+            <p className="font-medium text-base sm:text-lg mb-2">No People or Expenses Yet</p>
+            <p className="text-sm sm:text-base max-w-md">
+              Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!isLoading && expenses.length === 0 && settlementPayments.length === 0) {
+    return (
+      <Card className="text-center py-10 shadow-lg rounded-lg">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-center text-xl sm:text-2xl font-bold text-primary">
+            Ready to Settle?
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
+            <FileText className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
+            <p className="font-medium text-base sm:text-lg mb-2">No Expenses Recorded Yet</p>
+            <p className="text-sm sm:text-base max-w-md">
+              Navigate to "Add Expense" to start managing your group finances.
+            </p>
+            {people.length === 0 && (
+              <p className="text-sm sm:text-base mt-3 max-w-md">
+                First, go to "Manage People" to add participants to your group.
+              </p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
