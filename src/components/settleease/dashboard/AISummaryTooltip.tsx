@@ -921,7 +921,7 @@ export default function AISummaryTooltip({
         <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <h3 className="font-semibold text-sm">Summary</h3>
-            <GeminiSparkle className="h-4 w-4" />
+            {summary && <GeminiSparkle className="h-4 w-4" />}
             {modelName && (
               <span className="text-xs text-muted-foreground">
                 ({modelName})
