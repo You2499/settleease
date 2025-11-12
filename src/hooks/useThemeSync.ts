@@ -23,8 +23,45 @@ export function useThemeSync(
     setIsMounted(true);
   }, []);
 
+  // Reset state when user logs out
+  useEffect(() => {
+    if (!userId) {
+      setIsInitialized(false);
+      lastSyncedTheme.current = null;
+      isUpdatingFromRemote.current = false;
+    }
+  }, [userId]);
+
   // Get the actual resolved theme (handles 'system' theme)
   const resolvedTheme = nextThemesResolved || (theme === 'system' ? systemTheme : theme);
+
+  // Update database when theme changes
+  const updateThemeInDatabase = useCallback(async (newTheme: string) => {
+    if (!db || !userId) {
+      console.warn('Cannot update theme: missing db or userId');
+      return;
+    }
+
+    try {
+      const { error } = await db
+        .from(USER_PROFILES_TABLE)
+        .update({ theme_preference: newTheme })
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error updating theme in database:', error);
+        toast({
+          title: "Theme Sync Error",
+          description: "Failed to save theme preference",
+          variant: "destructive",
+        });
+      } else {
+        console.log(`✅ Theme updated in database: ${newTheme}`);
+      }
+    } catch (error: any) {
+      console.error('Error updating theme:', error);
+    }
+  }, [db, userId]);
 
   // Load theme from database on mount (only once, after next-themes is mounted)
   useEffect(() => {
@@ -55,35 +92,7 @@ export function useThemeSync(
     }
     
     setIsInitialized(true);
-  }, [isMounted, db, userId, userProfile, isInitialized, theme]);
-
-  // Update database when theme changes
-  const updateThemeInDatabase = useCallback(async (newTheme: string) => {
-    if (!db || !userId) {
-      console.warn('Cannot update theme: missing db or userId');
-      return;
-    }
-
-    try {
-      const { error } = await db
-        .from(USER_PROFILES_TABLE)
-        .update({ theme_preference: newTheme })
-        .eq('user_id', userId);
-
-      if (error) {
-        console.error('Error updating theme in database:', error);
-        toast({
-          title: "Theme Sync Error",
-          description: "Failed to save theme preference",
-          variant: "destructive",
-        });
-      } else {
-        console.log(`✅ Theme updated in database: ${newTheme}`);
-      }
-    } catch (error: any) {
-      console.error('Error updating theme:', error);
-    }
-  }, [db, userId]);
+  }, [isMounted, db, userId, userProfile, isInitialized, theme, updateThemeInDatabase]);
 
   // Watch for LOCAL theme changes and update database
   useEffect(() => {
