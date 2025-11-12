@@ -12,7 +12,7 @@ export function useThemeSync(
   userId: string | undefined,
   userProfile: any
 ) {
-  const { theme, setTheme, systemTheme, resolvedTheme: nextThemesResolved } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const isUpdatingFromRemote = useRef(false);
@@ -31,9 +31,6 @@ export function useThemeSync(
       isUpdatingFromRemote.current = false;
     }
   }, [userId]);
-
-  // Get the actual resolved theme (handles 'system' theme)
-  const resolvedTheme = nextThemesResolved || (theme === 'system' ? systemTheme : theme);
 
   // Update database when theme changes
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
@@ -170,7 +167,6 @@ export function useThemeSync(
 
   return {
     currentTheme: theme,
-    resolvedTheme,
     updateThemeInDatabase,
   };
 }

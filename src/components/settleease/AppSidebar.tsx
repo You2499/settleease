@@ -236,9 +236,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     <DropdownMenuItem onClick={() => setTheme("dark")}>
                       <Moon className="mr-2 h-4 w-4" /> Dark
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("system")}>
-                      <Settings className="mr-2 h-4 w-4" /> System
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                       <LogOut className="mr-2 h-4 w-4" /> Logout
