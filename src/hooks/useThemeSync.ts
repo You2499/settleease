@@ -12,40 +12,50 @@ export function useThemeSync(
   userId: string | undefined,
   userProfile: any
 ) {
-  const { theme, setTheme, systemTheme } = useTheme();
+  const { theme, setTheme, systemTheme, resolvedTheme: nextThemesResolved } = useTheme();
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const isUpdatingFromRemote = useRef(false);
+  const lastSyncedTheme = useRef<string | null>(null);
+
+  // Wait for next-themes to mount (fixes Safari/iOS hydration issues)
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Get the actual resolved theme (handles 'system' theme)
-  const resolvedTheme = theme === 'system' ? systemTheme : theme;
+  const resolvedTheme = nextThemesResolved || (theme === 'system' ? systemTheme : theme);
 
-  // Load theme from database on mount (only once)
+  // Load theme from database on mount (only once, after next-themes is mounted)
   useEffect(() => {
-    if (!db || !userId || !userProfile || isInitialized) return;
+    if (!isMounted || !db || !userId || !userProfile || isInitialized) return;
 
     const dbTheme = userProfile.theme_preference;
+    console.log(`🎨 [Init] Current theme: ${theme}, DB theme: ${dbTheme}, Mounted: ${isMounted}`);
     
     // If database has a theme preference, use it
     if (dbTheme) {
       console.log(`🎨 Loading theme from database: ${dbTheme}`);
       isUpdatingFromRemote.current = true;
+      lastSyncedTheme.current = dbTheme;
       setTheme(dbTheme);
       setTimeout(() => {
         isUpdatingFromRemote.current = false;
-      }, 100);
+      }, 200);
     } else if (!dbTheme) {
       // If no theme in database, default to light and save it
       console.log('🎨 No theme in database, defaulting to light');
       isUpdatingFromRemote.current = true;
+      lastSyncedTheme.current = 'light';
       setTheme('light');
       updateThemeInDatabase('light');
       setTimeout(() => {
         isUpdatingFromRemote.current = false;
-      }, 100);
+      }, 200);
     }
     
     setIsInitialized(true);
-  }, [db, userId, userProfile, isInitialized]);
+  }, [isMounted, db, userId, userProfile, isInitialized, theme]);
 
   // Update database when theme changes
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
@@ -77,7 +87,9 @@ export function useThemeSync(
 
   // Watch for LOCAL theme changes and update database
   useEffect(() => {
-    if (!theme || !db || !userId || !isInitialized) return;
+    if (!isMounted || !theme || !db || !userId || !isInitialized) return;
+    
+    console.log(`🎨 [Watch] Theme: ${theme}, LastSynced: ${lastSyncedTheme.current}, IsRemote: ${isUpdatingFromRemote.current}`);
     
     // Don't update database if this change came from remote
     if (isUpdatingFromRemote.current) {
@@ -85,17 +97,17 @@ export function useThemeSync(
       return;
     }
 
-    // Only update if theme is different from what's in the database
-    const dbTheme = userProfile?.theme_preference;
-    if (dbTheme !== theme) {
-      console.log(`🎨 Local theme changed to: ${theme}, updating database...`);
+    // Only update if theme is different from what we last synced
+    if (lastSyncedTheme.current !== theme) {
+      console.log(`🎨 Local theme changed: ${lastSyncedTheme.current} → ${theme}, updating database...`);
+      lastSyncedTheme.current = theme;
       updateThemeInDatabase(theme);
     }
-  }, [theme, db, userId, isInitialized, userProfile?.theme_preference, updateThemeInDatabase]);
+  }, [isMounted, theme, db, userId, isInitialized, updateThemeInDatabase]);
 
   // Set up real-time subscription for theme changes
   useEffect(() => {
-    if (!db || !userId || !isInitialized) return;
+    if (!isMounted || !db || !userId || !isInitialized) return;
 
     console.log('🔄 Setting up real-time theme sync subscription');
 
@@ -113,12 +125,15 @@ export function useThemeSync(
           const newTheme = payload.new?.theme_preference;
           const oldTheme = payload.old?.theme_preference;
           
+          console.log(`🔄 [Realtime] Received update: ${oldTheme} → ${newTheme}, Current: ${theme}`);
+          
           // Only update if the theme actually changed
-          if (newTheme && newTheme !== oldTheme) {
-            console.log(`🔄 Real-time theme update received: ${oldTheme} → ${newTheme}`);
+          if (newTheme && newTheme !== oldTheme && newTheme !== theme) {
+            console.log(`🔄 Applying real-time theme update: ${newTheme}`);
             
             // Mark this as a remote update to prevent loop
             isUpdatingFromRemote.current = true;
+            lastSyncedTheme.current = newTheme;
             setTheme(newTheme);
             
             toast({
@@ -126,20 +141,23 @@ export function useThemeSync(
               description: `Theme changed to ${newTheme} mode from another device`,
             });
             
-            // Reset flag after a short delay
+            // Reset flag after a longer delay for Safari
             setTimeout(() => {
               isUpdatingFromRemote.current = false;
-            }, 100);
+              console.log('🔄 Remote update flag cleared');
+            }, 300);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔄 Subscription status:', status);
+      });
 
     return () => {
       console.log('🔄 Cleaning up theme sync subscription');
       channel.unsubscribe();
     };
-  }, [db, userId, isInitialized, setTheme]);
+  }, [isMounted, db, userId, isInitialized, setTheme, theme]);
 
   return {
     currentTheme: theme,
