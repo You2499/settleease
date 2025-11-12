@@ -55,19 +55,21 @@ export default function SettleEasePage() {
   const [hasSession, setHasSession] = useState(() => {
     if (typeof window === 'undefined') return false;
     
-    // Check for Supabase session cookies (more thorough check)
+    // Check for Supabase session cookies
     const cookies = document.cookie;
-    if (cookies.includes('sb-') && cookies.includes('auth-token')) return true;
+    const hasCookie = cookies.includes('sb-') && cookies.includes('auth-token');
     
     // Check localStorage for Supabase auth tokens
+    let hasLocalStorage = false;
     try {
       // Check for common Supabase localStorage keys
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (key.includes('supabase.auth.token') || (key.includes('sb-') && key.includes('auth-token')))) {
           const value = localStorage.getItem(key);
-          if (value && value !== 'null' && value !== '{}') {
-            return true;
+          if (value && value !== 'null' && value !== '{}' && value.length > 10) {
+            hasLocalStorage = true;
+            break;
           }
         }
       }
@@ -75,7 +77,9 @@ export default function SettleEasePage() {
       // Ignore localStorage errors
     }
     
-    return false;
+    const result = hasCookie || hasLocalStorage;
+    console.log('🔍 Session check on mount:', { hasCookie, hasLocalStorage, result });
+    return result;
   });
 
   // Update hasSession when auth state changes (handles logout and login)
