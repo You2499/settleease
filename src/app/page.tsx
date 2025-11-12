@@ -252,31 +252,19 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show transparent overlay during initial auth check to prevent flashing
-  // This blocks rendering until we know what to show
-  if (isLoadingAuth && !currentUser) {
-    // If we have a session, show dashboard skeleton behind the overlay
-    if (hasSession) {
-      return (
-        <>
-          <div className="fixed inset-0 bg-background z-50" />
-          {/* Dashboard will render behind but won't be visible */}
-        </>
-      );
-    }
-    // If no session, show auth form behind the overlay
+  // Show transparent overlay during initial auth check ONLY when no session detected
+  // This prevents dashboard flash on auth page
+  if (isLoadingAuth && !currentUser && !hasSession) {
     return (
-      <>
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="fixed inset-0 bg-background z-50" />
-        <div className="flex items-center justify-center min-h-screen bg-background">
-          <AuthForm db={db} />
-        </div>
-      </>
+        <AuthForm db={db} />
+      </div>
     );
   }
 
   // Show auth form when auth is complete and there's no user
-  if (!currentUser) {
+  if (!currentUser && !isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
@@ -284,7 +272,9 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show dashboard when we have a user
+  // Show dashboard when:
+  // - We have a user, OR
+  // - Auth is loading and we have a session (prevents auth form flash)
   // (dashboard will show skeleton loaders while data loads)
 
   // Show dashboard (with skeleton loaders) when:
