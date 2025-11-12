@@ -33,6 +33,7 @@ interface DashboardViewProps {
   isLoadingExpenses?: boolean;
   isLoadingCategories?: boolean;
   isLoadingSettlements?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
 export default function DashboardView({
@@ -50,6 +51,7 @@ export default function DashboardView({
   isLoadingExpenses = false,
   isLoadingCategories = false,
   isLoadingSettlements = false,
+  isDataFetchedAtLeastOnce = false,
 }: DashboardViewProps) {
   // Check for crash test
   useEffect(() => {
@@ -133,8 +135,8 @@ export default function DashboardView({
     setExpenseModalOpenedFromStep2(false);
   };
 
-  // Check if we're currently loading any data
-  const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements;
+  // Check if we're currently loading any data OR if we haven't fetched data yet
+  const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || !isDataFetchedAtLeastOnce;
   
   // Show skeleton loaders while data is loading (on initial load OR refresh)
   if (isLoading) {

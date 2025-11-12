@@ -294,6 +294,7 @@ export default function SettleEasePage() {
                   isLoadingExpenses={isLoadingExpenses}
                   isLoadingCategories={isLoadingCategories}
                   isLoadingSettlements={isLoadingSettlements}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}

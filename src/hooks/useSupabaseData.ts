@@ -205,11 +205,7 @@ export function useSupabaseData(
   
     if (isLoadingAuth || isLoadingRole) {
       console.log("Data Effect: Still loading auth/role, skipping.");
-      // Don't show data loading skeletons while auth is loading
-      setIsLoadingPeople(false);
-      setIsLoadingExpenses(false);
-      setIsLoadingCategories(false);
-      setIsLoadingSettlements(false);
+      // Keep loading states as true - skeleton will show after auth completes
       return;
     }
   
