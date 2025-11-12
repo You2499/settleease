@@ -49,59 +49,58 @@ const renderMarkdown = (text: string) => {
   const renderNestedList = (items: ListItem[], key: number): React.ReactNode => {
     if (items.length === 0) return null;
 
-    const renderListLevel = (items: ListItem[], level: number = 0, parentKey: string = ''): React.ReactNode[] => {
-      const result: React.ReactNode[] = [];
+    const renderListLevel = (items: ListItem[], level: number = 0, parentKey: string = ''): React.ReactNode => {
+      // Group items by level
+      const itemsAtLevel: ListItem[] = [];
       let i = 0;
 
-      while (i < items.length) {
-        const item = items[i];
-        
-        if (item.level === level) {
-          const subItems: ListItem[] = [];
-          let j = i + 1;
-          
-          while (j < items.length && items[j].level > level) {
-            subItems.push(items[j]);
-            j++;
-          }
+      while (i < items.length && items[i].level === level) {
+        itemsAtLevel.push(items[i]);
+        i++;
+      }
 
-          const itemKey = `${parentKey}-${level}-${i}`;
-          const ListTag = item.type === 'numbered' ? 'ol' : 'ul';
-          
-          // Enhanced styling with better spacing and visual hierarchy
-          const listClass = item.type === 'numbered' 
-            ? `list-decimal space-y-1.5 ${level === 0 ? 'ml-5' : 'ml-6'}`
-            : `list-disc space-y-1.5 ${level === 0 ? 'ml-5' : 'ml-6'}`;
-          
-          const liClass = `text-sm leading-relaxed ${
-            level === 0 ? 'mb-2' : 'mb-1'
-          } ${item.type === 'numbered' && level === 0 ? 'font-medium' : ''}`;
+      if (itemsAtLevel.length === 0) return null;
 
-          result.push(
-            <ListTag key={itemKey} className={listClass}>
-              <li className={liClass}>
+      const ListTag = itemsAtLevel[0].type === 'numbered' ? 'ol' : 'ul';
+      const listClass = itemsAtLevel[0].type === 'numbered' 
+        ? `list-decimal space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`
+        : `list-disc space-y-0.5 ${level === 0 ? 'ml-5' : 'ml-6'}`;
+
+      return (
+        <ListTag key={`${parentKey}-list-${level}`} className={listClass}>
+          {itemsAtLevel.map((item, idx) => {
+            // Find sub-items for this item
+            const startIdx = items.indexOf(item) + 1;
+            const subItems: ListItem[] = [];
+            let j = startIdx;
+            
+            while (j < items.length && items[j].level > level) {
+              subItems.push(items[j]);
+              j++;
+            }
+
+            const liClass = `text-sm leading-snug ${
+              level === 0 ? 'mb-1' : 'mb-0.5'
+            } ${item.type === 'numbered' && level === 0 ? 'font-medium' : ''}`;
+
+            return (
+              <li key={`${parentKey}-${level}-${idx}`} className={liClass}>
                 <span className="inline-block">
                   {renderInlineMarkdown(item.text)}
                 </span>
                 {subItems.length > 0 && (
-                  <div className="mt-1.5">
-                    {renderListLevel(subItems, level + 1, itemKey)}
+                  <div className="mt-0.5">
+                    {renderListLevel(subItems, level + 1, `${parentKey}-${idx}`)}
                   </div>
                 )}
               </li>
-            </ListTag>
-          );
-
-          i = j;
-        } else {
-          i++;
-        }
-      }
-
-      return result;
+            );
+          })}
+        </ListTag>
+      );
     };
 
-    return <div key={`nested-list-${key}`} className="my-2">{renderListLevel(items)}</div>;
+    return <div key={`nested-list-${key}`} className="my-2">{renderListLevel(items, 0, `list-${key}`)}</div>;
   };
 
   const renderInlineMarkdown = (text: string) => {
@@ -176,10 +175,10 @@ const renderMarkdown = (text: string) => {
       const headerText = trimmedLine.replace(/^#+\s+/, '');
       
       const headerClasses = {
-        1: "text-xl font-extrabold text-foreground mb-4 mt-6 first:mt-0 pb-2 border-b-2 border-primary/20",
-        2: "text-lg font-bold text-foreground mb-3 mt-5 first:mt-0 pb-1.5 border-b border-primary/10", 
-        3: "text-base font-semibold text-foreground mb-2.5 mt-4 first:mt-0",
-        4: "text-sm font-semibold text-muted-foreground mb-2 mt-3 first:mt-0 uppercase tracking-wide"
+        1: "text-lg font-extrabold text-foreground mb-2 mt-4 first:mt-0 pb-1.5 border-b-2 border-primary/20",
+        2: "text-base font-bold text-foreground mb-1.5 mt-3 first:mt-0 pb-1 border-b border-primary/10", 
+        3: "text-sm font-semibold text-foreground mb-1 mt-2 first:mt-0",
+        4: "text-xs font-semibold text-muted-foreground mb-1 mt-2 first:mt-0 uppercase tracking-wide"
       };
       
       const HeaderTag = `h${Math.min(headerLevel, 4)}` as keyof JSX.IntrinsicElements;
@@ -276,7 +275,7 @@ const renderMarkdown = (text: string) => {
     // Regular paragraph with enhanced styling
     flushList();
     elements.push(
-      <p key={lineIndex} className="text-sm leading-relaxed mb-3 text-foreground/90">
+      <p key={lineIndex} className="text-sm leading-snug mb-1.5 text-foreground/90">
         {renderInlineMarkdown(trimmedLine)}
       </p>
     );
