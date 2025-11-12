@@ -18,16 +18,16 @@ interface AISummaryTooltipProps {
   triggerRef: React.RefObject<HTMLButtonElement>;
 }
 
-// Enhanced markdown renderer with support for headers, nested lists, sub-bullets, and proper formatting
+// Enhanced markdown renderer with comprehensive formatting support
 const renderMarkdown = (text: string) => {
   const lines = text.split('\n');
   const elements: React.ReactNode[] = [];
   
-  // Enhanced list tracking for nested lists
   interface ListItem {
     text: string;
     level: number;
     type: 'bullet' | 'numbered';
+    number?: number;
   }
   
   let currentListItems: ListItem[] = [];
@@ -35,7 +35,7 @@ const renderMarkdown = (text: string) => {
 
   const getIndentLevel = (line: string): number => {
     const match = line.match(/^(\s*)/);
-    return match ? Math.floor(match[1].length / 2) : 0; // 2 spaces = 1 level
+    return match ? Math.floor(match[1].length / 2) : 0;
   };
 
   const flushList = () => {
@@ -49,7 +49,7 @@ const renderMarkdown = (text: string) => {
   const renderNestedList = (items: ListItem[], key: number): React.ReactNode => {
     if (items.length === 0) return null;
 
-    const renderListLevel = (items: ListItem[], level: number = 0): React.ReactNode[] => {
+    const renderListLevel = (items: ListItem[], level: number = 0, parentKey: string = ''): React.ReactNode[] => {
       const result: React.ReactNode[] = [];
       let i = 0;
 
@@ -57,7 +57,6 @@ const renderMarkdown = (text: string) => {
         const item = items[i];
         
         if (item.level === level) {
-          // Find all sub-items for this item
           const subItems: ListItem[] = [];
           let j = i + 1;
           
@@ -66,18 +65,27 @@ const renderMarkdown = (text: string) => {
             j++;
           }
 
+          const itemKey = `${parentKey}-${level}-${i}`;
           const ListTag = item.type === 'numbered' ? 'ol' : 'ul';
+          
+          // Enhanced styling with better spacing and visual hierarchy
           const listClass = item.type === 'numbered' 
-            ? `list-decimal list-inside ml-${level * 4 + 4} mb-2 space-y-1`
-            : `list-disc list-inside ml-${level * 4 + 4} mb-2 space-y-1`;
+            ? `list-decimal space-y-1.5 ${level === 0 ? 'ml-5' : 'ml-6'}`
+            : `list-disc space-y-1.5 ${level === 0 ? 'ml-5' : 'ml-6'}`;
+          
+          const liClass = `text-sm leading-relaxed ${
+            level === 0 ? 'mb-2' : 'mb-1'
+          } ${item.type === 'numbered' && level === 0 ? 'font-medium' : ''}`;
 
           result.push(
-            <ListTag key={`${key}-${level}-${i}`} className={listClass}>
-              <li className="text-sm leading-relaxed">
-                {renderInlineMarkdown(item.text)}
+            <ListTag key={itemKey} className={listClass}>
+              <li className={liClass}>
+                <span className="inline-block">
+                  {renderInlineMarkdown(item.text)}
+                </span>
                 {subItems.length > 0 && (
-                  <div className="mt-1">
-                    {renderListLevel(subItems, level + 1)}
+                  <div className="mt-1.5">
+                    {renderListLevel(subItems, level + 1, itemKey)}
                   </div>
                 )}
               </li>
@@ -93,32 +101,59 @@ const renderMarkdown = (text: string) => {
       return result;
     };
 
-    return <div key={`nested-list-${key}`}>{renderListLevel(items)}</div>;
+    return <div key={`nested-list-${key}`} className="my-2">{renderListLevel(items)}</div>;
   };
 
   const renderInlineMarkdown = (text: string) => {
-    // Handle bold text (**text** and *text*)
-    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/);
+    const parts: React.ReactNode[] = [];
+    let currentIndex = 0;
     
-    return parts.map((part, index) => {
-      // Handle **text** (double asterisk)
-      if (part.startsWith('**') && part.endsWith('**')) {
-        return (
-          <strong key={index} className="font-bold text-primary">
-            {part.slice(2, -2)}
-          </strong>
+    // Enhanced regex to handle bold, currency symbols, and special characters
+    const boldRegex = /\*\*([^*]+)\*\*/g;
+    const matches: Array<{ start: number; end: number; text: string }> = [];
+    
+    let match;
+    while ((match = boldRegex.exec(text)) !== null) {
+      matches.push({
+        start: match.index,
+        end: match.index + match[0].length,
+        text: match[1]
+      });
+    }
+    
+    matches.forEach((m, idx) => {
+      // Add text before the match
+      if (m.start > currentIndex) {
+        parts.push(
+          <span key={`text-${idx}-before`}>
+            {text.substring(currentIndex, m.start)}
+          </span>
         );
       }
-      // Handle *text* (single asterisk) - but not if it's a list marker
-      if (part.startsWith('*') && part.endsWith('*') && part.length > 2 && !part.match(/^\*\s/)) {
-        return (
-          <strong key={index} className="font-bold text-primary">
-            {part.slice(1, -1)}
-          </strong>
-        );
-      }
-      return part;
+      
+      // Add the bold text with enhanced styling
+      parts.push(
+        <strong 
+          key={`bold-${idx}`} 
+          className="font-bold text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 px-1 rounded"
+        >
+          {m.text}
+        </strong>
+      );
+      
+      currentIndex = m.end;
     });
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
+      parts.push(
+        <span key="text-end">
+          {text.substring(currentIndex)}
+        </span>
+      );
+    }
+    
+    return parts.length > 0 ? parts : text;
   };
 
   lines.forEach((line, lineIndex) => {
@@ -129,40 +164,66 @@ const renderMarkdown = (text: string) => {
     if (!trimmedLine) {
       if (elements.length > 0) {
         flushList();
-        elements.push(<div key={`space-${lineIndex}`} className="mb-2" />);
+        elements.push(<div key={`space-${lineIndex}`} className="h-3" />);
       }
       return;
     }
 
-    // Headers (# ## ### ####) - Enhanced to support more levels
+    // Headers with enhanced styling and visual hierarchy
     if (trimmedLine.match(/^#{1,4}\s+/)) {
       flushList();
       const headerLevel = trimmedLine.match(/^#+/)?.[0].length || 1;
       const headerText = trimmedLine.replace(/^#+\s+/, '');
       
       const headerClasses = {
-        1: "text-lg font-bold text-foreground mb-3 mt-4 first:mt-0",
-        2: "text-base font-bold text-foreground mb-2 mt-3 first:mt-0", 
-        3: "text-sm font-semibold text-foreground mb-2 mt-2 first:mt-0",
-        4: "text-xs font-semibold text-muted-foreground mb-1 mt-2 first:mt-0"
+        1: "text-xl font-extrabold text-foreground mb-4 mt-6 first:mt-0 pb-2 border-b-2 border-primary/20",
+        2: "text-lg font-bold text-foreground mb-3 mt-5 first:mt-0 pb-1.5 border-b border-primary/10", 
+        3: "text-base font-semibold text-foreground mb-2.5 mt-4 first:mt-0",
+        4: "text-sm font-semibold text-muted-foreground mb-2 mt-3 first:mt-0 uppercase tracking-wide"
       };
       
       const HeaderTag = `h${Math.min(headerLevel, 4)}` as keyof JSX.IntrinsicElements;
       
       elements.push(
-        <HeaderTag key={lineIndex} className={headerClasses[headerLevel as keyof typeof headerClasses]}>
+        <HeaderTag 
+          key={lineIndex} 
+          className={headerClasses[headerLevel as keyof typeof headerClasses]}
+        >
           {renderInlineMarkdown(headerText)}
         </HeaderTag>
       );
       return;
     }
 
-    // Enhanced list detection with indentation support
+    // Horizontal rule
+    if (trimmedLine.match(/^[-*_]{3,}$/)) {
+      flushList();
+      elements.push(
+        <hr key={lineIndex} className="my-4 border-t border-border" />
+      );
+      return;
+    }
+
+    // Blockquote
+    if (trimmedLine.startsWith('>')) {
+      flushList();
+      const quoteText = trimmedLine.replace(/^>\s*/, '');
+      elements.push(
+        <blockquote 
+          key={lineIndex} 
+          className="border-l-4 border-primary/40 pl-4 py-2 my-3 italic text-sm text-muted-foreground bg-muted/30 rounded-r"
+        >
+          {renderInlineMarkdown(quoteText)}
+        </blockquote>
+      );
+      return;
+    }
+
     const indentLevel = getIndentLevel(originalLine);
     
-    // Bullet points (- or *) with indentation support
-    if (trimmedLine.match(/^[-*]\s+/)) {
-      const itemText = trimmedLine.replace(/^[-*]\s+/, '');
+    // Bullet points with enhanced detection
+    if (trimmedLine.match(/^[-*•]\s+/)) {
+      const itemText = trimmedLine.replace(/^[-*•]\s+/, '');
       currentListItems.push({
         text: itemText,
         level: indentLevel,
@@ -172,30 +233,56 @@ const renderMarkdown = (text: string) => {
       return;
     }
 
-    // Numbered lists (1. 2. etc.) with indentation support
-    if (trimmedLine.match(/^\d+\.\s+/)) {
+    // Numbered lists with number tracking
+    const numberedMatch = trimmedLine.match(/^(\d+)\.\s+/);
+    if (numberedMatch) {
       const itemText = trimmedLine.replace(/^\d+\.\s+/, '');
       currentListItems.push({
         text: itemText,
         level: indentLevel,
-        type: 'numbered'
+        type: 'numbered',
+        number: parseInt(numberedMatch[1])
       });
       inList = true;
       return;
     }
 
-    // Regular paragraph text
+    // Code blocks (inline)
+    if (trimmedLine.includes('`')) {
+      flushList();
+      const parts = trimmedLine.split(/(`[^`]+`)/g);
+      const rendered = parts.map((part, idx) => {
+        if (part.startsWith('`') && part.endsWith('`')) {
+          return (
+            <code 
+              key={idx} 
+              className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono"
+            >
+              {part.slice(1, -1)}
+            </code>
+          );
+        }
+        return <span key={idx}>{renderInlineMarkdown(part)}</span>;
+      });
+      
+      elements.push(
+        <p key={lineIndex} className="text-sm leading-relaxed mb-3">
+          {rendered}
+        </p>
+      );
+      return;
+    }
+
+    // Regular paragraph with enhanced styling
     flushList();
     elements.push(
-      <p key={lineIndex} className="text-sm leading-relaxed mb-3 text-left">
+      <p key={lineIndex} className="text-sm leading-relaxed mb-3 text-foreground/90">
         {renderInlineMarkdown(trimmedLine)}
       </p>
     );
   });
 
-  // Flush any remaining list items
   flushList();
-
   return elements;
 };
 
@@ -235,15 +322,17 @@ export default function AISummaryTooltip({
           top = Math.min(top, viewportHeight * 0.15); // Don't go too far down
         } else {
           // Desktop positioning
-          const tooltipWidth = 480; // Actual tooltip width
+          const tooltipWidth = 600; // Actual tooltip width (updated)
+          const tooltipHeight = 500; // Actual tooltip height (updated)
+          
           if (left + tooltipWidth > viewportWidth - 16) {
             left = viewportWidth - tooltipWidth - 16;
           }
           if (left < 16) left = 16;
           
           // Ensure tooltip doesn't go below viewport
-          if (top + 400 > viewportHeight - 16) {
-            top = rect.top - 400 - 8; // Position above button
+          if (top + tooltipHeight > viewportHeight - 16) {
+            top = rect.top - tooltipHeight - 8; // Position above button
           }
         }
         
@@ -263,9 +352,9 @@ export default function AISummaryTooltip({
     }
   }, [open, triggerRef]);
 
-  // Auto-scroll to bottom only when streaming (not for cached content)
+  // Auto-scroll to bottom only when streaming AND we have content (not for skeleton/cached content)
   useEffect(() => {
-    if (scrollAreaRef.current && isStreaming) {
+    if (scrollAreaRef.current && isStreaming && summary) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [summary, isStreaming]);
@@ -348,14 +437,13 @@ export default function AISummaryTooltip({
 
     console.log("🔍 Checking for existing summary with hash:", hash);
 
-    // Check database for existing summary
-    if (db && currentUserId) {
+    // Check database for existing summary (regardless of user to save API calls)
+    if (db) {
       try {
         const { data, error } = await db
           .from("ai_summaries")
           .select("summary")
           .eq("data_hash", hash)
-          .eq("user_id", currentUserId)
           .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
 
         if (error) {
@@ -368,7 +456,7 @@ export default function AISummaryTooltip({
         }
 
         if (data && data.summary) {
-          console.log("✅ Found cached summary, using existing data");
+          console.log("✅ Found cached summary for this data hash, using existing data");
           setSummary(data.summary);
           setIsLoading(false);
           setIsStreaming(false);
@@ -380,7 +468,7 @@ export default function AISummaryTooltip({
         console.error("❌ Error checking summary:", error);
       }
     } else {
-      console.log("❌ No database connection or user ID");
+      console.log("❌ No database connection");
     }
 
     // No existing summary found, fetch new one
@@ -493,17 +581,34 @@ export default function AISummaryTooltip({
     console.log("💾 Storing summary in database with hash:", dataHash);
 
     try {
-      await db.from("ai_summaries").upsert({
+      // First check if a summary with this hash already exists
+      const { data: existing } = await db
+        .from("ai_summaries")
+        .select("id")
+        .eq("data_hash", dataHash)
+        .maybeSingle();
+
+      if (existing) {
+        console.log("✅ Summary already exists for this hash, skipping storage");
+        return;
+      }
+
+      // Insert new summary (data_hash is now globally unique)
+      await db.from("ai_summaries").insert({
         user_id: currentUserId,
         data_hash: dataHash,
         summary: summaryText,
         updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id,data_hash'
       });
       console.log("✅ Summary stored successfully");
     } catch (error: any) {
-      console.error("❌ Error storing summary in database:", error);
+      // If we get a unique constraint violation, it means another user just stored it
+      // This is fine, we can ignore it
+      if (error.code === '23505') {
+        console.log("✅ Summary was already stored by another user, no action needed");
+      } else {
+        console.error("❌ Error storing summary in database:", error);
+      }
     }
   };
 
@@ -648,9 +753,9 @@ export default function AISummaryTooltip({
   if (!open) return null;
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const tooltipWidth = isMobile ? window.innerWidth - 32 : 480;
-  const tooltipHeight = isMobile ? window.innerHeight * 0.75 : 400;
-  const tooltipMinHeight = isMobile ? 300 : 250;
+  const tooltipWidth = isMobile ? window.innerWidth - 32 : 600; // Increased from 480 to 600
+  const tooltipHeight = isMobile ? window.innerHeight * 0.8 : 500; // Increased from 400 to 500
+  const tooltipMinHeight = isMobile ? 300 : 300;
 
   return (
     <>

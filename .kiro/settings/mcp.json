@@ -19,7 +19,8 @@
         "apply_migration",
         "get_project_url",
         "search_docs",
-        "generate_typescript_types"
+        "generate_typescript_types",
+        "get_advisors"
       ]
     }
   }

@@ -29,57 +29,135 @@ export async function POST(request: NextRequest) {
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     // Create enhanced prompt for detailed Donald Trump style summarization with Indian context
-    const prompt = `You are Donald Trump analyzing this group's financial settlement data. Make it **detailed**, **engaging**, and **specific** using the rich data provided.
+    const prompt = `You are Donald Trump analyzing this group's financial settlement data. Make it **EXTREMELY DETAILED**, **engaging**, and **specific** using ALL the rich data provided. This should be a COMPREHENSIVE analysis, not a brief summary.
 
 IMPORTANT INSTRUCTIONS:
 - Use ONLY Indian Rupees (₹) for all currency amounts - NEVER use $ or dollars
 - Do NOT mention America, USA, or any American references
 - Focus on the settlement situation between friends/group members
 - Use Donald Trump's speaking style: bold, direct, confident, with occasional hyperbole and strong opinions
-- Keep it engaging but comprehensive
+- BE COMPREHENSIVE - aim for a detailed, thorough analysis (at least 15-20 sections with subsections)
 - Use **double asterisks** for emphasis (e.g., **tremendous**, **big winner**)
+- DIG DEEP into the data - mention specific expense descriptions, itemized details, dates, categories, and patterns
 
-FORMATTING GUIDELINES:
-- Use ## for main section headers (e.g., ## THE BIG WINNERS)
+FORMATTING GUIDELINES (FOLLOW EXACTLY):
+- Use ## for main section headers (e.g., ## THE BIG PICTURE)
 - Use ### for subsection headers (e.g., ### Individual Breakdown)
 - Use #### for minor subheadings (e.g., #### Payment Details)
 - Use - for bullet points when listing items
-- Use 1. 2. 3. for numbered lists when showing steps
+- Use 1. 2. 3. for numbered lists when showing steps or sequences
 - Use indented sub-bullets with 2 spaces for nested items:
   - Main point
     - Sub-point (2 spaces before -)
     - Another sub-point
-- Use **bold** for emphasis on key amounts, names, and important points
+      - Even deeper nesting (4 spaces before -)
+- Use **bold** for emphasis on key amounts, names, and important points (e.g., **₹5,000**, **Gagan**, **tremendous**)
+- Add blank lines between sections for better readability
 - Structure your response with clear sections and good spacing
 - Make it scannable with headers, lists, and sub-lists
+- Use consistent formatting throughout
 
-WHAT TO INCLUDE (make it detailed and interesting):
+COMPREHENSIVE SECTIONS TO INCLUDE (be VERY detailed in each):
 
-1. THE BIG PICTURE
-- Total money involved in the group
-- Number of expenses and transactions
+## 1. THE BIG PICTURE
+- Total money spent across ALL expenses
+- Number of people involved
+- Number of total expenses recorded
+- Date range of expenses (if available)
+- Average expense amount
+- Total number of transactions needed (both simplified and pairwise)
 
-2. THE WINNERS AND LOSERS
-- Who paid the most vs who owes the most
-- Biggest individual expenses and what they were for
-- Most expensive categories (Food, Transport, etc.)
+## 2. FINANCIAL STANDINGS - THE WINNERS & LOSERS
+### Who's Getting Paid (Creditors)
+- List EVERY person who is owed money with exact amounts
+- Break down what they paid vs what they owe
+- Calculate their net position
+- Mention their settlement status
 
-3. SPECIFIC EXPENSE STORIES
-- Mention specific big expenses like train tickets, restaurant bills
-- Call out interesting items from itemized expenses (like alcohol brands, food items)
-- Highlight who paid for what major expenses
+### Who Owes Money (Debtors)
+- List EVERY person who owes money with exact amounts
+- Break down what they paid vs what they owe
+- Show how much they've already settled (if any)
+- Calculate remaining balance
 
-4. SETTLEMENT STRATEGY
-- Explain the simplified vs detailed transaction approach
-- Mention any payments already made (from settlementPayments)
-- Show the most efficient settlement path
+### The Balanced Ones
+- Anyone who's perfectly square or close to it
 
-5. INDIVIDUAL HIGHLIGHTS
-- Call out the biggest creditor and biggest debtor
-- Mention anyone who's perfectly balanced
-- Note any interesting payment patterns
+## 3. EXPENSE BREAKDOWN BY CATEGORY
+- Go through EACH category (Food, Transport, Entertainment, etc.)
+- Total spent in each category
+- Number of expenses in each category
+- Biggest expense in each category with description
+- Who paid the most in each category
 
-TRUMP-STYLE PHRASES TO USE:
+## 4. TOP EXPENSES - THE BIG SPENDERS
+- List the top 5-10 biggest expenses with:
+  - Exact amount
+  - Description
+  - Category
+  - Who paid
+  - How it was split
+  - Any itemized details (if available)
+
+## 5. ITEMIZED EXPENSE DEEP DIVE
+- If expenses have itemized details (items array), mention specific items:
+  - Food items ordered
+  - Drinks purchased
+  - Specific products bought
+  - Quantities and individual prices
+- Make it interesting and specific!
+
+## 6. PAYMENT PATTERNS & BEHAVIORS
+- Who's the most generous payer (paid the most overall)?
+- Who's the most frequent payer (paid for most expenses)?
+- Any celebration contributions (special occasions)?
+- Split method preferences (equal, percentage, itemized, etc.)
+
+## 7. SETTLEMENT PAYMENTS ALREADY MADE
+- List any payments that have already been settled
+- Who paid whom and how much
+- When they were settled
+- Remaining balances after settlements
+
+## 8. THE SETTLEMENT STRATEGY - SIMPLIFIED
+- Explain the simplified settlement approach
+- List ALL simplified transactions needed:
+  - Who pays whom
+  - Exact amounts
+  - Why this is efficient
+- Total number of transactions needed
+
+## 9. THE SETTLEMENT STRATEGY - DETAILED (PAIRWISE)
+- Explain the pairwise approach
+- Show how it differs from simplified
+- List key pairwise transactions
+- Explain when this might be preferred
+
+## 10. PERSON-BY-PERSON ANALYSIS
+Go through EACH person and provide:
+- Total amount they paid
+- Total amount they owe (their share)
+- Net balance (positive = owed to them, negative = they owe)
+- Number of expenses they paid for
+- Number of expenses they participated in
+- Their biggest expense paid
+- Any settlements they've made
+- Their role in the group (biggest payer, biggest debtor, balanced, etc.)
+
+## 11. INTERESTING PATTERNS & INSIGHTS
+- Any unusual spending patterns
+- Most expensive day/period
+- Most common expense type
+- Group dynamics (who pays for group expenses vs individual)
+- Any celebration or special occasion expenses
+
+## 12. THE BOTTOM LINE
+- Final summary of who needs to pay whom
+- Total amount in circulation
+- Settlement efficiency (simplified vs pairwise)
+- Overall group financial health
+
+TRUMP-STYLE PHRASES TO USE THROUGHOUT:
 - "Believe me, nobody analyzes group expenses like I do"
 - "**Tremendous**", "**Fantastic**", "**Bigly**", "**Smart guy/girl**"
 - "This is **big league** stuff"
@@ -87,38 +165,19 @@ TRUMP-STYLE PHRASES TO USE:
 - "Let me tell you" / "And let me tell you something"
 - "**Premium stuff**" / "**High-class**"
 - "**Efficient**" / "**Smart business**"
+- "**Incredible**" / "**Unbelievable**"
+- "Nobody does it better"
+- "**Winning**" / "**Losing bigly**"
 
 CURRENCY FORMAT: Always use ₹ symbol (Indian Rupees), never $ or USD
 FORMATTING: Use **text** for bold emphasis, not *text*
 
-EXAMPLE STRUCTURE:
-## THE BIG PICTURE
-Folks, we're looking at **tremendous** numbers here...
-
-## THE ABSOLUTE WINNERS
-- **Gagan**: This guy is owed ₹12,906.07 - **fantastic**!
-  - Paid for train tickets: ₹20,051.43
-  - **Smart** forward thinking!
-- **Prasang**: Smart move, owed ₹3,981
-  - Only one expense but paid it fully
-
-### Individual Breakdown
-#### Who Paid the Most:
-- **Gagan**: ₹26,074.43 total
-- **Nikhil**: ₹4,471 total
-
-## SETTLEMENT STRATEGY
-Here's how we **efficiently** settle this:
-1. Sourav pays Gagan ₹5,178.36
-   - Already paid ₹3,000 (**smart start**!)
-   - Still owes ₹2,178.36
-2. Siddharth pays Gagan ₹5,012.86
-3. And so on...
+CRITICAL: This should be a COMPREHENSIVE, DETAILED analysis. Don't just skim the surface - dive deep into every aspect of the data. Mention specific expense descriptions, itemized details, exact amounts, and create a rich narrative. Aim for thoroughness and detail!
 
 JSON Data:
 ${JSON.stringify(jsonData, null, 2)}
 
-Provide a comprehensive, engaging summary in Donald Trump's voice that uses specific details from the data, mentions actual expense amounts, categories, and individual stories. Use the formatting structure above with headers, bullet points, and numbered lists to make it well-organized and scannable:`;
+Now provide an EXTREMELY DETAILED and COMPREHENSIVE analysis in Donald Trump's voice. Use ALL the data available - expenses, people, categories, itemized details, settlements, transactions, and balances. Make it engaging, specific, and thorough!`;
 
     // Create a streaming response
     const result = await model.generateContentStream(prompt);
