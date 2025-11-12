@@ -196,17 +196,7 @@ export default function SettleEasePage() {
   // Memoized callback for action complete to prevent unnecessary re-renders
   const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
-  // Show loading screen for auth, role, or profile loading
-  if (isLoadingAuth || (currentUser && (isLoadingRole || isLoadingProfile))) {
-    const title = "Loading SettleEase";
-    const subtitle = isLoadingAuth
-      ? "Initializing application and verifying your session. Just a moment..."
-      : isLoadingRole
-      ? "Securing your account details. Almost there..."
-      : "Loading your profile information...";
-    return <AppLoadingScreen title={title} subtitle={subtitle} />;
-  }
-
+  // Show error screen for Supabase initialization errors
   if (supabaseInitializationError && !db) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
@@ -224,7 +214,8 @@ export default function SettleEasePage() {
     );
   }
 
-  if (!currentUser) {
+  // Show auth form only when auth is done loading and there's no user
+  if (!isLoadingAuth && !currentUser) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
@@ -232,9 +223,19 @@ export default function SettleEasePage() {
     );
   }
 
-  // No longer block the UI - show skeleton loaders instead
+  // If still loading auth or no user yet, show minimal loading state
+  if (!currentUser) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <HandCoins className="h-12 w-12 text-primary mx-auto mb-4 animate-pulse" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-
+  // User is authenticated, show the app with skeleton loaders for data
   return (
     <>
       <UserNameModal
