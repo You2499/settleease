@@ -752,16 +752,16 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                     <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
                     <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
                     <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
-                      Simplify your shared expenses. Effortlessly.
+                      The smartest way to manage shared expenses.
                     </p>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Key Features:</h3>
+                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Why SettleEase?</h3>
                   <ul className="space-y-2.5 text-xs sm:text-sm">
-                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Track shared expenses with unparalleled ease.</li>
-                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Split bills your way: equally, unequally, or item-by-item.</li>
-                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Handle special contributions, like someone treating for a part of the bill.</li>
-                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Simplify group settlements with clear, automated calculations.</li>
-                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> Pick from hundreds of Lucide icons for categories.</li>
+                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>AI-Powered Insights:</strong> Get intelligent summaries of your spending patterns.</span></li>
+                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Flexible Splitting:</strong> Equal, unequal, or item-by-item splits with ease.</span></li>
+                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Advanced Analytics:</strong> Visualize spending with charts, heatmaps, and trends.</span></li>
+                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Smart Settlements:</strong> Optimized payment plans that minimize transactions.</span></li>
+                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Customizable:</strong> Choose from 1000+ icons and personalize categories.</span></li>
                   </ul>
                 </>
               )}
