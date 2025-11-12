@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { toast } from "@/hooks/use-toast";
@@ -13,27 +13,39 @@ export function useThemeSync(
   userProfile: any
 ) {
   const { theme, setTheme, systemTheme } = useTheme();
+  const [isInitialized, setIsInitialized] = useState(false);
+  const isUpdatingFromRemote = useRef(false);
 
   // Get the actual resolved theme (handles 'system' theme)
   const resolvedTheme = theme === 'system' ? systemTheme : theme;
 
-  // Load theme from database on mount
+  // Load theme from database on mount (only once)
   useEffect(() => {
-    if (!db || !userId || !userProfile) return;
+    if (!db || !userId || !userProfile || isInitialized) return;
 
     const dbTheme = userProfile.theme_preference;
     
-    // If database has a theme preference and it's different from current, sync it
-    if (dbTheme && dbTheme !== theme) {
+    // If database has a theme preference, use it
+    if (dbTheme) {
       console.log(`🎨 Loading theme from database: ${dbTheme}`);
+      isUpdatingFromRemote.current = true;
       setTheme(dbTheme);
+      setTimeout(() => {
+        isUpdatingFromRemote.current = false;
+      }, 100);
     } else if (!dbTheme) {
       // If no theme in database, default to light and save it
       console.log('🎨 No theme in database, defaulting to light');
+      isUpdatingFromRemote.current = true;
       setTheme('light');
       updateThemeInDatabase('light');
+      setTimeout(() => {
+        isUpdatingFromRemote.current = false;
+      }, 100);
     }
-  }, [db, userId, userProfile]);
+    
+    setIsInitialized(true);
+  }, [db, userId, userProfile, isInitialized]);
 
   // Update database when theme changes
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
@@ -63,20 +75,27 @@ export function useThemeSync(
     }
   }, [db, userId]);
 
-  // Watch for theme changes and update database
+  // Watch for LOCAL theme changes and update database
   useEffect(() => {
-    if (!theme || !db || !userId) return;
+    if (!theme || !db || !userId || !isInitialized) return;
+    
+    // Don't update database if this change came from remote
+    if (isUpdatingFromRemote.current) {
+      console.log('🎨 Skipping database update - change came from remote');
+      return;
+    }
 
     // Only update if theme is different from what's in the database
-    if (userProfile?.theme_preference !== theme) {
-      console.log(`🎨 Theme changed to: ${theme}, updating database...`);
+    const dbTheme = userProfile?.theme_preference;
+    if (dbTheme !== theme) {
+      console.log(`🎨 Local theme changed to: ${theme}, updating database...`);
       updateThemeInDatabase(theme);
     }
-  }, [theme, db, userId, userProfile, updateThemeInDatabase]);
+  }, [theme, db, userId, isInitialized, userProfile?.theme_preference, updateThemeInDatabase]);
 
   // Set up real-time subscription for theme changes
   useEffect(() => {
-    if (!db || !userId) return;
+    if (!db || !userId || !isInitialized) return;
 
     console.log('🔄 Setting up real-time theme sync subscription');
 
@@ -92,15 +111,25 @@ export function useThemeSync(
         },
         (payload: any) => {
           const newTheme = payload.new?.theme_preference;
+          const oldTheme = payload.old?.theme_preference;
           
-          // Only update if the theme changed and it's different from current
-          if (newTheme && newTheme !== theme) {
-            console.log(`🔄 Real-time theme update received: ${newTheme}`);
+          // Only update if the theme actually changed
+          if (newTheme && newTheme !== oldTheme) {
+            console.log(`🔄 Real-time theme update received: ${oldTheme} → ${newTheme}`);
+            
+            // Mark this as a remote update to prevent loop
+            isUpdatingFromRemote.current = true;
             setTheme(newTheme);
+            
             toast({
               title: "Theme Updated",
               description: `Theme changed to ${newTheme} mode from another device`,
             });
+            
+            // Reset flag after a short delay
+            setTimeout(() => {
+              isUpdatingFromRemote.current = false;
+            }, 100);
           }
         }
       )
@@ -110,7 +139,7 @@ export function useThemeSync(
       console.log('🔄 Cleaning up theme sync subscription');
       channel.unsubscribe();
     };
-  }, [db, userId, theme, setTheme]);
+  }, [db, userId, isInitialized, setTheme]);
 
   return {
     currentTheme: theme,
