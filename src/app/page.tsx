@@ -214,9 +214,27 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show auth form only when auth is done loading and there's no user
-  // This prevents dashboard flash on auth page
-  if (!isLoadingAuth && !currentUser) {
+  // Determine if we likely have a session by checking Supabase storage
+  // This prevents flashing between auth form and dashboard during auth check
+  const likelyHasSession = typeof window !== 'undefined' && (() => {
+    // Check for Supabase session cookies (format: sb-<project-ref>-auth-token)
+    if (document.cookie.includes('sb-')) return true;
+    
+    // Check localStorage for Supabase auth tokens (multiple possible keys)
+    try {
+      const keys = Object.keys(localStorage);
+      return keys.some(key => 
+        key.includes('supabase.auth.token') || 
+        key.includes('sb-') && key.includes('auth-token')
+      );
+    } catch {
+      return false;
+    }
+  })();
+
+  // Show auth form when there's no user and no session detected
+  // This handles both: auth complete with no user, AND auth loading with no session
+  if (!currentUser && !likelyHasSession) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
@@ -224,9 +242,9 @@ export default function SettleEasePage() {
     );
   }
 
-  // If still loading auth OR user is authenticated, show the dashboard
-  // The dashboard will show skeleton loaders while data loads
-  // This prevents auth form flash on dashboard page during refresh
+  // Show dashboard (with skeleton loaders) when:
+  // - User is authenticated, OR
+  // - Auth is loading and we likely have a session (prevents auth form flash on refresh)
 
   // Show the app with skeleton loaders (works for both auth loading and data loading)
   return (
