@@ -52,8 +52,13 @@ export default function SettleEasePage() {
   } = useSupabaseAuth();
 
   // Check for existing session on mount to prevent flashing
-  const [hasSession, setHasSession] = useState(() => {
-    if (typeof window === 'undefined') return false;
+  // Start with false to avoid hydration mismatch, then check on client
+  const [hasSession, setHasSession] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
+  // Run session check only on client after mount
+  useEffect(() => {
+    setIsClient(true);
     
     // Check for Supabase session cookies
     const cookies = document.cookie;
@@ -62,7 +67,6 @@ export default function SettleEasePage() {
     // Check localStorage for Supabase auth tokens
     let hasLocalStorage = false;
     try {
-      // Check for common Supabase localStorage keys
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && (key.includes('supabase.auth.token') || (key.includes('sb-') && key.includes('auth-token')))) {
@@ -78,9 +82,8 @@ export default function SettleEasePage() {
     }
     
     const result = hasCookie || hasLocalStorage;
-    console.log('🔍 Session check on mount:', { hasCookie, hasLocalStorage, result });
-    return result;
-  });
+    setHasSession(result);
+  }, []);
 
   // Update hasSession when auth state changes (handles logout and login)
   useEffect(() => {
