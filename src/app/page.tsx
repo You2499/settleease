@@ -51,33 +51,30 @@ export default function SettleEasePage() {
     handleLogout,
   } = useSupabaseAuth();
 
-  // Check for existing session to prevent flashing
-  // This updates when currentUser changes (including logout)
-  const hasSession = useMemo(() => {
+  // Check for existing session on mount to prevent flashing
+  const [hasSession, setHasSession] = useState(() => {
     if (typeof window === 'undefined') return false;
     
-    // If we have a currentUser, we definitely have a session
-    if (currentUser) return true;
+    // Check for Supabase session cookies
+    if (document.cookie.includes('sb-')) return true;
     
-    // If auth is still loading, check storage
-    if (isLoadingAuth) {
-      // Check for Supabase session cookies
-      if (document.cookie.includes('sb-')) return true;
-      
-      // Check localStorage for Supabase auth tokens
-      try {
-        const keys = Object.keys(localStorage);
-        return keys.some(key => 
-          key.includes('supabase.auth.token') || 
-          (key.includes('sb-') && key.includes('auth-token'))
-        );
-      } catch {
-        return false;
-      }
+    // Check localStorage for Supabase auth tokens
+    try {
+      const keys = Object.keys(localStorage);
+      return keys.some(key => 
+        key.includes('supabase.auth.token') || 
+        (key.includes('sb-') && key.includes('auth-token'))
+      );
+    } catch {
+      return false;
     }
-    
-    // Auth is done loading and no user = no session
-    return false;
+  });
+
+  // Update hasSession when auth state changes (handles logout)
+  useEffect(() => {
+    if (!isLoadingAuth) {
+      setHasSession(!!currentUser);
+    }
   }, [currentUser, isLoadingAuth]);
 
   // Use user profile hook
