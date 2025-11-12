@@ -443,7 +443,7 @@ export default function AISummaryTooltip({
       try {
         const { data, error } = await db
           .from("ai_summaries")
-          .select("summary")
+          .select("summary, model_name")
           .eq("data_hash", hash)
           .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
 
@@ -460,6 +460,9 @@ export default function AISummaryTooltip({
           console.log("✅ Found cached summary for this data hash (shared across all users), using existing data");
           console.log("📊 Cache hit! No API call needed - serving from database");
           setSummary(data.summary);
+          if (data.model_name) {
+            setModelName(data.model_name);
+          }
           setIsLoading(false);
           setIsStreaming(false);
           return;
@@ -532,11 +535,12 @@ export default function AISummaryTooltip({
                 throw new Error(data.error);
               }
               if (data.done) {
-                // Store summary in database
-                await storeSummary(fullSummary, hash);
+                // Store summary in database with model name
+                const modelName = data.model || '';
+                await storeSummary(fullSummary, hash, modelName);
                 setIsStreaming(false);
-                if (data.model) {
-                  setModelName(data.model);
+                if (modelName) {
+                  setModelName(modelName);
                 }
               }
             } catch (e) {
@@ -556,10 +560,11 @@ export default function AISummaryTooltip({
             setSummary(fullSummary);
           }
           if (data.done) {
-            await storeSummary(fullSummary, hash);
+            const modelName = data.model || '';
+            await storeSummary(fullSummary, hash, modelName);
             setIsStreaming(false);
-            if (data.model) {
-              setModelName(data.model);
+            if (modelName) {
+              setModelName(modelName);
             }
           }
         } catch (e) {
@@ -580,13 +585,16 @@ export default function AISummaryTooltip({
     }
   };
 
-  const storeSummary = async (summaryText: string, dataHash: string) => {
+  const storeSummary = async (summaryText: string, dataHash: string, modelName: string = '') => {
     if (!summaryText || !dataHash || !db || !currentUserId) {
       console.log("❌ Cannot store summary - missing required data");
       return;
     }
 
     console.log("💾 Storing summary in database with hash:", dataHash);
+    if (modelName) {
+      console.log("🤖 Model used:", modelName);
+    }
 
     try {
       // First check if a summary with this hash already exists
@@ -606,6 +614,7 @@ export default function AISummaryTooltip({
         user_id: currentUserId,
         data_hash: dataHash,
         summary: summaryText,
+        model_name: modelName || null,
         updated_at: new Date().toISOString(),
       });
       console.log("✅ Summary stored successfully - now available to ALL users with this data hash");
