@@ -2,7 +2,15 @@ import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL_NAME = 'gemini-2.5-flash';
+
+// List of models to try in order of preference (fastest to most capable)
+const MODEL_FALLBACK_ORDER = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash-preview-09-2025',
+  'gemini-2.5-flash-lite-preview-09-2025',
+  'gemini-2.5-pro',
+];
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,19 +30,19 @@ export async function POST(request: NextRequest) {
     // Check if API key is configured
     if (!GEMINI_API_KEY) {
       console.error('❌ GEMINI_API_KEY environment variable is not set');
-      return new Response(JSON.stringify({ error: 'AI service is not configured. Please contact administrator.' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return new Response(
+        JSON.stringify({ error: 'AI service is not configured. Please contact administrator.' }),
+        {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     console.log('✅ API key found, initializing Gemini...');
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-    
-    console.log('✅ Gemini initialized, generating content...');
 
     // Create enhanced prompt for detailed Donald Trump style summarization with Indian context
     const prompt = `You are Donald Trump analyzing this group's financial settlement data. Make it **EXTREMELY DETAILED**, **engaging**, and **specific** using ALL the rich data provided. This should be a COMPREHENSIVE analysis, not a brief summary.
@@ -187,8 +195,40 @@ ${JSON.stringify(jsonData, null, 2)}
 
 Now provide an EXTREMELY DETAILED and COMPREHENSIVE analysis in Donald Trump's voice. Use ALL the data available - expenses, people, categories, itemized details, settlements, transactions, and balances. Make it engaging, specific, and thorough!`;
 
-    // Create a streaming response
-    const result = await model.generateContentStream(prompt);
+    // Try models in fallback order until one succeeds
+    let result;
+    let successfulModel = null;
+    const errors: string[] = [];
+
+    for (const modelName of MODEL_FALLBACK_ORDER) {
+      try {
+        console.log(`🔄 Trying model: ${modelName}...`);
+        const model = genAI.getGenerativeModel({ model: modelName });
+        result = await model.generateContentStream(prompt);
+        successfulModel = modelName;
+        console.log(`✅ Successfully using model: ${modelName}`);
+        break;
+      } catch (error: any) {
+        const errorMsg = error.message || 'Unknown error';
+        console.warn(`⚠️ Model ${modelName} failed: ${errorMsg}`);
+        errors.push(`${modelName}: ${errorMsg}`);
+        
+        // If this is the last model, throw the error
+        if (modelName === MODEL_FALLBACK_ORDER[MODEL_FALLBACK_ORDER.length - 1]) {
+          console.error('❌ All models failed');
+          throw new Error(
+            `All AI models are currently unavailable. Please try again later. Errors: ${errors.join('; ')}`
+          );
+        }
+        // Otherwise, continue to next model
+        continue;
+      }
+    }
+
+    if (!result || !successfulModel) {
+      throw new Error('Failed to generate content with any available model');
+    }
+
     console.log('✅ Stream created, starting to send chunks...');
 
     // Create a readable stream for the response
@@ -229,13 +269,30 @@ Now provide an EXTREMELY DETAILED and COMPREHENSIVE analysis in Donald Trump's v
     console.error('❌ API Error:', error);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
-    return new Response(JSON.stringify({ 
-      error: error.message || 'Failed to summarize',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
-    }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+
+    // Provide user-friendly error messages
+    let userMessage = 'Failed to generate summary. Please try again.';
+    
+    if (error.message?.includes('overloaded') || error.message?.includes('503')) {
+      userMessage = 'AI service is currently busy. Please try again in a moment.';
+    } else if (error.message?.includes('quota') || error.message?.includes('429')) {
+      userMessage = 'API quota exceeded. Please try again later.';
+    } else if (error.message?.includes('API key')) {
+      userMessage = 'AI service configuration error. Please contact administrator.';
+    } else if (error.message?.includes('All AI models')) {
+      userMessage = error.message; // Use the detailed message from fallback
+    }
+
+    return new Response(
+      JSON.stringify({
+        error: userMessage,
+        technicalDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
+      }),
+      {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
   }
 }
 
