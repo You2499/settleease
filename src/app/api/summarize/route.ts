@@ -49,7 +49,8 @@ export async function POST(request: NextRequest) {
 
 CRITICAL RULES:
 - Use ONLY Indian Rupees (₹) - NEVER $ or dollars
-- Use EXACT numbers from the data - don't make up values
+- Use EXACT numbers from the data - don't make up values or calculate incorrectly
+- Total spent = SUM of expenses[].total_amount ONLY (do NOT use personBalances for this!)
 - Be CONCISE but comprehensive - quality over quantity
 - Use **double asterisks** for emphasis (e.g., **tremendous**, **₹5,000**)
 - ALWAYS show actual values, not placeholders
@@ -77,8 +78,13 @@ SECTIONS TO INCLUDE (with Trump commentary):
 
 ## 1. THE BIG PICTURE
 Start with: "Folks, let me tell you about this group..."
-Total spent, number of people, expenses, date range
+- Total spent: SUM of all expenses[].total_amount (NOT personBalances totals!)
+- Number of people: count of people[]
+- Number of expenses: count of expenses[]
+- Date range from expenses
 Add commentary on the scale
+
+CRITICAL: Use expenses[].total_amount to calculate total spent, NOT personBalances!
 
 ## 2. THE WINNERS AND LOSERS
 Start with: "Now let's talk about who's **winning** and who's **losing**..."
