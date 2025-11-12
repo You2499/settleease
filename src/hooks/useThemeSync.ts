@@ -92,7 +92,7 @@ export function useThemeSync(
     }
     
     setIsInitialized(true);
-  }, [isMounted, db, userId, userProfile, isInitialized, theme, updateThemeInDatabase]);
+  }, [isMounted, db, userId, userProfile, isInitialized, setTheme, updateThemeInDatabase]);
 
   // Watch for LOCAL theme changes and update database
   useEffect(() => {
