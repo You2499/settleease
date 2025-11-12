@@ -40,6 +40,25 @@ export default function SettleEasePage() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
 
+  // Check for existing session BEFORE rendering to prevent flashing
+  const [hasSession] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    
+    // Check for Supabase session cookies
+    if (document.cookie.includes('sb-')) return true;
+    
+    // Check localStorage for Supabase auth tokens
+    try {
+      const keys = Object.keys(localStorage);
+      return keys.some(key => 
+        key.includes('supabase.auth.token') || 
+        (key.includes('sb-') && key.includes('auth-token'))
+      );
+    } catch {
+      return false;
+    }
+  });
+
   // Use custom hooks for auth, data, and realtime
   const {
     db,
@@ -214,27 +233,10 @@ export default function SettleEasePage() {
     );
   }
 
-  // Determine if we likely have a session by checking Supabase storage
-  // This prevents flashing between auth form and dashboard during auth check
-  const likelyHasSession = typeof window !== 'undefined' && (() => {
-    // Check for Supabase session cookies (format: sb-<project-ref>-auth-token)
-    if (document.cookie.includes('sb-')) return true;
-    
-    // Check localStorage for Supabase auth tokens (multiple possible keys)
-    try {
-      const keys = Object.keys(localStorage);
-      return keys.some(key => 
-        key.includes('supabase.auth.token') || 
-        key.includes('sb-') && key.includes('auth-token')
-      );
-    } catch {
-      return false;
-    }
-  })();
-
-  // Show auth form when there's no user and no session detected
-  // This handles both: auth complete with no user, AND auth loading with no session
-  if (!currentUser && !likelyHasSession) {
+  // Show auth form only when:
+  // 1. Auth is done loading AND no user exists
+  // 2. OR we're still loading but we know there's no session
+  if (!currentUser && (!isLoadingAuth || !hasSession)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
