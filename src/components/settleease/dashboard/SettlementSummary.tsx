@@ -73,6 +73,9 @@ interface SettlementSummaryProps {
   userRole: UserRole;
   db?: SupabaseClient;
   currentUserId?: string;
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingSettlements?: boolean;
 }
 
 export default function SettlementSummary({

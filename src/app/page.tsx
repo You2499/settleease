@@ -91,6 +91,10 @@ export default function SettleEasePage() {
     settlementPayments,
     isLoadingData,
     isDataFetchedAtLeastOnce,
+    isLoadingPeople,
+    isLoadingExpenses,
+    isLoadingCategories,
+    isLoadingSettlements,
     fetchAllData,
   } = useSupabaseData(db, supabaseInitializationError, currentUser, userRole, isLoadingAuth, isLoadingRole);
 
@@ -224,15 +228,7 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show loading screen for initial data fetch or when data is loading and no data has been fetched yet
-  if (isLoadingData && !isDataFetchedAtLeastOnce) {
-    return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
-  }
-
-  // Show loading screen if we're still waiting for initial data after auth/role/profile are ready
-  if (currentUser && userRole && !isLoadingAuth && !isLoadingRole && !isLoadingProfile && !isDataFetchedAtLeastOnce) {
-    return <AppLoadingScreen title="Loading Your Data" subtitle="Preparing your dashboard and fetching latest information. Hang tight!" />;
-  }
+  // No longer block the UI - show skeleton loaders instead
 
 
   return (
@@ -290,6 +286,10 @@ export default function SettleEasePage() {
                   currentUserId={currentUser.id}
                   onActionComplete={handleActionComplete}
                   userRole={userRole}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingCategories={isLoadingCategories}
+                  isLoadingSettlements={isLoadingSettlements}
                 />
               </SettleEaseErrorBoundary>
             )}

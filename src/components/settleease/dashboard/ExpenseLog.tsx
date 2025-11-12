@@ -18,6 +18,8 @@ interface ExpenseLogProps {
   handleExpenseCardClick: (expense: Expense) => void;
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   categories: Category[];
+  isLoadingExpenses?: boolean;
+  isLoadingSettlements?: boolean;
 }
 
 type ActivityItem = 

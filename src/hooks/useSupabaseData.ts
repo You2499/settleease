@@ -25,9 +25,18 @@ export function useSupabaseData(
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [settlementPayments, setSettlementPayments] = useState<SettlementPayment[]>([]);
+  
+  // Individual loading states for progressive loading
+  const [isLoadingPeople, setIsLoadingPeople] = useState(false);
+  const [isLoadingExpenses, setIsLoadingExpenses] = useState(false);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
+  const [isLoadingSettlements, setIsLoadingSettlements] = useState(false);
+  
+  // Legacy loading state for backward compatibility
   const [isLoadingData, setIsLoadingData] = useState(false);
   const [isDataFetchedAtLeastOnce, setIsDataFetchedAtLeastOnce] = useState(false);
 
+  // Fetch data progressively - each table independently
   const fetchAllData = useCallback(async (showLoadingIndicator = true) => {
     if (!db || supabaseInitializationError || !currentUser) {
       if (showLoadingIndicator) setIsLoadingData(false);
@@ -35,76 +44,107 @@ export function useSupabaseData(
     }
     if (showLoadingIndicator) setIsLoadingData(true);
 
-    let peopleErrorOccurred = false;
-    let expensesErrorOccurred = false;
-    let categoriesErrorOccurred = false;
-    let settlementPaymentsErrorOccurred = false;
+    // Fetch all tables in parallel, not sequentially
+    const fetchPromises: Promise<boolean>[] = [];
 
-    try {
-      const { data: peopleData, error: peopleError } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
-      if (peopleError) {
-        console.error("Error fetching people:", peopleError);
-        toast({ title: "Data Error", description: `Could not fetch people: ${peopleError.message}`, variant: "destructive" });
-        peopleErrorOccurred = true;
-      } else {
-        setPeople(peopleData as Person[]);
+    // Fetch people
+    setIsLoadingPeople(true);
+    const peopleFetch = (async () => {
+      try {
+        const { data, error } = await db.from(PEOPLE_TABLE).select('*').order('name', { ascending: true });
+        if (error) {
+          console.error("Error fetching people:", error);
+          toast({ title: "Data Error", description: `Could not fetch people: ${error.message}`, variant: "destructive" });
+          return false;
+        }
+        setPeople(data as Person[]);
+        return true;
+      } catch (error: any) {
+        console.error("Catch: Error fetching people:", error);
+        toast({ title: "Data Error", description: `Unexpected error fetching people.`, variant: "destructive" });
+        return false;
+      } finally {
+        setIsLoadingPeople(false);
       }
-    } catch (error) {
-      console.error("Catch: Error fetching people:", error);
-      toast({ title: "Data Error", description: `Unexpected error fetching people.`, variant: "destructive" });
-      peopleErrorOccurred = true;
-    }
+    })();
+    fetchPromises.push(peopleFetch);
 
-    try {
-      const { data: expensesData, error: expensesError } = await db.from(EXPENSES_TABLE).select('*').order('created_at', { ascending: false });
-      if (expensesError) {
-        console.error("Error fetching expenses:", expensesError);
-        toast({ title: "Data Error", description: `Could not fetch expenses: ${expensesError.message}`, variant: "destructive" });
-        expensesErrorOccurred = true;
-      } else {
-        setExpenses(expensesData as Expense[]);
+    // Fetch expenses
+    setIsLoadingExpenses(true);
+    const expensesFetch = (async () => {
+      try {
+        const { data, error } = await db.from(EXPENSES_TABLE).select('*').order('created_at', { ascending: false });
+        if (error) {
+          console.error("Error fetching expenses:", error);
+          toast({ title: "Data Error", description: `Could not fetch expenses: ${error.message}`, variant: "destructive" });
+          return false;
+        }
+        setExpenses(data as Expense[]);
+        return true;
+      } catch (error: any) {
+        console.error("Catch: Error fetching expenses:", error);
+        toast({ title: "Data Error", description: `Unexpected error fetching expenses.`, variant: "destructive" });
+        return false;
+      } finally {
+        setIsLoadingExpenses(false);
       }
-    } catch (error) {
-      console.error("Catch: Error fetching expenses:", error);
-      toast({ title: "Data Error", description: `Unexpected error fetching expenses.`, variant: "destructive" });
-      expensesErrorOccurred = true;
-    }
+    })();
+    fetchPromises.push(expensesFetch);
 
-    try {
-      const { data: categoriesData, error: fetchCategoriesError } = await db.from(CATEGORIES_TABLE).select('*').order('rank', { ascending: true }).order('name', { ascending: true });
-      if (fetchCategoriesError) {
-        console.error("Error fetching categories:", fetchCategoriesError);
-        toast({ title: "Data Error", description: `Could not fetch categories: ${fetchCategoriesError.message}`, variant: "destructive" });
-        categoriesErrorOccurred = true;
-      } else {
-        setCategories(categoriesData as Category[]);
+    // Fetch categories
+    setIsLoadingCategories(true);
+    const categoriesFetch = (async () => {
+      try {
+        const { data, error } = await db.from(CATEGORIES_TABLE).select('*').order('rank', { ascending: true }).order('name', { ascending: true });
+        if (error) {
+          console.error("Error fetching categories:", error);
+          toast({ title: "Data Error", description: `Could not fetch categories: ${error.message}`, variant: "destructive" });
+          return false;
+        }
+        setCategories(data as Category[]);
+        return true;
+      } catch (error: any) {
+        console.error("Catch: Error fetching categories:", error);
+        toast({ title: "Data Error", description: `Unexpected error fetching categories.`, variant: "destructive" });
+        return false;
+      } finally {
+        setIsLoadingCategories(false);
       }
-    } catch (error) {
-      console.error("Catch: Error fetching categories:", error);
-      toast({ title: "Data Error", description: `Unexpected error fetching categories.`, variant: "destructive" });
-      categoriesErrorOccurred = true;
+    })();
+    fetchPromises.push(categoriesFetch);
+
+    // Fetch settlement payments
+    setIsLoadingSettlements(true);
+    const settlementsFetch = (async () => {
+      try {
+        const { data, error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).select('*').order('settled_at', { ascending: false });
+        if (error) {
+          console.error("Error fetching settlement payments:", error);
+          toast({ title: "Data Error", description: `Could not fetch settlement payments: ${error.message}`, variant: "destructive" });
+          return false;
+        }
+        setSettlementPayments(data as SettlementPayment[]);
+        return true;
+      } catch (error: any) {
+        console.error("Catch: Error fetching settlement payments:", error);
+        toast({ title: "Data Error", description: `Unexpected error fetching settlement_payments.`, variant: "destructive" });
+        return false;
+      } finally {
+        setIsLoadingSettlements(false);
+      }
+    })();
+    fetchPromises.push(settlementsFetch);
+
+    // Wait for all fetches to complete
+    const results = await Promise.all(fetchPromises);
+    const allSuccessful = results.every((result: boolean) => result === true);
+
+    if (allSuccessful) {
+      setIsDataFetchedAtLeastOnce(true);
     }
     
-    try {
-      const { data: settlementPaymentsData, error: settlementPaymentsError } = await db.from(SETTLEMENT_PAYMENTS_TABLE).select('*').order('settled_at', { ascending: false });
-      if (settlementPaymentsError) {
-        console.error("Error fetching settlement payments:", settlementPaymentsError);
-        toast({ title: "Data Error", description: `Could not fetch settlement payments: ${settlementPaymentsError.message}`, variant: "destructive" });
-        settlementPaymentsErrorOccurred = true;
-      } else {
-        setSettlementPayments(settlementPaymentsData as SettlementPayment[]);
-      }
-    } catch (error) {
-      console.error("Catch: Error fetching settlement payments:", error);
-      toast({ title: "Data Error", description: `Unexpected error fetching settlement_payments.`, variant: "destructive" });
-      settlementPaymentsErrorOccurred = true;
-    }
-
-    if (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred) {
-        setIsDataFetchedAtLeastOnce(true);
-    }
-    if (showLoadingIndicator || (!peopleErrorOccurred && !expensesErrorOccurred && !categoriesErrorOccurred && !settlementPaymentsErrorOccurred)) {
-     setIsLoadingData(false);
+    if (showLoadingIndicator) {
+      setIsLoadingData(false);
     }
   }, [currentUser, supabaseInitializationError, db]);
 
@@ -200,6 +240,10 @@ export function useSupabaseData(
     settlementPayments,
     isLoadingData,
     isDataFetchedAtLeastOnce,
+    isLoadingPeople,
+    isLoadingExpenses,
+    isLoadingCategories,
+    isLoadingSettlements,
     fetchAllData,
     setPeople,
     setExpenses,

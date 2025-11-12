@@ -6,6 +6,7 @@ import { FileText } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 
 import ExpenseDetailModal from './ExpenseDetailModal';
@@ -28,6 +29,10 @@ interface DashboardViewProps {
   currentUserId: string;
   onActionComplete: () => void;
   userRole: UserRole;
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingCategories?: boolean;
+  isLoadingSettlements?: boolean;
 }
 
 export default function DashboardView({
@@ -41,6 +46,10 @@ export default function DashboardView({
   currentUserId,
   onActionComplete,
   userRole,
+  isLoadingPeople = false,
+  isLoadingExpenses = false,
+  isLoadingCategories = false,
+  isLoadingSettlements = false,
 }: DashboardViewProps) {
   // Check for crash test
   useEffect(() => {
@@ -144,7 +153,7 @@ export default function DashboardView({
       </Card>
     );
   }
-  if (expenses.length === 0 && settlementPayments.length === 0) {
+  if (expenses.length === 0 && settlementPayments.length === 0 && !isLoadingExpenses && !isLoadingSettlements) {
      return (
       <Card className="text-center py-10 shadow-lg rounded-lg">
         <CardHeader className="pb-2">
@@ -170,6 +179,104 @@ export default function DashboardView({
     );
   }
 
+  // Show skeleton loaders while data is loading
+  const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements;
+  if (isLoading && people.length === 0 && expenses.length === 0) {
+    return (
+      <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
+        {/* Settlement Summary Skeleton - Matches actual SettlementSummary structure */}
+        <Card className="w-full flex flex-col shadow-lg rounded-lg">
+          <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                {/* Title with icon */}
+                <Skeleton className="h-7 w-56" /> {/* Settlement Hub title */}
+                <Skeleton className="h-8 w-28" /> {/* Summarise button */}
+              </div>
+              {/* Tabs */}
+              <Skeleton className="h-10 w-full sm:w-48" />
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+            {/* Description bar with toggle */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-muted/50 px-3 py-2 rounded-md gap-2 mb-2">
+              <Skeleton className="h-4 w-full sm:w-96" />
+              <div className="flex items-center space-x-2">
+                <Skeleton className="h-5 w-10 rounded-full" /> {/* Switch */}
+                <Skeleton className="h-4 w-16" /> {/* Label */}
+              </div>
+            </div>
+            {/* Transaction list */}
+            <div className="flex-1 min-h-0 border rounded-md p-1">
+              <div className="space-y-2 p-2">
+                {[1, 2, 3].map((i) => (
+                  <Card key={i} className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
+                    <div className="flex flex-col sm:grid sm:grid-cols-5 items-start sm:items-center gap-2 sm:gap-1.5">
+                      {/* Person -> Person -> Amount structure */}
+                      <div className="col-span-1 sm:col-span-3 w-full">
+                        <div className="flex items-center justify-between sm:grid sm:grid-cols-3 w-full">
+                          <Skeleton className="h-4 w-20" /> {/* From person */}
+                          <div className="flex items-center justify-center w-5 mx-1">
+                            <Skeleton className="h-4 w-4" /> {/* Arrow */}
+                          </div>
+                          <Skeleton className="h-4 w-20" /> {/* To person */}
+                        </div>
+                      </div>
+                      <Skeleton className="h-5 w-24 col-span-1" /> {/* Amount */}
+                      <Skeleton className="h-8 w-full sm:w-32 col-span-1" /> {/* Mark as Paid button */}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expense Log Skeleton - Matches actual ExpenseLog structure */}
+        <Card className="w-full h-full flex flex-col shadow-lg rounded-lg flex-1 min-h-0">
+          <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+            <Skeleton className="h-7 w-44" /> {/* Activity Feed title */}
+            <Skeleton className="h-4 w-full sm:w-96 mt-1" /> {/* Description */}
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+            <div className="flex-1 min-h-0">
+              <div className="space-y-4">
+                {/* Date separator */}
+                <div className="relative my-3">
+                  <div className="absolute inset-0 flex items-center">
+                    <Skeleton className="h-px w-full" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <Skeleton className="h-5 w-32" /> {/* Date badge */}
+                  </div>
+                </div>
+                {/* Expense items */}
+                <div className="space-y-2.5 px-0.5 sm:px-1">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i} className="bg-card/70 rounded-md">
+                      <CardHeader className="pb-1.5 pt-2.5 px-3">
+                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                          <Skeleton className="h-6 w-48" /> {/* Expense title */}
+                          <Skeleton className="h-5 w-20 mt-1 sm:mt-0" /> {/* Amount */}
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-3 pb-2 space-y-0.5">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+                          <Skeleton className="h-4 w-24" /> {/* Category */}
+                          <Skeleton className="h-4 w-32 mt-0.5 sm:mt-0" /> {/* Paid by */}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
       <SettlementSummary
@@ -188,6 +295,9 @@ export default function DashboardView({
         userRole={userRole}
         db={db}
         currentUserId={currentUserId}
+        isLoadingPeople={isLoadingPeople}
+        isLoadingExpenses={isLoadingExpenses}
+        isLoadingSettlements={isLoadingSettlements}
       />
       <div className="flex-1 flex flex-col">
         <ExpenseLog
@@ -197,6 +307,8 @@ export default function DashboardView({
           handleExpenseCardClick={handleExpenseCardClick}
           getCategoryIconFromName={getCategoryIconFromName}
           categories={dynamicCategories}
+          isLoadingExpenses={isLoadingExpenses}
+          isLoadingSettlements={isLoadingSettlements}
         />
       </div>
       {selectedExpenseForModal && (
