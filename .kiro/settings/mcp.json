@@ -20,7 +20,8 @@
         "get_project_url",
         "search_docs",
         "generate_typescript_types",
-        "get_advisors"
+        "get_advisors",
+        "get_logs"
       ]
     }
   }

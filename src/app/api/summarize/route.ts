@@ -6,27 +6,35 @@ const MODEL_NAME = 'gemini-2.5-flash';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('📥 Summarize API called');
     const { jsonData, hash } = await request.json();
 
     if (!jsonData) {
+      console.error('❌ No JSON data provided');
       return new Response(JSON.stringify({ error: 'JSON data is required' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('✅ JSON data received, hash:', hash);
+
     // Check if API key is configured
     if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY environment variable is not set');
-      return new Response(JSON.stringify({ error: 'AI service is not configured' }), {
+      console.error('❌ GEMINI_API_KEY environment variable is not set');
+      return new Response(JSON.stringify({ error: 'AI service is not configured. Please contact administrator.' }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
+    console.log('✅ API key found, initializing Gemini...');
+
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
+    
+    console.log('✅ Gemini initialized, generating content...');
 
     // Create enhanced prompt for detailed Donald Trump style summarization with Indian context
     const prompt = `You are Donald Trump analyzing this group's financial settlement data. Make it **EXTREMELY DETAILED**, **engaging**, and **specific** using ALL the rich data provided. This should be a COMPREHENSIVE analysis, not a brief summary.
@@ -181,22 +189,27 @@ Now provide an EXTREMELY DETAILED and COMPREHENSIVE analysis in Donald Trump's v
 
     // Create a streaming response
     const result = await model.generateContentStream(prompt);
+    console.log('✅ Stream created, starting to send chunks...');
 
     // Create a readable stream for the response
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          let chunkCount = 0;
           for await (const chunk of result.stream) {
             const chunkText = chunk.text();
             if (chunkText) {
+              chunkCount++;
               controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunkText })}\n\n`));
             }
           }
+          console.log(`✅ Streaming complete. Sent ${chunkCount} chunks`);
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, hash })}\n\n`));
           controller.close();
         } catch (error: any) {
-          console.error('Streaming error:', error);
+          console.error('❌ Streaming error:', error);
+          console.error('Error details:', error.message, error.stack);
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ error: error.message || 'Streaming failed' })}\n\n`)
           );
@@ -213,7 +226,13 @@ Now provide an EXTREMELY DETAILED and COMPREHENSIVE analysis in Donald Trump's v
       },
     });
   } catch (error: any) {
-    return new Response(JSON.stringify({ error: error.message || 'Failed to summarize' }), {
+    console.error('❌ API Error:', error);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    return new Response(JSON.stringify({ 
+      error: error.message || 'Failed to summarize',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
