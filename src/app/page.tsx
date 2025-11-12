@@ -253,14 +253,9 @@ export default function SettleEasePage() {
   }
 
   // Show transparent overlay during initial auth check ONLY when no session detected
-  // This prevents dashboard flash on auth page
+  // This prevents dashboard flash on auth page without blocking OAuth flow
   if (isLoadingAuth && !currentUser && !hasSession) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="fixed inset-0 bg-background z-50" />
-        <AuthForm db={db} />
-      </div>
-    );
+    return <div className="fixed inset-0 bg-background" />;
   }
 
   // Show auth form when auth is complete and there's no user
