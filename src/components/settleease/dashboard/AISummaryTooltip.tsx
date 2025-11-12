@@ -457,13 +457,14 @@ export default function AISummaryTooltip({
         }
 
         if (data && data.summary) {
-          console.log("✅ Found cached summary for this data hash, using existing data");
+          console.log("✅ Found cached summary for this data hash (shared across all users), using existing data");
+          console.log("📊 Cache hit! No API call needed - serving from database");
           setSummary(data.summary);
           setIsLoading(false);
           setIsStreaming(false);
           return;
         } else {
-          console.log("❌ No cached summary found for this hash");
+          console.log("❌ No cached summary found for this hash - will generate new one");
         }
       } catch (error: any) {
         console.error("❌ Error checking summary:", error);
@@ -607,7 +608,7 @@ export default function AISummaryTooltip({
         summary: summaryText,
         updated_at: new Date().toISOString(),
       });
-      console.log("✅ Summary stored successfully");
+      console.log("✅ Summary stored successfully - now available to ALL users with this data hash");
     } catch (error: any) {
       // If we get a unique constraint violation, it means another user just stored it
       // This is fine, we can ignore it

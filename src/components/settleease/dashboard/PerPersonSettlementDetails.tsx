@@ -59,6 +59,7 @@ export default function PerPersonSettlementDetails({
   const [isRelevantExpensesModalOpen, setIsRelevantExpensesModalOpen] =
     useState(false);
   const [modalTitle, setModalTitle] = useState("");
+  const [preservedModalTitle, setPreservedModalTitle] = useState("");
   const [selectedExpenseFromModal, setSelectedExpenseFromModal] =
     useState<Expense | null>(null);
   const [isExpenseDetailFromModalOpen, setIsExpenseDetailFromModalOpen] =
@@ -203,19 +204,21 @@ export default function PerPersonSettlementDetails({
       });
     }
     setRelevantExpenses(relevant);
-    setModalTitle(
-      `Expenses related to ${
-        type === "debt" ? peopleMap[debtorId] : peopleMap[creditorId]
-      }'s payment to ${
-        type === "debt" ? peopleMap[creditorId] : peopleMap[debtorId]
-      }`
-    );
+    const title = `Expenses related to ${
+      type === "debt" ? peopleMap[debtorId] : peopleMap[creditorId]
+    }'s payment to ${
+      type === "debt" ? peopleMap[creditorId] : peopleMap[debtorId]
+    }`;
+    setModalTitle(title);
+    setPreservedModalTitle(title);
     setIsRelevantExpensesModalOpen(true);
   };
 
   const handleViewAllExpenses = () => {
     setRelevantExpenses(personExpenses);
-    setModalTitle(`All expenses involving ${selectedPerson.name}`);
+    const title = `All expenses involving ${selectedPerson.name}`;
+    setModalTitle(title);
+    setPreservedModalTitle(title);
     setIsRelevantExpensesModalOpen(true);
   };
 
@@ -290,7 +293,7 @@ export default function PerPersonSettlementDetails({
           setSelectedExpenseFromModal(expense);
           setIsExpenseDetailFromModalOpen(true);
         }}
-        modalTitle={modalTitle}
+        modalTitle={preservedModalTitle || modalTitle}
         peopleMap={peopleMap}
       />
 

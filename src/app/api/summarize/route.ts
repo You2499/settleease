@@ -104,7 +104,7 @@ TOTAL = 36084.43 (this is the correct total!)
 - Total spent: ₹36,084.43 (or whatever the actual sum is from expenses array)
 - Number of people: 7
 - Number of expenses: 8
-- Date range: [earliest to latest from expenses[].created_at]
+- Date range: [Format as "Month Year to Month Year" e.g., "Sep 2025 to Oct 2025" using expenses[].created_at]
 
 CRITICAL WARNINGS:
 - DO NOT use personBalances for total spent!

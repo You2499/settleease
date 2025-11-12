@@ -6,6 +6,9 @@ import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins } from 'lucide-react';
+import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
@@ -61,6 +64,9 @@ export default function ManageSettlementsTab({
 
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
+  const [paymentToEdit, setPaymentToEdit] = useState<SettlementPayment | null>(null);
+  const [editAmount, setEditAmount] = useState<string>('');
+  const [editNotes, setEditNotes] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
 
   const calculatedSimplifiedSettlements = useMemo(() => {
@@ -153,6 +159,52 @@ export default function ManageSettlementsTab({
     } catch (error: any) {
       console.error("Error unmarking payment:", error);
       toast({ title: "Error Unmarking Payment", description: error.message || "Could not unmark payment.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditPayment = (payment: SettlementPayment) => {
+    setPaymentToEdit(payment);
+    setEditAmount(payment.amount_settled.toString());
+    setEditNotes(payment.notes || '');
+  };
+
+  const handleUpdatePayment = async () => {
+    if (!paymentToEdit || !db) {
+      toast({ title: "Error", description: "Cannot update payment. Missing information or database connection.", variant: "destructive" });
+      return;
+    }
+    
+    const amount = parseFloat(editAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({ title: "Invalid Amount", description: "Please enter a valid positive amount", variant: "destructive" });
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await db
+        .from(SETTLEMENT_PAYMENTS_TABLE)
+        .update({
+          amount_settled: amount,
+          notes: editNotes.trim() || null,
+        })
+        .eq('id', paymentToEdit.id);
+
+      if (error) throw error;
+      
+      toast({ 
+        title: "Payment Updated", 
+        description: `Payment from ${peopleMap[paymentToEdit.debtor_id]} to ${peopleMap[paymentToEdit.creditor_id]} has been updated.` 
+      });
+      setPaymentToEdit(null);
+      setEditAmount('');
+      setEditNotes('');
+      onActionComplete();
+    } catch (error: any) {
+      console.error("Error updating payment:", error);
+      toast({ title: "Error Updating Payment", description: error.message || "Could not update payment.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -305,15 +357,26 @@ export default function ManageSettlementsTab({
                                 )}
                               </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setPaymentToUnmark(payment)}
-                              disabled={isLoading}
-                              className="text-xs w-full sm:w-auto py-1.5 px-3 h-auto self-start sm:self-center"
-                            >
-                              <Undo2 className="mr-1 h-4 w-4" /> Unmark
-                            </Button>
+                            <div className="flex gap-2 w-full sm:w-auto">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleEditPayment(payment)}
+                                disabled={isLoading}
+                                className="text-xs flex-1 sm:flex-none py-1.5 px-3 h-auto"
+                              >
+                                <Pencil className="mr-1 h-3 w-3" /> Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setPaymentToUnmark(payment)}
+                                disabled={isLoading}
+                                className="text-xs flex-1 sm:flex-none py-1.5 px-3 h-auto"
+                              >
+                                <Undo2 className="mr-1 h-4 w-4" /> Unmark
+                              </Button>
+                            </div>
                           </div>
                         </div>
                       </li>
@@ -455,6 +518,65 @@ export default function ManageSettlementsTab({
             </div>
           </AlertDialogContent>
         </AlertDialog>
+      )}
+
+      {/* Edit Payment Dialog */}
+      {paymentToEdit && (
+        <Dialog open={paymentToEdit !== null} onOpenChange={(open) => !open && setPaymentToEdit(null)}>
+          <DialogContent className="max-w-[95vw] sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Edit Settlement Payment</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 py-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 text-sm mb-4">
+                <p className="text-gray-600 dark:text-gray-400">
+                  Editing payment from <strong>{peopleMap[paymentToEdit.debtor_id]}</strong> to <strong>{peopleMap[paymentToEdit.creditor_id]}</strong>
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount (₹)</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                  placeholder="Enter amount"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="edit-notes">Notes (Optional)</Label>
+                <Textarea
+                  id="edit-notes"
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  placeholder="Add any notes about this payment..."
+                  rows={3}
+                />
+              </div>
+            </div>
+            
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setPaymentToEdit(null)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdatePayment}
+                disabled={isLoading || !editAmount || parseFloat(editAmount) <= 0}
+              >
+                {isLoading ? "Updating..." : "Update Payment"}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

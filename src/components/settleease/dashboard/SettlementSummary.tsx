@@ -228,18 +228,13 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
-  // Build full debug object for hashing (excluding timestamp to ensure consistent hashing)
+  // Build full debug object for hashing (excluding timestamp and user-specific UI state to ensure consistent hashing across all users)
   const fullDebug = useMemo(() => {
     const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
-    const filteredPeopleIds = filteredPeople.map((p) => p.id);
     
     return {
-      // NOTE: No timestamp here to ensure consistent hashing for same data
-      ui: {
-        userRole,
-        canMarkAsPaid: userRole === "admin",
-        showBalancedPeople,
-      },
+      // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
+      // This enables cross-user caching of AI summaries
       counts: {
         people: people.length,
         expenses: allExpenses.length,
@@ -252,7 +247,6 @@ export default function SettlementSummary({
         simplifyOff: "Detailed pairwise debts reflecting direct expense involvements and payments.",
       },
       personBalances,
-      filteredPeopleIdsWhenHidingBalanced: filteredPeopleIds,
       transactions: {
         pairwise: pairwiseTransactions,
         simplified: simplifiedTransactions,
@@ -262,7 +256,7 @@ export default function SettlementSummary({
       expenses: allExpenses,
       people,
     };
-  }, [people, allExpenses, settlementPayments, pairwiseTransactions, simplifiedTransactions, personBalances, categories, userRole, showBalancedPeople, filteredPeople]);
+  }, [people, allExpenses, settlementPayments, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
 
   const handleSummarise = async () => {
     if (!fullDebug || isComputingHash) return;
