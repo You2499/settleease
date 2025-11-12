@@ -723,13 +723,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         <ThemeToggle />
       </div>
 
-      <Card className="w-full max-w-3xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[600px] md:h-[600px]">
-        <div className="md:flex h-full md:min-h-[600px] md:h-[600px]"> {/* Fixed height for modal and flex container on md+ */}
+      <Card className="w-full max-w-4xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[680px] md:h-[680px]">
+        <div className="md:flex h-full md:min-h-[680px] md:h-[680px]"> {/* Fixed height for modal and flex container on md+ */}
           {/* Left Pane: Branding & Features */}
-          <div className={`md:w-2/5 flex flex-col p-6 sm:p-8 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[600px] md:h-[600px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
+          <div className={`md:w-2/5 flex flex-col px-6 py-8 sm:px-10 sm:py-10 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[680px] md:h-[680px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
             <div className="flex flex-col flex-1 justify-center min-h-0 h-full">
               {isLoginView ? (
-                <div className="flex flex-col flex-1 items-center justify-center text-center h-full">
+                <div className="flex flex-col flex-1 items-center justify-center text-center h-full px-2">
                   <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
                   <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
                   <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
@@ -748,20 +748,20 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                 </div>
               ) : (
                 <>
-                  <div className="mb-6 sm:mb-8 text-center md:text-left">
+                  <div className="mb-6 sm:mb-7 text-center md:text-left">
                     <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
                     <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
                     <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
                       The smartest way to manage shared expenses.
                     </p>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4 text-center md:text-left">Why SettleEase?</h3>
-                  <ul className="space-y-2.5 text-xs sm:text-sm">
-                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>AI-Powered Insights:</strong> Get intelligent summaries of your spending patterns.</span></li>
-                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Flexible Splitting:</strong> Equal, unequal, or item-by-item splits with ease.</span></li>
-                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Advanced Analytics:</strong> Visualize spending with charts, heatmaps, and trends.</span></li>
-                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Smart Settlements:</strong> Optimized payment plans that minimize transactions.</span></li>
-                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Customizable:</strong> Choose from 1000+ icons and personalize categories.</span></li>
+                  <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-center md:text-left">Why SettleEase?</h3>
+                  <ul className="space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
+                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>AI-Powered Insights:</strong> Get intelligent summaries of your spending patterns.</span></li>
+                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Flexible Splitting:</strong> Equal, unequal, or item-by-item splits with ease.</span></li>
+                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Advanced Analytics:</strong> Visualize spending with charts, heatmaps, and trends.</span></li>
+                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Smart Settlements:</strong> Optimized payment plans that minimize transactions.</span></li>
+                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Customizable:</strong> Choose from 1000+ icons and personalize categories.</span></li>
                   </ul>
                 </>
               )}
@@ -769,7 +769,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           </div>
 
           {/* Right Pane: Form */}
-          <div className="md:w-3/5 p-6 sm:p-8 flex flex-col justify-center min-h-0 md:min-h-[600px] md:h-[600px] h-full">
+          <div className="md:w-3/5 px-6 py-8 sm:px-10 sm:py-10 flex flex-col justify-center min-h-0 md:min-h-[680px] md:h-[680px] h-full">
             <div className="flex flex-col justify-center flex-1 min-h-0 h-full">
               <CardHeader className="px-0 pt-0 pb-4 text-center">
                 <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
