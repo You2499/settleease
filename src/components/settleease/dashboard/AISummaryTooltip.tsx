@@ -220,9 +220,10 @@ const renderMarkdown = (text: string) => {
 
     const indentLevel = getIndentLevel(originalLine);
     
-    // Bullet points with enhanced detection
-    if (trimmedLine.match(/^[-*•]\s+/)) {
-      const itemText = trimmedLine.replace(/^[-*•]\s+/, '');
+    // Bullet points with strict detection - must start with bullet marker
+    const bulletMatch = trimmedLine.match(/^([-*•])\s+(.+)/);
+    if (bulletMatch) {
+      const itemText = bulletMatch[2];
       currentListItems.push({
         text: itemText,
         level: indentLevel,
@@ -232,10 +233,10 @@ const renderMarkdown = (text: string) => {
       return;
     }
 
-    // Numbered lists with number tracking
-    const numberedMatch = trimmedLine.match(/^(\d+)\.\s+/);
+    // Numbered lists with strict detection - must be number followed by period and space
+    const numberedMatch = trimmedLine.match(/^(\d+)\.\s+(.+)/);
     if (numberedMatch) {
-      const itemText = trimmedLine.replace(/^\d+\.\s+/, '');
+      const itemText = numberedMatch[2];
       currentListItems.push({
         text: itemText,
         level: indentLevel,
@@ -297,6 +298,7 @@ export default function AISummaryTooltip({
   const [summary, setSummary] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [modelName, setModelName] = useState<string>("");
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -412,6 +414,7 @@ export default function AISummaryTooltip({
       setSummary("");
       setIsLoading(false);
       setIsStreaming(false);
+      setModelName("");
     }
   }, [open]);
 
@@ -532,6 +535,9 @@ export default function AISummaryTooltip({
                 // Store summary in database
                 await storeSummary(fullSummary, hash);
                 setIsStreaming(false);
+                if (data.model) {
+                  setModelName(data.model);
+                }
               }
             } catch (e) {
               // Skip malformed JSON
@@ -552,6 +558,9 @@ export default function AISummaryTooltip({
           if (data.done) {
             await storeSummary(fullSummary, hash);
             setIsStreaming(false);
+            if (data.model) {
+              setModelName(data.model);
+            }
           }
         } catch (e) {
           // Ignore
@@ -795,7 +804,12 @@ export default function AISummaryTooltip({
         <div className="flex items-center justify-between p-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-primary" />
-            <h3 className="font-semibold text-sm">AI Summary</h3>
+            <h3 className="font-semibold text-sm">Summary</h3>
+            {modelName && (
+              <span className="text-xs text-muted-foreground">
+                ({modelName})
+              </span>
+            )}
           </div>
           <Button
             variant="ghost"
