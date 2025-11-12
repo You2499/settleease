@@ -55,22 +55,30 @@ export default function SettleEasePage() {
   const [hasSession, setHasSession] = useState(() => {
     if (typeof window === 'undefined') return false;
     
-    // Check for Supabase session cookies
-    if (document.cookie.includes('sb-')) return true;
+    // Check for Supabase session cookies (more thorough check)
+    const cookies = document.cookie;
+    if (cookies.includes('sb-') && cookies.includes('auth-token')) return true;
     
     // Check localStorage for Supabase auth tokens
     try {
-      const keys = Object.keys(localStorage);
-      return keys.some(key => 
-        key.includes('supabase.auth.token') || 
-        (key.includes('sb-') && key.includes('auth-token'))
-      );
+      // Check for common Supabase localStorage keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && (key.includes('supabase.auth.token') || (key.includes('sb-') && key.includes('auth-token')))) {
+          const value = localStorage.getItem(key);
+          if (value && value !== 'null' && value !== '{}') {
+            return true;
+          }
+        }
+      }
     } catch {
-      return false;
+      // Ignore localStorage errors
     }
+    
+    return false;
   });
 
-  // Update hasSession when auth state changes (handles logout)
+  // Update hasSession when auth state changes (handles logout and login)
   useEffect(() => {
     if (!isLoadingAuth) {
       setHasSession(!!currentUser);
@@ -240,9 +248,8 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show auth form when there's no user AND no session
-  // This works for both: during auth loading and after auth completes
-  if (!currentUser && !hasSession) {
+  // Show auth form when there's definitely no session
+  if (!hasSession && (!isLoadingAuth || !currentUser)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
@@ -250,7 +257,7 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show dashboard when we have a user OR a session is detected
+  // Show dashboard when we have a session OR user
   // (dashboard will show skeleton loaders while data loads)
 
   // Show dashboard (with skeleton loaders) when:
