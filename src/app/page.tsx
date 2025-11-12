@@ -240,12 +240,9 @@ export default function SettleEasePage() {
     );
   }
 
-  // Show auth form ONLY when we're certain there's no user:
-  // - Auth loading is complete (not loading anymore)
-  // - AND no current user exists
-  // - AND no session was detected on mount
-  // This prevents showing auth form during the brief auth check when session exists
-  if (!isLoadingAuth && !currentUser && !hasSession) {
+  // Show auth form when there's no user AND no session
+  // This works for both: during auth loading and after auth completes
+  if (!currentUser && !hasSession) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <AuthForm db={db} />
@@ -253,8 +250,8 @@ export default function SettleEasePage() {
     );
   }
 
-  // If we have a session but auth is still loading, OR if we have a user,
-  // show the dashboard (it will show skeleton loaders while data loads)
+  // Show dashboard when we have a user OR a session is detected
+  // (dashboard will show skeleton loaders while data loads)
 
   // Show dashboard (with skeleton loaders) when:
   // - User is authenticated, OR
