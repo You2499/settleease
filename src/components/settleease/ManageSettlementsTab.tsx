@@ -25,11 +25,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil } from 'lucide-react';
+import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
+import { FixedCalendar } from "@/components/ui/fixed-calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import CustomSettlementForm from './CustomSettlementForm';
 
 interface ManageSettlementsTabProps {
@@ -67,6 +71,8 @@ export default function ManageSettlementsTab({
   const [paymentToEdit, setPaymentToEdit] = useState<SettlementPayment | null>(null);
   const [editAmount, setEditAmount] = useState<string>('');
   const [editNotes, setEditNotes] = useState<string>('');
+  const [editDate, setEditDate] = useState<Date | undefined>(undefined);
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const calculatedSimplifiedSettlements = useMemo(() => {
@@ -168,6 +174,7 @@ export default function ManageSettlementsTab({
     setPaymentToEdit(payment);
     setEditAmount(payment.amount_settled.toString());
     setEditNotes(payment.notes || '');
+    setEditDate(payment.settled_at ? new Date(payment.settled_at) : new Date());
   };
 
   const handleUpdatePayment = async () => {
@@ -182,6 +189,11 @@ export default function ManageSettlementsTab({
       return;
     }
 
+    if (!editDate) {
+      toast({ title: "Invalid Date", description: "Please select a payment date", variant: "destructive" });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const { error } = await db
@@ -189,6 +201,7 @@ export default function ManageSettlementsTab({
         .update({
           amount_settled: amount,
           notes: editNotes.trim() || null,
+          settled_at: editDate.toISOString(),
         })
         .eq('id', paymentToEdit.id);
 
@@ -201,6 +214,7 @@ export default function ManageSettlementsTab({
       setPaymentToEdit(null);
       setEditAmount('');
       setEditNotes('');
+      setEditDate(undefined);
       onActionComplete();
     } catch (error: any) {
       console.error("Error updating payment:", error);
@@ -547,6 +561,35 @@ export default function ManageSettlementsTab({
                   placeholder="Enter amount"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label>Payment Date</Label>
+                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        "border-border bg-background hover:bg-accent hover:text-accent-foreground",
+                        "focus:ring-2 focus:ring-ring focus:ring-offset-2 transition-colors",
+                        !editDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+                      {editDate ? format(editDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border border-border shadow-md rounded-lg bg-popover">
+                    <FixedCalendar
+                      selected={editDate}
+                      onSelect={(date) => {
+                        setEditDate(date);
+                        setCalendarOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               
               <div className="space-y-2">
                 <Label htmlFor="edit-notes">Notes (Optional)</Label>
@@ -570,7 +613,7 @@ export default function ManageSettlementsTab({
               </Button>
               <Button
                 onClick={handleUpdatePayment}
-                disabled={isLoading || !editAmount || parseFloat(editAmount) <= 0}
+                disabled={isLoading || !editAmount || parseFloat(editAmount) <= 0 || !editDate}
               >
                 {isLoading ? "Updating..." : "Update Payment"}
               </Button>
