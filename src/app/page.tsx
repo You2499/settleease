@@ -435,8 +435,11 @@ function SettleEasePageContent() {
   // Show transparent loading screen during OAuth callback until initial view is loaded
   // This prevents showing wrong skeleton (dashboard) before correct view is determined
   if (isOAuthCallback && !hasLoadedInitialView) {
+    console.log('🔄 Showing transparent screen - OAuth callback in progress');
     return <div className="fixed inset-0 bg-background" />;
   }
+  
+  console.log('🎯 Rendering app - isOAuthCallback:', isOAuthCallback, 'hasLoadedInitialView:', hasLoadedInitialView, 'activeView:', activeView);
 
   // Show auth form when auth is complete and there's no user
   if (!currentUser && !isLoadingAuth) {
