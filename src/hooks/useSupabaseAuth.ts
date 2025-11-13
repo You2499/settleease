@@ -101,7 +101,7 @@ export function useSupabaseAuth() {
           }
         });
         Object.keys(sessionStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase')) {
+          if (key.startsWith('sb-') || key.includes('supabase') || key.startsWith('auth_processed_')) {
             sessionStorage.removeItem(key);
           }
         });
@@ -144,18 +144,22 @@ export function useSupabaseAuth() {
           // Track sign-in event in database (NO toasts here - page.tsx handles all toasts)
           const prevLocalUser = currentUser;
           
-          console.log('🔥 Auth event check:', {
-            event: _event,
-            hasNewUser: !!newAuthUser,
-            hadPrevUser: !!prevLocalUser,
-            willSetFlag: newAuthUser && !prevLocalUser && _event === "SIGNED_IN"
-          });
+          // Check if this is a fresh sign-in or just a page refresh
+          // Use sessionStorage to track if we've already processed this session
+          const sessionKey = `auth_processed_${newAuthUser?.id}`;
+          const hasProcessedThisSession = typeof window !== 'undefined' && sessionStorage.getItem(sessionKey) === 'true';
           
-          // Only set flag on actual sign-in events, NOT on session restoration (INITIAL_SESSION)
-          // SIGNED_IN = user just signed in (email/password or OAuth callback)
-          // INITIAL_SESSION = page load/refresh with existing session (should NOT trigger toast)
-          if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
-            console.log('✅ Setting should_show_welcome_toast = true');
+          // Only set flag on actual NEW sign-ins (not page refreshes)
+          // Conditions:
+          // 1. New user exists
+          // 2. No previous user in state (transition from logged out to logged in)
+          // 3. Haven't processed this session yet (prevents flag being set on refresh)
+          if (newAuthUser && !prevLocalUser && !hasProcessedThisSession) {
+            // Mark this session as processed
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem(sessionKey, 'true');
+            }
+            
             try {
               // Set flag to show welcome toast - page.tsx will check this flag
               await db
