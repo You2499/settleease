@@ -171,7 +171,7 @@ export function useSupabaseAuth() {
                       const createdAt = new Date(newAuthUser.created_at);
                       const now = new Date();
                       const timeDiff = now.getTime() - createdAt.getTime();
-                      const isNewUser = timeDiff < 60000; // Less than 1 minute ago = new user
+                      const isNewUser = timeDiff < 300000; // Less than 5 minutes ago = new user (allows time for email confirmation)
                       
                       // Only show welcome toast for new users
                       // Returning users will see the "Welcome back!" toast with restored view info in page.tsx

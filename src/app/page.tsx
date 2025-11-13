@@ -224,32 +224,44 @@ function SettleEasePageContent() {
         if (!error && data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
           
-          // Show toast to inform user they were restored to their last view
-          const viewNames: Record<ActiveView, string> = {
-            dashboard: 'Dashboard',
-            analytics: 'Analytics',
-            addExpense: 'Add Expense',
-            editExpenses: 'Edit Expenses',
-            managePeople: 'Manage People',
-            manageCategories: 'Manage Categories',
-            manageSettlements: 'Manage Settlements',
-            testErrorBoundary: 'Test Error Boundary'
-          };
+          // Check if we've already shown a welcome toast in this session
+          const hasShownToast = typeof window !== 'undefined' && 
+            sessionStorage.getItem('settleease_welcome_toast_shown') === 'true';
           
-          const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
-          
-          toast({ 
-            title: "Welcome back!", 
-            description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
-            action: (
-              <ToastAction 
-                altText="Go to Dashboard" 
-                onClick={() => setActiveView('dashboard')}
-              >
-                Dashboard
-              </ToastAction>
-            )
-          });
+          // Only show restoration toast if no welcome toast was shown yet
+          if (!hasShownToast) {
+            // Show toast to inform user they were restored to their last view
+            const viewNames: Record<ActiveView, string> = {
+              dashboard: 'Dashboard',
+              analytics: 'Analytics',
+              addExpense: 'Add Expense',
+              editExpenses: 'Edit Expenses',
+              managePeople: 'Manage People',
+              manageCategories: 'Manage Categories',
+              manageSettlements: 'Manage Settlements',
+              testErrorBoundary: 'Test Error Boundary'
+            };
+            
+            const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
+            
+            toast({ 
+              title: "Welcome back!", 
+              description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+              action: (
+                <ToastAction 
+                  altText="Go to Dashboard" 
+                  onClick={() => setActiveView('dashboard')}
+                >
+                  Dashboard
+                </ToastAction>
+              )
+            });
+            
+            // Mark that we've shown the welcome toast for this session
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('settleease_welcome_toast_shown', 'true');
+            }
+          }
         }
       } catch (err) {
         console.error('Error loading last active view:', err);
