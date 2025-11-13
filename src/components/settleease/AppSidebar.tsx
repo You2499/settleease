@@ -64,6 +64,13 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  
+  const handleLogoutClick = async () => {
+    setIsLoggingOut(true);
+    await handleLogout();
+    // Note: Component will unmount after logout, so no need to set isLoggingOut back to false
+  };
 
   const handleNavigation = (view: ActiveView) => {
     setActiveView(view);
@@ -238,8 +245,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                       <Moon className="mr-2 h-4 w-4" /> Dark
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" /> Logout
+                    <DropdownMenuItem 
+                      onClick={handleLogoutClick} 
+                      disabled={isLoggingOut}
+                      className="text-destructive focus:bg-destructive/10 focus:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" /> 
+                      {isLoggingOut ? (
+                        <span className="text-muted-foreground">Logging out...</span>
+                      ) : (
+                        'Logout'
+                      )}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
