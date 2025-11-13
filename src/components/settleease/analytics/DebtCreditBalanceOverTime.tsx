@@ -215,9 +215,9 @@ export default function DebtCreditBalanceOverTime({
               type="monotone" 
               dataKey={() => 0} 
               name="Break Even"
-              stroke="hsl(var(--muted-foreground))" 
-              strokeWidth={1} 
-              strokeDasharray="3 3"
+              stroke="#94a3b8" 
+              strokeWidth={2} 
+              strokeDasharray="8 4"
               dot={false}
             />
             <Line 
