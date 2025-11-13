@@ -320,23 +320,71 @@ export default function AddExpenseTab({
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
     newPayers[index] = { ...newPayers[index], [field]: value };
+    
+    // Smart auto-calculation: if amount field changed and multiple payers exist
+    if (field === 'amount' && isMultiplePayers && newPayers.length > 1) {
+      const total = parseFloat(totalAmount) || 0;
+      
+      // Calculate sum of all entered amounts except the last payer
+      let sumOfOthers = 0;
+      for (let i = 0; i < newPayers.length - 1; i++) {
+        const amt = parseFloat(newPayers[i].amount) || 0;
+        sumOfOthers += amt;
+      }
+      
+      // Auto-calculate the last payer's amount
+      const remainder = Math.max(0, total - sumOfOthers);
+      newPayers[newPayers.length - 1].amount = remainder.toFixed(2);
+    }
+    
     setPayers(newPayers);
   };
 
   const addPayer = () => {
     const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-    setPayers([...payers, { id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+    const total = parseFloat(totalAmount) || 0;
+    
+    // Auto-distribute amounts equally when adding a new payer
+    if (isMultiplePayers && total > 0) {
+      const newPayerCount = payers.length + 1;
+      const equalAmount = (total / newPayerCount).toFixed(2);
+      
+      const redistributedPayers = payers.map(payer => ({
+        ...payer,
+        amount: equalAmount
+      }));
+      
+      setPayers([...redistributedPayers, { 
+        id: Date.now().toString(), 
+        personId: firstPayerPersonId, 
+        amount: equalAmount 
+      }]);
+    } else {
+      setPayers([...payers, { id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+    }
   };
 
   const removePayer = (index: number) => {
     const newPayers = payers.filter((_, i) => i !== index);
     const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+    
     if (newPayers.length === 0) {
       if (isMultiplePayers) {
         setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
       } else {
         setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
       }
+    } else if (isMultiplePayers && newPayers.length > 1) {
+      // Auto-redistribute after removal
+      const total = parseFloat(totalAmount) || 0;
+      const equalAmount = (total / newPayers.length).toFixed(2);
+      
+      const redistributedPayers = newPayers.map(payer => ({
+        ...payer,
+        amount: equalAmount
+      }));
+      
+      setPayers(redistributedPayers);
     } else {
       setPayers(newPayers);
     }
@@ -348,8 +396,9 @@ export default function AddExpenseTab({
     const firstPayerPersonId = payers[0]?.personId || defaultPayerId || (people.length > 0 ? people[0].id : '');
 
     if (goingToMultiple) {
-      const firstPayerAmount = (payers.length === 1 && payers[0].amount && payers[0].amount !== '0' && payers[0].amount !== '0.00') ? payers[0].amount : '';
-      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: firstPayerAmount }]);
+      // When switching to multiple payers, start with the total amount for the first payer
+      const total = parseFloat(totalAmount) || 0;
+      setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: total > 0 ? totalAmount : '' }]);
     } else {
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: totalAmount }]);
     }
@@ -518,6 +567,7 @@ export default function AddExpenseTab({
                     people={people}
                     unequalShares={unequalShares}
                     handleUnequalShareChange={handleUnequalShareChange}
+                    amountToSplit={amountToSplit}
                   />
                 </SettleEaseErrorBoundary>
               )}

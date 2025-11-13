@@ -1,17 +1,16 @@
 "use client";
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, MinusCircle, Settings2 } from 'lucide-react';
+import { PlusCircle, X, Settings2, ShoppingCart, UserCheck, UserX } from 'lucide-react';
+import { formatCurrency } from '@/lib/settleease/utils';
 import * as LucideIcons from 'lucide-react';
 import type { Person, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
-
 
 interface ItemwiseSplitSectionProps {
   items: ExpenseItemDetail[];
@@ -32,88 +31,192 @@ export default function ItemwiseSplitSection({
   removeItem,
   addItem,
 }: ItemwiseSplitSectionProps) {
+  const totalItemsPrice = useMemo(() => {
+    return items.reduce((sum, item) => {
+      const price = parseFloat(item.price as string) || 0;
+      return sum + price;
+    }, 0);
+  }, [items]);
+  
+  const handleSelectAllForItem = (itemIndex: number) => {
+    people.forEach(person => {
+      if (!items[itemIndex].sharedBy.includes(person.id)) {
+        handleItemSharedByChange(itemIndex, person.id);
+      }
+    });
+  };
+  
+  const handleDeselectAllForItem = (itemIndex: number) => {
+    items[itemIndex].sharedBy.forEach(personId => {
+      handleItemSharedByChange(itemIndex, personId);
+    });
+  };
+  
   return (
-    <Card className="p-3 sm:p-4 bg-card/50 shadow-sm mt-2 space-y-3 sm:space-y-4">
-        {items.map((item, itemIndex) => (
-        <Card key={item.id} className="p-3 sm:p-4 bg-background shadow-md rounded-lg">
-            <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto] gap-2 sm:gap-3 mb-2 sm:mb-3 items-center">
-                <Input 
-                    value={item.name} 
-                    onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
-                    placeholder={`Item ${itemIndex + 1} Name`} 
-                    className="h-9 sm:h-10 text-sm"
-                />
-                <Input 
-                    type="number" 
-                    inputMode="decimal"
-                    pattern="[0-9]*\.?[0-9]*"
-                    value={item.price as string} 
-                    onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
-                    placeholder="Price" 
-                    className="w-full md:w-24 h-9 sm:h-10 text-sm"
-                />
-                <Select
-                  value={item.categoryName || ''}
-                  onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
-                  disabled={dynamicCategories.length === 0}
-                >
-                  <SelectTrigger className="h-9 sm:h-10 w-full md:w-36 sm:w-40 text-xs sm:text-sm">
-                    <SelectValue placeholder="Item Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {dynamicCategories.map(cat => {
-                      const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
-                      return (
-                        <SelectItem key={cat.id} value={cat.name}>
-                          <div className="flex items-center">
-                            <IconComponent className="mr-2 h-4 w-4" />
-                            {cat.name}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+    <Card className="p-5 bg-card/50 shadow-sm mt-3">
+      <div className="flex items-center justify-between mb-5">
+        <Label className="text-sm font-semibold flex items-center gap-2">
+          <ShoppingCart className="h-4 w-4 text-primary" />
+          Add items and select who shared each
+        </Label>
+        {totalItemsPrice > 0 && (
+          <div className="text-sm font-semibold text-muted-foreground">
+            Total: <span className="text-foreground">{formatCurrency(totalItemsPrice)}</span>
+          </div>
+        )}
+      </div>
+      
+      <div className="space-y-4">
+        {items.map((item, itemIndex) => {
+          const allSelected = people.length > 0 && item.sharedBy.length === people.length;
+          const noneSelected = item.sharedBy.length === 0;
+          const itemPrice = parseFloat(item.price as string) || 0;
+          
+          return (
+            <Card key={item.id} className="p-4 bg-background border-2 border-border hover:border-primary/20 transition-all">
+              {/* Item Header */}
+              <div className="flex items-start gap-3 mb-4">
+                <div className="flex-1 space-y-3">
+                  <div className="flex gap-3">
+                    <Input 
+                      value={item.name} 
+                      onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
+                      placeholder={`Item ${itemIndex + 1} name (e.g., Pizza)`} 
+                      className="flex-1 h-10"
+                    />
+                    <Input 
+                      type="number" 
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
+                      value={item.price as string} 
+                      onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
+                      placeholder="0.00" 
+                      className="w-28 h-10 text-right font-mono"
+                    />
+                  </div>
+                  
+                  <Select
+                    value={item.categoryName || ''}
+                    onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
+                    disabled={dynamicCategories.length === 0}
+                  >
+                    <SelectTrigger className="h-10 w-full">
+                      <SelectValue placeholder="Select item category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {dynamicCategories.map(cat => {
+                        const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
+                        return (
+                          <SelectItem key={cat.id} value={cat.name}>
+                            <div className="flex items-center">
+                              <IconComponent className="mr-2 h-4 w-4" />
+                              {cat.name}
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
                 <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => removeItem(itemIndex)} 
-                    className="text-destructive h-9 w-9 sm:h-10 sm:w-10 md:w-auto justify-self-end md:justify-self-auto"
-                    disabled={items.length <=1}
-                    aria-label={`Remove item ${itemIndex + 1}`}
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={() => removeItem(itemIndex)} 
+                  className="text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0"
+                  disabled={items.length <= 1}
+                  aria-label={`Remove item ${itemIndex + 1}`}
                 >
-                    <MinusCircle className="h-4 w-4 sm:h-5 sm:w-5" />
+                  <X className="h-5 w-5" />
                 </Button>
-            </div>
-            
-            <Label className="text-xs sm:text-sm font-medium block mb-1.5 sm:mb-2 text-muted-foreground">Shared by:</Label>
-            {people.length > 0 ? (
-              <ScrollArea className="h-28 sm:h-32 rounded-md border p-1 bg-card/30">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-1.5 sm:gap-y-2 p-1.5 sm:p-2">
-                    {people.map(person => (
-                    <div key={person.id} className="flex items-center space-x-2">
-                        <Checkbox
+              </div>
+              
+              {/* Shared By Section */}
+              <div className="pt-3 border-t">
+                <div className="flex items-center justify-between mb-3">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Shared by
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSelectAllForItem(itemIndex)}
+                      disabled={allSelected}
+                      className="text-xs h-7 px-2"
+                    >
+                      <UserCheck className="h-3 w-3 mr-1" />
+                      All
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeselectAllForItem(itemIndex)}
+                      disabled={noneSelected}
+                      className="text-xs h-7 px-2"
+                    >
+                      <UserX className="h-3 w-3 mr-1" />
+                      None
+                    </Button>
+                  </div>
+                </div>
+                
+                {people.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {people.map(person => {
+                      const isSharing = item.sharedBy.includes(person.id);
+                      return (
+                        <div 
+                          key={person.id} 
+                          className={`flex items-center space-x-2 p-2 rounded-md border transition-all cursor-pointer ${
+                            isSharing 
+                              ? 'bg-primary/5 border-primary/30' 
+                              : 'bg-card/50 border-border hover:border-primary/20'
+                          }`}
+                          onClick={() => handleItemSharedByChange(itemIndex, person.id)}
+                        >
+                          <Checkbox
                             id={`item-${itemIndex}-person-${person.id}`}
-                            checked={item.sharedBy.includes(person.id)}
+                            checked={isSharing}
                             onCheckedChange={() => handleItemSharedByChange(itemIndex, person.id)}
                             className="h-4 w-4"
-                        />
-                        <Label 
+                          />
+                          <Label 
                             htmlFor={`item-${itemIndex}-person-${person.id}`} 
-                            className="text-xs sm:text-sm font-normal cursor-pointer hover:text-foreground transition-colors"
-                        >
+                            className="text-xs font-medium cursor-pointer flex-1"
+                          >
                             {person.name}
-                        </Label>
-                    </div>
-                    ))}
-                </div>
-              </ScrollArea>
-            ) : <p className="text-xs text-muted-foreground">No people available to share items.</p>}
-        </Card>
-        ))}
-        <Button variant="outline" size="default" onClick={addItem} className="w-full sm:w-auto mt-3 py-2 px-4 text-sm">
-            <PlusCircle className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Add Item
-        </Button>
+                          </Label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground text-center py-2">No people available</p>
+                )}
+                
+                {item.sharedBy.length > 0 && itemPrice > 0 && (
+                  <p className="text-xs text-muted-foreground text-center mt-3 pt-2 border-t">
+                    {formatCurrency(itemPrice / item.sharedBy.length)} per person ({item.sharedBy.length} {item.sharedBy.length === 1 ? 'person' : 'people'})
+                  </p>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+      
+      <Button 
+        variant="outline" 
+        size="default" 
+        onClick={addItem} 
+        className="w-full mt-4 h-11 text-sm font-medium"
+      >
+        <PlusCircle className="mr-2 h-5 w-5" /> 
+        Add Another Item
+      </Button>
     </Card>
   );
 }

@@ -55,17 +55,50 @@ const CelebrationPayerSelectComponent = ({ celebrationPayerId, setCelebrationPay
   );
 };
 
-const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebrationAmountInput }: {
+const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebrationAmountInput, totalAmount }: {
   celebrationAmountInput: string;
   setCelebrationAmountInput: (value: string) => void;
+  totalAmount: string;
 }) => {
   crashTestManager.checkAndCrash('celebrationAmountInput', 'Celebration Amount Input crashed: Invalid celebration amount format');
+  
+  const total = parseFloat(totalAmount) || 0;
+  
+  const handlePercentageClick = (percentage: number) => {
+    if (total > 0) {
+      const amount = (total * percentage / 100).toFixed(2);
+      setCelebrationAmountInput(amount);
+    }
+  };
   
   return (
     <div>
       <Label htmlFor="celebrationAmount" className="text-sm">
         Contribution Amount
       </Label>
+      <div className="flex gap-2 mt-1 mb-2">
+        <button
+          type="button"
+          onClick={() => handlePercentageClick(25)}
+          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          25%
+        </button>
+        <button
+          type="button"
+          onClick={() => handlePercentageClick(50)}
+          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          50%
+        </button>
+        <button
+          type="button"
+          onClick={() => setCelebrationAmountInput('')}
+          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+        >
+          Other
+        </button>
+      </div>
       <Input
         id="celebrationAmount"
         type="number"
@@ -74,7 +107,7 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
         value={celebrationAmountInput}
         onChange={(e) => setCelebrationAmountInput(e.target.value)}
         placeholder="e.g., 20.00"
-        className="mt-1 h-9 sm:h-10"
+        className="h-9 sm:h-10"
       />
     </div>
   );
@@ -134,6 +167,7 @@ export default function CelebrationSection({
                 <CelebrationAmountInputComponent 
                   celebrationAmountInput={celebrationAmountInput}
                   setCelebrationAmountInput={setCelebrationAmountInput}
+                  totalAmount={totalAmount}
                 />
               </SettleEaseErrorBoundary>
             </div>
