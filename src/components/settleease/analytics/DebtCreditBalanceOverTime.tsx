@@ -224,31 +224,11 @@ export default function DebtCreditBalanceOverTime({
               type="monotone" 
               dataKey="balance" 
               name="Your Balance"
-              stroke="transparent"
+              stroke={isPositive ? ANALYTICS_STYLES.positiveColor : ANALYTICS_STYLES.negativeColor} 
               strokeWidth={2} 
-              dot={false}
-              activeDot={false}
+              dot={{ r: 3 }} 
+              activeDot={{ r: 5 }} 
             />
-            {/* Render colored segments */}
-            {chartData.map((point, index) => {
-              if (index === 0) return null;
-              const prevPoint = chartData[index - 1];
-              const segmentColor = point.balance >= 0 ? ANALYTICS_STYLES.positiveColor : ANALYTICS_STYLES.negativeColor;
-              
-              return (
-                <Line
-                  key={`segment-${index}`}
-                  type="monotone"
-                  data={[prevPoint, point]}
-                  dataKey="balance"
-                  stroke={segmentColor}
-                  strokeWidth={2}
-                  dot={index === chartData.length - 1 ? { r: 3, fill: segmentColor } : false}
-                  activeDot={{ r: 5 }}
-                  legendType="none"
-                />
-              );
-            })}
           </LineChart>
         </ResponsiveContainer>
       </CardContent>
