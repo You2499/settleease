@@ -199,11 +199,11 @@ function SettleEasePageContent() {
   }, []);
 
 
-  // Effect to load initial view from URL or database
+  // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts
   useEffect(() => {
     if (hasLoadedInitialView || !currentUser || !db) return;
     
-    const loadInitialView = async () => {
+    const loadInitialViewAndShowToast = async () => {
       // First check URL params
       const viewParam = searchParams.get('view') as ActiveView | null;
       
@@ -213,91 +213,118 @@ function SettleEasePageContent() {
         return;
       }
       
-      // If no URL param, load from database
+      // Fetch all needed data from database
       try {
         const { data, error } = await db
           .from('user_profiles')
-          .select('last_active_view, last_welcome_toast_at')
+          .select('last_active_view, last_welcome_toast_at, has_seen_welcome_toast, last_sign_in_at')
           .eq('user_id', currentUser.id)
           .single();
         
-        // Check if we've shown a welcome toast recently (within last 30 seconds)
-        // This prevents duplicate toasts across tabs/devices
-        const lastToastAt = data?.last_welcome_toast_at ? new Date(data.last_welcome_toast_at) : null;
+        if (error) {
+          console.error('Error loading user profile:', error);
+          setHasLoadedInitialView(true);
+          return;
+        }
+        
         const now = new Date();
+        
+        // Check if user just signed in (within last 5 seconds)
+        const lastSignInAt = data?.last_sign_in_at ? new Date(data.last_sign_in_at) : null;
+        const timeSinceSignIn = lastSignInAt ? now.getTime() - lastSignInAt.getTime() : Infinity;
+        const justSignedIn = timeSinceSignIn < 5000; // 5 seconds
+        
+        // Check if we've shown a toast recently (within last 30 seconds)
+        const lastToastAt = data?.last_welcome_toast_at ? new Date(data.last_welcome_toast_at) : null;
         const timeSinceLastToast = lastToastAt ? now.getTime() - lastToastAt.getTime() : Infinity;
         const hasShownToastRecently = timeSinceLastToast < 30000; // 30 seconds
         
-        if (!error && data?.last_active_view && data.last_active_view !== 'dashboard') {
-          // User was on a non-dashboard view - restore them there with a toast
+        // Determine user type
+        const isNewUser = !data?.has_seen_welcome_toast;
+        const isReturningUser = data?.has_seen_welcome_toast === true;
+        
+        // Restore last active view
+        if (data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
+        }
+        
+        // Show appropriate toast if user just signed in and no recent toast
+        if (justSignedIn && !hasShownToastRecently) {
+          // Get user's name for personalization
+          const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+          const firstName = fullName ? fullName.split(' ')[0] : '';
+          const userName = firstName || currentUser.email?.split('@')[0] || 'there';
           
-          // Only show restoration toast if no welcome toast was shown recently
-          if (!hasShownToastRecently) {
-            // Show toast to inform user they were restored to their last view
-            const viewNames: Record<ActiveView, string> = {
-              dashboard: 'Dashboard',
-              analytics: 'Analytics',
-              addExpense: 'Add Expense',
-              editExpenses: 'Edit Expenses',
-              managePeople: 'Manage People',
-              manageCategories: 'Manage Categories',
-              manageSettlements: 'Manage Settlements',
-              testErrorBoundary: 'Test Error Boundary'
-            };
-            
-            const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
-            
-            toast({ 
-              title: "Welcome back!", 
-              description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
-              action: (
-                <ToastAction 
-                  altText="Go to Dashboard" 
-                  onClick={() => setActiveView('dashboard')}
-                >
-                  Dashboard
-                </ToastAction>
-              )
+          if (isNewUser) {
+            // NEW USER - Show welcome toast
+            toast({
+              title: "Welcome to SettleEase!",
+              description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+              variant: "default"
             });
             
-            // Update the database to mark that we've shown the welcome toast
-            try {
-              await db
-                .from('user_profiles')
-                .update({ last_welcome_toast_at: new Date().toISOString() })
-                .eq('user_id', currentUser.id);
-            } catch (updateErr) {
-              console.error('Error updating last_welcome_toast_at:', updateErr);
-            }
-          }
-        } else if (!error && !hasShownToastRecently) {
-          // User was on dashboard or no last view - show simple welcome back toast
-          // This handles returning users who log in to dashboard (especially Google OAuth users)
-          toast({ 
-            title: "Welcome back!", 
-            description: "You've successfully signed in to SettleEase."
-          });
-          
-          // Update the database to mark that we've shown the welcome toast
-          try {
+            // Mark as seen
             await db
               .from('user_profiles')
-              .update({ last_welcome_toast_at: new Date().toISOString() })
+              .update({ 
+                last_welcome_toast_at: now.toISOString(),
+                has_seen_welcome_toast: true
+              })
               .eq('user_id', currentUser.id);
-          } catch (updateErr) {
-            console.error('Error updating last_welcome_toast_at:', updateErr);
+              
+          } else if (isReturningUser) {
+            // RETURNING USER
+            if (data?.last_active_view && data.last_active_view !== 'dashboard') {
+              // Returning to non-dashboard view - show restoration toast with button
+              const viewNames: Record<ActiveView, string> = {
+                dashboard: 'Dashboard',
+                analytics: 'Analytics',
+                addExpense: 'Add Expense',
+                editExpenses: 'Edit Expenses',
+                managePeople: 'Manage People',
+                manageCategories: 'Manage Categories',
+                manageSettlements: 'Manage Settlements',
+                testErrorBoundary: 'Test Error Boundary'
+              };
+              
+              const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
+              
+              toast({ 
+                title: "Welcome back!", 
+                description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+                action: (
+                  <ToastAction 
+                    altText="Go to Dashboard" 
+                    onClick={() => setActiveView('dashboard')}
+                  >
+                    Dashboard
+                  </ToastAction>
+                )
+              });
+            } else {
+              // Returning to dashboard - show simple welcome back
+              toast({ 
+                title: "Welcome back!", 
+                description: "You've successfully signed in to SettleEase."
+              });
+            }
+            
+            // Update toast timestamp
+            await db
+              .from('user_profiles')
+              .update({ last_welcome_toast_at: now.toISOString() })
+              .eq('user_id', currentUser.id);
           }
         }
       } catch (err) {
-        console.error('Error loading last active view:', err);
+        console.error('Error in centralized toast logic:', err);
       }
       
       setHasLoadedInitialView(true);
     };
     
-    loadInitialView();
-  }, [currentUser, db, searchParams, hasLoadedInitialView]);
+    loadInitialViewAndShowToast();
+  }, [currentUser, db, searchParams, hasLoadedInitialView, setActiveView]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {

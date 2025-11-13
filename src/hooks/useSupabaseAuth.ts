@@ -138,49 +138,18 @@ export function useSupabaseAuth() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
           
-          // Handle sign-in success toast for all users (before updating state)
+          // Track sign-in event in database (NO toasts here - page.tsx handles all toasts)
           const prevLocalUser = currentUser;
           if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
-            // Check if we've shown a welcome toast recently (from database)
             try {
-              const { data: profileData } = await db
+              // Update last_sign_in_at timestamp
+              // This triggers the toast logic in page.tsx
+              await db
                 .from('user_profiles')
-                .select('last_welcome_toast_at, has_seen_welcome_toast')
-                .eq('user_id', newAuthUser.id)
-                .single();
-              
-              const lastToastAt = profileData?.last_welcome_toast_at ? new Date(profileData.last_welcome_toast_at) : null;
-              const now = new Date();
-              const timeSinceLastToast = lastToastAt ? now.getTime() - lastToastAt.getTime() : Infinity;
-              const hasShownToastRecently = timeSinceLastToast < 30000; // 30 seconds
-              
-              // Check if this is a new user (never seen welcome toast before)
-              const isNewUser = !profileData?.has_seen_welcome_toast;
-              
-              if (!hasShownToastRecently && isNewUser) {
-                // Show welcome toast for new users (both email and Google OAuth)
-                // Get user's name for personalization
-                const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
-                const firstName = fullName ? fullName.split(' ')[0] : '';
-                const userName = firstName || newAuthUser.email?.split('@')[0] || 'there';
-                
-                toast({
-                  title: "Welcome to SettleEase!",
-                  description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-                  variant: "default"
-                });
-                
-                // Update the database to mark that we've shown the welcome toast
-                await db
-                  .from('user_profiles')
-                  .update({ 
-                    last_welcome_toast_at: now.toISOString(),
-                    has_seen_welcome_toast: true
-                  })
-                  .eq('user_id', newAuthUser.id);
-              }
+                .update({ last_sign_in_at: new Date().toISOString() })
+                .eq('user_id', newAuthUser.id);
             } catch (err) {
-              console.error('Error checking/updating welcome toast status:', err);
+              console.error('Error updating last_sign_in_at:', err);
             }
           }
           

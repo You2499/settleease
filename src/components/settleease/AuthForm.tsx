@@ -612,29 +612,21 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         }
 
         // Handle successful signup with immediate session
-        if (data.session) {
-          toast({
-            title: "Welcome to SettleEase!",
-            description: "Your account has been created and you're now signed in.",
-            variant: "default"
-          });
-          
-          // Update the database to mark that we've shown the welcome toast
+        if (data.session && data.user) {
+          // NO toast here - page.tsx handles all welcome toasts centrally
+          // Just update the sign-in timestamp
           try {
             await db
               .from('user_profiles')
-              .update({ 
-                last_welcome_toast_at: new Date().toISOString(),
-                has_seen_welcome_toast: true
-              })
+              .update({ last_sign_in_at: new Date().toISOString() })
               .eq('user_id', data.user.id);
           } catch (err) {
-            console.error('Error updating welcome toast status:', err);
+            console.error('Error updating last_sign_in_at:', err);
           }
           
           setHasAuthError(false);
           setAuthErrorType('');
-          if (data.user && onAuthSuccess) onAuthSuccess(data.user);
+          if (onAuthSuccess) onAuthSuccess(data.user);
         } else {
           // This case should be handled above, but keeping as fallback
           toast({
