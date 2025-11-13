@@ -426,9 +426,15 @@ function SettleEasePageContent() {
   }
 
   // Show transparent loading screen during:
-  // 1. OAuth callback (prevents skeleton flash)
+  // 1. OAuth callback - show until data is loaded (prevents skeleton flash)
   // 2. Initial auth check when no session detected (prevents auth form flash)
-  if (isLoadingAuth && !currentUser && (isOAuthCallback || !hasSession)) {
+  if (isLoadingAuth && !currentUser && !hasSession) {
+    return <div className="fixed inset-0 bg-background" />;
+  }
+  
+  // Show transparent loading screen during OAuth callback until initial view is loaded
+  // This prevents showing wrong skeleton (dashboard) before correct view is determined
+  if (isOAuthCallback && !hasLoadedInitialView) {
     return <div className="fixed inset-0 bg-background" />;
   }
 
