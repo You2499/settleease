@@ -34,6 +34,15 @@ export default function PayerInputSection({
   removePayer,
   expenseToEdit,
 }: PayerInputSectionProps) {
+  // Get available people for each payer dropdown (excluding already selected payers)
+  const getAvailablePeople = (currentIndex: number) => {
+    const selectedIds = payers
+      .map((p, idx) => idx !== currentIndex ? p.personId : null)
+      .filter(id => id && id !== '');
+    
+    return people.filter(person => !selectedIds.includes(person.id));
+  };
+  
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -45,26 +54,31 @@ export default function PayerInputSection({
       </div>
       {isMultiplePayers ? (
         <div className="space-y-2.5">
-          {payers.map((payer, index) => (
-            <Card key={payer.id} className="p-3 bg-card/50 shadow-sm">
-              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
-                <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)} disabled={people.length === 0}>
-                  <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select payer" /></SelectTrigger>
-                  <SelectContent>{people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                </Select>
-                <Input type="number" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-full sm:w-28 h-10" />
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removePayer(index)} 
-                  className="text-destructive h-8 w-8 self-end sm:self-center"
-                  disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </Card>
-          ))}
+          {payers.map((payer, index) => {
+            const availablePeople = getAvailablePeople(index);
+            return (
+              <Card key={payer.id} className="p-3 bg-card/50 shadow-sm">
+                <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto_auto] gap-2 items-center">
+                  <Select value={payer.personId} onValueChange={val => handlePayerChange(index, 'personId', val)} disabled={people.length === 0}>
+                    <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Select payer" /></SelectTrigger>
+                    <SelectContent>
+                      {availablePeople.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Input type="number" inputMode="decimal" pattern="[0-9]*\.?[0-9]*" value={payer.amount} onChange={e => handlePayerChange(index, 'amount', e.target.value)} placeholder="Amount" className="w-full sm:w-28 h-10" />
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removePayer(index)} 
+                    className="text-destructive h-8 w-8 self-end sm:self-center"
+                    disabled={payers.length <= 1 && (!expenseToEdit || (expenseToEdit && payers.length === 1 && payers[0].personId === expenseToEdit.paid_by[0]?.personId))}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </Card>
+            );
+          })}
           <Button variant="outline" size="sm" onClick={addPayer} className="text-xs" disabled={people.length === 0}><PlusCircle className="mr-1 h-4 w-4" /> Add Another Payer</Button>
         </div>
       ) : (

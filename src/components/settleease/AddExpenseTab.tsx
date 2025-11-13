@@ -320,26 +320,35 @@ export default function AddExpenseTab({
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
     newPayers[index] = { ...newPayers[index], [field]: value };
-    
-    // Smart auto-calculation: if amount field changed and multiple payers exist
-    // Only auto-adjust if we're NOT editing the last payer
-    if (field === 'amount' && isMultiplePayers && newPayers.length > 1 && index !== newPayers.length - 1) {
-      const total = parseFloat(totalAmount) || 0;
-      
-      // Calculate sum of all entered amounts except the last payer
-      let sumOfOthers = 0;
-      for (let i = 0; i < newPayers.length - 1; i++) {
-        const amt = parseFloat(newPayers[i].amount) || 0;
-        sumOfOthers += amt;
-      }
-      
-      // Auto-calculate the last payer's amount
-      const remainder = Math.max(0, total - sumOfOthers);
-      newPayers[newPayers.length - 1].amount = remainder.toFixed(2);
-    }
-    
     setPayers(newPayers);
   };
+  
+  // Separate effect to handle auto-calculation without blocking input
+  useEffect(() => {
+    if (!isMultiplePayers || payers.length <= 1) return;
+    
+    const total = parseFloat(totalAmount) || 0;
+    
+    // Calculate sum of all entered amounts except the last payer
+    let sumOfOthers = 0;
+    for (let i = 0; i < payers.length - 1; i++) {
+      const amt = parseFloat(payers[i].amount) || 0;
+      sumOfOthers += amt;
+    }
+    
+    // Auto-calculate the last payer's amount
+    const remainder = Math.max(0, total - sumOfOthers);
+    const expectedLastAmount = remainder.toFixed(2);
+    
+    // Only update if different to avoid infinite loop
+    if (payers[payers.length - 1].amount !== expectedLastAmount) {
+      setPayers(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { ...updated[updated.length - 1], amount: expectedLastAmount };
+        return updated;
+      });
+    }
+  }, [isMultiplePayers, totalAmount, ...payers.slice(0, -1).map(p => p.amount)]);
 
   const addPayer = () => {
     const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
