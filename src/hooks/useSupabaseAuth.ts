@@ -173,16 +173,12 @@ export function useSupabaseAuth() {
                       const timeDiff = now.getTime() - createdAt.getTime();
                       const isNewUser = timeDiff < 60000; // Less than 1 minute ago = new user
                       
+                      // Only show welcome toast for new users
+                      // Returning users will see the "Welcome back!" toast with restored view info in page.tsx
                       if (isNewUser) {
                         toast({
                           title: "Welcome to SettleEase!",
                           description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-                          variant: "default"
-                        });
-                      } else {
-                        toast({
-                          title: "Welcome Back!",
-                          description: `Hi ${userName}! You've successfully signed in to SettleEase.`,
                           variant: "default"
                         });
                       }
