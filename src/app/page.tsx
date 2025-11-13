@@ -232,6 +232,14 @@ function SettleEasePageContent() {
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
         
+        console.log('🎯 Toast check:', {
+          shouldShowToast,
+          isNewUser,
+          isReturningUser,
+          flagValue: data?.should_show_welcome_toast,
+          hasSeenValue: data?.has_seen_welcome_toast
+        });
+        
         // Restore last active view
         if (data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
