@@ -255,15 +255,59 @@ function SettleEasePageContent() {
           const firstName = fullName ? fullName.split(' ')[0] : '';
           const userName = firstName || currentUser.email?.split('@')[0] || 'there';
           
+          // Use setTimeout to ensure toast is queued after component is fully mounted
+          setTimeout(() => {
+            if (isNewUser) {
+              // NEW USER - Show welcome toast
+              toast({
+                title: "Welcome to SettleEase!",
+                description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+                variant: "default",
+                duration: 5000
+              });
+            } else if (isReturningUser) {
+              // RETURNING USER
+              if (data?.last_active_view && data.last_active_view !== 'dashboard') {
+                // Returning to non-dashboard view - show restoration toast with button
+                const viewNames: Record<ActiveView, string> = {
+                  dashboard: 'Dashboard',
+                  analytics: 'Analytics',
+                  addExpense: 'Add Expense',
+                  editExpenses: 'Edit Expenses',
+                  managePeople: 'Manage People',
+                  manageCategories: 'Manage Categories',
+                  manageSettlements: 'Manage Settlements',
+                  testErrorBoundary: 'Test Error Boundary'
+                };
+                
+                const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
+                
+                toast({ 
+                  title: "Welcome back!", 
+                  description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+                  duration: 5000,
+                  action: (
+                    <ToastAction 
+                      altText="Go to Dashboard" 
+                      onClick={() => setActiveView('dashboard')}
+                    >
+                      Dashboard
+                    </ToastAction>
+                  )
+                });
+              } else {
+                // Returning to dashboard - show simple welcome back
+                toast({ 
+                  title: "Welcome back!", 
+                  description: "You've successfully signed in to SettleEase.",
+                  duration: 5000
+                });
+              }
+            }
+          }, 0);
+          
+          // Update database flags
           if (isNewUser) {
-            // NEW USER - Show welcome toast
-            toast({
-              title: "Welcome to SettleEase!",
-              description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-              variant: "default"
-            });
-            
-            // Mark as seen
             await db
               .from('user_profiles')
               .update({ 
@@ -271,53 +315,12 @@ function SettleEasePageContent() {
                 has_seen_welcome_toast: true
               })
               .eq('user_id', currentUser.id);
-              
           } else if (isReturningUser) {
-            // RETURNING USER
-            if (data?.last_active_view && data.last_active_view !== 'dashboard') {
-              // Returning to non-dashboard view - show restoration toast with button
-              const viewNames: Record<ActiveView, string> = {
-                dashboard: 'Dashboard',
-                analytics: 'Analytics',
-                addExpense: 'Add Expense',
-                editExpenses: 'Edit Expenses',
-                managePeople: 'Manage People',
-                manageCategories: 'Manage Categories',
-                manageSettlements: 'Manage Settlements',
-                testErrorBoundary: 'Test Error Boundary'
-              };
-              
-              const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
-              
-              toast({ 
-                title: "Welcome back!", 
-                description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
-                action: (
-                  <ToastAction 
-                    altText="Go to Dashboard" 
-                    onClick={() => setActiveView('dashboard')}
-                  >
-                    Dashboard
-                  </ToastAction>
-                )
-              });
-            } else {
-              // Returning to dashboard - show simple welcome back
-              toast({ 
-                title: "Welcome back!", 
-                description: "You've successfully signed in to SettleEase."
-              });
-            }
-            
-            // Update toast timestamp
             await db
               .from('user_profiles')
               .update({ last_welcome_toast_at: now.toISOString() })
               .eq('user_id', currentUser.id);
           }
-          
-          // Wait a bit for toast to mount before marking as loaded
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (err) {
         console.error('Error in centralized toast logic:', err);
