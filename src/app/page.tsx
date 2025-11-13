@@ -198,10 +198,16 @@ function SettleEasePageContent() {
     setShowNameModal(true);
   }, []);
 
+  // Reset hasLoadedInitialView when user changes (to allow toast to show on sign-in)
+  useEffect(() => {
+    if (currentUser) {
+      setHasLoadedInitialView(false);
+    }
+  }, [currentUser?.id]);
 
   // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts
   useEffect(() => {
-    if (hasLoadedInitialView || !currentUser || !db) return;
+    if (hasLoadedInitialView || !currentUser || !db || !userRole) return;
     
     const loadInitialViewAndShowToast = async () => {
       // First check URL params
@@ -232,20 +238,13 @@ function SettleEasePageContent() {
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
         
-        console.log('🎯 Toast check:', {
-          shouldShowToast,
-          isNewUser,
-          isReturningUser,
-          flagValue: data?.should_show_welcome_toast,
-          hasSeenValue: data?.has_seen_welcome_toast
-        });
-        
-        // Restore last active view
+        // Restore last active view (will be validated by role sync effect later)
         if (data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
         }
         
         // Show toast if flag is set (no time-based logic!)
+        // Add a delay to ensure any role-based redirects happen first
         if (shouldShowToast) {
           // Get user's name for personalization - prioritize database first_name, then metadata, then email
           const dbFirstName = data?.first_name || '';
@@ -255,7 +254,7 @@ function SettleEasePageContent() {
           
           const userName = dbFirstName || metadataFirstName || emailUsername;
           
-          // Use setTimeout to ensure toast is queued after component is fully mounted
+          // Use setTimeout to ensure toast is queued after component is fully mounted and role checks complete
           setTimeout(() => {
             if (isNewUser) {
               // NEW USER - Show welcome toast
@@ -325,7 +324,7 @@ function SettleEasePageContent() {
     };
     
     loadInitialViewAndShowToast();
-  }, [currentUser, db, searchParams, hasLoadedInitialView, setActiveView]);
+  }, [currentUser, db, searchParams, hasLoadedInitialView, userRole, setActiveView]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
