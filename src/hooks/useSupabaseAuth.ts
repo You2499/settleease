@@ -140,16 +140,18 @@ export function useSupabaseAuth() {
           
           // Track sign-in event in database (NO toasts here - page.tsx handles all toasts)
           const prevLocalUser = currentUser;
-          if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
+          if (newAuthUser && !prevLocalUser && (_event === "SIGNED_IN" || _event === "TOKEN_REFRESHED" || _event === "INITIAL_SESSION")) {
             try {
-              // Update last_sign_in_at timestamp
-              // This triggers the toast logic in page.tsx
+              // Set flag to show welcome toast - page.tsx will check this flag
               await db
                 .from('user_profiles')
-                .update({ last_sign_in_at: new Date().toISOString() })
+                .update({ 
+                  last_sign_in_at: new Date().toISOString(),
+                  should_show_welcome_toast: true
+                })
                 .eq('user_id', newAuthUser.id);
             } catch (err) {
-              console.error('Error updating last_sign_in_at:', err);
+              console.error('Error updating sign-in flags:', err);
             }
           }
           

@@ -217,7 +217,7 @@ function SettleEasePageContent() {
       try {
         const { data, error } = await db
           .from('user_profiles')
-          .select('last_active_view, last_welcome_toast_at, has_seen_welcome_toast, last_sign_in_at, first_name, last_name')
+          .select('last_active_view, has_seen_welcome_toast, should_show_welcome_toast, first_name, last_name')
           .eq('user_id', currentUser.id)
           .single();
         
@@ -227,40 +227,18 @@ function SettleEasePageContent() {
           return;
         }
         
-        const now = new Date();
-        
-        // Check if user just signed in (within last 5 seconds)
-        const lastSignInAt = data?.last_sign_in_at ? new Date(data.last_sign_in_at) : null;
-        const timeSinceSignIn = lastSignInAt ? now.getTime() - lastSignInAt.getTime() : Infinity;
-        const justSignedIn = timeSinceSignIn < 5000; // 5 seconds
-        
-        // Check if we've shown a toast recently (within last 30 seconds)
-        const lastToastAt = data?.last_welcome_toast_at ? new Date(data.last_welcome_toast_at) : null;
-        const timeSinceLastToast = lastToastAt ? now.getTime() - lastToastAt.getTime() : Infinity;
-        const hasShownToastRecently = timeSinceLastToast < 30000; // 30 seconds
-        
-        // Determine user type
+        // Simple flag-based logic - no time windows!
+        const shouldShowToast = data?.should_show_welcome_toast === true;
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
-        
-        console.log('🔍 Toast decision:', {
-          justSignedIn,
-          hasShownToastRecently,
-          isNewUser,
-          isReturningUser,
-          timeSinceSignIn,
-          timeSinceLastToast,
-          lastSignInAt: lastSignInAt?.toISOString(),
-          lastToastAt: lastToastAt?.toISOString()
-        });
         
         // Restore last active view
         if (data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
         }
         
-        // Show appropriate toast if user just signed in and no recent toast
-        if (justSignedIn && !hasShownToastRecently) {
+        // Show toast if flag is set (no time-based logic!)
+        if (shouldShowToast) {
           // Get user's name for personalization - prioritize database first_name, then metadata, then email
           const dbFirstName = data?.first_name || '';
           const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
@@ -320,21 +298,16 @@ function SettleEasePageContent() {
             }
           }, 0);
           
-          // Update database flags
+          // Clear the flag and update has_seen_welcome_toast for new users
+          const updates: any = { should_show_welcome_toast: false };
           if (isNewUser) {
-            await db
-              .from('user_profiles')
-              .update({ 
-                last_welcome_toast_at: now.toISOString(),
-                has_seen_welcome_toast: true
-              })
-              .eq('user_id', currentUser.id);
-          } else if (isReturningUser) {
-            await db
-              .from('user_profiles')
-              .update({ last_welcome_toast_at: now.toISOString() })
-              .eq('user_id', currentUser.id);
+            updates.has_seen_welcome_toast = true;
           }
+          
+          await db
+            .from('user_profiles')
+            .update(updates)
+            .eq('user_id', currentUser.id);
         }
       } catch (err) {
         console.error('Error in centralized toast logic:', err);

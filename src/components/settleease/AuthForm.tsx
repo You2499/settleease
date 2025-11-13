@@ -614,14 +614,17 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         // Handle successful signup with immediate session
         if (data.session && data.user) {
           // NO toast here - page.tsx handles all welcome toasts centrally
-          // Just update the sign-in timestamp
+          // Set flag to show welcome toast
           try {
             await db
               .from('user_profiles')
-              .update({ last_sign_in_at: new Date().toISOString() })
+              .update({ 
+                last_sign_in_at: new Date().toISOString(),
+                should_show_welcome_toast: true
+              })
               .eq('user_id', data.user.id);
           } catch (err) {
-            console.error('Error updating last_sign_in_at:', err);
+            console.error('Error updating sign-in flags:', err);
           }
           
           setHasAuthError(false);
