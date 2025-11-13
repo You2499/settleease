@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Settings2, AlertTriangle, HandCoins, BarChartBig, Activity } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,9 +37,12 @@ import * as LucideIcons from 'lucide-react';
 
 
 export default function SettleEasePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
+  const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -195,6 +199,58 @@ export default function SettleEasePage() {
   }, []);
 
 
+  // Effect to load initial view from URL or database
+  useEffect(() => {
+    if (hasLoadedInitialView || !currentUser || !db) return;
+    
+    const loadInitialView = async () => {
+      // First check URL params
+      const viewParam = searchParams.get('view') as ActiveView | null;
+      
+      if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'].includes(viewParam)) {
+        setActiveView(viewParam);
+        setHasLoadedInitialView(true);
+        return;
+      }
+      
+      // If no URL param, load from database
+      try {
+        const { data, error } = await db
+          .from('user_profiles')
+          .select('last_active_view')
+          .eq('user_id', currentUser.id)
+          .single();
+        
+        if (!error && data?.last_active_view && data.last_active_view !== 'dashboard') {
+          setActiveView(data.last_active_view as ActiveView);
+          
+          // Show toast to inform user they were restored to their last view
+          const viewNames: Record<ActiveView, string> = {
+            dashboard: 'Dashboard',
+            analytics: 'Analytics',
+            addExpense: 'Add Expense',
+            editExpenses: 'Edit Expenses',
+            managePeople: 'Manage People',
+            manageCategories: 'Manage Categories',
+            manageSettlements: 'Manage Settlements',
+            testErrorBoundary: 'Test Error Boundary'
+          };
+          
+          toast({ 
+            title: "Welcome back!", 
+            description: `Restored to ${viewNames[data.last_active_view as ActiveView] || 'your last view'}`
+          });
+        }
+      } catch (err) {
+        console.error('Error loading last active view:', err);
+      }
+      
+      setHasLoadedInitialView(true);
+    };
+    
+    loadInitialView();
+  }, [currentUser, db, searchParams, hasLoadedInitialView]);
+
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
@@ -207,6 +263,30 @@ export default function SettleEasePage() {
       return;
     }
   }, [userRole, activeView]);
+  
+  // Effect to persist activeView to URL and database
+  useEffect(() => {
+    if (!hasLoadedInitialView || !currentUser || !db) return;
+    
+    // Update URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('view', activeView);
+    router.replace(`?${params.toString()}`, { scroll: false });
+    
+    // Save to database (debounced)
+    const timeoutId = setTimeout(async () => {
+      try {
+        await db
+          .from('user_profiles')
+          .update({ last_active_view: activeView })
+          .eq('user_id', currentUser.id);
+      } catch (err) {
+        console.error('Error saving last active view:', err);
+      }
+    }, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [activeView, currentUser, db, hasLoadedInitialView, router, searchParams]);
 
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
