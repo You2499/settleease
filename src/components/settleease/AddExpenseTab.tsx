@@ -351,7 +351,11 @@ export default function AddExpenseTab({
   }, [isMultiplePayers, totalAmount, ...payers.slice(0, -1).map(p => p.amount)]);
 
   const addPayer = () => {
-    const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
+    // Find first available person who isn't already selected
+    const selectedIds = payers.map(p => p.personId).filter(id => id && id !== '');
+    const availablePerson = people.find(p => !selectedIds.includes(p.id));
+    const newPayerPersonId = availablePerson ? availablePerson.id : (defaultPayerId || (people.length > 0 ? people[0].id : ''));
+    
     const total = parseFloat(totalAmount) || 0;
     
     // Auto-distribute amounts equally when adding a new payer
@@ -366,11 +370,11 @@ export default function AddExpenseTab({
       
       setPayers([...redistributedPayers, { 
         id: Date.now().toString(), 
-        personId: firstPayerPersonId, 
+        personId: newPayerPersonId, 
         amount: equalAmount 
       }]);
     } else {
-      setPayers([...payers, { id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
+      setPayers([...payers, { id: Date.now().toString(), personId: newPayerPersonId, amount: '' }]);
     }
   };
 
