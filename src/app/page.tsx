@@ -6,6 +6,7 @@ import { Settings2, AlertTriangle, HandCoins, BarChartBig, Activity } from 'luci
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import {
   SidebarProvider,
   SidebarInset,
@@ -235,9 +236,19 @@ function SettleEasePageContent() {
             testErrorBoundary: 'Test Error Boundary'
           };
           
+          const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
+          
           toast({ 
             title: "Welcome back!", 
-            description: `Restored to ${viewNames[data.last_active_view as ActiveView] || 'your last view'}`
+            description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+            action: (
+              <ToastAction 
+                altText="Go to Dashboard" 
+                onClick={() => setActiveView('dashboard')}
+              >
+                Dashboard
+              </ToastAction>
+            )
           });
         }
       } catch (err) {
