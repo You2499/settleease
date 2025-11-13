@@ -217,7 +217,7 @@ function SettleEasePageContent() {
       try {
         const { data, error } = await db
           .from('user_profiles')
-          .select('last_active_view, last_welcome_toast_at, has_seen_welcome_toast, last_sign_in_at')
+          .select('last_active_view, last_welcome_toast_at, has_seen_welcome_toast, last_sign_in_at, first_name, last_name')
           .eq('user_id', currentUser.id)
           .single();
         
@@ -261,10 +261,13 @@ function SettleEasePageContent() {
         
         // Show appropriate toast if user just signed in and no recent toast
         if (justSignedIn && !hasShownToastRecently) {
-          // Get user's name for personalization
-          const fullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-          const firstName = fullName ? fullName.split(' ')[0] : '';
-          const userName = firstName || currentUser.email?.split('@')[0] || 'there';
+          // Get user's name for personalization - prioritize database first_name, then metadata, then email
+          const dbFirstName = data?.first_name || '';
+          const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+          const metadataFirstName = metadataFullName ? metadataFullName.split(' ')[0] : '';
+          const emailUsername = currentUser.email?.split('@')[0] || 'there';
+          
+          const userName = dbFirstName || metadataFirstName || emailUsername;
           
           // Use setTimeout to ensure toast is queued after component is fully mounted
           setTimeout(() => {
