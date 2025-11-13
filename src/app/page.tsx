@@ -220,8 +220,8 @@ function SettleEasePageContent() {
     if (hasLoadedInitialView || !currentUser || !db || !userRole) return;
     
     const loadInitialViewAndShowToast = async () => {
-      // Note: activeView is already initialized from URL params in useState
-      // So we don't need to check URL params here anymore
+      // Check if URL has a view param - if so, don't restore from database
+      const hasUrlView = searchParams.get('view') !== null;
       
       // Fetch all needed data from database
       try {
@@ -242,8 +242,9 @@ function SettleEasePageContent() {
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
         
-        // Restore last active view (will be validated by role sync effect later)
-        if (data?.last_active_view && data.last_active_view !== 'dashboard') {
+        // Restore last active view from database ONLY if no URL param exists
+        // (URL takes precedence over database)
+        if (!hasUrlView && data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
         }
         
@@ -257,6 +258,17 @@ function SettleEasePageContent() {
           const emailUsername = currentUser.email?.split('@')[0] || 'there';
           
           const userName = dbFirstName || metadataFirstName || emailUsername;
+          
+          // Clear the flag IMMEDIATELY to prevent duplicate toasts on refresh
+          const updates: any = { should_show_welcome_toast: false };
+          if (isNewUser) {
+            updates.has_seen_welcome_toast = true;
+          }
+          
+          await db
+            .from('user_profiles')
+            .update(updates)
+            .eq('user_id', currentUser.id);
           
           // Use setTimeout to ensure toast is queued after component is fully mounted and role checks complete
           setTimeout(() => {
@@ -308,17 +320,6 @@ function SettleEasePageContent() {
               }
             }
           }, 0);
-          
-          // Clear the flag and update has_seen_welcome_toast for new users
-          const updates: any = { should_show_welcome_toast: false };
-          if (isNewUser) {
-            updates.has_seen_welcome_toast = true;
-          }
-          
-          await db
-            .from('user_profiles')
-            .update(updates)
-            .eq('user_id', currentUser.id);
         }
       } catch (err) {
         console.error('Error in centralized toast logic:', err);
