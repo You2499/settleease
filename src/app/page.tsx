@@ -227,8 +227,9 @@ function SettleEasePageContent() {
   }, [currentUser?.id]);
 
   // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts
+  // Split into two parts: view loading (fast) and toast showing (waits for role)
   useEffect(() => {
-    if (hasLoadedInitialView || !currentUser || !db || !userRole) return;
+    if (hasLoadedInitialView || !currentUser || !db) return;
     
     const loadInitialViewAndShowToast = async () => {
       // Check if URL has a view param - if so, don't restore from database
@@ -259,9 +260,9 @@ function SettleEasePageContent() {
           setActiveView(data.last_active_view as ActiveView);
         }
         
-        // Show toast if flag is set (no time-based logic!)
-        // Add a delay to ensure any role-based redirects happen first
-        if (shouldShowToast) {
+        // Show toast if flag is set AND role is loaded (no time-based logic!)
+        // Wait for role to ensure any role-based redirects happen first
+        if (shouldShowToast && userRole) {
           // Get user's name for personalization - prioritize database first_name, then metadata, then email
           const dbFirstName = data?.first_name || '';
           const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
@@ -436,11 +437,8 @@ function SettleEasePageContent() {
   // Show transparent loading screen during OAuth callback until initial view is loaded
   // This prevents showing wrong skeleton (dashboard) before correct view is determined
   if (isOAuthCallback && !hasLoadedInitialView) {
-    console.log('🔄 Showing transparent screen - OAuth callback in progress');
     return <div className="fixed inset-0 bg-background" />;
   }
-  
-  console.log('🎯 Rendering app - isOAuthCallback:', isOAuthCallback, 'hasLoadedInitialView:', hasLoadedInitialView, 'activeView:', activeView);
 
   // Show auth form when auth is complete and there's no user
   if (!currentUser && !isLoadingAuth) {
