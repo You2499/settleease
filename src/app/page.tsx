@@ -109,12 +109,13 @@ function SettleEasePageContent() {
   useEffect(() => {
     if (!isLoadingAuth) {
       setHasSession(!!currentUser);
-      // Clear OAuth callback state once auth is complete
-      if (currentUser) {
+      // Clear OAuth callback state ONLY after initial view is loaded
+      // This prevents showing dashboard skeleton during OAuth
+      if (currentUser && hasLoadedInitialView) {
         setIsOAuthCallback(false);
       }
     }
-  }, [currentUser, isLoadingAuth]);
+  }, [currentUser, isLoadingAuth, hasLoadedInitialView]);
 
   // Use user profile hook
   const {
