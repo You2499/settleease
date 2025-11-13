@@ -35,7 +35,7 @@ export default function EqualSplitSection({ people, selectedPeopleEqual, handleE
   
   return (
     <Card className="p-5 bg-card/50 shadow-sm mt-3 flex flex-col">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 space-y-3">
         <Label className="text-sm font-semibold flex items-center gap-2">
           <Users className="h-4 w-4 text-primary" />
           Select who shared this expense
@@ -73,10 +73,10 @@ export default function EqualSplitSection({ people, selectedPeopleEqual, handleE
             return (
               <div 
                 key={person.id} 
-                className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all cursor-pointer hover:shadow-md ${
+                className={`flex items-center space-x-3 p-3 rounded-lg border-2 transition-all cursor-pointer ${
                   isSelected 
                     ? 'bg-primary/5 border-primary/30' 
-                    : 'bg-background border-border hover:border-primary/20'
+                    : 'bg-background border-border'
                 }`}
                 onClick={() => handleEqualSplitChange(person.id)}
               >

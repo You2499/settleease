@@ -5,6 +5,7 @@ import {
   Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3
 } from 'lucide-react';
 import { useTheme } from "next-themes";
+import packageJson from '../../../package.json';
 
 import { Button } from "@/components/ui/button";
 import {
@@ -247,7 +248,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           )}
           <div className="text-center border-t pt-2">
             <p className="text-xs text-muted-foreground">Made by Gagan Gupta</p>
-            <p className="text-xs text-muted-foreground/70">v3.0.0</p>
+            <p className="text-xs text-muted-foreground/70">v{packageJson.version}</p>
           </div>
         </div>
       </SidebarFooter>

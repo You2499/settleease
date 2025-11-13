@@ -7,7 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from '@/components/ui/label';
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { PlusCircle, X, Settings2, ShoppingCart, UserCheck, UserX } from 'lucide-react';
+import { PlusCircle, Trash2, Settings2, ShoppingCart, UserCheck, UserX } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import * as LucideIcons from 'lucide-react';
 import type { Person, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
@@ -54,7 +54,7 @@ export default function ItemwiseSplitSection({
   
   return (
     <Card className="p-5 bg-card/50 shadow-sm mt-3">
-      <div className="flex items-center justify-between mb-5">
+      <div className="mb-5 space-y-2">
         <Label className="text-sm font-semibold flex items-center gap-2">
           <ShoppingCart className="h-4 w-4 text-primary" />
           Add items and select who shared each
@@ -73,9 +73,9 @@ export default function ItemwiseSplitSection({
           const itemPrice = parseFloat(item.price as string) || 0;
           
           return (
-            <Card key={item.id} className="p-4 bg-background border-2 border-border hover:border-primary/20 transition-all">
+            <Card key={item.id} className="p-4 bg-background border-2 border-border transition-all">
               {/* Item Header */}
-              <div className="flex items-start gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4">
                 <div className="flex-1 space-y-3">
                   <div className="flex gap-3">
                     <Input 
@@ -123,17 +123,17 @@ export default function ItemwiseSplitSection({
                   variant="ghost" 
                   size="icon" 
                   onClick={() => removeItem(itemIndex)} 
-                  className="text-destructive hover:bg-destructive/10 h-10 w-10 shrink-0"
+                  className="text-destructive h-10 w-10 shrink-0 self-center"
                   disabled={items.length <= 1}
                   aria-label={`Remove item ${itemIndex + 1}`}
                 >
-                  <X className="h-5 w-5" />
+                  <Trash2 className="h-5 w-5" />
                 </Button>
               </div>
               
               {/* Shared By Section */}
               <div className="pt-3 border-t">
-                <div className="flex items-center justify-between mb-3">
+                <div className="mb-3 space-y-2">
                   <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                     Shared by
                   </Label>
@@ -173,7 +173,7 @@ export default function ItemwiseSplitSection({
                           className={`flex items-center space-x-2 p-2 rounded-md border transition-all cursor-pointer ${
                             isSharing 
                               ? 'bg-primary/5 border-primary/30' 
-                              : 'bg-card/50 border-border hover:border-primary/20'
+                              : 'bg-card/50 border-border'
                           }`}
                           onClick={() => handleItemSharedByChange(itemIndex, person.id)}
                         >

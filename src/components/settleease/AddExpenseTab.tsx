@@ -322,7 +322,8 @@ export default function AddExpenseTab({
     newPayers[index] = { ...newPayers[index], [field]: value };
     
     // Smart auto-calculation: if amount field changed and multiple payers exist
-    if (field === 'amount' && isMultiplePayers && newPayers.length > 1) {
+    // Only auto-adjust if we're NOT editing the last payer
+    if (field === 'amount' && isMultiplePayers && newPayers.length > 1 && index !== newPayers.length - 1) {
       const total = parseFloat(totalAmount) || 0;
       
       // Calculate sum of all entered amounts except the last payer

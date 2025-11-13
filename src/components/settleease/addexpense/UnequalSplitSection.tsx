@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card } from "@/components/ui/card";
-import { Wallet, AlertCircle } from 'lucide-react';
+import { Wallet, AlertCircle, Sparkles, Eraser } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Person } from '@/lib/settleease/types';
 
@@ -50,12 +50,12 @@ export default function UnequalSplitSection({ people, unequalShares, handleUnequ
   
   return (
     <Card className="p-5 bg-card/50 shadow-sm mt-3">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4 space-y-3">
         <Label className="text-sm font-semibold flex items-center gap-2">
           <Wallet className="h-4 w-4 text-primary" />
           Enter custom amounts for each person
         </Label>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {remaining > 0.01 && (
             <Button
               type="button"
@@ -64,6 +64,7 @@ export default function UnequalSplitSection({ people, unequalShares, handleUnequ
               onClick={handleDistributeRemaining}
               className="text-xs h-8"
             >
+              <Sparkles className="h-3 w-3 mr-1" />
               Distribute Remaining
             </Button>
           )}
@@ -74,6 +75,7 @@ export default function UnequalSplitSection({ people, unequalShares, handleUnequ
             onClick={handleClearAll}
             className="text-xs h-8"
           >
+            <Eraser className="h-3 w-3 mr-1" />
             Clear All
           </Button>
         </div>

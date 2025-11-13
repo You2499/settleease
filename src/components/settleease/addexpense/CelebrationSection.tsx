@@ -36,11 +36,11 @@ const CelebrationPayerSelectComponent = ({ celebrationPayerId, setCelebrationPay
   
   return (
     <div>
-      <Label htmlFor="celebrationPayer" className="text-sm">
+      <Label htmlFor="celebrationPayer" className="text-sm font-medium mb-2 block">
         Who is treating?
       </Label>
       <Select value={celebrationPayerId} onValueChange={setCelebrationPayerId}>
-        <SelectTrigger id="celebrationPayer" className="mt-1 text-sm h-9">
+        <SelectTrigger id="celebrationPayer" className="text-sm h-10">
           <SelectValue placeholder="Select person" />
         </SelectTrigger>
         <SelectContent>
@@ -73,28 +73,28 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
   
   return (
     <div>
-      <Label htmlFor="celebrationAmount" className="text-sm">
+      <Label htmlFor="celebrationAmount" className="text-sm font-medium mb-2 block">
         Contribution Amount
       </Label>
-      <div className="flex gap-2 mt-1 mb-2">
+      <div className="flex gap-2 mb-3">
         <button
           type="button"
           onClick={() => handlePercentageClick(25)}
-          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex-1 px-3 py-2 text-sm border border-border rounded bg-background transition-colors"
         >
           25%
         </button>
         <button
           type="button"
           onClick={() => handlePercentageClick(50)}
-          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex-1 px-3 py-2 text-sm border border-border rounded bg-background transition-colors"
         >
           50%
         </button>
         <button
           type="button"
           onClick={() => setCelebrationAmountInput('')}
-          className="flex-1 px-2 py-1.5 text-xs sm:text-sm border border-border rounded hover:bg-accent hover:text-accent-foreground transition-colors"
+          className="flex-1 px-3 py-2 text-sm border border-border rounded bg-background transition-colors"
         >
           Other
         </button>
@@ -107,7 +107,7 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
         value={celebrationAmountInput}
         onChange={(e) => setCelebrationAmountInput(e.target.value)}
         placeholder="e.g., 20.00"
-        className="h-9 sm:h-10"
+        className="h-10"
       />
     </div>
   );
@@ -154,7 +154,7 @@ export default function CelebrationSection({
                 gift). The remaining amount will be split among the group.
               </p>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="space-y-4">
               <SettleEaseErrorBoundary componentName="Celebration Payer Select" size="small">
                 <CelebrationPayerSelectComponent 
                   celebrationPayerId={celebrationPayerId}
