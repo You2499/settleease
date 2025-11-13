@@ -395,11 +395,12 @@ function SettleEasePageContent() {
             </div>
             <div className="w-10" /> {/* Right part, spacer for symmetry */}
           </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar">
-            {isLoadingData && isDataFetchedAtLeastOnce && (
-              <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
-            )}
-            {activeView === 'dashboard' && (
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0">
+            <div className="min-h-full bg-background">
+              {isLoadingData && isDataFetchedAtLeastOnce && (
+                <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
+              )}
+              {activeView === 'dashboard' && (
               <SettleEaseErrorBoundary
                 componentName="Dashboard"
                 size="large"
@@ -557,6 +558,7 @@ function SettleEasePageContent() {
                 />
               </SettleEaseErrorBoundary>
             )}
+            </div>
           </main>
         </div>
       </SidebarInset>
