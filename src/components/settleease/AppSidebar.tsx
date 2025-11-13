@@ -248,14 +248,14 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     <DropdownMenuItem 
                       onClick={handleLogoutClick} 
                       disabled={isLoggingOut}
-                      className="text-destructive focus:bg-destructive/10 focus:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`transition-all duration-200 ${
+                        isLoggingOut 
+                          ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400' 
+                          : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                      }`}
                     >
-                      <LogOut className="mr-2 h-4 w-4" /> 
-                      {isLoggingOut ? (
-                        <span className="text-muted-foreground">Logging out...</span>
-                      ) : (
-                        'Logout'
-                      )}
+                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} /> 
+                      {isLoggingOut ? 'Logging out...' : 'Logout'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
