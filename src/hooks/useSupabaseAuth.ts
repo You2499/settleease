@@ -105,6 +105,9 @@ export function useSupabaseAuth() {
             sessionStorage.removeItem(key);
           }
         });
+        
+        // Clear URL params
+        window.history.replaceState(null, '', window.location.pathname);
       }
       
     } catch (err: any) {
