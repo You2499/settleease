@@ -69,6 +69,7 @@ function SettleEasePageContent() {
   // Start with false to avoid hydration mismatch, then check on client
   const [hasSession, setHasSession] = useState(false);
   const [isClient, setIsClient] = useState(false);
+  const [isOAuthCallback, setIsOAuthCallback] = useState(false);
 
   // Run session check only on client after mount
   useEffect(() => {
@@ -76,6 +77,7 @@ function SettleEasePageContent() {
     
     // Check if this is an OAuth redirect (has hash fragment with access_token)
     const isOAuthRedirect = window.location.hash.includes('access_token');
+    setIsOAuthCallback(isOAuthRedirect);
     
     // Check for Supabase session cookies
     const cookies = document.cookie;
@@ -107,6 +109,10 @@ function SettleEasePageContent() {
   useEffect(() => {
     if (!isLoadingAuth) {
       setHasSession(!!currentUser);
+      // Clear OAuth callback state once auth is complete
+      if (currentUser) {
+        setIsOAuthCallback(false);
+      }
     }
   }, [currentUser, isLoadingAuth]);
 
@@ -419,9 +425,10 @@ function SettleEasePageContent() {
     );
   }
 
-  // Show transparent overlay during initial auth check ONLY when no session detected
-  // This prevents dashboard flash on auth page without blocking OAuth flow
-  if (isLoadingAuth && !currentUser && !hasSession) {
+  // Show transparent loading screen during:
+  // 1. OAuth callback (prevents skeleton flash)
+  // 2. Initial auth check when no session detected (prevents auth form flash)
+  if (isLoadingAuth && !currentUser && (isOAuthCallback || !hasSession)) {
     return <div className="fixed inset-0 bg-background" />;
   }
 
