@@ -74,6 +74,9 @@ function SettleEasePageContent() {
   useEffect(() => {
     setIsClient(true);
     
+    // Check if this is an OAuth redirect (has hash fragment with access_token)
+    const isOAuthRedirect = window.location.hash.includes('access_token');
+    
     // Check for Supabase session cookies
     const cookies = document.cookie;
     const hasCookie = cookies.includes('sb-') && cookies.includes('auth-token');
@@ -95,7 +98,8 @@ function SettleEasePageContent() {
       // Ignore localStorage errors
     }
     
-    const result = hasCookie || hasLocalStorage;
+    // If OAuth redirect, assume session exists (prevents skeleton flash)
+    const result = isOAuthRedirect || hasCookie || hasLocalStorage;
     setHasSession(result);
   }, []);
 

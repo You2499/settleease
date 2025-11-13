@@ -336,7 +336,7 @@ export default function ManageSettlementsTab({
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           <ScrollArea className="flex-1 min-h-0">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               
               {/* Custom Settlement Info */}
               <div className="border rounded-lg shadow-sm bg-primary/5 p-3 sm:p-4">
@@ -363,22 +363,24 @@ export default function ManageSettlementsTab({
                         key={`${settlement.from}-${settlement.to}-${index}`}
                         className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-md shadow-sm gap-3 sm:gap-4"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                          <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-red-800 dark:text-red-200">
-                              {(peopleMap[settlement.from] || 'Unknown').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
-                            <span className="text-xs font-bold text-green-800 dark:text-green-200">
-                              {(peopleMap[settlement.to] || 'Unknown').charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="text-sm min-w-0 flex-1">
-                            <span className="font-medium break-words">{peopleMap[settlement.from] || 'Unknown'}</span>
-                            <span className="text-gray-600 dark:text-gray-400"> pays </span>
-                            <span className="font-medium break-words">{peopleMap[settlement.to] || 'Unknown'}</span>
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1 w-full">
+                          <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                            <div className="w-8 h-8 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-red-800 dark:text-red-200">
+                                {(peopleMap[settlement.from] || 'Unknown').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <ArrowRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            <div className="w-8 h-8 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-xs font-bold text-green-800 dark:text-green-200">
+                                {(peopleMap[settlement.to] || 'Unknown').charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="text-sm min-w-0 flex-1">
+                              <span className="font-medium break-words">{peopleMap[settlement.from] || 'Unknown'}</span>
+                              <span className="text-gray-600 dark:text-gray-400"> pays </span>
+                              <span className="font-medium break-words">{peopleMap[settlement.to] || 'Unknown'}</span>
+                            </div>
                           </div>
                           <div className="font-bold text-green-600 dark:text-green-400 flex-shrink-0 text-lg">
                             {formatCurrency(settlement.amount)}
@@ -417,20 +419,20 @@ export default function ManageSettlementsTab({
                     {settlementPayments.sort((a,b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime()).map(payment => (
                       <li key={payment.id}>
                         <div className="bg-card/80 p-3 sm:p-3.5 rounded-md border shadow-inner">
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                            <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0">
-                              <div>
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3">
+                            <div className="flex-grow text-xs sm:text-sm mb-1.5 sm:mb-0 min-w-0 w-full">
+                              <div className="break-words">
                                 <span className="font-medium text-foreground">{peopleMap[payment.debtor_id] || 'Unknown'}</span>
                                 <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-600 mx-1 sm:mx-1.5 inline-block" />
                                 <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
                                 <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
                               </div>
-                              <div className="text-xs text-muted-foreground mt-1">
+                              <div className="text-xs text-muted-foreground mt-1 break-words">
                                 <span>Paid on: {new Date(payment.settled_at).toLocaleDateString()}</span>
                                 {payment.notes && (
                                   <>
                                     <span className="mx-2">•</span>
-                                    <span className="italic">{payment.notes}</span>
+                                    <span className="italic break-words">{payment.notes}</span>
                                     <span className="mx-2">•</span>
                                     <span className="text-primary/70 font-medium">Custom Payment</span>
                                   </>
@@ -443,7 +445,7 @@ export default function ManageSettlementsTab({
                                 )}
                               </div>
                             </div>
-                            <div className="flex gap-2 w-full sm:w-auto">
+                            <div className="flex gap-2 w-full sm:w-auto flex-shrink-0">
                               <Button
                                 size="sm"
                                 variant="outline"
