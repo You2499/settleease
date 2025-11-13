@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Settings2, AlertTriangle, HandCoins, BarChartBig, Activity } from 'lucide-react';
 
@@ -36,7 +36,7 @@ import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 
 
-export default function SettleEasePage() {
+function SettleEasePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
@@ -541,3 +541,10 @@ export default function SettleEasePage() {
   );
 }
 
+export default function SettleEasePage() {
+  return (
+    <Suspense fallback={<AppLoadingScreen title="Loading SettleEase" subtitle="Preparing your workspace..." />}>
+      <SettleEasePageContent />
+    </Suspense>
+  );
+}
