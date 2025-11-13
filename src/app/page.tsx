@@ -217,19 +217,23 @@ function SettleEasePageContent() {
       try {
         const { data, error } = await db
           .from('user_profiles')
-          .select('last_active_view')
+          .select('last_active_view, last_welcome_toast_at')
           .eq('user_id', currentUser.id)
           .single();
         
+        // Check if we've shown a welcome toast recently (within last 30 seconds)
+        // This prevents duplicate toasts across tabs/devices
+        const lastToastAt = data?.last_welcome_toast_at ? new Date(data.last_welcome_toast_at) : null;
+        const now = new Date();
+        const timeSinceLastToast = lastToastAt ? now.getTime() - lastToastAt.getTime() : Infinity;
+        const hasShownToastRecently = timeSinceLastToast < 30000; // 30 seconds
+        
         if (!error && data?.last_active_view && data.last_active_view !== 'dashboard') {
+          // User was on a non-dashboard view - restore them there with a toast
           setActiveView(data.last_active_view as ActiveView);
           
-          // Check if we've already shown a welcome toast in this session
-          const hasShownToast = typeof window !== 'undefined' && 
-            sessionStorage.getItem('settleease_welcome_toast_shown') === 'true';
-          
-          // Only show restoration toast if no welcome toast was shown yet
-          if (!hasShownToast) {
+          // Only show restoration toast if no welcome toast was shown recently
+          if (!hasShownToastRecently) {
             // Show toast to inform user they were restored to their last view
             const viewNames: Record<ActiveView, string> = {
               dashboard: 'Dashboard',
@@ -257,10 +261,32 @@ function SettleEasePageContent() {
               )
             });
             
-            // Mark that we've shown the welcome toast for this session
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('settleease_welcome_toast_shown', 'true');
+            // Update the database to mark that we've shown the welcome toast
+            try {
+              await db
+                .from('user_profiles')
+                .update({ last_welcome_toast_at: new Date().toISOString() })
+                .eq('user_id', currentUser.id);
+            } catch (updateErr) {
+              console.error('Error updating last_welcome_toast_at:', updateErr);
             }
+          }
+        } else if (!error && !hasShownToastRecently) {
+          // User was on dashboard or no last view - show simple welcome back toast
+          // This handles returning users who log in to dashboard (especially Google OAuth users)
+          toast({ 
+            title: "Welcome back!", 
+            description: "You've successfully signed in to SettleEase."
+          });
+          
+          // Update the database to mark that we've shown the welcome toast
+          try {
+            await db
+              .from('user_profiles')
+              .update({ last_welcome_toast_at: new Date().toISOString() })
+              .eq('user_id', currentUser.id);
+          } catch (updateErr) {
+            console.error('Error updating last_welcome_toast_at:', updateErr);
           }
         }
       } catch (err) {

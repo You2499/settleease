@@ -105,8 +105,6 @@ export function useSupabaseAuth() {
             sessionStorage.removeItem(key);
           }
         });
-        // Clear welcome toast flag on logout
-        sessionStorage.removeItem('settleease_welcome_toast_shown');
       }
       
     } catch (err: any) {
@@ -114,10 +112,6 @@ export function useSupabaseAuth() {
       // Force logout even if there's an error
       setCurrentUser(null);
       setUserRole(null);
-      // Clear welcome toast flag on logout
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('settleease_welcome_toast_shown');
-      }
     }
   };
 
@@ -133,7 +127,7 @@ export function useSupabaseAuth() {
 
     console.log("Auth effect: Setting up onAuthStateChange listener.");
     const { data: authListener } = db.auth.onAuthStateChange((_event, session) => {
-      setTimeout(() => {
+      setTimeout(async () => {
         console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
         if (isMounted) {
           const newAuthUser = session?.user ?? null;
@@ -144,59 +138,73 @@ export function useSupabaseAuth() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
           
-          setCurrentUser(prevLocalUser => { 
-            if ((newAuthUser?.id !== prevLocalUser?.id) || (newAuthUser === null && prevLocalUser !== null) || (newAuthUser !== null && prevLocalUser === null) ) {
-                console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
+          // Handle Google OAuth sign-in success toast (before updating state)
+          const prevLocalUser = currentUser;
+          if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
+            // Check if this is a Google OAuth user (consistent with getGoogleUserInfo)
+            const isGoogleUser = newAuthUser.app_metadata?.provider === 'google' || 
+                               newAuthUser.user_metadata?.iss === 'https://accounts.google.com' ||
+                               newAuthUser.user_metadata?.provider_id;
+            
+            if (isGoogleUser) {
+              // Check if we've shown a welcome toast recently (from database)
+              try {
+                const { data: profileData } = await db
+                  .from('user_profiles')
+                  .select('last_welcome_toast_at, has_seen_welcome_toast')
+                  .eq('user_id', newAuthUser.id)
+                  .single();
                 
-                // Handle Google OAuth sign-in success toast
-                if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
-                  // Check if we've already shown the welcome toast in this session
-                  const hasShownToast = typeof window !== 'undefined' && 
-                    sessionStorage.getItem('settleease_welcome_toast_shown') === 'true';
+                const lastToastAt = profileData?.last_welcome_toast_at ? new Date(profileData.last_welcome_toast_at) : null;
+                const now = new Date();
+                const timeSinceLastToast = lastToastAt ? now.getTime() - lastToastAt.getTime() : Infinity;
+                const hasShownToastRecently = timeSinceLastToast < 30000; // 30 seconds
+                
+                // Check if this is a new user (never seen welcome toast before)
+                const isNewUser = !profileData?.has_seen_welcome_toast;
+                
+                if (!hasShownToastRecently) {
+                  // Show welcome toast for Google OAuth users only
+                  // (Email/password users get their toast from AuthForm)
+                  const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
+                  const firstName = fullName ? fullName.split(' ')[0] : '';
+                  const userName = firstName || newAuthUser.email?.split('@')[0] || 'there';
                   
-                  if (!hasShownToast) {
-                    // Check if this is a Google OAuth user (consistent with getGoogleUserInfo)
-                    const isGoogleUser = newAuthUser.app_metadata?.provider === 'google' || 
-                                       newAuthUser.user_metadata?.iss === 'https://accounts.google.com' ||
-                                       newAuthUser.user_metadata?.provider_id;
+                  // Only show welcome toast for new users
+                  // Returning users will see the "Welcome back!" toast with restored view info in page.tsx
+                  if (isNewUser) {
+                    toast({
+                      title: "Welcome to SettleEase!",
+                      description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+                      variant: "default"
+                    });
                     
-                    if (isGoogleUser) {
-                      // Show welcome toast for Google OAuth users only
-                      // (Email/password users get their toast from AuthForm)
-                      const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
-                      const firstName = fullName ? fullName.split(' ')[0] : '';
-                      const userName = firstName || newAuthUser.email?.split('@')[0] || 'there';
-                      
-                      // Check if this is a new user (created_at is recent) or returning user
-                      const createdAt = new Date(newAuthUser.created_at);
-                      const now = new Date();
-                      const timeDiff = now.getTime() - createdAt.getTime();
-                      const isNewUser = timeDiff < 300000; // Less than 5 minutes ago = new user (allows time for email confirmation)
-                      
-                      // Only show welcome toast for new users
-                      // Returning users will see the "Welcome back!" toast with restored view info in page.tsx
-                      if (isNewUser) {
-                        toast({
-                          title: "Welcome to SettleEase!",
-                          description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-                          variant: "default"
-                        });
-                      }
-                      
-                      // Mark that we've shown the welcome toast for this session
-                      if (typeof window !== 'undefined') {
-                        sessionStorage.setItem('settleease_welcome_toast_shown', 'true');
-                      }
-                    }
+                    // Update the database to mark that we've shown the welcome toast
+                    await db
+                      .from('user_profiles')
+                      .update({ 
+                        last_welcome_toast_at: now.toISOString(),
+                        has_seen_welcome_toast: true
+                      })
+                      .eq('user_id', newAuthUser.id);
                   }
                 }
+              } catch (err) {
+                console.error('Error checking/updating welcome toast status:', err);
+              }
+            }
+          }
+          
+          setCurrentUser(prevUser => { 
+            if ((newAuthUser?.id !== prevUser?.id) || (newAuthUser === null && prevUser !== null) || (newAuthUser !== null && prevUser === null) ) {
+                console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
                 
                 if (!newAuthUser) {
                   setUserRole(null);
                 }
                 return newAuthUser;
             }
-            return prevLocalUser; 
+            return prevUser; 
           });
 
           if (!newAuthUser) { 

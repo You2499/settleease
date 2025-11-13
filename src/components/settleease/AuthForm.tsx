@@ -523,22 +523,9 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           throw signInError;
         }
 
-        // Only show toast if we haven't shown it in this session
-        const hasShownToast = typeof window !== 'undefined' && 
-          sessionStorage.getItem('settleease_welcome_toast_shown') === 'true';
-        
-        if (!hasShownToast) {
-          toast({
-            title: "Welcome Back!",
-            description: "You've successfully signed in to SettleEase.",
-            variant: "default"
-          });
-          
-          // Mark that we've shown the welcome toast for this session
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('settleease_welcome_toast_shown', 'true');
-          }
-        }
+        // Don't show toast here for returning users
+        // Let page.tsx handle the "Welcome back!" toast so it can show the appropriate message
+        // (with or without Dashboard button depending on last active view)
         setHasAuthError(false);
         setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
@@ -631,6 +618,20 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             description: "Your account has been created and you're now signed in.",
             variant: "default"
           });
+          
+          // Update the database to mark that we've shown the welcome toast
+          try {
+            await db
+              .from('user_profiles')
+              .update({ 
+                last_welcome_toast_at: new Date().toISOString(),
+                has_seen_welcome_toast: true
+              })
+              .eq('user_id', data.user.id);
+          } catch (err) {
+            console.error('Error updating welcome toast status:', err);
+          }
+          
           setHasAuthError(false);
           setAuthErrorType('');
           if (data.user && onAuthSuccess) onAuthSuccess(data.user);
