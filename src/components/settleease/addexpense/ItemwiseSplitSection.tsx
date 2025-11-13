@@ -140,22 +140,22 @@ export default function ItemwiseSplitSection({
                   <div className="flex gap-2">
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleSelectAllForItem(itemIndex)}
                       disabled={allSelected}
-                      className="text-xs h-7 px-2"
+                      className="text-xs h-8"
                     >
                       <UserCheck className="h-3 w-3 mr-1" />
                       All
                     </Button>
                     <Button
                       type="button"
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
                       onClick={() => handleDeselectAllForItem(itemIndex)}
                       disabled={noneSelected}
-                      className="text-xs h-7 px-2"
+                      className="text-xs h-8"
                     >
                       <UserX className="h-3 w-3 mr-1" />
                       None

@@ -36,11 +36,15 @@ export default function PayerInputSection({
 }: PayerInputSectionProps) {
   // Get available people for each payer dropdown (excluding already selected payers)
   const getAvailablePeople = (currentIndex: number) => {
+    // Get all selected person IDs except for the current dropdown and empty values
     const selectedIds = payers
-      .map((p, idx) => idx !== currentIndex ? p.personId : null)
-      .filter(id => id && id !== '');
+      .map((p, idx) => idx !== currentIndex && p.personId ? p.personId : null)
+      .filter((id): id is string => id !== null && id !== '');
     
-    return people.filter(person => !selectedIds.includes(person.id));
+    // Return people who aren't selected elsewhere, or the current selection
+    return people.filter(person => 
+      !selectedIds.includes(person.id) || person.id === payers[currentIndex]?.personId
+    );
   };
   
   return (
