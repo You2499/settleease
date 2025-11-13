@@ -315,6 +315,9 @@ function SettleEasePageContent() {
               .update({ last_welcome_toast_at: now.toISOString() })
               .eq('user_id', currentUser.id);
           }
+          
+          // Wait a bit for toast to mount before marking as loaded
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       } catch (err) {
         console.error('Error in centralized toast logic:', err);
