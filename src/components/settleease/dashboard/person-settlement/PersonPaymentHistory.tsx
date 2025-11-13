@@ -79,7 +79,10 @@ export default function PersonPaymentHistory({
                         ) : (
                           <>
                             <strong className="truncate inline-block max-w-[100px] align-bottom">{peopleMap[payment.debtor_id]}</strong>{" "}
-                            paid you
+                            paid{" "}
+                            <strong className="truncate inline-block max-w-[100px] align-bottom">
+                              {selectedPerson.name}
+                            </strong>
                           </>
                         )}
                       </span>
