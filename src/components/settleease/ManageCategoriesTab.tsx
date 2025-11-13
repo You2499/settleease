@@ -266,7 +266,7 @@ export default function ManageCategoriesTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
           <Skeleton className="h-7 sm:h-8 w-full max-w-[180px] sm:w-56" />
           <Skeleton className="h-4 w-full sm:w-96 mt-2" />

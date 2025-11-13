@@ -540,12 +540,34 @@ export default function AnalyticsTab({
   // Show skeleton loaders while data is loading - CHECK THIS FIRST
   if (isLoading) {
     return (
-      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
+      <div className="h-full w-full overflow-x-hidden overflow-y-auto bg-background">
         <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4">
           {/* Tabs Skeleton - Mobile Optimized */}
           <div className="flex flex-col gap-4">
             <Skeleton className="h-10 w-full" /> {/* Tab selector */}
           </div>
+          
+          {/* Overall Snapshot Skeleton - Mobile Optimized */}
+          <Card className="w-full shadow-lg rounded-lg">
+            <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 sm:h-6 sm:w-6 rounded" />
+                <Skeleton className="h-6 w-full max-w-[160px] sm:w-48" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {/* Stat cards */}
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} className={`p-3 sm:p-4 rounded-lg border bg-muted/30 ${i === 5 ? 'col-span-2 md:col-span-1' : i === 6 ? 'col-span-2 md:col-span-3' : ''}`}>
+                    <Skeleton className="h-3 sm:h-4 w-full max-w-[120px] sm:w-32 mb-2" />
+                    <Skeleton className="h-5 sm:h-6 w-20 sm:w-24 mb-1" />
+                    {i >= 5 && <Skeleton className="h-3 w-full max-w-[140px] sm:w-36" />}
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
           
           {/* Charts Grid Skeleton - Mobile Optimized */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">

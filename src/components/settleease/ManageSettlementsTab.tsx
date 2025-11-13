@@ -254,7 +254,7 @@ export default function ManageSettlementsTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+      <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1">

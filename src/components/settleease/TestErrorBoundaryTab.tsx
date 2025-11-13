@@ -317,7 +317,7 @@ export default function TestErrorBoundaryTab({
 
   if (isLoading) {
     return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+      <Card className="shadow-xl rounded-lg h-full flex flex-col bg-background">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1">
