@@ -65,8 +65,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
   
-  const handleLogoutClick = async () => {
+  const handleLogoutClick = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent dropdown from closing
     setIsLoggingOut(true);
     await handleLogout();
     // Note: Component will unmount after logout, so no need to set isLoggingOut back to false
@@ -223,7 +225,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     </div>
                   )}
                 </div>
-                <DropdownMenu>
+                <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
                       <Settings className="h-3 w-3" />
@@ -246,7 +248,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
-                      onClick={handleLogoutClick} 
+                      onSelect={(e) => {
+                        e.preventDefault(); // Prevent dropdown from closing
+                        handleLogoutClick(e as any);
+                      }}
                       disabled={isLoggingOut}
                       className={`transition-all duration-200 ${
                         isLoggingOut 
