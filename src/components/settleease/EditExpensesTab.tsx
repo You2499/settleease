@@ -112,37 +112,41 @@ export default function EditExpensesTab({
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96 mt-2" />
+          <Skeleton className="h-7 sm:h-8 w-full max-w-[220px] sm:w-64" />
+          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           <div className="space-y-4">
-            {/* Date separator skeleton */}
+            {/* Date separator skeleton - Mobile Optimized */}
             <div className="relative my-3">
               <div className="absolute inset-0 flex items-center">
                 <Skeleton className="h-px w-full" />
               </div>
               <div className="relative flex justify-center">
-                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-28 sm:w-32" />
               </div>
             </div>
             
-            {/* Expense items skeleton */}
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="p-4">
-                <div className="flex flex-col sm:flex-row justify-between gap-3">
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-6 w-48" />
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-4 w-40" />
+            {/* Expense items skeleton - Mobile Optimized */}
+            <div className="space-y-2.5 px-0.5 sm:px-1">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="bg-card/70 rounded-md">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row justify-between gap-3">
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-6 w-full max-w-[180px] sm:w-48" />
+                        <Skeleton className="h-4 w-28 sm:w-32" />
+                        <Skeleton className="h-4 w-32 sm:w-40" />
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Skeleton className="h-9 w-full sm:w-20" />
+                        <Skeleton className="h-9 w-full sm:w-20" />
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Skeleton className="h-9 w-20" />
-                    <Skeleton className="h-9 w-20" />
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -190,7 +194,7 @@ export default function EditExpensesTab({
           <CardDescription className="text-xs sm:text-sm">Select an expense below to modify its details or remove it from the records.</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
-          {expenses.length > 0 ? (
+          {!isLoading && expenses.length > 0 ? (
             <ScrollArea className="flex-1">
               <div className="space-y-4">
                 {expenseDates.map((date, index) => (

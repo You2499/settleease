@@ -318,64 +318,64 @@ export default function TestErrorBoundaryTab({
   if (isLoading) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex-1">
-              <Skeleton className="h-8 w-64 mb-2" />
-              <Skeleton className="h-4 w-96" />
+              <Skeleton className="h-7 sm:h-8 w-full max-w-[220px] sm:w-64 mb-2" />
+              <Skeleton className="h-4 w-full sm:w-96" />
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
-              <Skeleton className="h-9 w-32 flex-1 sm:flex-initial" />
-              <Skeleton className="h-9 w-32 flex-1 sm:flex-initial" />
+              <Skeleton className="h-9 w-full sm:w-32 flex-1 sm:flex-initial" />
+              <Skeleton className="h-9 w-full sm:w-32 flex-1 sm:flex-initial" />
             </div>
           </div>
         </CardHeader>
 
-        <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pt-4 sm:pt-6">
-          {/* Alert skeleton */}
-          <div className="rounded-lg border p-4">
-            <Skeleton className="h-5 w-48 mb-2" />
+        <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+          {/* Alert skeleton - Mobile Optimized */}
+          <div className="rounded-lg border p-3 sm:p-4">
+            <Skeleton className="h-5 w-full max-w-[160px] sm:w-48 mb-2" />
             <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4 mt-1" />
+            <Skeleton className="h-4 w-full sm:w-3/4 mt-1" />
           </div>
 
-          {/* Category groups skeleton */}
+          {/* Category groups skeleton - Mobile Optimized */}
           {[1, 2, 3, 4].map((groupIndex) => (
-            <div key={groupIndex} className="space-y-4">
+            <div key={groupIndex} className="space-y-3 sm:space-y-4">
               {/* Category header */}
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-12 w-12 rounded-lg" />
-                <div className="flex-1">
-                  <Skeleton className="h-6 w-48 mb-2" />
-                  <Skeleton className="h-4 w-96" />
+              <div className="flex items-center gap-2 sm:gap-3">
+                <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <Skeleton className="h-5 sm:h-6 w-full max-w-[160px] sm:w-48 mb-2" />
+                  <Skeleton className="h-4 w-full sm:w-96" />
                 </div>
               </div>
 
-              {/* Test cards */}
-              <div className="grid gap-4 md:gap-6">
+              {/* Test cards - Mobile Optimized */}
+              <div className="grid gap-3 sm:gap-4 md:gap-6">
                 {[1, 2].map((cardIndex) => (
-                  <Card key={cardIndex} className="overflow-hidden">
-                    <CardHeader className="pb-3">
+                  <Card key={cardIndex} className="overflow-hidden bg-card/70">
+                    <CardHeader className="px-3 sm:px-4 pt-3 sm:pt-4 pb-3">
                       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-                        <div className="space-y-2 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Skeleton className="h-5 w-5 rounded" />
-                            <Skeleton className="h-5 w-48" />
-                            <Skeleton className="h-5 w-16 rounded-full" />
-                            <Skeleton className="h-5 w-20 rounded-full" />
-                            <Skeleton className="h-5 w-16 rounded-full" />
+                        <div className="space-y-2 flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                            <Skeleton className="h-4 sm:h-5 w-4 sm:w-5 rounded flex-shrink-0" />
+                            <Skeleton className="h-4 sm:h-5 w-full max-w-[160px] sm:w-48" />
+                            <Skeleton className="h-4 sm:h-5 w-14 sm:w-16 rounded-full" />
+                            <Skeleton className="h-4 sm:h-5 w-16 sm:w-20 rounded-full" />
+                            <Skeleton className="h-4 sm:h-5 w-14 sm:w-16 rounded-full" />
                           </div>
                           <Skeleton className="h-4 w-full" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Skeleton className="h-4 w-4 rounded-full" />
-                          <Skeleton className="h-9 w-24" />
-                          <Skeleton className="h-9 w-28" />
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                          <Skeleton className="h-4 w-4 rounded-full flex-shrink-0" />
+                          <Skeleton className="h-9 w-full sm:w-24" />
+                          <Skeleton className="h-9 w-full sm:w-28" />
                         </div>
                       </div>
                     </CardHeader>
                     <Separator />
-                    <CardContent className="p-3 md:p-4">
+                    <CardContent className="px-3 sm:px-4 py-3 sm:py-4">
                       <div className="flex items-start gap-2">
                         <Skeleton className="h-4 w-4 rounded-full flex-shrink-0 mt-0.5" />
                         <Skeleton className="h-4 w-full" />
@@ -391,7 +391,8 @@ export default function TestErrorBoundaryTab({
     );
   }
 
-  if (userRole !== 'admin') {
+  // Show access restriction only when NOT loading
+  if (!isLoading && userRole !== 'admin') {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
         <CardHeader className="p-4 sm:p-6">

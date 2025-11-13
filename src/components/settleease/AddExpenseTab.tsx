@@ -464,42 +464,42 @@ export default function AddExpenseTab({
   if (isLoadingData) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96 mt-2" />
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+          <Skeleton className="h-7 sm:h-8 w-full max-w-[200px] sm:w-64" />
+          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
         </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6 space-y-6">
-          {/* Bill Information Skeleton */}
-          <div className="p-5 border rounded-lg space-y-4">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-10 w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+        <CardContent className="flex-1 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+          {/* Bill Information Skeleton - Mobile Optimized */}
+          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
+            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
+            <Skeleton className="h-10 sm:h-11 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+              <Skeleton className="h-10 sm:h-11 w-full" />
+              <Skeleton className="h-10 sm:h-11 w-full" />
             </div>
-            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 sm:h-11 w-full" />
           </div>
           
-          {/* Payment Details Skeleton */}
-          <div className="p-5 border rounded-lg space-y-4">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-10 w-full" />
+          {/* Payment Details Skeleton - Mobile Optimized */}
+          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
+            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
+            <Skeleton className="h-10 sm:h-11 w-full" />
           </div>
           
-          {/* Split Method Skeleton */}
-          <div className="p-5 border rounded-lg space-y-4">
-            <Skeleton className="h-6 w-32" />
-            <Skeleton className="h-10 w-full max-w-md" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Split Method Skeleton - Mobile Optimized */}
+          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
+            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32" />
+            <Skeleton className="h-10 w-full sm:max-w-md" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
               {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <Skeleton key={i} className="h-14 sm:h-16 w-full" />
               ))}
             </div>
           </div>
         </CardContent>
-        <CardFooter className="border-t p-4 sm:pt-6">
-          <Skeleton className="h-10 w-32 ml-auto" />
-        </CardFooter>
+        <div className="border-t px-4 sm:px-6 py-3 sm:py-4">
+          <Skeleton className="h-9 sm:h-10 w-28 sm:w-32 ml-auto" />
+        </div>
       </Card>
     );
   }
@@ -520,7 +520,8 @@ export default function AddExpenseTab({
     );
   }
 
-  if (people.length === 0 && !expenseToEdit) {
+  // Show empty state only when NOT loading and no people exist
+  if (!isLoadingData && people.length === 0 && !expenseToEdit) {
     return (
       <Card className="text-center py-8 sm:py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center p-4">
         <CardHeader className="pb-2">

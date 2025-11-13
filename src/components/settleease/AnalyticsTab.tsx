@@ -537,7 +537,37 @@ export default function AnalyticsTab({
     return [];
   }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
-  if (allExpenses.length === 0) {
+  // Show skeleton loaders while data is loading - CHECK THIS FIRST
+  if (isLoading) {
+    return (
+      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4">
+          {/* Tabs Skeleton - Mobile Optimized */}
+          <div className="flex flex-col gap-4">
+            <Skeleton className="h-10 w-full" /> {/* Tab selector */}
+          </div>
+          
+          {/* Charts Grid Skeleton - Mobile Optimized */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="w-full shadow-lg rounded-lg">
+                <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
+                  <Skeleton className="h-6 w-full max-w-[200px] sm:w-48" />
+                  <Skeleton className="h-4 w-full sm:w-64 mt-2" />
+                </CardHeader>
+                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
+                  <Skeleton className="h-48 sm:h-64 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state only when NOT loading and no data exists
+  if (!isLoading && allExpenses.length === 0) {
     return (
       <Card className={`${ANALYTICS_STYLES.card} text-center py-6 sm:py-10`}>
         <CardHeader className={ANALYTICS_STYLES.header}>
@@ -555,39 +585,6 @@ export default function AnalyticsTab({
           </div>
         </CardContent>
       </Card>
-    );
-  }
-
-  // Show skeleton loaders while data is loading
-  if (isLoading) {
-    return (
-      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-        <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4">
-          {/* Header Skeleton */}
-          <div className="flex items-center justify-between mb-2">
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-10 w-40" />
-          </div>
-          
-          {/* Tabs Skeleton */}
-          <Skeleton className="h-10 w-full max-w-md" />
-          
-          {/* Charts Grid Skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="w-full">
-                <CardHeader className="pb-3">
-                  <Skeleton className="h-6 w-48" />
-                  <Skeleton className="h-4 w-64 mt-2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-64 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </div>
     );
   }
 

@@ -198,31 +198,33 @@ export default function ManagePeopleTab({
   if (isLoadingData) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-96 mt-2" />
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+          <Skeleton className="h-7 sm:h-8 w-full max-w-[160px] sm:w-48" />
+          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
         </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-6">
-          {/* Add New Person Section Skeleton */}
-          <div className="p-5 border rounded-lg space-y-3">
-            <Skeleton className="h-6 w-40" />
-            <div className="flex gap-3">
-              <Skeleton className="h-10 flex-1" />
-              <Skeleton className="h-10 w-32" />
+        <CardContent className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+          {/* Add New Person Section Skeleton - Mobile Optimized */}
+          <div className="p-4 sm:p-5 border rounded-lg space-y-3">
+            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <Skeleton className="h-10 sm:h-11 flex-1" />
+              <Skeleton className="h-10 sm:h-11 w-full sm:w-32" />
             </div>
           </div>
           
-          {/* People List Skeleton */}
+          {/* People List Skeleton - Mobile Optimized */}
           <div className="flex-1 min-h-0">
-            <Skeleton className="h-6 w-48 mb-3" />
-            <div className="space-y-3">
+            <Skeleton className="h-5 sm:h-6 w-full max-w-[200px] sm:w-48 mb-3" />
+            <div className="space-y-2 sm:space-y-2.5">
               {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="p-4">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-5 w-32" />
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 w-8" />
-                      <Skeleton className="h-8 w-8" />
+                <Card key={i} className="bg-card/70 rounded-md">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex items-center justify-between">
+                      <Skeleton className="h-5 w-28 sm:w-32" />
+                      <div className="flex gap-1 sm:gap-2">
+                        <Skeleton className="h-8 w-8" />
+                        <Skeleton className="h-8 w-8" />
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -285,7 +287,7 @@ export default function ManagePeopleTab({
 
           <div className="flex-1 flex flex-col min-h-0">
             <h4 className="text-md sm:text-lg font-semibold mb-2 sm:mb-3 text-primary">Current People in Group</h4>
-            {people.length > 0 ? (
+            {!isLoadingData && people.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 rounded-md border bg-background -mx-1 sm:-mx-1">
                 <ul className="space-y-1.5 sm:space-y-2 p-1 sm:p-2">
                   {people.map(person => (

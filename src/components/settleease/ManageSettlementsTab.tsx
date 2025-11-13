@@ -258,45 +258,49 @@ export default function ManageSettlementsTab({
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div className="flex-1">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-4 w-96 mt-2" />
+              <Skeleton className="h-7 sm:h-8 w-full max-w-[200px] sm:w-64" />
+              <Skeleton className="h-4 w-full sm:w-96 mt-2" />
             </div>
-            <Skeleton className="h-10 w-40" />
+            <Skeleton className="h-9 sm:h-10 w-full sm:w-40" />
           </div>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
-          <div className="space-y-4">
-            {/* Outstanding Settlements Section Skeleton */}
+          <div className="space-y-4 sm:space-y-6">
+            {/* Outstanding Settlements Section Skeleton - Mobile Optimized */}
             <div className="space-y-3">
-              <Skeleton className="h-6 w-48" />
+              <Skeleton className="h-5 sm:h-6 w-full max-w-[200px] sm:w-48" />
               {[1, 2, 3].map((i) => (
-                <Card key={i} className="p-4">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div className="flex items-center gap-3 flex-1">
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-4 w-4" />
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-6 w-24" />
+                <Card key={i} className="bg-card/70 rounded-md">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                        <Skeleton className="h-5 w-16 sm:w-20 flex-shrink-0" />
+                        <Skeleton className="h-4 w-4 flex-shrink-0" />
+                        <Skeleton className="h-5 w-16 sm:w-20 flex-shrink-0" />
+                        <Skeleton className="h-6 w-20 sm:w-24 flex-shrink-0" />
+                      </div>
+                      <Skeleton className="h-9 w-full sm:w-32" />
                     </div>
-                    <Skeleton className="h-9 w-32" />
                   </div>
                 </Card>
               ))}
             </div>
             
-            {/* Payment History Section Skeleton */}
-            <div className="space-y-3 mt-6">
-              <Skeleton className="h-6 w-48" />
+            {/* Payment History Section Skeleton - Mobile Optimized */}
+            <div className="space-y-3">
+              <Skeleton className="h-5 sm:h-6 w-full max-w-[180px] sm:w-48" />
               {[1, 2].map((i) => (
-                <Card key={i} className="p-4">
-                  <div className="flex justify-between items-start gap-3">
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-5 w-48" />
-                      <Skeleton className="h-4 w-32" />
-                    </div>
-                    <div className="flex gap-2">
-                      <Skeleton className="h-8 w-16" />
-                      <Skeleton className="h-8 w-16" />
+                <Card key={i} className="bg-card/70 rounded-md">
+                  <div className="p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                      <div className="space-y-2 flex-1 min-w-0">
+                        <Skeleton className="h-5 w-full max-w-[180px] sm:w-48" />
+                        <Skeleton className="h-4 w-28 sm:w-32" />
+                      </div>
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Skeleton className="h-8 w-full sm:w-16" />
+                        <Skeleton className="h-8 w-full sm:w-16" />
+                      </div>
                     </div>
                   </div>
                 </Card>
@@ -352,7 +356,7 @@ export default function ManageSettlementsTab({
                 <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
                     <FileText className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Outstanding Simplified Debts
                 </h3>
-                {calculatedSimplifiedSettlements.length > 0 ? (
+                {!isLoadingData && calculatedSimplifiedSettlements.length > 0 ? (
                   <div className="space-y-2">
                     {calculatedSimplifiedSettlements.map((settlement, index) => (
                       <div
