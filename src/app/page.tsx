@@ -39,7 +39,17 @@ import * as LucideIcons from 'lucide-react';
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  
+  // Initialize activeView from URL params to prevent dashboard flash on refresh
+  const initialView = (() => {
+    const viewParam = searchParams.get('view') as ActiveView | null;
+    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'].includes(viewParam)) {
+      return viewParam;
+    }
+    return 'dashboard';
+  })();
+  
+  const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
@@ -210,14 +220,8 @@ function SettleEasePageContent() {
     if (hasLoadedInitialView || !currentUser || !db || !userRole) return;
     
     const loadInitialViewAndShowToast = async () => {
-      // First check URL params
-      const viewParam = searchParams.get('view') as ActiveView | null;
-      
-      if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'].includes(viewParam)) {
-        setActiveView(viewParam);
-        setHasLoadedInitialView(true);
-        return;
-      }
+      // Note: activeView is already initialized from URL params in useState
+      // So we don't need to check URL params here anymore
       
       // Fetch all needed data from database
       try {
