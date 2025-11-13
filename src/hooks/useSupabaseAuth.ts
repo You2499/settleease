@@ -144,10 +144,18 @@ export function useSupabaseAuth() {
           // Track sign-in event in database (NO toasts here - page.tsx handles all toasts)
           const prevLocalUser = currentUser;
           
+          console.log('🔥 Auth event check:', {
+            event: _event,
+            hasNewUser: !!newAuthUser,
+            hadPrevUser: !!prevLocalUser,
+            willSetFlag: newAuthUser && !prevLocalUser && _event === "SIGNED_IN"
+          });
+          
           // Only set flag on actual sign-in events, NOT on session restoration (INITIAL_SESSION)
           // SIGNED_IN = user just signed in (email/password or OAuth callback)
           // INITIAL_SESSION = page load/refresh with existing session (should NOT trigger toast)
           if (newAuthUser && !prevLocalUser && _event === "SIGNED_IN") {
+            console.log('✅ Setting should_show_welcome_toast = true');
             try {
               // Set flag to show welcome toast - page.tsx will check this flag
               await db
