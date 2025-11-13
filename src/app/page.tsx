@@ -243,6 +243,17 @@ function SettleEasePageContent() {
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
         
+        console.log('🔍 Toast decision:', {
+          justSignedIn,
+          hasShownToastRecently,
+          isNewUser,
+          isReturningUser,
+          timeSinceSignIn,
+          timeSinceLastToast,
+          lastSignInAt: lastSignInAt?.toISOString(),
+          lastToastAt: lastToastAt?.toISOString()
+        });
+        
         // Restore last active view
         if (data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
