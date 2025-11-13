@@ -6,6 +6,7 @@ import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -32,13 +33,25 @@ interface ManageCategoriesTabProps {
   supabaseInitializationError: string | null;
   onCategoriesUpdate: () => void;
   isAdmin?: boolean;
+  isLoadingCategories?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
-export default function ManageCategoriesTab({ categories, db, supabaseInitializationError, onCategoriesUpdate, isAdmin }: ManageCategoriesTabProps) {
+export default function ManageCategoriesTab({ 
+  categories, 
+  db, 
+  supabaseInitializationError, 
+  onCategoriesUpdate, 
+  isAdmin,
+  isLoadingCategories = false,
+  isDataFetchedAtLeastOnce = true,
+}: ManageCategoriesTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('manageCategories', 'Manage Categories Tab crashed: Category validation failed with corrupted data');
   });
+  
+  const isLoadingData = isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryIconKey, setNewCategoryIconKey] = useState<string>('Utensils');
@@ -250,6 +263,51 @@ export default function ManageCategoriesTab({ categories, db, supabaseInitializa
     </div>
   );
 
+  // Show skeleton loaders while data is loading
+  if (isLoadingData) {
+    return (
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <Skeleton className="h-8 w-56" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-6">
+          {/* Add New Category Section Skeleton */}
+          <div className="p-5 border rounded-lg space-y-3">
+            <Skeleton className="h-6 w-48" />
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-24" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+          
+          {/* Categories List Skeleton */}
+          <div className="flex-1 min-h-0">
+            <Skeleton className="h-6 w-56 mb-3" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-5 w-5" />
+                      <Skeleton className="h-5 w-32" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -44,6 +45,10 @@ interface ManageSettlementsTabProps {
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingSettlements?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
 interface CalculatedSettlement {
@@ -60,11 +65,17 @@ export default function ManageSettlementsTab({
   db,
   currentUserId,
   onActionComplete,
+  isLoadingPeople = false,
+  isLoadingExpenses = false,
+  isLoadingSettlements = false,
+  isDataFetchedAtLeastOnce = true,
 }: ManageSettlementsTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('manageSettlements', 'Manage Settlements Tab crashed: Settlement processing failed with corrupted payment data');
   });
+  
+  const isLoadingData = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || !isDataFetchedAtLeastOnce;
 
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
@@ -235,6 +246,63 @@ export default function ManageSettlementsTab({
         </CardHeader>
         <CardContent className="flex-1 p-4 sm:p-6">
           <p className="text-sm sm:text-base">Could not connect to the database. Managing settlements is currently unavailable.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  // Show skeleton loaders while data is loading
+  if (isLoadingData) {
+    return (
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div className="flex-1">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-4 w-96 mt-2" />
+            </div>
+            <Skeleton className="h-10 w-40" />
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+          <div className="space-y-4">
+            {/* Outstanding Settlements Section Skeleton */}
+            <div className="space-y-3">
+              <Skeleton className="h-6 w-48" />
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-4 w-4" />
+                      <Skeleton className="h-5 w-20" />
+                      <Skeleton className="h-6 w-24" />
+                    </div>
+                    <Skeleton className="h-9 w-32" />
+                  </div>
+                </Card>
+              ))}
+            </div>
+            
+            {/* Payment History Section Skeleton */}
+            <div className="space-y-3 mt-6">
+              <Skeleton className="h-6 w-48" />
+              {[1, 2].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-5 w-48" />
+                      <Skeleton className="h-4 w-32" />
+                    </div>
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
     );

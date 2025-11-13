@@ -5,6 +5,7 @@ import {
   BarChartBig, Users, Eye, UserSquare
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,6 +47,11 @@ interface AnalyticsTabProps {
   dynamicCategories: DynamicCategory[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   settlementPayments: SettlementPayment[];
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingCategories?: boolean;
+  isLoadingSettlements?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
 const UNCATEGORIZED = "Uncategorized";
@@ -73,6 +79,11 @@ export default function AnalyticsTab({
   dynamicCategories,
   getCategoryIconFromName,
   settlementPayments,
+  isLoadingPeople = false,
+  isLoadingExpenses = false,
+  isLoadingCategories = false,
+  isLoadingSettlements = false,
+  isDataFetchedAtLeastOnce = true,
 }: AnalyticsTabProps) {
 
   
@@ -83,6 +94,8 @@ export default function AnalyticsTab({
 
   const [analyticsViewMode, setAnalyticsViewMode] = useState<'group' | 'personal'>('group');
   const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
+  
+  const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || isLoadingSettlements || !isDataFetchedAtLeastOnce;
 
   const displayedExpenses = useMemo(() => {
     if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
@@ -542,6 +555,39 @@ export default function AnalyticsTab({
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  // Show skeleton loaders while data is loading
+  if (isLoading) {
+    return (
+      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
+        <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between mb-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-10 w-40" />
+          </div>
+          
+          {/* Tabs Skeleton */}
+          <Skeleton className="h-10 w-full max-w-md" />
+          
+          {/* Charts Grid Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Card key={i} className="w-full">
+                <CardHeader className="pb-3">
+                  <Skeleton className="h-6 w-48" />
+                  <Skeleton className="h-4 w-64 mt-2" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-64 w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </div>
     );
   }
 

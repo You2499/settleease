@@ -4,12 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer, X } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
 import type { ActiveView, Person, Expense, Category, SettlementPayment } from '@/lib/settleease/types';
@@ -22,6 +22,11 @@ interface TestErrorBoundaryTabProps {
   settlementPayments: SettlementPayment[];
   peopleMap: Record<string, string>;
   categories: Category[];
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingCategories?: boolean;
+  isLoadingSettlements?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
 export default function TestErrorBoundaryTab({
@@ -31,7 +36,12 @@ export default function TestErrorBoundaryTab({
   expenses,
   settlementPayments,
   peopleMap,
-  categories
+  categories,
+  isLoadingPeople = false,
+  isLoadingExpenses = false,
+  isLoadingCategories = false,
+  isLoadingSettlements = false,
+  isDataFetchedAtLeastOnce = true,
 }: TestErrorBoundaryTabProps) {
   const isMobile = useIsMobile();
   const [crashStates, setCrashStates] = useState(crashTestManager.getAllStates());
@@ -301,6 +311,85 @@ export default function TestErrorBoundaryTab({
       default: return <RefreshCw className="h-4 w-4 text-gray-400" />;
     }
   };
+
+  // Show loading skeleton while data is being fetched
+  const isLoading = !isDataFetchedAtLeastOnce || isLoadingPeople || isLoadingExpenses || isLoadingCategories || isLoadingSettlements;
+
+  if (isLoading) {
+    return (
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1">
+              <Skeleton className="h-8 w-64 mb-2" />
+              <Skeleton className="h-4 w-96" />
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Skeleton className="h-9 w-32 flex-1 sm:flex-initial" />
+              <Skeleton className="h-9 w-32 flex-1 sm:flex-initial" />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-4 sm:space-y-6 pt-4 sm:pt-6">
+          {/* Alert skeleton */}
+          <div className="rounded-lg border p-4">
+            <Skeleton className="h-5 w-48 mb-2" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4 mt-1" />
+          </div>
+
+          {/* Category groups skeleton */}
+          {[1, 2, 3, 4].map((groupIndex) => (
+            <div key={groupIndex} className="space-y-4">
+              {/* Category header */}
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-12 w-12 rounded-lg" />
+                <div className="flex-1">
+                  <Skeleton className="h-6 w-48 mb-2" />
+                  <Skeleton className="h-4 w-96" />
+                </div>
+              </div>
+
+              {/* Test cards */}
+              <div className="grid gap-4 md:gap-6">
+                {[1, 2].map((cardIndex) => (
+                  <Card key={cardIndex} className="overflow-hidden">
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                        <div className="space-y-2 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Skeleton className="h-5 w-5 rounded" />
+                            <Skeleton className="h-5 w-48" />
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                            <Skeleton className="h-5 w-20 rounded-full" />
+                            <Skeleton className="h-5 w-16 rounded-full" />
+                          </div>
+                          <Skeleton className="h-4 w-full" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-4 w-4 rounded-full" />
+                          <Skeleton className="h-9 w-24" />
+                          <Skeleton className="h-9 w-28" />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <Separator />
+                    <CardContent className="p-3 md:p-4">
+                      <div className="flex items-start gap-2">
+                        <Skeleton className="h-4 w-4 rounded-full flex-shrink-0 mt-0.5" />
+                        <Skeleton className="h-4 w-full" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (userRole !== 'admin') {
     return (

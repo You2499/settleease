@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   AlertDialog,
@@ -31,13 +32,30 @@ interface EditExpensesTabProps {
   supabaseInitializationError: string | null;
   onActionComplete: () => void; 
   dynamicCategories: DynamicCategory[];
+  isLoadingPeople?: boolean;
+  isLoadingExpenses?: boolean;
+  isLoadingCategories?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
-export default function EditExpensesTab({ people, expenses, db, supabaseInitializationError, onActionComplete, dynamicCategories }: EditExpensesTabProps) {
+export default function EditExpensesTab({ 
+  people, 
+  expenses, 
+  db, 
+  supabaseInitializationError, 
+  onActionComplete, 
+  dynamicCategories,
+  isLoadingPeople = false,
+  isLoadingExpenses = false,
+  isLoadingCategories = false,
+  isDataFetchedAtLeastOnce = true,
+}: EditExpensesTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('editExpenses', 'Edit Expenses Tab crashed: Expense modification failed with invalid data');
   });
+  
+  const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
@@ -89,6 +107,48 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
     onActionComplete(); 
   };
 
+  // Show skeleton loaders while data is loading
+  if (isLoading) {
+    return (
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+          <div className="space-y-4">
+            {/* Date separator skeleton */}
+            <div className="relative my-3">
+              <div className="absolute inset-0 flex items-center">
+                <Skeleton className="h-px w-full" />
+              </div>
+              <div className="relative flex justify-center">
+                <Skeleton className="h-5 w-32" />
+              </div>
+            </div>
+            
+            {/* Expense items skeleton */}
+            {[1, 2, 3].map((i) => (
+              <Card key={i} className="p-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-6 w-48" />
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-4 w-40" />
+                  </div>
+                  <div className="flex gap-2">
+                    <Skeleton className="h-9 w-20" />
+                    <Skeleton className="h-9 w-20" />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
@@ -115,6 +175,9 @@ export default function EditExpensesTab({ people, expenses, db, supabaseInitiali
         expenseToEdit={editingExpense}
         onCancelEdit={() => setEditingExpense(null)}
         dynamicCategories={dynamicCategories}
+        isLoadingPeople={isLoadingPeople}
+        isLoadingCategories={isLoadingCategories}
+        isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
       />
     );
   }

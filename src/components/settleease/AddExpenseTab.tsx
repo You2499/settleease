@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, AlertTriangle, Users, Wallet } from 'lucide-react';
 
 import PayerInputSection from './addexpense/PayerInputSection';
@@ -28,6 +29,9 @@ interface AddExpenseTabProps {
   dynamicCategories: DynamicCategory[];
   expenseToEdit?: Expense | null;
   onCancelEdit?: () => void;
+  isLoadingPeople?: boolean;
+  isLoadingCategories?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
 // Section wrapper components with crash test logic
@@ -54,11 +58,16 @@ export default function AddExpenseTab({
   dynamicCategories,
   expenseToEdit,
   onCancelEdit,
+  isLoadingPeople = false,
+  isLoadingCategories = false,
+  isDataFetchedAtLeastOnce = true,
 }: AddExpenseTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('addExpense', 'Add Expense Tab crashed: Form validation failed with corrupted category data');
   });
+  
+  const isLoadingData = isLoadingPeople || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [description, setDescription] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
@@ -451,6 +460,50 @@ export default function AddExpenseTab({
     setItems(items.filter((_, i) => i !== index));
   };
 
+  // Show skeleton loaders while data is loading
+  if (isLoadingData) {
+    return (
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <Skeleton className="h-8 w-64" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="flex-1 p-4 sm:p-6 space-y-6">
+          {/* Bill Information Skeleton */}
+          <div className="p-5 border rounded-lg space-y-4">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-full" />
+          </div>
+          
+          {/* Payment Details Skeleton */}
+          <div className="p-5 border rounded-lg space-y-4">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+          
+          {/* Split Method Skeleton */}
+          <div className="p-5 border rounded-lg space-y-4">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-10 w-full max-w-md" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter className="border-t p-4 sm:pt-6">
+          <Skeleton className="h-10 w-32 ml-auto" />
+        </CardFooter>
+      </Card>
+    );
+  }
+  
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-xl rounded-lg h-full flex flex-col">

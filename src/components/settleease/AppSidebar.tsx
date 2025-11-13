@@ -248,7 +248,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           )}
           <div className="text-center border-t pt-2">
             <p className="text-xs text-muted-foreground">Made by Gagan Gupta</p>
-            <p className="text-xs text-muted-foreground/70">v{packageJson.version}</p>
+            <p className="text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
           </div>
         </div>
       </SidebarFooter>

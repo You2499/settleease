@@ -22,7 +22,6 @@ import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
-import AppLoadingScreen from '@/components/settleease/AppLoadingScreen';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 
@@ -438,6 +437,11 @@ function SettleEasePageContent() {
                   dynamicCategories={categories}
                   getCategoryIconFromName={getCategoryIconFromName}
                   settlementPayments={settlementPayments}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingCategories={isLoadingCategories}
+                  isLoadingSettlements={isLoadingSettlements}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -453,6 +457,9 @@ function SettleEasePageContent() {
                   supabaseInitializationError={supabaseInitializationError}
                   onExpenseAdded={handleExpenseAddedAndRedirect}
                   dynamicCategories={categories}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingCategories={isLoadingCategories}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -469,6 +476,10 @@ function SettleEasePageContent() {
                   supabaseInitializationError={supabaseInitializationError}
                   onActionComplete={handleExpenseAddedAndRedirect}
                   dynamicCategories={categories}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingCategories={isLoadingCategories}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -482,6 +493,8 @@ function SettleEasePageContent() {
                   people={people}
                   db={db}
                   supabaseInitializationError={supabaseInitializationError}
+                  isLoadingPeople={isLoadingPeople}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -496,6 +509,8 @@ function SettleEasePageContent() {
                   db={db}
                   supabaseInitializationError={supabaseInitializationError}
                   onCategoriesUpdate={handleActionComplete}
+                  isLoadingCategories={isLoadingCategories}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -513,6 +528,10 @@ function SettleEasePageContent() {
                   db={db}
                   currentUserId={currentUser?.id || ''}
                   onActionComplete={handleActionComplete}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingSettlements={isLoadingSettlements}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -530,6 +549,11 @@ function SettleEasePageContent() {
                   settlementPayments={settlementPayments}
                   peopleMap={peopleMap}
                   categories={categories}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingCategories={isLoadingCategories}
+                  isLoadingSettlements={isLoadingSettlements}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -543,7 +567,7 @@ function SettleEasePageContent() {
 
 export default function SettleEasePage() {
   return (
-    <Suspense fallback={<AppLoadingScreen title="Loading SettleEase" subtitle="Preparing your workspace..." />}>
+    <Suspense fallback={<div className="fixed inset-0 bg-background" />}>
       <SettleEasePageContent />
     </Suspense>
   );

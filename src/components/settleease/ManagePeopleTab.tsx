@@ -6,6 +6,7 @@ import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
 import {
@@ -27,13 +28,23 @@ interface ManagePeopleTabProps {
   people: Person[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
+  isLoadingPeople?: boolean;
+  isDataFetchedAtLeastOnce?: boolean;
 }
 
-export default function ManagePeopleTab({ people, db, supabaseInitializationError }: ManagePeopleTabProps) {
+export default function ManagePeopleTab({ 
+  people, 
+  db, 
+  supabaseInitializationError,
+  isLoadingPeople = false,
+  isDataFetchedAtLeastOnce = true,
+}: ManagePeopleTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('managePeople', 'Manage People Tab crashed: Database connection lost during people management operation');
   });
+  
+  const isLoadingData = isLoadingPeople || !isDataFetchedAtLeastOnce;
 
   const [newPersonName, setNewPersonName] = useState('');
   const [editingPersonId, setEditingPersonId] = useState<string | null>(null);
@@ -183,6 +194,46 @@ export default function ManagePeopleTab({ people, db, supabaseInitializationErro
     }
   };
 
+  // Show skeleton loaders while data is loading
+  if (isLoadingData) {
+    return (
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-96 mt-2" />
+        </CardHeader>
+        <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-6">
+          {/* Add New Person Section Skeleton */}
+          <div className="p-5 border rounded-lg space-y-3">
+            <Skeleton className="h-6 w-40" />
+            <div className="flex gap-3">
+              <Skeleton className="h-10 flex-1" />
+              <Skeleton className="h-10 w-32" />
+            </div>
+          </div>
+          
+          {/* People List Skeleton */}
+          <div className="flex-1 min-h-0">
+            <Skeleton className="h-6 w-48 mb-3" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <Skeleton className="h-5 w-32" />
+                    <div className="flex gap-2">
+                      <Skeleton className="h-8 w-8" />
+                      <Skeleton className="h-8 w-8" />
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
