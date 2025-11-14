@@ -235,20 +235,59 @@ function SettleEasePageContent() {
       // Check if URL has a view param - if so, don't restore from database
       const hasUrlView = searchParams.get('view') !== null;
       
-      // Fetch all needed data from database
-      try {
-        const { data, error } = await db
-          .from('user_profiles')
-          .select('last_active_view, has_seen_welcome_toast, should_show_welcome_toast, first_name, last_name')
-          .eq('user_id', currentUser.id)
-          .single();
-        
-        if (error) {
-          console.error('Error loading user profile:', error);
-          setHasLoadedInitialView(true);
-          return;
+      // Race condition fix: Retry logic to wait for auth hook to set the flag
+      // Sometimes the page effect runs before auth hook completes the database write
+      let data: any = null;
+      let retries = 0;
+      const maxRetries = 3;
+      
+      while (retries < maxRetries) {
+        try {
+          const result = await db
+            .from('user_profiles')
+            .select('last_active_view, has_seen_welcome_toast, should_show_welcome_toast, first_name, last_name')
+            .eq('user_id', currentUser.id)
+            .single();
+          
+          if (result.error) {
+            console.error('Error loading user profile:', result.error);
+            setHasLoadedInitialView(true);
+            return;
+          }
+          
+          data = result.data;
+          
+          // If we're expecting a toast (fresh sign-in) but flag isn't set yet, retry
+          // Check if this might be a fresh sign-in by looking at sessionStorage
+          let mightBeFreshSignIn = false;
+          try {
+            const sessionKey = `auth_processed_${currentUser.id}`;
+            mightBeFreshSignIn = sessionStorage.getItem(sessionKey) === 'true';
+          } catch (e) {
+            // Ignore storage errors
+          }
+          
+          // If flag should be set but isn't, wait and retry
+          if (mightBeFreshSignIn && !data?.should_show_welcome_toast && retries < maxRetries - 1) {
+            await new Promise(resolve => setTimeout(resolve, 100 * (retries + 1))); // 100ms, 200ms, 300ms
+            retries++;
+            continue;
+          }
+          
+          break; // Success, exit retry loop
+        } catch (err) {
+          console.error('Error in retry loop:', err);
+          break;
         }
-        
+      }
+      
+      if (!data) {
+        setHasLoadedInitialView(true);
+        return;
+      }
+      
+      // Process the fetched data
+      try {
         // Simple flag-based logic - no time windows!
         const shouldShowToast = data?.should_show_welcome_toast === true;
         const isNewUser = !data?.has_seen_welcome_toast;

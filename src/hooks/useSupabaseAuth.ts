@@ -92,22 +92,35 @@ export function useSupabaseAuth() {
       setCurrentUser(null);
       setUserRole(null);
       
-      // Clear any stored session data
+      // Clear any stored session data (Safari-safe)
       if (typeof window !== 'undefined') {
-        // Clear localStorage and sessionStorage for Supabase
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase')) {
-            localStorage.removeItem(key);
-          }
-        });
-        Object.keys(sessionStorage).forEach(key => {
-          if (key.startsWith('sb-') || key.includes('supabase') || key.startsWith('auth_processed_')) {
-            sessionStorage.removeItem(key);
-          }
-        });
+        try {
+          // Clear localStorage and sessionStorage for Supabase
+          Object.keys(localStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase')) {
+              localStorage.removeItem(key);
+            }
+          });
+        } catch (e) {
+          console.warn('Could not clear localStorage:', e);
+        }
+        
+        try {
+          Object.keys(sessionStorage).forEach(key => {
+            if (key.startsWith('sb-') || key.includes('supabase') || key.startsWith('auth_processed_')) {
+              sessionStorage.removeItem(key);
+            }
+          });
+        } catch (e) {
+          console.warn('Could not clear sessionStorage:', e);
+        }
         
         // Clear URL params
-        window.history.replaceState(null, '', window.location.pathname);
+        try {
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch (e) {
+          console.warn('Could not clear URL params:', e);
+        }
       }
       
     } catch (err: any) {
@@ -146,8 +159,20 @@ export function useSupabaseAuth() {
           
           // Check if this is a fresh sign-in or just a page refresh
           // Use sessionStorage to track if we've already processed this session
+          // Safari-safe: wrap in try-catch for private browsing mode
+          let hasProcessedThisSession = false;
           const sessionKey = `auth_processed_${newAuthUser?.id}`;
-          const hasProcessedThisSession = typeof window !== 'undefined' && sessionStorage.getItem(sessionKey) === 'true';
+          
+          if (typeof window !== 'undefined' && newAuthUser) {
+            try {
+              hasProcessedThisSession = sessionStorage.getItem(sessionKey) === 'true';
+            } catch (e) {
+              // Safari private browsing or storage disabled - fallback to checking if SIGNED_IN event
+              // In this case, we'll rely on the event type to determine if it's a fresh sign-in
+              console.warn('SessionStorage not available, using event-based detection');
+              hasProcessedThisSession = _event !== 'SIGNED_IN';
+            }
+          }
           
           // Only set flag on actual NEW sign-ins (not page refreshes)
           // Conditions:
@@ -155,9 +180,13 @@ export function useSupabaseAuth() {
           // 2. No previous user in state (transition from logged out to logged in)
           // 3. Haven't processed this session yet (prevents flag being set on refresh)
           if (newAuthUser && !prevLocalUser && !hasProcessedThisSession) {
-            // Mark this session as processed
+            // Mark this session as processed (Safari-safe)
             if (typeof window !== 'undefined') {
-              sessionStorage.setItem(sessionKey, 'true');
+              try {
+                sessionStorage.setItem(sessionKey, 'true');
+              } catch (e) {
+                console.warn('Could not set sessionStorage:', e);
+              }
             }
             
             try {

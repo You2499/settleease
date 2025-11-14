@@ -75,60 +75,74 @@ export default function ItemwiseSplitSection({
           return (
             <Card key={item.id} className="p-4 bg-background border-2 border-border transition-all">
               {/* Item Header */}
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 space-y-3">
-                  <div className="flex gap-3">
-                    <Input 
-                      value={item.name} 
-                      onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
-                      placeholder={`Item ${itemIndex + 1} name (e.g., Pizza)`} 
-                      className="flex-1 h-10"
-                    />
-                    <Input 
-                      type="number" 
-                      inputMode="decimal"
-                      pattern="[0-9]*\.?[0-9]*"
-                      value={item.price as string} 
-                      onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
-                      placeholder="0.00" 
-                      className="w-28 h-10 text-right font-mono"
-                    />
+              <div className="space-y-3 mb-4">
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 space-y-3">
+                    {/* Item Name - Full Width */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Item Name</Label>
+                      <Input 
+                        value={item.name} 
+                        onChange={e => handleItemChange(itemIndex, 'name', e.target.value)} 
+                        placeholder={`e.g., Pizza, Drinks, etc.`} 
+                        className="h-10 w-full"
+                      />
+                    </div>
+                    
+                    {/* Price - Full Width */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Price</Label>
+                      <Input 
+                        type="number" 
+                        inputMode="decimal"
+                        pattern="[0-9]*\.?[0-9]*"
+                        value={item.price as string} 
+                        onChange={e => handleItemChange(itemIndex, 'price', e.target.value)} 
+                        placeholder="0.00" 
+                        className="h-10 w-full text-right font-mono"
+                      />
+                    </div>
+                    
+                    {/* Category - Full Width */}
+                    <div>
+                      <Label className="text-xs text-muted-foreground mb-1.5 block">Category</Label>
+                      <Select
+                        value={item.categoryName || ''}
+                        onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
+                        disabled={dynamicCategories.length === 0}
+                      >
+                        <SelectTrigger className="h-10 w-full">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dynamicCategories.map(cat => {
+                            const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
+                            return (
+                              <SelectItem key={cat.id} value={cat.name}>
+                                <div className="flex items-center">
+                                  <IconComponent className="mr-2 h-4 w-4" />
+                                  {cat.name}
+                                </div>
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   
-                  <Select
-                    value={item.categoryName || ''}
-                    onValueChange={(value) => handleItemChange(itemIndex, 'categoryName', value)}
-                    disabled={dynamicCategories.length === 0}
+                  {/* Delete Button - Top Right */}
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => removeItem(itemIndex)} 
+                    className="text-destructive h-10 w-10 shrink-0"
+                    disabled={items.length <= 1}
+                    aria-label={`Remove item ${itemIndex + 1}`}
                   >
-                    <SelectTrigger className="h-10 w-full">
-                      <SelectValue placeholder="Select item category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {dynamicCategories.map(cat => {
-                        const IconComponent = (LucideIcons as any)[cat.icon_name] || Settings2;
-                        return (
-                          <SelectItem key={cat.id} value={cat.name}>
-                            <div className="flex items-center">
-                              <IconComponent className="mr-2 h-4 w-4" />
-                              {cat.name}
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                    <Trash2 className="h-5 w-5" />
+                  </Button>
                 </div>
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => removeItem(itemIndex)} 
-                  className="text-destructive h-10 w-10 shrink-0 self-center"
-                  disabled={items.length <= 1}
-                  aria-label={`Remove item ${itemIndex + 1}`}
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
               </div>
               
               {/* Shared By Section */}
