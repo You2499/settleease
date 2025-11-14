@@ -76,7 +76,7 @@ export default function ItemwiseSplitSection({
             <Card key={item.id} className="p-4 bg-background border-2 border-border transition-all">
               {/* Item Header */}
               <div className="space-y-3 mb-4">
-                <div className="flex items-start gap-2">
+                <div className="flex items-center gap-2">
                   <div className="flex-1 space-y-3">
                     {/* Item Name - Full Width */}
                     <div>
