@@ -171,13 +171,32 @@ All tables have Row Level Security (RLS) enabled.
 ### Scripts
 
 ```bash
-npm run dev        # Development server (port 3000)
-npm run build      # Production build
-npm run start      # Production server
-npm run lint       # ESLint
-npm run typecheck  # TypeScript checking
-npm run prebuild   # Download Lucide icons
+npm run dev          # Development server (port 3000)
+npm run build        # Production build
+npm run start        # Production server
+npm run lint         # ESLint
+npm run typecheck    # TypeScript checking
+npm run prebuild     # Download Lucide icons
+npm run sync-version # Sync version from package.json to README
 ```
+
+### Version Management
+
+The version number is automatically synced across the application:
+
+- **package.json** - Source of truth for version
+- **README.md** - Auto-synced using `sync-version` script
+- **AuthForm & AppSidebar** - Import version directly from package.json
+
+**Updating the version:**
+
+```bash
+npm version patch  # 5.3.2 → 5.3.3
+npm version minor  # 5.3.2 → 5.4.0
+npm version major  # 5.3.2 → 6.0.0
+```
+
+This automatically updates package.json, syncs README.md, and creates a git commit with version tag.
 
 ### Project Structure
 
