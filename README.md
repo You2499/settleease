@@ -158,11 +158,11 @@ All tables have Row Level Security (RLS) enabled.
 
 - Automated settlement calculations
 - Transaction minimization algorithm
-- Manual settlement path overrides
+- Manual settlement path overrides (admin only)
 - Manual payment recording
 - Complete audit trail
 - Real-time balance updates
-- Prominent alerts for active manual overrides
+- Prominent alerts in Dashboard for active manual overrides
 
 ### AI Summaries
 

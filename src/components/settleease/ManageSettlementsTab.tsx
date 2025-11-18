@@ -37,7 +37,6 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import CustomSettlementForm from './CustomSettlementForm';
 import ManualSettlementOverrideForm from './ManualSettlementOverrideForm';
-import ManualOverrideAlert from './ManualOverrideAlert';
 import { calculateNetBalances } from '@/lib/settleease/settlementCalculations';
 
 interface ManageSettlementsTabProps {
@@ -329,14 +328,14 @@ export default function ManageSettlementsTab({
     <>
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex flex-col gap-3">
             <div className="flex-1">
               <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                 <Handshake className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" /> Manage Settlements
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm mt-1">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
             </div>
-            <div className="flex-shrink-0 flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
               <ManualSettlementOverrideForm
                 people={people}
                 peopleMap={peopleMap}
@@ -358,15 +357,6 @@ export default function ManageSettlementsTab({
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4 sm:space-y-6">
-              
-              {/* Manual Override Alert */}
-              <ManualOverrideAlert
-                overrides={manualOverrides}
-                peopleMap={peopleMap}
-                db={db}
-                onActionComplete={onActionComplete}
-                userRole={userRole}
-              />
               
               {/* Custom Settlement Info */}
               <div className="border rounded-lg shadow-sm bg-primary/5 p-3 sm:p-4">

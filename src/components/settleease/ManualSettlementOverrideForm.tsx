@@ -192,7 +192,7 @@ export default function ManualSettlementOverrideForm({
                     Set Manual Path
                 </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto" hideCloseButton={true}>
+            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={true}>
                 <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
                     <div>
                         <DialogHeader className="pb-4">

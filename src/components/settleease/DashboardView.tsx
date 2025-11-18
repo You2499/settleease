@@ -17,6 +17,7 @@ import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
+import ManualOverrideAlert from './ManualOverrideAlert';
 
 interface DashboardViewProps {
   expenses: Expense[];
@@ -288,6 +289,15 @@ export default function DashboardView({
 
   return (
     <div className="h-full flex-1 flex flex-col space-y-4 md:space-y-6 min-h-0">
+      {/* Manual Override Alert - shown when overrides are active */}
+      <ManualOverrideAlert
+        overrides={manualOverrides}
+        peopleMap={peopleMap}
+        db={db}
+        onActionComplete={onActionComplete}
+        userRole={userRole}
+      />
+      
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
