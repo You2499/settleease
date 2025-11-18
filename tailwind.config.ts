@@ -2,7 +2,7 @@
 import type { Config } from 'tailwindcss';
 
 export default {
-  darkMode: ['class'],
+  darkMode: 'class',
   content: [
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -43,6 +43,24 @@ export default {
           'sans-serif'
         ],
         code: ['SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'monospace'],
+        // Override default mono to use system monospace fonts
+        mono: [
+          // Apple system monospace
+          'SF Mono',
+          'ui-monospace',
+          // macOS fallback
+          'Monaco',
+          // Inter monospace variants for non-Apple devices
+          'Inter Tight',
+          // Windows
+          'Cascadia Code',
+          'Consolas',
+          // Linux
+          'Liberation Mono',
+          'Courier New',
+          // Generic fallback
+          'monospace'
+        ],
       },
       colors: {
         background: 'hsl(var(--background))',
