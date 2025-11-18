@@ -1,6 +1,6 @@
 {
   "name": "settleease",
-  "version": "7.1.2",
+  "version": "7.1.3",
   "private": true,
   "description": "A comprehensive expense management and settlement application for groups",
   "scripts": {

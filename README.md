@@ -2,7 +2,7 @@
 
 A modern expense management and settlement application for groups. Built with Next.js 15, TypeScript, and Supabase.
 
-**Version:** 7.1.1
+**Version:** 7.1.3
 
 ---
 
