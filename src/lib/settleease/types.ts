@@ -74,6 +74,18 @@ export interface SettlementPayment {
   notes?: string;
 }
 
+export interface ManualSettlementOverride {
+  id: string; // Supabase ID
+  debtor_id: string; // FK to people.id - who owes
+  creditor_id: string; // FK to people.id - who is owed
+  amount: number; // Amount to be paid in this manual path
+  notes?: string | null;
+  created_by_user_id?: string | null; // FK to auth.users.id
+  created_at: string; // ISO date string
+  updated_at: string; // ISO date string
+  is_active: boolean; // Whether this override is currently active
+}
+
 // Used for displaying calculated settlements
 export interface CalculatedTransaction {
   from: string; // debtorId

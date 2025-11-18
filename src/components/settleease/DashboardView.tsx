@@ -15,7 +15,7 @@ import ExpenseLog from './dashboard/ExpenseLog';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
-import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole } from '@/lib/settleease/types';
+import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 interface DashboardViewProps {
@@ -25,6 +25,7 @@ interface DashboardViewProps {
   dynamicCategories: Category[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   settlementPayments: SettlementPayment[];
+  manualOverrides: ManualSettlementOverride[];
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
@@ -33,6 +34,7 @@ interface DashboardViewProps {
   isLoadingExpenses?: boolean;
   isLoadingCategories?: boolean;
   isLoadingSettlements?: boolean;
+  isLoadingOverrides?: boolean;
   isDataFetchedAtLeastOnce?: boolean;
 }
 
@@ -43,6 +45,7 @@ export default function DashboardView({
   dynamicCategories,
   getCategoryIconFromName,
   settlementPayments,
+  manualOverrides,
   db,
   currentUserId,
   onActionComplete,
@@ -51,6 +54,7 @@ export default function DashboardView({
   isLoadingExpenses = false,
   isLoadingCategories = false,
   isLoadingSettlements = false,
+  isLoadingOverrides = false,
   isDataFetchedAtLeastOnce = false,
 }: DashboardViewProps) {
   // Check for crash test
@@ -65,7 +69,7 @@ export default function DashboardView({
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
     if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
 
-    const sTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments);
+    const sTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments, manualOverrides);
     const pTransactions = calculatePairwiseTransactions(people, expenses, settlementPayments);
     
     // Sort pairwise transactions for consistent display
@@ -75,7 +79,7 @@ export default function DashboardView({
     );
 
     return { simplifiedTransactions: sTransactions, pairwiseTransactions: pTransactions };
-  }, [expenses, people, settlementPayments, peopleMap]);
+  }, [expenses, people, settlementPayments, manualOverrides, peopleMap]);
 
 
   const handleMarkAsPaid = async (transaction: CalculatedTransaction) => {

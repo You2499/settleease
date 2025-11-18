@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
-import type { ActiveView, Person, Expense, Category, SettlementPayment } from '@/lib/settleease/types';
+import type { ActiveView, Person, Expense, Category, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
 
 interface TestErrorBoundaryTabProps {
   userRole: 'admin' | 'user' | null;
@@ -20,12 +20,14 @@ interface TestErrorBoundaryTabProps {
   people: Person[];
   expenses: Expense[];
   settlementPayments: SettlementPayment[];
+  manualOverrides: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
   categories: Category[];
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
   isLoadingCategories?: boolean;
   isLoadingSettlements?: boolean;
+  isLoadingOverrides?: boolean;
   isDataFetchedAtLeastOnce?: boolean;
 }
 
@@ -35,12 +37,14 @@ export default function TestErrorBoundaryTab({
   people,
   expenses,
   settlementPayments,
+  manualOverrides,
   peopleMap,
   categories,
   isLoadingPeople = false,
   isLoadingExpenses = false,
   isLoadingCategories = false,
   isLoadingSettlements = false,
+  isLoadingOverrides = false,
   isDataFetchedAtLeastOnce = true,
 }: TestErrorBoundaryTabProps) {
   const isMobile = useIsMobile();
@@ -466,6 +470,7 @@ export default function TestErrorBoundaryTab({
                   people={people}
                   expenses={expenses}
                   settlementPayments={settlementPayments}
+                  manualOverrides={manualOverrides}
                   peopleMap={peopleMap}
                   categories={categories}
                   userRole={userRole}
@@ -483,6 +488,7 @@ export default function TestErrorBoundaryTab({
               people={people}
               expenses={expenses}
               settlementPayments={settlementPayments}
+              manualOverrides={manualOverrides}
               peopleMap={peopleMap}
               categories={categories}
               userRole={userRole}

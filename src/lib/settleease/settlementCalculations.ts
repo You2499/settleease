@@ -3,6 +3,7 @@ import type {
   Expense,
   SettlementPayment,
   CalculatedTransaction,
+  ManualSettlementOverride,
 } from "./types";
 
 /**
@@ -65,11 +66,13 @@ export function calculateNetBalances(
 
 /**
  * Calculate simplified transactions to settle all debts optimally
+ * Supports manual overrides that take precedence over optimized calculations
  */
 export function calculateSimplifiedTransactions(
   people: Person[],
   expenses: Expense[],
-  settlementPayments: SettlementPayment[]
+  settlementPayments: SettlementPayment[],
+  manualOverrides?: ManualSettlementOverride[]
 ): CalculatedTransaction[] {
   const netBalances = calculateNetBalances(
     people,
@@ -77,20 +80,91 @@ export function calculateSimplifiedTransactions(
     settlementPayments
   );
 
-  // Separate debtors and creditors based on net balances
+  // If there are active manual overrides, apply them first
+  const activeOverrides = (manualOverrides || []).filter(o => o.is_active);
+  const transactions: CalculatedTransaction[] = [];
+  
+  if (activeOverrides.length > 0) {
+    // Create a copy of net balances to track remaining amounts
+    const remainingBalances = { ...netBalances };
+    
+    // Apply manual overrides first
+    activeOverrides.forEach(override => {
+      const debtorBalance = remainingBalances[override.debtor_id] || 0;
+      const creditorBalance = remainingBalances[override.creditor_id] || 0;
+      
+      // Only apply override if debtor owes and creditor is owed
+      if (debtorBalance < -0.01 && creditorBalance > 0.01) {
+        // Calculate the actual amount that can be settled
+        const maxSettleable = Math.min(
+          Math.abs(debtorBalance),
+          creditorBalance,
+          override.amount
+        );
+        
+        if (maxSettleable > 0.01) {
+          transactions.push({
+            from: override.debtor_id,
+            to: override.creditor_id,
+            amount: maxSettleable,
+          });
+          
+          // Update remaining balances
+          remainingBalances[override.debtor_id] += maxSettleable;
+          remainingBalances[override.creditor_id] -= maxSettleable;
+        }
+      }
+    });
+    
+    // Now calculate optimized transactions for remaining balances
+    const remainingDebtors = Object.entries(remainingBalances)
+      .filter(([_, balance]) => balance < -0.01)
+      .map(([id, balance]) => ({ id, amount: Math.abs(balance) }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const remainingCreditors = Object.entries(remainingBalances)
+      .filter(([_, balance]) => balance > 0.01)
+      .map(([id, balance]) => ({ id, amount: balance }))
+      .sort((a, b) => b.amount - a.amount);
+
+    let debtorIndex = 0;
+    let creditorIndex = 0;
+
+    while (debtorIndex < remainingDebtors.length && creditorIndex < remainingCreditors.length) {
+      const debtor = remainingDebtors[debtorIndex];
+      const creditor = remainingCreditors[creditorIndex];
+
+      const settlementAmount = Math.min(debtor.amount, creditor.amount);
+
+      if (settlementAmount > 0.01) {
+        transactions.push({
+          from: debtor.id,
+          to: creditor.id,
+          amount: settlementAmount,
+        });
+
+        debtor.amount -= settlementAmount;
+        creditor.amount -= settlementAmount;
+      }
+
+      if (debtor.amount < 0.01) debtorIndex++;
+      if (creditor.amount < 0.01) creditorIndex++;
+    }
+    
+    return transactions;
+  }
+
+  // No manual overrides - use standard optimized calculation
   const debtors = Object.entries(netBalances)
     .filter(([_, balance]) => balance < -0.01)
     .map(([id, balance]) => ({ id, amount: Math.abs(balance) }))
-    .sort((a, b) => b.amount - a.amount); // Sort by amount descending
+    .sort((a, b) => b.amount - a.amount);
 
   const creditors = Object.entries(netBalances)
     .filter(([_, balance]) => balance > 0.01)
     .map(([id, balance]) => ({ id, amount: balance }))
-    .sort((a, b) => b.amount - a.amount); // Sort by amount descending
+    .sort((a, b) => b.amount - a.amount);
 
-  const transactions: CalculatedTransaction[] = [];
-
-  // Use a greedy approach to minimize number of transactions
   let debtorIndex = 0;
   let creditorIndex = 0;
 
@@ -111,7 +185,6 @@ export function calculateSimplifiedTransactions(
       creditor.amount -= settlementAmount;
     }
 
-    // Move to next debtor/creditor if current one is settled
     if (debtor.amount < 0.01) debtorIndex++;
     if (creditor.amount < 0.01) creditorIndex++;
   }

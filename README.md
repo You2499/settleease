@@ -98,6 +98,11 @@ GEMINI_API_KEY=your_gemini_api_key
 - Tracks payments between people
 - Fields: `id`, `debtor_id`, `creditor_id`, `amount_settled`, `marked_by_user_id`, `notes`, `settled_at`
 
+**manual_settlement_overrides**
+- Stores manual settlement path preferences
+- Fields: `id`, `debtor_id`, `creditor_id`, `amount`, `notes`, `created_by_user_id`, `is_active`, `created_at`, `updated_at`
+- Allows overriding optimized settlement calculations with preferred payment paths
+
 **user_profiles**
 - User information and roles
 - Fields: `id`, `user_id`, `role`, `first_name`, `last_name`, `theme_preference`, `created_at`, `updated_at`
@@ -153,9 +158,11 @@ All tables have Row Level Security (RLS) enabled.
 
 - Automated settlement calculations
 - Transaction minimization algorithm
+- Manual settlement path overrides
 - Manual payment recording
 - Complete audit trail
 - Real-time balance updates
+- Prominent alerts for active manual overrides
 
 ### AI Summaries
 

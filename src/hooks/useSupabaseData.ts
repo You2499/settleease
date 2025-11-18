@@ -8,8 +8,9 @@ import {
   PEOPLE_TABLE,
   CATEGORIES_TABLE,
   SETTLEMENT_PAYMENTS_TABLE,
+  MANUAL_SETTLEMENT_OVERRIDES_TABLE,
 } from '@/lib/settleease';
-import type { Person, Expense, Category, SettlementPayment, UserRole } from '@/lib/settleease';
+import type { Person, Expense, Category, SettlementPayment, ManualSettlementOverride, UserRole } from '@/lib/settleease';
 
 let initialDefaultPeopleSetupAttemptedOrCompleted = false;
 
@@ -25,12 +26,14 @@ export function useSupabaseData(
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [settlementPayments, setSettlementPayments] = useState<SettlementPayment[]>([]);
+  const [manualOverrides, setManualOverrides] = useState<ManualSettlementOverride[]>([]);
   
   // Individual loading states for progressive loading - start as true for initial load
   const [isLoadingPeople, setIsLoadingPeople] = useState(true);
   const [isLoadingExpenses, setIsLoadingExpenses] = useState(true);
   const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   const [isLoadingSettlements, setIsLoadingSettlements] = useState(true);
+  const [isLoadingOverrides, setIsLoadingOverrides] = useState(true);
   
   // Legacy loading state for backward compatibility
   const [isLoadingData, setIsLoadingData] = useState(false);
@@ -135,6 +138,28 @@ export function useSupabaseData(
     })();
     fetchPromises.push(settlementsFetch);
 
+    // Fetch manual settlement overrides
+    setIsLoadingOverrides(true);
+    const overridesFetch = (async () => {
+      try {
+        const { data, error } = await db.from(MANUAL_SETTLEMENT_OVERRIDES_TABLE).select('*').order('created_at', { ascending: false });
+        if (error) {
+          console.error("Error fetching manual overrides:", error);
+          toast({ title: "Data Error", description: `Could not fetch manual overrides: ${error.message}`, variant: "destructive" });
+          return false;
+        }
+        setManualOverrides(data as ManualSettlementOverride[]);
+        return true;
+      } catch (error: any) {
+        console.error("Catch: Error fetching manual overrides:", error);
+        toast({ title: "Data Error", description: `Unexpected error fetching manual_settlement_overrides.`, variant: "destructive" });
+        return false;
+      } finally {
+        setIsLoadingOverrides(false);
+      }
+    })();
+    fetchPromises.push(overridesFetch);
+
     // Wait for all fetches to complete
     const results = await Promise.all(fetchPromises);
     const allSuccessful = results.every((result: boolean) => result === true);
@@ -225,12 +250,14 @@ export function useSupabaseData(
       setExpenses([]);
       setCategories([]);
       setSettlementPayments([]);
+      setManualOverrides([]);
       setIsDataFetchedAtLeastOnce(false);
       // Reset loading states when no user
       setIsLoadingPeople(false);
       setIsLoadingExpenses(false);
       setIsLoadingCategories(false);
       setIsLoadingSettlements(false);
+      setIsLoadingOverrides(false);
     }
     
     return () => {
@@ -244,16 +271,19 @@ export function useSupabaseData(
     expenses,
     categories,
     settlementPayments,
+    manualOverrides,
     isLoadingData,
     isDataFetchedAtLeastOnce,
     isLoadingPeople,
     isLoadingExpenses,
     isLoadingCategories,
     isLoadingSettlements,
+    isLoadingOverrides,
     fetchAllData,
     setPeople,
     setExpenses,
     setCategories,
     setSettlementPayments,
+    setManualOverrides,
   };
 }

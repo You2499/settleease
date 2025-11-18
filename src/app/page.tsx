@@ -159,12 +159,14 @@ function SettleEasePageContent() {
     expenses,
     categories,
     settlementPayments,
+    manualOverrides,
     isLoadingData,
     isDataFetchedAtLeastOnce,
     isLoadingPeople,
     isLoadingExpenses,
     isLoadingCategories,
     isLoadingSettlements,
+    isLoadingOverrides,
     fetchAllData,
   } = useSupabaseData(db, supabaseInitializationError, currentUser, userRole, isLoadingAuth, isLoadingRole);
 
@@ -552,6 +554,7 @@ function SettleEasePageContent() {
                   dynamicCategories={categories}
                   getCategoryIconFromName={getCategoryIconFromName}
                   settlementPayments={settlementPayments}
+                  manualOverrides={manualOverrides}
                   db={db}
                   currentUserId={currentUser?.id || ''}
                   onActionComplete={handleActionComplete}
@@ -560,6 +563,7 @@ function SettleEasePageContent() {
                   isLoadingExpenses={isLoadingExpenses}
                   isLoadingCategories={isLoadingCategories}
                   isLoadingSettlements={isLoadingSettlements}
+                  isLoadingOverrides={isLoadingOverrides}
                   isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>
@@ -665,13 +669,16 @@ function SettleEasePageContent() {
                   people={people}
                   peopleMap={peopleMap}
                   settlementPayments={settlementPayments}
+                  manualOverrides={manualOverrides}
                   db={db}
                   currentUserId={currentUser?.id || ''}
                   onActionComplete={handleActionComplete}
                   isLoadingPeople={isLoadingPeople}
                   isLoadingExpenses={isLoadingExpenses}
                   isLoadingSettlements={isLoadingSettlements}
+                  isLoadingOverrides={isLoadingOverrides}
                   isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                  userRole={userRole}
                 />
               </SettleEaseErrorBoundary>
             )}
@@ -687,12 +694,14 @@ function SettleEasePageContent() {
                   people={people}
                   expenses={expenses}
                   settlementPayments={settlementPayments}
+                  manualOverrides={manualOverrides}
                   peopleMap={peopleMap}
                   categories={categories}
                   isLoadingPeople={isLoadingPeople}
                   isLoadingExpenses={isLoadingExpenses}
                   isLoadingCategories={isLoadingCategories}
                   isLoadingSettlements={isLoadingSettlements}
+                  isLoadingOverrides={isLoadingOverrides}
                   isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                 />
               </SettleEaseErrorBoundary>

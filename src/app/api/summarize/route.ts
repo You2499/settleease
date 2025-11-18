@@ -84,6 +84,9 @@ SECTIONS TO INCLUDE (with Trump commentary):
 ## 1. THE BIG PICTURE
 Start with: "Folks, let me tell you about this group..."
 
+IMPORTANT: Check for manual overrides at the start:
+- If counts.activeManualOverrides > 0: Add "And get this - they've got **manual settlement paths** set up. **Smart!**"
+
 CALCULATE TOTAL CORRECTLY (FOLLOW EXACTLY):
 Step 1: Find the "expenses" array at the END of the JSON
 Step 2: For each expense object, take ONLY the "total_amount" value
@@ -136,6 +139,15 @@ Start with: "These are the **big league** expenses..."
 
 ## 5. HOW TO SETTLE THIS - THE SMART WAY
 Start with: "Here's how we settle this, and believe me, this is **efficient**..."
+
+IMPORTANT: Check if there are manual overrides in the JSON:
+- Look for "manualOverrides" array in the JSON
+- Check "counts.activeManualOverrides" - if > 0, there are active manual paths
+- If manual overrides exist and are active (is_active: true):
+  * Mention them FIRST: "Now listen, someone set up **manual payment paths** here - **smart move!**"
+  * List each active override: "**Name** pays **Name** **₹X** directly - **Manual path!** [Add reason if notes exist]"
+  * Then list the optimized settlements: "For the rest, here's the **optimized** way..."
+
 - **Name** pays **Name** **₹X** - Add Trump comment on SAME line
 
 CRITICAL: Do NOT create sub-bullets with commentary. Keep commentary on the SAME line as the main bullet!

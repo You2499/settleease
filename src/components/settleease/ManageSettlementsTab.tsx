@@ -29,26 +29,32 @@ import {
 import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
-import type { Expense, Person, SettlementPayment } from '@/lib/settleease';
+import type { Expense, Person, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import CustomSettlementForm from './CustomSettlementForm';
+import ManualSettlementOverrideForm from './ManualSettlementOverrideForm';
+import ManualOverrideAlert from './ManualOverrideAlert';
+import { calculateNetBalances } from '@/lib/settleease/settlementCalculations';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
   people: Person[];
   peopleMap: Record<string, string>;
   settlementPayments: SettlementPayment[];
+  manualOverrides: ManualSettlementOverride[];
   db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
   isLoadingSettlements?: boolean;
+  isLoadingOverrides?: boolean;
   isDataFetchedAtLeastOnce?: boolean;
+  userRole: 'admin' | 'user' | null;
 }
 
 interface CalculatedSettlement {
@@ -62,20 +68,23 @@ export default function ManageSettlementsTab({
   people,
   peopleMap,
   settlementPayments,
+  manualOverrides,
   db,
   currentUserId,
   onActionComplete,
   isLoadingPeople = false,
   isLoadingExpenses = false,
   isLoadingSettlements = false,
+  isLoadingOverrides = false,
   isDataFetchedAtLeastOnce = true,
+  userRole,
 }: ManageSettlementsTabProps) {
   // Check for crash test
   useEffect(() => {
     crashTestManager.checkAndCrash('manageSettlements', 'Manage Settlements Tab crashed: Settlement processing failed with corrupted payment data');
   });
   
-  const isLoadingData = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || !isDataFetchedAtLeastOnce;
+  const isLoadingData = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || isLoadingOverrides || !isDataFetchedAtLeastOnce;
 
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);
   const [paymentToUnmark, setPaymentToUnmark] = useState<SettlementPayment | null>(null);
@@ -85,6 +94,10 @@ export default function ManageSettlementsTab({
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  const netBalances = useMemo(() => {
+    return calculateNetBalances(people, expenses, settlementPayments);
+  }, [people, expenses, settlementPayments]);
 
   const calculatedSimplifiedSettlements = useMemo(() => {
     if (people.length === 0) return [];
@@ -323,7 +336,15 @@ export default function ManageSettlementsTab({
               </CardTitle>
               <CardDescription className="text-xs sm:text-sm mt-1">View outstanding debts based on current expenses, mark them as paid, or manage previously recorded payments.</CardDescription>
             </div>
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex gap-2">
+              <ManualSettlementOverrideForm
+                people={people}
+                peopleMap={peopleMap}
+                db={db}
+                currentUserId={currentUserId}
+                onActionComplete={onActionComplete}
+                netBalances={netBalances}
+              />
               <CustomSettlementForm
                 people={people}
                 peopleMap={peopleMap}
@@ -337,6 +358,15 @@ export default function ManageSettlementsTab({
         <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4 sm:space-y-6">
+              
+              {/* Manual Override Alert */}
+              <ManualOverrideAlert
+                overrides={manualOverrides}
+                peopleMap={peopleMap}
+                db={db}
+                onActionComplete={onActionComplete}
+                userRole={userRole}
+              />
               
               {/* Custom Settlement Info */}
               <div className="border rounded-lg shadow-sm bg-primary/5 p-3 sm:p-4">

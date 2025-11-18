@@ -19,12 +19,14 @@ import type {
   CalculatedTransaction,
   Category,
   UserRole,
+  ManualSettlementOverride,
 } from "@/lib/settleease/types";
 
 interface ComprehensiveDebugProps {
   people: Person[];
   expenses: Expense[];
   settlementPayments: SettlementPayment[];
+  manualOverrides: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
   categories: Category[];
   userRole: UserRole;
@@ -43,6 +45,7 @@ export default function ComprehensiveDebug({
   people,
   expenses,
   settlementPayments,
+  manualOverrides,
   peopleMap,
   categories,
   userRole,
@@ -105,8 +108,8 @@ export default function ComprehensiveDebug({
 
   // Calculate transactions
   const allSimplified: CalculatedTransaction[] = useMemo(
-    () => calculateSimplifiedTransactions(people, expenses, settlementPayments),
-    [people, expenses, settlementPayments]
+    () => calculateSimplifiedTransactions(people, expenses, settlementPayments, manualOverrides),
+    [people, expenses, settlementPayments, manualOverrides]
   );
   
   const allPairwise: CalculatedTransaction[] = useMemo(
@@ -220,6 +223,8 @@ export default function ComprehensiveDebug({
         people: people.length,
         expenses: expenses.length,
         settlementPayments: settlementPayments.length,
+        manualOverrides: manualOverrides.length,
+        activeManualOverrides: manualOverrides.filter(o => o.is_active).length,
         pairwiseTransactions: allPairwise.length,
         simplifiedTransactions: allSimplified.length,
       },
@@ -240,12 +245,13 @@ export default function ComprehensiveDebug({
           efficiencyPercent: step3Filtered.efficiency,
         },
       },
+      manualOverrides,
       categories,
       perPerson,
       settlementPayments,
       expenses,
     };
-  }, [people, expenses, settlementPayments, allPairwise, allSimplified, personBalances, categories, userRole, showBalancedPeople, filteredPeople, pairwiseSortedForDisplay, unpaidSimplified, step3Filtered, perPerson]);
+  }, [people, expenses, settlementPayments, manualOverrides, allPairwise, allSimplified, personBalances, categories, userRole, showBalancedPeople, filteredPeople, pairwiseSortedForDisplay, unpaidSimplified, step3Filtered, perPerson]);
 
   const handleCopy = async () => {
     try {

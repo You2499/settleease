@@ -8,6 +8,7 @@ import {
   PEOPLE_TABLE,
   CATEGORIES_TABLE,
   SETTLEMENT_PAYMENTS_TABLE,
+  MANUAL_SETTLEMENT_OVERRIDES_TABLE,
 } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
 
@@ -23,6 +24,7 @@ export function useSupabaseRealtime(
   const expensesChannelRef = useRef<RealtimeChannel | null>(null);
   const categoriesChannelRef = useRef<RealtimeChannel | null>(null);
   const settlementPaymentsChannelRef = useRef<RealtimeChannel | null>(null);
+  const manualOverridesChannelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -40,6 +42,7 @@ export function useSupabaseRealtime(
               expensesChannelRef.current = null;
               categoriesChannelRef.current = null;
               settlementPaymentsChannelRef.current = null;
+              manualOverridesChannelRef.current = null;
               console.log("Realtime: Channel refs nullified (init error path).");
             }
           });
@@ -48,6 +51,7 @@ export function useSupabaseRealtime(
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
         settlementPaymentsChannelRef.current = null;
+        manualOverridesChannelRef.current = null;
         console.log("Realtime: Channel refs nullified (db client was null).");
       }
       return;
@@ -55,12 +59,13 @@ export function useSupabaseRealtime(
 
     if (!currentUser) {
       console.log("Realtime setup skipped: No authenticated user.");
-      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current || settlementPaymentsChannelRef.current) {
+      if (peopleChannelRef.current || expensesChannelRef.current || categoriesChannelRef.current || settlementPaymentsChannelRef.current || manualOverridesChannelRef.current) {
         console.log("Realtime: User logged out. Ensuring local channel refs are cleared (should have been handled by prior cleanup).");
         peopleChannelRef.current = null;
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
         settlementPaymentsChannelRef.current = null;
+        manualOverridesChannelRef.current = null;
       }
       return;
     }
@@ -167,6 +172,7 @@ export function useSupabaseRealtime(
     setupChannel(expensesChannelRef, EXPENSES_TABLE);
     setupChannel(categoriesChannelRef, CATEGORIES_TABLE);
     setupChannel(settlementPaymentsChannelRef, SETTLEMENT_PAYMENTS_TABLE);
+    setupChannel(manualOverridesChannelRef, MANUAL_SETTLEMENT_OVERRIDES_TABLE);
 
     return () => {
       isMounted = false;
@@ -192,6 +198,7 @@ export function useSupabaseRealtime(
             expensesChannelRef.current = null;
             categoriesChannelRef.current = null;
             settlementPaymentsChannelRef.current = null;
+            manualOverridesChannelRef.current = null;
           });
       } else {
         console.warn("Realtime: Supabase client (db) or removeAllChannels not available during cleanup. Manually nullifying refs.");
@@ -199,6 +206,7 @@ export function useSupabaseRealtime(
         expensesChannelRef.current = null;
         categoriesChannelRef.current = null;
         settlementPaymentsChannelRef.current = null;
+        manualOverridesChannelRef.current = null;
       }
     };
   }, [db, currentUser, supabaseInitializationError, isDataFetchedAtLeastOnce, userRole, fetchAllData]);
