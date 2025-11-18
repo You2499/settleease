@@ -66,7 +66,7 @@ const AmountInputComponent = ({ totalAmount, setTotalAmount }: { totalAmount: st
         value={totalAmount}
         onChange={(e) => setTotalAmount(e.target.value)}
         placeholder="e.g., 100.00"
-        className="mt-1 h-10 sm:h-11"
+        className="mt-1 h-10 sm:h-11 text-right font-mono"
       />
     </div>
   );

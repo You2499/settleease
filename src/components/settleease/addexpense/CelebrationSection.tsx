@@ -107,7 +107,7 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
         value={celebrationAmountInput}
         onChange={(e) => setCelebrationAmountInput(e.target.value)}
         placeholder="e.g., 20.00"
-        className="h-10"
+        className="h-10 text-right font-mono"
       />
     </div>
   );

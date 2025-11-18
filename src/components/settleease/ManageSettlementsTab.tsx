@@ -655,6 +655,7 @@ export default function ManageSettlementsTab({
                   value={editAmount}
                   onChange={(e) => setEditAmount(e.target.value)}
                   placeholder="Enter amount"
+                  className="text-right font-mono"
                 />
               </div>
 

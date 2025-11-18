@@ -294,7 +294,7 @@ export default function ManualSettlementOverrideForm({
                                                     value={formData.amount}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                                                     disabled={isLoading}
-                                                    className="pl-10 h-10 text-sm"
+                                                    className="pl-10 h-10 text-sm text-right font-mono"
                                                 />
                                             </div>
                                         </div>
