@@ -120,70 +120,74 @@ export default function ManualOverrideAlert({
     return (
         <>
             <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20 mb-4">
-                <Route className="h-4 w-4 sm:h-5 sm:w-5 text-amber-600 flex-shrink-0" />
-                <AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                        <span className="text-sm sm:text-base">Manual Settlement Paths Active</span>
-                        <Badge variant="secondary" className="self-start sm:self-auto">
-                            {activeOverrides.length} {activeOverrides.length === 1 ? 'override' : 'overrides'}
-                        </Badge>
+                <div className="flex gap-3 w-full">
+                    <Route className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                        <AlertTitle className="text-amber-900 dark:text-amber-100 font-semibold mb-2">
+                            <div className="flex items-center justify-between gap-2">
+                                <span className="text-sm sm:text-base">Manual Settlement Paths Active</span>
+                                <Badge variant="secondary" className="flex-shrink-0">
+                                    {activeOverrides.length} {activeOverrides.length === 1 ? 'override' : 'overrides'}
+                                </Badge>
+                            </div>
+                        </AlertTitle>
+                        <AlertDescription className="text-amber-800 dark:text-amber-200">
+                            <p className="mb-3 text-xs sm:text-sm">
+                                Custom settlement paths are being used instead of the optimized calculation. 
+                                These will remain active until cleared or the debts are settled.
+                            </p>
+                            <div className="flex flex-col sm:flex-row gap-2">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setShowDetails(true)}
+                                    className="text-xs w-full sm:w-auto"
+                                >
+                                    <Eye className="mr-1 h-3 w-3" />
+                                    View Details
+                                </Button>
+                                {userRole === 'admin' && activeOverrides.length > 0 && (
+                                    <Button
+                                        size="sm"
+                                        variant="destructive"
+                                        onClick={async () => {
+                                            if (!db) return;
+                                            setIsLoading(true);
+                                            try {
+                                                const { error } = await db
+                                                    .from(MANUAL_SETTLEMENT_OVERRIDES_TABLE)
+                                                    .update({ is_active: false })
+                                                    .in('id', activeOverrides.map(o => o.id));
+
+                                                if (error) throw error;
+
+                                                toast({
+                                                    title: "All Overrides Cleared",
+                                                    description: "All manual settlement paths have been removed.",
+                                                });
+
+                                                onActionComplete();
+                                            } catch (error: any) {
+                                                toast({
+                                                    title: "Error",
+                                                    description: error.message || "Could not clear overrides.",
+                                                    variant: "destructive"
+                                                });
+                                            } finally {
+                                                setIsLoading(false);
+                                            }
+                                        }}
+                                        disabled={isLoading}
+                                        className="text-xs w-full sm:w-auto"
+                                    >
+                                        <X className="mr-1 h-3 w-3" />
+                                        Clear All
+                                    </Button>
+                                )}
+                            </div>
+                        </AlertDescription>
                     </div>
-                </AlertTitle>
-                <AlertDescription className="text-amber-800 dark:text-amber-200 mt-2">
-                    <p className="mb-3 text-xs sm:text-sm">
-                        Custom settlement paths are being used instead of the optimized calculation. 
-                        These will remain active until cleared or the debts are settled.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setShowDetails(true)}
-                            className="text-xs w-full sm:w-auto"
-                        >
-                            <Eye className="mr-1 h-3 w-3" />
-                            View Details
-                        </Button>
-                        {userRole === 'admin' && activeOverrides.length > 0 && (
-                            <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={async () => {
-                                    if (!db) return;
-                                    setIsLoading(true);
-                                    try {
-                                        const { error } = await db
-                                            .from(MANUAL_SETTLEMENT_OVERRIDES_TABLE)
-                                            .update({ is_active: false })
-                                            .in('id', activeOverrides.map(o => o.id));
-
-                                        if (error) throw error;
-
-                                        toast({
-                                            title: "All Overrides Cleared",
-                                            description: "All manual settlement paths have been removed.",
-                                        });
-
-                                        onActionComplete();
-                                    } catch (error: any) {
-                                        toast({
-                                            title: "Error",
-                                            description: error.message || "Could not clear overrides.",
-                                            variant: "destructive"
-                                        });
-                                    } finally {
-                                        setIsLoading(false);
-                                    }
-                                }}
-                                disabled={isLoading}
-                                className="text-xs w-full sm:w-auto"
-                            >
-                                <X className="mr-1 h-3 w-3" />
-                                Clear All
-                            </Button>
-                        )}
-                    </div>
-                </AlertDescription>
+                </div>
             </Alert>
 
             {/* Details Dialog */}
