@@ -50,6 +50,7 @@ import type {
   SettlementPayment,
   CalculatedTransaction,
   UserRole,
+  ManualSettlementOverride,
 } from "@/lib/settleease/types";
 import PerPersonSettlementDetails from "./PerPersonSettlementDetails";
 import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
@@ -63,6 +64,7 @@ interface SettlementSummaryProps {
   people: Person[];
   peopleMap: Record<string, string>;
   settlementPayments: SettlementPayment[];
+  manualOverrides: ManualSettlementOverride[];
   onMarkAsPaid: (transaction: CalculatedTransaction) => Promise<void>;
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void;
@@ -85,6 +87,7 @@ export default function SettlementSummary({
   people,
   peopleMap,
   settlementPayments,
+  manualOverrides,
   onMarkAsPaid,
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
@@ -235,6 +238,9 @@ export default function SettlementSummary({
   const fullDebug = useMemo(() => {
     const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
     
+    // Filter active manual overrides
+    const activeManualOverrides = manualOverrides.filter(override => override.is_active);
+    
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
@@ -244,6 +250,7 @@ export default function SettlementSummary({
         settlementPayments: settlementPayments.length,
         pairwiseTransactions: pairwiseTransactions.length,
         simplifiedTransactions: simplifiedTransactions.length,
+        activeManualOverrides: activeManualOverrides.length,
       },
       overviewDescriptions: {
         simplifyOn: "Minimum transactions required to settle all debts.",
@@ -256,10 +263,11 @@ export default function SettlementSummary({
       },
       categories,
       settlementPayments,
+      manualOverrides: activeManualOverrides,
       expenses: allExpenses,
       people,
     };
-  }, [people, allExpenses, settlementPayments, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
+  }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
 
   const handleSummarise = async () => {
     if (!fullDebug || isComputingHash) return;

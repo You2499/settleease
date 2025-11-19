@@ -74,9 +74,12 @@ The JSON contains:
   * created_at - When expense was made
 - people[] - Array of people with id and name
 - personBalances[] - Net balances for each person (totalPaid, totalOwed, netBalance)
-- simplifiedSettlements[] - Optimized settlement plan
+- transactions.simplified[] - Optimized settlement plan
+- transactions.pairwise[] - Direct debt relationships
 - categories[] - Spending categories
-- settlementPayments[] - Already recorded payments
+- settlementPayments[] - Already recorded payments (debtor_id, creditor_id, amount_settled, notes)
+- manualOverrides[] - Active manual settlement paths (if any) - these override the optimized plan
+- counts - Summary statistics including activeManualOverrides count
 
 STRUCTURE YOUR ANALYSIS:
 
@@ -95,6 +98,11 @@ List people with positive net balance (personBalances where netBalance > 0)
 
 ### The Losers (Owing Money)
 List people with negative net balance (personBalances where netBalance < 0)
+IMPORTANT: Check settlementPayments[] to see if they've made any partial payments:
+- If someone has paid something but still owes more, call it out!
+- Example: "Sourav paid ₹3,000 already but STILL owes ₹5,000 more to Gagan!"
+- Give credit for partial payments while emphasizing what's still owed
+- React naturally to their payment progress (or lack thereof)
 
 ### The Balanced Ones
 List people with zero net balance
@@ -126,7 +134,16 @@ React naturally to what you see:
 - Add your signature commentary on each big expense
 
 ## 5. HOW TO SETTLE THIS - THE SMART WAY
-Show the settlement plan (from simplifiedSettlements array)
+Show the settlement plan (from transactions.simplified array)
+
+CRITICAL: Cross-reference with settlementPayments[] to show payment progress:
+- If someone has already made partial payments, acknowledge it
+- Show what's STILL needed after accounting for payments already made
+- Example: "Sourav needs to pay Gagan ₹5,000 (already paid ₹3,000, good start!)"
+- Call out people who haven't paid anything yet vs those making progress
+- React to the payment history - praise those paying, call out those who haven't
+
+The simplified settlements already account for recorded payments, so just present them with context about payment history
 
 ## 6. THE BOTTOM LINE
 Wrap it up with your signature style

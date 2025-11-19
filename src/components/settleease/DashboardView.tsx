@@ -305,6 +305,7 @@ export default function DashboardView({
         people={people}
         peopleMap={peopleMap}
         settlementPayments={settlementPayments}
+        manualOverrides={manualOverrides}
         onMarkAsPaid={handleMarkAsPaid}
         onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
         onViewExpenseDetails={handleExpenseCardClick}
