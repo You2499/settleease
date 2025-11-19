@@ -214,17 +214,38 @@ const renderMarkdown = (text: string) => {
     const parts: React.ReactNode[] = [];
     let currentIndex = 0;
     
-    // Enhanced regex to handle bold, currency symbols, and special characters
-    const boldRegex = /\*\*([^*]+)\*\*/g;
-    const matches: Array<{ start: number; end: number; text: string }> = [];
+    // Enhanced regex to handle bold, italic, currency symbols, and special characters
+    // Match bold (**text**) and italic (*text* or _text_)
+    const formattingRegex = /(\*\*([^*]+)\*\*)|(\*([^*]+)\*)|(_([^_]+)_)/g;
+    const matches: Array<{ start: number; end: number; text: string; type: 'bold' | 'italic' }> = [];
     
     let match;
-    while ((match = boldRegex.exec(text)) !== null) {
-      matches.push({
-        start: match.index,
-        end: match.index + match[0].length,
-        text: match[1]
-      });
+    while ((match = formattingRegex.exec(text)) !== null) {
+      if (match[1]) {
+        // Bold: **text**
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          text: match[2],
+          type: 'bold'
+        });
+      } else if (match[3]) {
+        // Italic: *text*
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          text: match[4],
+          type: 'italic'
+        });
+      } else if (match[5]) {
+        // Italic: _text_
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          text: match[6],
+          type: 'italic'
+        });
+      }
     }
     
     matches.forEach((m, idx) => {
@@ -237,15 +258,26 @@ const renderMarkdown = (text: string) => {
         );
       }
       
-      // Add the bold text with enhanced styling
-      parts.push(
-        <strong 
-          key={`bold-${idx}`} 
-          className="font-bold text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 px-1 rounded"
-        >
-          {m.text}
-        </strong>
-      );
+      // Add the formatted text
+      if (m.type === 'bold') {
+        parts.push(
+          <strong 
+            key={`bold-${idx}`} 
+            className="font-bold text-primary dark:text-primary-foreground bg-primary/10 dark:bg-primary/20 px-1 rounded"
+          >
+            {m.text}
+          </strong>
+        );
+      } else if (m.type === 'italic') {
+        parts.push(
+          <em 
+            key={`italic-${idx}`} 
+            className="italic text-foreground/80"
+          >
+            {m.text}
+          </em>
+        );
+      }
       
       currentIndex = m.end;
     });
