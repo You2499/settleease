@@ -511,25 +511,25 @@ export default function StatusTab({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <Card className="bg-primary/5 border-none">
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold text-primary">{people.length}</div>
+                  <div className="text-xl sm:text-3xl font-bold text-primary">{people.length}</div>
                   <div className="text-xs font-medium text-muted-foreground mt-1">Active People</div>
                 </CardContent>
               </Card>
               <Card className="bg-primary/5 border-none">
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold text-primary">{expenses.length}</div>
+                  <div className="text-xl sm:text-3xl font-bold text-primary">{expenses.length}</div>
                   <div className="text-xs font-medium text-muted-foreground mt-1">Total Expenses</div>
                 </CardContent>
               </Card>
               <Card className="bg-primary/5 border-none">
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold text-primary">{settlementPayments.length}</div>
+                  <div className="text-xl sm:text-3xl font-bold text-primary">{settlementPayments.length}</div>
                   <div className="text-xs font-medium text-muted-foreground mt-1">Settlements</div>
                 </CardContent>
               </Card>
               <Card className="bg-primary/5 border-none">
                 <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold text-primary">
+                  <div className="text-xl sm:text-3xl font-bold text-primary truncate">
                     {formatCurrency(expenses.reduce((sum, e) => sum + e.total_amount, 0))}
                   </div>
                   <div className="text-xs font-medium text-muted-foreground mt-1">Total Value</div>

@@ -247,11 +247,11 @@ export default function AlgorithmVerification({
           <div className="flex flex-col min-h-[500px]">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full flex-1 flex flex-col">
               <div className="px-4 sm:px-6 pt-4 border-b bg-muted/30">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4 bg-background/50 p-1">
-                  <TabsTrigger value="overview" className="text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm">
+                <TabsList className="w-full justify-start overflow-x-auto flex-nowrap mb-4 bg-background/50 p-1 h-auto no-scrollbar">
+                  <TabsTrigger value="overview" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm px-3 py-1.5 h-9">
                     Overview
                   </TabsTrigger>
-                  <TabsTrigger value="results" className="text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm">
+                  <TabsTrigger value="results" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm px-3 py-1.5 h-9">
                     <span className="flex items-center gap-2">
                       Results
                       {failedTests > 0 && (
@@ -261,12 +261,12 @@ export default function AlgorithmVerification({
                       )}
                     </span>
                   </TabsTrigger>
-                  <TabsTrigger value="debug" className="text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm">
+                  <TabsTrigger value="debug" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm px-3 py-1.5 h-9">
                     <Bug className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Debug Report
                   </TabsTrigger>
                   {currentUserId && db && (
-                    <TabsTrigger value="prompt" className="text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm">
+                    <TabsTrigger value="prompt" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm px-3 py-1.5 h-9">
                       <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       AI Prompt
                     </TabsTrigger>
