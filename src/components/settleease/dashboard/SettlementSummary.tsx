@@ -249,9 +249,16 @@ export default function SettlementSummary({
     const categoryTotals: Record<string, number> = {};
     includedExpenses.forEach(expense => {
       if (expense.split_method === 'itemwise' && expense.items && expense.items.length > 0) {
+        // Scale items to match the total amount exactly
+        // This handles cases where items don't sum to total (e.g. tax/tip not itemized, or estimation errors)
+        const sumOfItems = expense.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+        const totalAmount = Number(expense.total_amount) || 0;
+        const scalingFactor = sumOfItems > 0.001 ? totalAmount / sumOfItems : 1;
+
         expense.items.forEach(item => {
           const categoryName = item.categoryName || expense.category || 'Uncategorized';
-          categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + Number(item.price);
+          const adjustedPrice = (Number(item.price) || 0) * scalingFactor;
+          categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + adjustedPrice;
         });
       } else {
         const categoryName = expense.category || 'Uncategorized';
