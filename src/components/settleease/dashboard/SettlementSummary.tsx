@@ -247,8 +247,7 @@ export default function SettlementSummary({
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
-      // IMPORTANT: promptVersion is included so changing the prompt invalidates old summaries
-      promptVersion: 2, // Increment this when you update the AI prompt to force new summaries
+      // IMPORTANT: promptVersion is fetched from database and added dynamically before hashing
       counts: {
         people: people.length,
         expenses: includedExpenses.length,
@@ -276,12 +275,35 @@ export default function SettlementSummary({
   }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
 
   const handleSummarise = async () => {
-    if (!fullDebug || isComputingHash) return;
+    if (!fullDebug || isComputingHash || !db) return;
     
     try {
       setIsComputingHash(true);
+      console.log("🔄 Fetching active prompt version...");
+      
+      // Fetch active prompt version from database
+      const { data: promptData, error: promptError } = await db
+        .from('ai_prompts')
+        .select('version')
+        .eq('name', 'trump-summarizer')
+        .eq('is_active', true)
+        .single();
+      
+      if (promptError || !promptData) {
+        console.warn("⚠️ Could not fetch prompt version, using default");
+      }
+      
+      const promptVersion = promptData?.version || 2;
+      console.log("✅ Using prompt version:", promptVersion);
+      
+      // Include prompt version in the data for hashing
+      const dataWithPromptVersion = {
+        ...fullDebug,
+        promptVersion,
+      };
+      
       console.log("🔄 Computing hash for current data...");
-      const hash = await computeJsonHash(fullDebug);
+      const hash = await computeJsonHash(dataWithPromptVersion);
       console.log("🔑 Generated hash:", hash);
       
       setSummaryJsonData(fullDebug);
