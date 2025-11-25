@@ -18,10 +18,12 @@ import { runAllTests } from "./testRunner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
-import { Bug, EyeOff, Eye } from "lucide-react";
+import { Bug, EyeOff, Eye, Sparkles } from "lucide-react";
 import VerificationOverview from "./VerificationOverview";
 import VerificationResults from "./VerificationResults";
 import VerificationDebug from "./VerificationDebug";
+import PromptEditor from "./PromptEditor";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 export default function AlgorithmVerification({
   people,
@@ -30,12 +32,15 @@ export default function AlgorithmVerification({
   peopleMap,
   uiSimplifiedTransactions,
   uiPairwiseTransactions,
+  db,
+  currentUserId,
 }: AlgorithmVerificationProps) {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
   const [lastRunTime, setLastRunTime] = useState<Date | null>(null);
   const [debugReport, setDebugReport] = useState<DebugReport | null>(null);
   const [showDebugMode, setShowDebugMode] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'debug' | 'prompt'>('overview');
 
   const runTests = async () => {
     setIsRunning(true);
@@ -182,18 +187,53 @@ export default function AlgorithmVerification({
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      {lastRunTime && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button
+            variant={activeTab === 'overview' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setActiveTab('overview')}
+          >
+            Overview
+          </Button>
+          {showDebugMode && debugReport && (
+            <Button
+              variant={activeTab === 'debug' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('debug')}
+            >
+              <Bug className="h-4 w-4 mr-1" />
+              Debug
+            </Button>
+          )}
+          {currentUserId && db && (
+            <Button
+              variant={activeTab === 'prompt' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveTab('prompt')}
+            >
+              <Sparkles className="h-4 w-4 mr-1" />
+              AI Prompt
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Content Area with Mobile-Responsive Spacing */}
       <div className="space-y-4 sm:space-y-6">
         {/* Step 1: System Overview */}
-        <VerificationOverview
-          people={people}
-          expenses={expenses}
-          settlementPayments={settlementPayments}
-          testResults={testResults}
-        />
+        {activeTab === 'overview' && (
+          <VerificationOverview
+            people={people}
+            expenses={expenses}
+            settlementPayments={settlementPayments}
+            testResults={testResults}
+          />
+        )}
 
         {/* Step 2: Test Results */}
-        {testResults.length > 0 && (
+        {activeTab === 'overview' && testResults.length > 0 && (
           <VerificationResults
             testResults={testResults}
             showDebugMode={showDebugMode}
@@ -202,13 +242,21 @@ export default function AlgorithmVerification({
         )}
 
         {/* Step 3: Debug Information */}
-        {showDebugMode && debugReport && (
+        {activeTab === 'debug' && showDebugMode && debugReport && (
           <VerificationDebug
             debugReport={debugReport}
             peopleMap={peopleMap}
             onCopyReport={copyDebugReport}
             onDownloadReport={downloadDebugReport}
             onExportData={exportLiveData}
+          />
+        )}
+
+        {/* Step 4: AI Prompt Editor */}
+        {activeTab === 'prompt' && currentUserId && db && (
+          <PromptEditor
+            db={db}
+            currentUserId={currentUserId}
           />
         )}
       </div>

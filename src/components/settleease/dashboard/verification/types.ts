@@ -50,4 +50,6 @@ export interface AlgorithmVerificationProps {
   // UI-displayed data for verification
   uiSimplifiedTransactions?: any[];
   uiPairwiseTransactions?: any[];
+  db?: any;
+  currentUserId?: string;
 }

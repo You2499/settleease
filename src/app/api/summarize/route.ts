@@ -18,6 +18,11 @@ const MODEL_FALLBACK_ORDER = [
 export async function POST(request: NextRequest) {
   try {
     console.log('📥 Summarize API called');
+    console.log('🔍 Environment check:', {
+      hasGeminiKey: !!GEMINI_API_KEY,
+      hasSupabaseUrl: !!SUPABASE_URL,
+      hasServiceKey: !!SUPABASE_SERVICE_KEY,
+    });
     const { jsonData, hash, promptVersion } = await request.json();
 
     if (!jsonData) {
