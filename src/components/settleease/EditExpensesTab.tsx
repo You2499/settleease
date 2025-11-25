@@ -16,7 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil, HandCoins } from 'lucide-react';
+import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil, HandCoins, Ban, CheckCircle2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab'; 
 import { EXPENSES_TABLE, formatCurrency } from '@/lib/settleease';
@@ -82,6 +82,34 @@ export default function EditExpensesTab({
 
   const handleConfirmDeleteExpense = (expense: Expense) => {
     setExpenseToDelete(expense);
+  };
+
+  const handleToggleExcludeFromSettlement = async (expense: Expense) => {
+    if (!db || supabaseInitializationError) {
+      toast({ title: "Error", description: `Cannot update expense: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
+      return;
+    }
+    
+    const newExcludeStatus = !expense.exclude_from_settlement;
+    
+    try {
+      const { error } = await db
+        .from(EXPENSES_TABLE)
+        .update({ exclude_from_settlement: newExcludeStatus })
+        .eq('id', expense.id);
+      
+      if (error) throw error;
+      
+      toast({ 
+        title: newExcludeStatus ? "Excluded from Settlements" : "Included in Settlements", 
+        description: newExcludeStatus 
+          ? `${expense.description} will not be counted in settlement calculations (still in analytics).`
+          : `${expense.description} will now be included in settlement calculations.`
+      });
+      onActionComplete(); 
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not update expense: ${error.message}`, variant: "destructive" });
+    }
   };
 
   const handleDeleteExpense = async () => {
@@ -217,10 +245,24 @@ export default function EditExpensesTab({
                                   peopleMap={peopleMap}
                                   getCategoryIconFromName={(iconName: string) => (LucideIcons as any)[iconName] || Settings2}
                                   categories={dynamicCategories}
+                                  showExcludedBadge={true}
                                   actions={
                                     <>
                                       <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="w-full sm:w-auto">
                                           <Pencil className="mr-1 h-4 w-4" /> Edit
+                                      </Button>
+                                      <Button 
+                                        variant={expense.exclude_from_settlement ? "default" : "outline"} 
+                                        size="sm" 
+                                        onClick={() => handleToggleExcludeFromSettlement(expense)} 
+                                        className="w-full sm:w-auto"
+                                        title={expense.exclude_from_settlement ? "Include in settlements" : "Exclude from settlements"}
+                                      >
+                                          {expense.exclude_from_settlement ? (
+                                            <><CheckCircle2 className="mr-1 h-4 w-4" /> Include</>
+                                          ) : (
+                                            <><Ban className="mr-1 h-4 w-4" /> Exclude</>
+                                          )}
                                       </Button>
                                       <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="w-full sm:w-auto">
                                           <Trash2 className="mr-1 h-4 w-4" /> Delete

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense } from '@/lib/settleease/types';
 
@@ -10,6 +11,7 @@ interface ExpenseListItemProps {
   categories: { name: string; icon_name: string }[];
   onClick?: (expense: Expense) => void;
   actions?: React.ReactNode;
+  showExcludedBadge?: boolean; // Only show badge in admin/edit contexts
 }
 
 export default function ExpenseListItem({
@@ -19,6 +21,7 @@ export default function ExpenseListItem({
   categories,
   onClick,
   actions,
+  showExcludedBadge = false,
 }: ExpenseListItemProps) {
   const categoryObj = categories.find(cat => cat.name === expense.category);
   const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
@@ -32,10 +35,17 @@ export default function ExpenseListItem({
     <li onClick={() => onClick?.(expense)} className={onClick ? 'cursor-pointer' : ''}>
       <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
         <CardHeader className="pb-1.5 pt-2.5 px-3">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold" title={expense.description}>
-              {expense.description}
-            </CardTitle>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold" title={expense.description}>
+                {expense.description}
+              </CardTitle>
+              {showExcludedBadge && expense.exclude_from_settlement && (
+                <Badge variant="secondary" className="text-xs">
+                  Excluded from Settlements
+                </Badge>
+              )}
+            </div>
             <span className="text-sm sm:text-md font-bold text-primary mt-1 sm:mt-0">
               {formatCurrency(Number(expense.total_amount))}
             </span>

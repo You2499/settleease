@@ -19,8 +19,13 @@ export function calculateNetBalances(
   // Initialize balances
   people.forEach((p) => (balances[p.id] = 0));
 
-  // Process expenses
+  // Process expenses (excluding those marked as exclude_from_settlement)
   expenses.forEach((expense) => {
+    // Skip expenses excluded from settlement calculations
+    if (expense.exclude_from_settlement) {
+      return;
+    }
+    
     // Credit payers
     if (Array.isArray(expense.paid_by)) {
       expense.paid_by.forEach((payment) => {

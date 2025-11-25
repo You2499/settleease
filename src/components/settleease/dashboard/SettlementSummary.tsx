@@ -241,12 +241,16 @@ export default function SettlementSummary({
     // Filter active manual overrides
     const activeManualOverrides = manualOverrides.filter(override => override.is_active);
     
+    // Filter expenses to exclude those marked as exclude_from_settlement
+    const includedExpenses = allExpenses.filter(expense => !expense.exclude_from_settlement);
+    
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
       counts: {
         people: people.length,
-        expenses: allExpenses.length,
+        expenses: includedExpenses.length,
+        excludedExpenses: allExpenses.length - includedExpenses.length,
         settlementPayments: settlementPayments.length,
         pairwiseTransactions: pairwiseTransactions.length,
         simplifiedTransactions: simplifiedTransactions.length,
@@ -264,7 +268,7 @@ export default function SettlementSummary({
       categories,
       settlementPayments,
       manualOverrides: activeManualOverrides,
-      expenses: allExpenses,
+      expenses: includedExpenses,
       people,
     };
   }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);

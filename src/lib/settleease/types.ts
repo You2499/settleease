@@ -26,6 +26,7 @@ export interface Expense {
   shares: PayerShare[]; // Calculated shares for each person (personId and amount) based on the net amount split
   items?: ExpenseItemDetail[]; // For itemwise split method
   celebration_contribution?: CelebrationContribution | null; // New field for celebration contributions
+  exclude_from_settlement?: boolean; // When true, expense is excluded from settlement calculations but still counted in analytics
   created_at?: string; // ISO date string
   updated_at?: string; // ISO date string
 }
