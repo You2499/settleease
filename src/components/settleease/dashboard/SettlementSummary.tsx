@@ -278,6 +278,55 @@ export default function SettlementSummary({
     // Create clean people data (names only, no IDs in the summary)
     const cleanPeople = people.map(p => ({ name: p.name }));
 
+    // Create a map of ID to Name for easy lookup
+    const idToName = (id: string) => peopleMap[id] || "Unknown";
+
+    // Hydrate person balances with names
+    const balancesWithNames: Record<string, any> = {};
+    Object.entries(personBalances).forEach(([id, balance]) => {
+      balancesWithNames[idToName(id)] = balance;
+    });
+
+    // Hydrate transactions with names
+    const pairwiseWithNames = pairwiseTransactions.map(t => ({
+      ...t,
+      from: idToName(t.from),
+      to: idToName(t.to),
+    }));
+
+    const simplifiedWithNames = simplifiedTransactions.map(t => ({
+      ...t,
+      from: idToName(t.from),
+      to: idToName(t.to),
+    }));
+
+    // Hydrate settlement payments
+    const paymentsWithNames = settlementPayments.map(p => ({
+      ...p,
+      debtor: idToName(p.debtor_id),
+      creditor: idToName(p.creditor_id),
+      // Remove raw IDs to avoid confusion
+      debtor_id: undefined,
+      creditor_id: undefined,
+    }));
+
+    // Hydrate manual overrides
+    const overridesWithNames = activeManualOverrides.map(o => ({
+      ...o,
+      debtor: idToName(o.debtor_id),
+      creditor: idToName(o.creditor_id),
+      debtor_id: undefined,
+      creditor_id: undefined,
+    }));
+
+    // Hydrate expenses
+    const expensesWithNames = includedExpenses.map(e => ({
+      ...e,
+      paid_by: Array.isArray(e.paid_by) ? e.paid_by.map(p => ({ ...p, person: idToName(p.personId), personId: undefined })) : e.paid_by,
+      shares: Array.isArray(e.shares) ? e.shares.map(s => ({ ...s, person: idToName(s.personId), personId: undefined })) : e.shares,
+      celebration_contribution: e.celebration_contribution ? { ...e.celebration_contribution, person: idToName(e.celebration_contribution.personId), personId: undefined } : undefined,
+    }));
+
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
@@ -295,18 +344,18 @@ export default function SettlementSummary({
         simplifyOn: "Minimum transactions required to settle all debts.",
         simplifyOff: "Detailed pairwise debts reflecting direct expense involvements and payments.",
       },
-      personBalances,
+      personBalances: balancesWithNames,
       transactions: {
-        pairwise: pairwiseTransactions,
-        simplified: simplifiedTransactions,
+        pairwise: pairwiseWithNames,
+        simplified: simplifiedWithNames,
       },
       categories: categoriesWithTotals,
-      settlementPayments,
-      manualOverrides: activeManualOverrides,
-      expenses: includedExpenses,
+      settlementPayments: paymentsWithNames,
+      manualOverrides: overridesWithNames,
+      expenses: expensesWithNames,
       people: cleanPeople,
     };
-  }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
+  }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories, peopleMap]);
 
   const handleSummarise = async () => {
     if (!fullDebug || isComputingHash || !db) return;

@@ -265,12 +265,7 @@ export default function AlgorithmVerification({
                     <Bug className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                     Debug Report
                   </TabsTrigger>
-                  {currentUserId && db && (
-                    <TabsTrigger value="prompt" className="flex-shrink-0 text-xs sm:text-sm data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:shadow-sm px-3 py-1.5 h-9">
-                      <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                      AI Prompt
-                    </TabsTrigger>
-                  )}
+
                 </TabsList>
               </div>
 
@@ -325,14 +320,7 @@ export default function AlgorithmVerification({
                   )}
                 </TabsContent>
 
-                {currentUserId && db && (
-                  <TabsContent value="prompt" className="mt-0 h-full">
-                    <PromptEditor
-                      db={db}
-                      currentUserId={currentUserId}
-                    />
-                  </TabsContent>
-                )}
+
               </div>
             </Tabs>
           </div>

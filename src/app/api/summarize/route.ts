@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
         const errorMsg = error.message || 'Unknown error';
         console.warn(`⚠️ Model ${modelName} failed: ${errorMsg}`);
         errors.push(`${modelName}: ${errorMsg}`);
-        
+
         // If this is the last model, throw the error
         if (modelName === MODEL_FALLBACK_ORDER[MODEL_FALLBACK_ORDER.length - 1]) {
           console.error('❌ All models failed');
@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
 
     // Provide user-friendly error messages
     let userMessage = 'Failed to generate summary. Please try again.';
-    
+
     if (error.message?.includes('overloaded') || error.message?.includes('503')) {
       userMessage = 'AI service is currently busy. Please try again in a moment.';
     } else if (error.message?.includes('quota') || error.message?.includes('429')) {

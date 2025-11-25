@@ -92,8 +92,8 @@ export default function VerificationResults({
   }, [testResults]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="w-full overflow-hidden border-none shadow-none sm:border sm:shadow-sm">
+      <CardHeader className="pb-3 px-3 sm:px-6">
         <CardTitle className="flex items-center text-lg font-bold">
           <TestTube className="mr-2 h-5 w-5 text-orange-600" />
           Step 2: Verification Results
@@ -107,7 +107,7 @@ export default function VerificationResults({
           )}
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-0 px-2 sm:px-6">
         <div className="space-y-4 sm:space-y-6">
           {Object.entries(testsByCategory).map(([category, tests]) => {
             const categoryStats = {
@@ -122,20 +122,20 @@ export default function VerificationResults({
             return (
               <div
                 key={category}
-                className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${categoryColor === "green"
-                    ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
-                    : categoryColor === "yellow"
-                      ? "bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/20 border-yellow-300 dark:border-yellow-700"
-                      : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
+                className={`relative p-3 sm:p-4 rounded-xl border-2 shadow-sm transition-all ${categoryColor === "green"
+                  ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
+                  : categoryColor === "yellow"
+                    ? "bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/20 border-yellow-300 dark:border-yellow-700"
+                    : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
                   }`}
               >
                 {/* Category Status Badge - Adjusted for mobile */}
                 <div
                   className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl rounded-tr-lg text-[10px] sm:text-xs font-bold shadow-sm ${categoryColor === "green"
-                      ? "bg-green-500 text-white"
-                      : categoryColor === "yellow"
-                        ? "bg-yellow-500 text-white"
-                        : "bg-red-500 text-white"
+                    ? "bg-green-500 text-white"
+                    : categoryColor === "yellow"
+                      ? "bg-yellow-500 text-white"
+                      : "bg-red-500 text-white"
                     }`}
                 >
                   {categoryStats.fail > 0 ? "ISSUES" :
@@ -147,10 +147,10 @@ export default function VerificationResults({
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm flex-shrink-0 ${categoryColor === "green"
-                          ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
-                          : categoryColor === "yellow"
-                            ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
-                            : "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                        ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
+                        : categoryColor === "yellow"
+                          ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
+                          : "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
                         }`}
                     >
                       <TestTube className="w-5 h-5" />
@@ -303,7 +303,7 @@ export default function VerificationResults({
           })}
 
           {/* Summary explanation */}
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-sm">
+          <div className="mt-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border-2 border-blue-300 dark:border-blue-700 shadow-sm">
             <div className="flex items-start gap-3">
               <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
               <div>
