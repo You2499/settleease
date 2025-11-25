@@ -10,9 +10,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2 } from 'lucide-react';
+import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { AI_PROMPTS_TABLE } from '@/lib/settleease/constants';
 import type { AIPrompt } from '@/lib/settleease/types';
 
@@ -29,6 +35,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Load active prompt and history
   useEffect(() => {
@@ -184,13 +191,12 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
     }
   };
 
-  const handleDeleteSummaries = async () => {
-    if (!db) return;
+  const handleDeleteSummaries = () => {
+    setShowDeleteConfirm(true);
+  };
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete ALL cached AI summaries? This will force the AI to regenerate summaries for everyone."
-    );
-    if (!confirmed) return;
+  const executeDeleteSummaries = async () => {
+    if (!db) return;
 
     setIsSaving(true);
     try {
@@ -205,6 +211,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
         title: "Success",
         description: "All AI summaries have been deleted.",
       });
+      setShowDeleteConfirm(false);
     } catch (error: any) {
       console.error('Error deleting summaries:', error);
       toast({
@@ -399,6 +406,59 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
           </ScrollArea>
         </CardContent>
       </Card>
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
+          <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
+            <div>
+              <AlertDialogHeader className="pb-4">
+                <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
+                  Delete All Summaries
+                </AlertDialogTitle>
+              </AlertDialogHeader>
+
+              <div className="space-y-3">
+                {/* Warning Section */}
+                <div className="bg-white/95 dark:bg-gray-800/95 border border-[#EA4335]/30 dark:border-[#EA4335]/20 rounded-lg overflow-hidden">
+                  <div className="px-4 py-3 bg-[#EA4335]/10 dark:bg-[#EA4335]/5">
+                    <div className="flex items-center space-x-2">
+                      <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
+                      <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
+                        Irreversible Action
+                      </span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                      This action will delete <strong>ALL cached AI summaries</strong>.
+                    </p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      The AI will need to regenerate summaries for everyone next time they are requested. This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col space-y-2 pt-4">
+                <button
+                  className="w-full h-10 text-sm sm:h-11 sm:text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={executeDeleteSummaries}
+                  disabled={isSaving}
+                >
+                  {isSaving ? 'Deleting...' : 'Delete All Summaries'}
+                </button>
+                <button
+                  className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isSaving}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
