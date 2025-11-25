@@ -32,8 +32,6 @@ import { formatCurrency } from '@/lib/settleease/utils';
 import type { Person, Expense, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
 import { runAllTests } from './dashboard/verification/testRunner';
 import type { TestResult } from './dashboard/verification/types';
-import PromptEditor from './dashboard/verification/PromptEditor';
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 interface StatusTabProps {
   db?: SupabaseClient;
@@ -101,7 +99,6 @@ export default function StatusTab({
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
   const [testResults, setTestResults] = useState<TestResult[] | null>(null);
   const [integrityScore, setIntegrityScore] = useState<number | null>(null);
-  const [showPromptEditor, setShowPromptEditor] = useState(false);
 
   // Check service health
   const checkServiceHealth = async () => {
@@ -360,17 +357,6 @@ export default function StatusTab({
               </CardDescription>
             </div>
             <div className="flex gap-2">
-              <Dialog open={showPromptEditor} onOpenChange={setShowPromptEditor}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2">
-                    <Sparkles className="h-4 w-4" />
-                    <span className="hidden sm:inline">AI Config</span>
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                  {db && <PromptEditor db={db} currentUserId="admin" />}
-                </DialogContent>
-              </Dialog>
               <Button
                 onClick={checkServiceHealth}
                 disabled={isRefreshing}

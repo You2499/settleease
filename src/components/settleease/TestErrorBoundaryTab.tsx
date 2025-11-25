@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer, X } from 'lucide-react';
+import { AlertTriangle, Bug, CheckCircle, XCircle, Zap, RefreshCw, BarChart4, Home, Users, DollarSign, Settings, FileEdit, Handshake, Shield, Layers, Component, MousePointer, X, Sparkles } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
 import AlgorithmVerification from './dashboard/verification/AlgorithmVerification';
+import PromptEditor from './dashboard/verification/PromptEditor';
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import type { ActiveView, Person, Expense, Category, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
@@ -59,6 +61,7 @@ export default function TestErrorBoundaryTab({
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
   const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
   const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
+  const [showPromptEditor, setShowPromptEditor] = useState(false);
 
   // Calculate transactions for AlgorithmVerification
   const simplifiedTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments);
@@ -437,26 +440,40 @@ export default function TestErrorBoundaryTab({
               Visually test error boundary coverage by forcing component crashes
             </p>
           </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              onClick={() => {
-                if (isMobile) {
-                  setIsDebugSheetOpen(true)
-                } else {
-                  setShowComprehensiveDebug((s) => !s)
-                }
-              }}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2 flex-1 sm:flex-initial"
-            >
-              <BarChart4 className="h-4 w-4" />
-              {isMobile ? 'Show Debug' : (showComprehensiveDebug ? 'Hide Debug' : 'Show Debug')}
-            </Button>
-            <Button onClick={resetAll} variant="outline" size="sm" className="flex items-center gap-2 flex-1 sm:flex-initial">
-              <RefreshCw className="h-4 w-4" />
-              Reset All Tests
-            </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:items-center">
+            <div className="flex gap-2 w-full sm:w-auto sm:order-2">
+              <Button
+                onClick={() => {
+                  if (isMobile) {
+                    setIsDebugSheetOpen(true)
+                  } else {
+                    setShowComprehensiveDebug((s) => !s)
+                  }
+                }}
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-2 flex-1 sm:flex-initial"
+              >
+                <BarChart4 className="h-4 w-4" />
+                {isMobile ? 'Show Debug' : (showComprehensiveDebug ? 'Hide Debug' : 'Show Debug')}
+              </Button>
+              <Button onClick={resetAll} variant="outline" size="sm" className="flex items-center gap-2 flex-1 sm:flex-initial">
+                <RefreshCw className="h-4 w-4" />
+                Reset All Tests
+              </Button>
+            </div>
+
+            <Dialog open={showPromptEditor} onOpenChange={setShowPromptEditor}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="w-full sm:w-auto gap-2 sm:order-1">
+                  <Sparkles className="h-4 w-4" />
+                  <span>AI Config</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar">
+                {db && <PromptEditor db={db} currentUserId={currentUserId || 'admin'} />}
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
       </CardHeader>
