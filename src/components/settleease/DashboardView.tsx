@@ -12,7 +12,6 @@ import { toast } from "@/hooks/use-toast";
 import ExpenseDetailModal from './ExpenseDetailModal';
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
-import AlgorithmVerification from './dashboard/AlgorithmVerification';
 
 import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
@@ -332,19 +331,6 @@ export default function DashboardView({
           isLoadingSettlements={isLoadingSettlements}
         />
       </div>
-      
-      {/* Algorithm Verification with Prompt Editor */}
-      <AlgorithmVerification
-        people={people}
-        expenses={expenses}
-        settlementPayments={settlementPayments}
-        peopleMap={peopleMap}
-        uiSimplifiedTransactions={simplifiedTransactions}
-        uiPairwiseTransactions={pairwiseTransactions}
-        db={db}
-        currentUserId={currentUserId}
-      />
-      
       {selectedExpenseForModal && (
         <ExpenseDetailModal
           expense={selectedExpenseForModal}

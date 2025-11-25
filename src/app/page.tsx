@@ -20,6 +20,7 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
+import StatusTab from '@/components/settleease/StatusTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
@@ -340,6 +341,7 @@ function SettleEasePageContent() {
                 const viewNames: Record<ActiveView, string> = {
                   dashboard: 'Dashboard',
                   analytics: 'Analytics',
+                  status: 'Status',
                   addExpense: 'Add Expense',
                   editExpenses: 'Edit Expenses',
                   managePeople: 'Manage People',
@@ -589,6 +591,24 @@ function SettleEasePageContent() {
                 />
               </SettleEaseErrorBoundary>
             )}
+            {activeView === 'status' && (
+              <SettleEaseErrorBoundary
+                componentName="Status"
+                size="large"
+                onNavigateHome={() => setActiveView('dashboard')}
+              >
+                <StatusTab
+                  db={db}
+                  people={people}
+                  expenses={expenses}
+                  settlementPayments={settlementPayments}
+                  isLoadingPeople={isLoadingPeople}
+                  isLoadingExpenses={isLoadingExpenses}
+                  isLoadingSettlements={isLoadingSettlements}
+                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                />
+              </SettleEaseErrorBoundary>
+            )}
             {userRole === 'admin' && activeView === 'addExpense' && (
               <SettleEaseErrorBoundary
                 componentName="Add Expense"
@@ -697,6 +717,8 @@ function SettleEasePageContent() {
                   manualOverrides={manualOverrides}
                   peopleMap={peopleMap}
                   categories={categories}
+                  db={db}
+                  currentUserId={currentUser?.id}
                   isLoadingPeople={isLoadingPeople}
                   isLoadingExpenses={isLoadingExpenses}
                   isLoadingCategories={isLoadingCategories}

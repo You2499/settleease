@@ -2,7 +2,11 @@
 
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Play, Calculator } from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RefreshCw, Play, Calculator, Bug, Sparkles, CircleCheck, CircleX, CircleAlert } from "lucide-react";
 import {
   calculateNetBalances,
   calculateSimplifiedTransactions,
@@ -15,10 +19,7 @@ import type {
 } from "./types";
 import { generateDebugReportText } from "./testUtils";
 import { runAllTests } from "./testRunner";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
-import { Bug, EyeOff, Eye, Sparkles } from "lucide-react";
 import VerificationOverview from "./VerificationOverview";
 import VerificationResults from "./VerificationResults";
 import VerificationDebug from "./VerificationDebug";
@@ -39,8 +40,7 @@ export default function AlgorithmVerification({
   const [isRunning, setIsRunning] = useState(false);
   const [lastRunTime, setLastRunTime] = useState<Date | null>(null);
   const [debugReport, setDebugReport] = useState<DebugReport | null>(null);
-  const [showDebugMode, setShowDebugMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'debug' | 'prompt'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'results' | 'debug' | 'prompt'>('overview');
 
   const runTests = async () => {
     setIsRunning(true);
@@ -57,6 +57,7 @@ export default function AlgorithmVerification({
       setTestResults(results);
       setDebugReport(debugReport);
       setLastRunTime(new Date());
+      setActiveTab('results');
     } catch (error) {
       console.error("Error running tests:", error);
     } finally {
@@ -64,19 +65,7 @@ export default function AlgorithmVerification({
     }
   };
 
-  // Copy debug report to clipboard
-  const copyDebugReport = async () => {
-    try {
-      const reportText = generateDebugReportText(debugReport, peopleMap);
-      await navigator.clipboard.writeText(reportText);
-      console.log("Debug report copied to clipboard");
-    } catch (err) {
-      console.error("Failed to copy debug report:", err);
-    }
-  };
-
-  // Download debug report as file
-  const downloadDebugReport = () => {
+  const handleDownloadReport = () => {
     const reportText = generateDebugReportText(debugReport, peopleMap);
     const blob = new Blob([reportText], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
@@ -91,8 +80,7 @@ export default function AlgorithmVerification({
     URL.revokeObjectURL(url);
   };
 
-  // Export live data as JSON
-  const exportLiveData = () => {
+  const handleExportData = () => {
     const quickData = {
       timestamp: new Date().toISOString(),
       people: people,
@@ -130,136 +118,143 @@ export default function AlgorithmVerification({
     URL.revokeObjectURL(url);
   };
 
+  // Calculate test summary
+  const passedTests = testResults.filter(t => t.status === 'pass').length;
+  const failedTests = testResults.filter(t => t.status === 'fail').length;
+  const totalTests = testResults.length;
+
   return (
-    <div>
-      {/* Control Panel - Mobile Responsive */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50 rounded-lg border mb-4 gap-3 sm:gap-4">
-        <div className="flex items-center space-x-3">
-          <Calculator className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-          <div>
-            <Label className="text-sm font-medium">Algorithm Verification</Label>
-            <p className="text-xs text-muted-foreground">
-              Test all calculations with live data
-            </p>
+    <Card className="shadow-lg rounded-lg">
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex-1">
+            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <Calculator className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+              Algorithm Verification
+            </CardTitle>
+            <CardDescription className="mt-2">
+              Test settlement calculations and verify algorithm accuracy
+            </CardDescription>
           </div>
-        </div>
-        
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          {/* Debug Mode Toggle */}
-          {lastRunTime && (
-            <div className="flex items-center space-x-2">
-              {showDebugMode ? (
-                <Eye className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              ) : (
-                <EyeOff className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-              )}
-              <Label
-                htmlFor="debug-mode"
-                className="text-sm font-medium cursor-pointer"
-              >
-                Debug mode
-              </Label>
-              <Switch
-                id="debug-mode"
-                checked={showDebugMode}
-                onCheckedChange={setShowDebugMode}
-              />
-            </div>
-          )}
-          
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             <Button
               onClick={runTests}
               disabled={isRunning}
               size="sm"
-              className="flex items-center space-x-2"
+              className="flex-1 sm:flex-initial"
             >
-              {isRunning ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4" />
-              )}
-              <span className="hidden sm:inline">{isRunning ? "Running..." : "Run Tests"}</span>
-              <span className="sm:hidden">{isRunning ? "..." : "Test"}</span>
+              <span className="hidden sm:inline">{isRunning ? "Running Tests..." : "Run Tests"}</span>
+              <span className="sm:hidden">{isRunning ? "Running..." : "Test"}</span>
             </Button>
+            {lastRunTime && totalTests > 0 && (
+              <Badge variant={failedTests === 0 ? "default" : "destructive"} className="flex items-center gap-1">
+                {failedTests === 0 ? (
+                  <CircleCheck className="h-3 w-3" />
+                ) : (
+                  <CircleX className="h-3 w-3" />
+                )}
+                {passedTests}/{totalTests}
+              </Badge>
+            )}
           </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Tab Navigation */}
-      {lastRunTime && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button
-            variant={activeTab === 'overview' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveTab('overview')}
-          >
-            Overview
-          </Button>
-          {showDebugMode && debugReport && (
-            <Button
-              variant={activeTab === 'debug' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab('debug')}
-            >
-              <Bug className="h-4 w-4 mr-1" />
-              Debug
+      <CardContent className="p-4 sm:p-6">
+        {!lastRunTime ? (
+          // Initial state - show overview
+          <div className="text-center py-8 sm:py-12">
+            <div className="inline-flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 mb-4">
+              <Calculator className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+            </div>
+            <h3 className="text-lg sm:text-xl font-semibold mb-2">Ready to Test</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+              Run comprehensive tests on settlement calculations to verify algorithm accuracy
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto mb-6">
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="text-2xl font-bold text-primary">{people.length}</div>
+                <div className="text-xs text-muted-foreground">People</div>
+              </div>
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="text-2xl font-bold text-primary">{expenses.length}</div>
+                <div className="text-xs text-muted-foreground">Expenses</div>
+              </div>
+              <div className="p-4 rounded-lg border bg-card">
+                <div className="text-2xl font-bold text-primary">{settlementPayments.length}</div>
+                <div className="text-xs text-muted-foreground">Settlements</div>
+              </div>
+            </div>
+            <Button onClick={runTests} disabled={isRunning} size="lg">
+              {isRunning ? "Running Tests..." : "Run Verification Tests"}
             </Button>
-          )}
-          {currentUserId && db && (
-            <Button
-              variant={activeTab === 'prompt' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab('prompt')}
-            >
-              <Sparkles className="h-4 w-4 mr-1" />
-              AI Prompt
-            </Button>
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          // After tests run - show tabs
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
+              <TabsTrigger value="overview" className="text-xs sm:text-sm">
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="results" className="text-xs sm:text-sm">
+                <span className="hidden sm:inline">Test </span>Results
+              </TabsTrigger>
+              <TabsTrigger value="debug" className="text-xs sm:text-sm">
+                <Bug className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                Debug
+              </TabsTrigger>
+              {currentUserId && db && (
+                <TabsTrigger value="prompt" className="text-xs sm:text-sm">
+                  <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  AI Prompt
+                </TabsTrigger>
+              )}
+            </TabsList>
 
-      {/* Content Area with Mobile-Responsive Spacing */}
-      <div className="space-y-4 sm:space-y-6">
-        {/* Step 1: System Overview */}
-        {activeTab === 'overview' && (
-          <VerificationOverview
-            people={people}
-            expenses={expenses}
-            settlementPayments={settlementPayments}
-            testResults={testResults}
-          />
-        )}
+            <TabsContent value="overview" className="mt-0">
+              <VerificationOverview
+                people={people}
+                expenses={expenses}
+                settlementPayments={settlementPayments}
+                testResults={testResults}
+              />
+            </TabsContent>
 
-        {/* Step 2: Test Results */}
-        {activeTab === 'overview' && testResults.length > 0 && (
-          <VerificationResults
-            testResults={testResults}
-            showDebugMode={showDebugMode}
-            lastRunTime={lastRunTime}
-          />
-        )}
+            <TabsContent value="results" className="mt-0">
+              <VerificationResults
+                testResults={testResults}
+                showDebugMode={true}
+                lastRunTime={lastRunTime}
+              />
+            </TabsContent>
 
-        {/* Step 3: Debug Information */}
-        {activeTab === 'debug' && showDebugMode && debugReport && (
-          <VerificationDebug
-            debugReport={debugReport}
-            peopleMap={peopleMap}
-            onCopyReport={copyDebugReport}
-            onDownloadReport={downloadDebugReport}
-            onExportData={exportLiveData}
-          />
-        )}
+            <TabsContent value="debug" className="mt-0">
+              {debugReport && (
+                <VerificationDebug
+                  debugReport={debugReport}
+                  peopleMap={peopleMap}
+                  onCopyReport={async () => {
+                    const reportText = generateDebugReportText(debugReport, peopleMap);
+                    await navigator.clipboard.writeText(reportText);
+                    console.log("Debug report copied to clipboard");
+                  }}
+                  onDownloadReport={handleDownloadReport}
+                  onExportData={handleExportData}
+                />
+              )}
+            </TabsContent>
 
-        {/* Step 4: AI Prompt Editor */}
-        {activeTab === 'prompt' && currentUserId && db && (
-          <PromptEditor
-            db={db}
-            currentUserId={currentUserId}
-          />
+            {currentUserId && db && (
+              <TabsContent value="prompt" className="mt-0">
+                <PromptEditor
+                  db={db}
+                  currentUserId={currentUserId}
+                />
+              </TabsContent>
+            )}
+          </Tabs>
         )}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

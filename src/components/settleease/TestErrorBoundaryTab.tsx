@@ -12,7 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
+import AlgorithmVerification from './dashboard/verification/AlgorithmVerification';
 import type { ActiveView, Person, Expense, Category, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 
 interface TestErrorBoundaryTabProps {
   userRole: 'admin' | 'user' | null;
@@ -23,6 +26,8 @@ interface TestErrorBoundaryTabProps {
   manualOverrides: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
   categories: Category[];
+  db?: SupabaseClient;
+  currentUserId?: string;
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
   isLoadingCategories?: boolean;
@@ -40,6 +45,8 @@ export default function TestErrorBoundaryTab({
   manualOverrides,
   peopleMap,
   categories,
+  db,
+  currentUserId,
   isLoadingPeople = false,
   isLoadingExpenses = false,
   isLoadingCategories = false,
@@ -52,6 +59,10 @@ export default function TestErrorBoundaryTab({
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
   const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
   const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
+  
+  // Calculate transactions for AlgorithmVerification
+  const simplifiedTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments);
+  const pairwiseTransactions = calculatePairwiseTransactions(people, expenses, settlementPayments);
 
   // Subscribe to crash state changes
   useEffect(() => {
@@ -495,6 +506,20 @@ export default function TestErrorBoundaryTab({
             />
           </div>
         )}
+
+        {/* Algorithm Verification Section */}
+        <div className="mb-6">
+          <AlgorithmVerification
+            people={people}
+            expenses={expenses}
+            settlementPayments={settlementPayments}
+            peopleMap={peopleMap}
+            uiSimplifiedTransactions={simplifiedTransactions}
+            uiPairwiseTransactions={pairwiseTransactions}
+            db={db}
+            currentUserId={currentUserId}
+          />
+        </div>
 
         <Alert>
           <AlertTriangle className="h-4 w-4" />

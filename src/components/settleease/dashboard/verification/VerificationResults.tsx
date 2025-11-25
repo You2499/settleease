@@ -11,9 +11,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
+  CircleCheck,
+  CircleX,
+  TriangleAlert,
   Clock,
   TestTube,
   ChevronDown,
@@ -49,11 +49,11 @@ export default function VerificationResults({
   const getStatusIcon = (status: "pass" | "fail" | "warning") => {
     switch (status) {
       case "pass":
-        return <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />;
+        return <CircleCheck className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />;
       case "fail":
-        return <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />;
+        return <CircleX className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />;
       case "warning":
-        return <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />;
+        return <TriangleAlert className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />;
     }
   };
 
@@ -171,16 +171,16 @@ export default function VerificationResults({
                     <div className="text-right">
                       <div className="flex gap-1 text-xs items-center">
                         <span className="text-green-600 font-medium flex items-center gap-1">
-                          {categoryStats.pass}<CheckCircle2 className="h-3 w-3" />
+                          {categoryStats.pass}<CircleCheck className="h-3 w-3" />
                         </span>
                         {categoryStats.warning > 0 && (
                           <span className="text-yellow-600 font-medium flex items-center gap-1">
-                            {categoryStats.warning}<AlertTriangle className="h-3 w-3" />
+                            {categoryStats.warning}<TriangleAlert className="h-3 w-3" />
                           </span>
                         )}
                         {categoryStats.fail > 0 && (
                           <span className="text-red-600 font-medium flex items-center gap-1">
-                            {categoryStats.fail}<XCircle className="h-3 w-3" />
+                            {categoryStats.fail}<CircleX className="h-3 w-3" />
                           </span>
                         )}
                       </div>

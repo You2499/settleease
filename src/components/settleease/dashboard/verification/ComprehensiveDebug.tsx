@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Download, Users, FileText, TrendingUp, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Copy, Download, Users, FileText, TrendingUp, CircleCheck, Eye, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import {
   calculateNetBalances,
@@ -417,7 +417,7 @@ export default function ComprehensiveDebug({
                         <CardTitle className="text-sm sm:text-base truncate">{p.name}</CardTitle>
                         {isBalanced ? (
                           <Badge variant="outline" className="bg-gray-50 dark:bg-gray-900 text-foreground text-xs flex-shrink-0">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <CircleCheck className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : isCreditor ? (
@@ -474,7 +474,7 @@ export default function ComprehensiveDebug({
                 <CardContent className="px-3 pb-3">
                   {unpaidSimplified.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                      <CircleCheck className="h-8 w-8 mx-auto mb-2 text-green-600" />
                       <p>All settled!</p>
                     </div>
                   ) : (
@@ -509,7 +509,7 @@ export default function ComprehensiveDebug({
                 <CardContent className="px-3 pb-3">
                   {pairwiseSortedForDisplay.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-green-600" />
+                      <CircleCheck className="h-8 w-8 mx-auto mb-2 text-green-600" />
                       <p>No direct debts!</p>
                     </div>
                   ) : (
@@ -621,7 +621,7 @@ export default function ComprehensiveDebug({
                         </Badge>
                         {Math.abs(pp.personSummary?.netBalance || 0) <= 0.01 ? (
                           <Badge variant="outline" className="bg-gray-50 dark:bg-gray-900 text-foreground text-xs">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <CircleCheck className="h-3 w-3 mr-1" />
                             Balanced
                           </Badge>
                         ) : pp.personSummary?.netBalance > 0 ? (

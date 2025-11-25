@@ -14,12 +14,12 @@ import {
   Copy, 
   Download, 
   Database, 
-  AlertTriangle, 
+  TriangleAlert, 
   Info,
   ChevronDown,
   ChevronRight,
   Activity,
-  BarChart4,
+  ChartBar,
   Settings
 } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
@@ -215,7 +215,7 @@ export default function VerificationDebug({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center shadow-sm">
-                  <BarChart4 className="w-5 h-5 text-blue-800 dark:text-blue-200" />
+                  <ChartBar className="w-5 h-5 text-blue-800 dark:text-blue-200" />
                 </div>
                 <div>
                   <h3 className="font-bold text-blue-900 dark:text-blue-100">
@@ -291,7 +291,7 @@ export default function VerificationDebug({
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-red-200 dark:bg-red-800 rounded-full flex items-center justify-center shadow-sm">
-                    <AlertTriangle className="w-5 h-5 text-red-800 dark:text-red-200" />
+                    <TriangleAlert className="w-5 h-5 text-red-800 dark:text-red-200" />
                   </div>
                   <div>
                     <h3 className="font-bold text-red-900 dark:text-red-100">
@@ -324,7 +324,7 @@ export default function VerificationDebug({
                   ) : (
                     <ChevronRight className="w-4 h-4 mr-2" />
                   )}
-                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  <TriangleAlert className="w-4 h-4 mr-2" />
                   View Critical Failures & Recommendations
                 </Button>
 
