@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock } from 'lucide-react';
+import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2 } from 'lucide-react';
 import { AI_PROMPTS_TABLE } from '@/lib/settleease/constants';
 import type { AIPrompt } from '@/lib/settleease/types';
 
@@ -38,7 +38,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
 
   const loadPrompts = async () => {
     if (!db) return;
-    
+
     setIsLoading(true);
     try {
       // Load active prompt
@@ -50,7 +50,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
         .single();
 
       if (activeError) throw activeError;
-      
+
       setActivePrompt(activeData);
       setEditedPromptText(activeData.prompt_text);
 
@@ -184,6 +184,39 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
     }
   };
 
+  const handleDeleteSummaries = async () => {
+    if (!db) return;
+
+    const confirmed = window.confirm(
+      "Are you sure you want to delete ALL cached AI summaries? This will force the AI to regenerate summaries for everyone."
+    );
+    if (!confirmed) return;
+
+    setIsSaving(true);
+    try {
+      const { error } = await db
+        .from('ai_summaries')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "All AI summaries have been deleted.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting summaries:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete summaries",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Card className="p-4 sm:p-6">
@@ -280,6 +313,15 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
               className="flex-1 sm:flex-initial"
             >
               Reset
+            </Button>
+            <Button
+              onClick={handleDeleteSummaries}
+              variant="destructive"
+              disabled={isSaving}
+              className="flex items-center gap-2 flex-1 sm:flex-initial"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Summaries
             </Button>
           </div>
 
