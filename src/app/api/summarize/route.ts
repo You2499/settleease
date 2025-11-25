@@ -15,7 +15,7 @@ const MODEL_FALLBACK_ORDER = [
 export async function POST(request: NextRequest) {
   try {
     console.log('📥 Summarize API called');
-    const { jsonData, hash } = await request.json();
+    const { jsonData, hash, promptVersion } = await request.json();
 
     if (!jsonData) {
       console.error('❌ No JSON data provided');
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    console.log('✅ JSON data received, hash:', hash);
+    console.log('✅ JSON data received, hash:', hash, 'promptVersion:', promptVersion);
 
     // Check if API key is configured
     if (!GEMINI_API_KEY) {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
     // Create enhanced prompt for detailed Donald Trump style summarization with Indian context
+    // NOTE: Prompt version is now included in the hash, so changing the prompt will invalidate old summaries
     const prompt = `You are Donald Trump analyzing this group's financial settlement data. Write in your authentic, iconic speaking style - confident, direct, and entertaining.
 
 CRITICAL DATA RULES:

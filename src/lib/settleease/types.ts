@@ -87,6 +87,18 @@ export interface ManualSettlementOverride {
   is_active: boolean; // Whether this override is currently active
 }
 
+export interface AIPrompt {
+  id: string; // Supabase ID
+  name: string; // Unique name for the prompt (e.g., "trump-summarizer")
+  prompt_text: string; // The actual prompt text
+  is_active: boolean; // Only one prompt can be active per name
+  created_by_user_id?: string | null; // FK to auth.users.id
+  created_at: string; // ISO date string
+  updated_at: string; // ISO date string
+  version: number; // Version number for tracking changes
+  description?: string | null; // Optional description
+}
+
 // Used for displaying calculated settlements
 export interface CalculatedTransaction {
   from: string; // debtorId

@@ -247,6 +247,8 @@ export default function SettlementSummary({
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
+      // IMPORTANT: promptVersion is included so changing the prompt invalidates old summaries
+      promptVersion: 2, // Increment this when you update the AI prompt to force new summaries
       counts: {
         people: people.length,
         expenses: includedExpenses.length,

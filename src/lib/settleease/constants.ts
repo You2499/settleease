@@ -6,6 +6,7 @@ export const CATEGORIES_TABLE = 'categories';
 export const USER_PROFILES_TABLE = 'user_profiles';
 export const SETTLEMENT_PAYMENTS_TABLE = 'settlement_payments';
 export const MANUAL_SETTLEMENT_OVERRIDES_TABLE = 'manual_settlement_overrides';
+export const AI_PROMPTS_TABLE = 'ai_prompts';
 
 export const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 export const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
