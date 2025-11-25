@@ -40,7 +40,7 @@ import * as LucideIcons from 'lucide-react';
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
     const viewParam = searchParams.get('view') as ActiveView | null;
@@ -49,7 +49,7 @@ function SettleEasePageContent() {
     }
     return 'dashboard';
   })();
-  
+
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
@@ -75,15 +75,15 @@ function SettleEasePageContent() {
   // Run session check only on client after mount
   useEffect(() => {
     setIsClient(true);
-    
+
     // Check if this is an OAuth redirect (has hash fragment with access_token)
     const isOAuthRedirect = window.location.hash.includes('access_token');
     setIsOAuthCallback(isOAuthRedirect);
-    
+
     // Check for Supabase session cookies
     const cookies = document.cookie;
     const hasCookie = cookies.includes('sb-') && cookies.includes('auth-token');
-    
+
     // Check localStorage for Supabase auth tokens
     let hasLocalStorage = false;
     try {
@@ -100,7 +100,7 @@ function SettleEasePageContent() {
     } catch {
       // Ignore localStorage errors
     }
-    
+
     // If OAuth redirect, assume session exists (prevents skeleton flash)
     const result = isOAuthRedirect || hasCookie || hasLocalStorage;
     setHasSession(result);
@@ -133,20 +133,20 @@ function SettleEasePageContent() {
   // Helper function to detect Google OAuth users and parse their names
   const getGoogleUserInfo = useCallback(() => {
     if (!currentUser?.user_metadata) return null;
-    
+
     const metadata = currentUser.user_metadata;
     const isGoogle = metadata.iss === 'https://accounts.google.com' || metadata.provider_id;
-    
+
     if (!isGoogle) return null;
-    
+
     const fullName = metadata.full_name || metadata.name || '';
     if (!fullName) return { isGoogle: true, firstName: '', lastName: '' };
-    
+
     // Parse the full name
     const spaceIndex = fullName.indexOf(' ');
     const firstName = spaceIndex > 0 ? fullName.substring(0, spaceIndex).trim() : fullName.trim();
     const lastName = spaceIndex > 0 ? fullName.substring(spaceIndex + 1).trim() : '';
-    
+
     return {
       isGoogle: true,
       firstName,
@@ -180,9 +180,9 @@ function SettleEasePageContent() {
       // Check if we've already shown the modal for this user (using localStorage)
       const modalShownKey = `nameModal_shown_${currentUser.id}`;
       const hasShownModal = localStorage.getItem(modalShownKey);
-      
+
       const googleInfo = getGoogleUserInfo();
-      
+
       // Show modal if:
       // 1. Modal hasn't been shown before for this user AND
       // 2. (User is a Google OAuth user OR user doesn't have complete names)
@@ -192,7 +192,7 @@ function SettleEasePageContent() {
           setIsNameModalEditMode(false); // This is initial setup, not edit mode
           setShowNameModal(true);
         }, 500);
-        
+
         return () => clearTimeout(timer);
       }
     }
@@ -205,7 +205,7 @@ function SettleEasePageContent() {
         const modalShownKey = `nameModal_shown_${currentUser.id}`;
         localStorage.setItem(modalShownKey, 'true');
       }
-      
+
       // Refresh user profile to get updated names - but do it silently without triggering loading states
       try {
         await refreshUserProfile(false); // false = don't show loading state
@@ -233,17 +233,17 @@ function SettleEasePageContent() {
   // Split into two parts: view loading (fast) and toast showing (waits for role)
   useEffect(() => {
     if (hasLoadedInitialView || !currentUser || !db) return;
-    
+
     const loadInitialViewAndShowToast = async () => {
       // Check if URL has a view param - if so, don't restore from database
       const hasUrlView = searchParams.get('view') !== null;
-      
+
       // Race condition fix: Retry logic to wait for auth hook to set the flag
       // Sometimes the page effect runs before auth hook completes the database write
       let data: any = null;
       let retries = 0;
       const maxRetries = 3;
-      
+
       while (retries < maxRetries) {
         try {
           const result = await db
@@ -251,15 +251,15 @@ function SettleEasePageContent() {
             .select('last_active_view, has_seen_welcome_toast, should_show_welcome_toast, first_name, last_name')
             .eq('user_id', currentUser.id)
             .single();
-          
+
           if (result.error) {
             console.error('Error loading user profile:', result.error);
             setHasLoadedInitialView(true);
             return;
           }
-          
+
           data = result.data;
-          
+
           // If we're expecting a toast (fresh sign-in) but flag isn't set yet, retry
           // Check if this might be a fresh sign-in by looking at sessionStorage
           let mightBeFreshSignIn = false;
@@ -269,39 +269,39 @@ function SettleEasePageContent() {
           } catch (e) {
             // Ignore storage errors
           }
-          
+
           // If flag should be set but isn't, wait and retry
           if (mightBeFreshSignIn && !data?.should_show_welcome_toast && retries < maxRetries - 1) {
             await new Promise(resolve => setTimeout(resolve, 100 * (retries + 1))); // 100ms, 200ms, 300ms
             retries++;
             continue;
           }
-          
+
           break; // Success, exit retry loop
         } catch (err) {
           console.error('Error in retry loop:', err);
           break;
         }
       }
-      
+
       if (!data) {
         setHasLoadedInitialView(true);
         return;
       }
-      
+
       // Process the fetched data
       try {
         // Simple flag-based logic - no time windows!
         const shouldShowToast = data?.should_show_welcome_toast === true;
         const isNewUser = !data?.has_seen_welcome_toast;
         const isReturningUser = data?.has_seen_welcome_toast === true;
-        
+
         // Restore last active view from database ONLY if no URL param exists
         // (URL takes precedence over database)
         if (!hasUrlView && data?.last_active_view && data.last_active_view !== 'dashboard') {
           setActiveView(data.last_active_view as ActiveView);
         }
-        
+
         // Show toast if flag is set AND role is loaded (no time-based logic!)
         // Wait for role to ensure any role-based redirects happen first
         if (shouldShowToast && userRole) {
@@ -310,20 +310,20 @@ function SettleEasePageContent() {
           const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
           const metadataFirstName = metadataFullName ? metadataFullName.split(' ')[0] : '';
           const emailUsername = currentUser.email?.split('@')[0] || 'there';
-          
+
           const userName = dbFirstName || metadataFirstName || emailUsername;
-          
+
           // Clear the flag IMMEDIATELY to prevent duplicate toasts on refresh
           const updates: any = { should_show_welcome_toast: false };
           if (isNewUser) {
             updates.has_seen_welcome_toast = true;
           }
-          
+
           await db
             .from('user_profiles')
             .update(updates)
             .eq('user_id', currentUser.id);
-          
+
           // Use setTimeout to ensure toast is queued after component is fully mounted and role checks complete
           setTimeout(() => {
             if (isNewUser) {
@@ -349,16 +349,16 @@ function SettleEasePageContent() {
                   manageSettlements: 'Manage Settlements',
                   testErrorBoundary: 'Test Error Boundary'
                 };
-                
+
                 const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
-                
-                toast({ 
-                  title: "Welcome back!", 
+
+                toast({
+                  title: "Welcome back!",
                   description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
                   duration: 5000,
                   action: (
-                    <ToastAction 
-                      altText="Go to Dashboard" 
+                    <ToastAction
+                      altText="Go to Dashboard"
                       onClick={() => setActiveView('dashboard')}
                     >
                       Dashboard
@@ -367,8 +367,8 @@ function SettleEasePageContent() {
                 });
               } else {
                 // Returning to dashboard - show simple welcome back
-                toast({ 
-                  title: "Welcome back!", 
+                toast({
+                  title: "Welcome back!",
                   description: "You've successfully signed in to SettleEase.",
                   duration: 5000
                 });
@@ -379,17 +379,17 @@ function SettleEasePageContent() {
       } catch (err) {
         console.error('Error in centralized toast logic:', err);
       }
-      
+
       setHasLoadedInitialView(true);
     };
-    
+
     loadInitialViewAndShowToast();
   }, [currentUser, db, searchParams, hasLoadedInitialView, userRole, setActiveView]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
-    
+
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
       console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
@@ -398,16 +398,16 @@ function SettleEasePageContent() {
       return;
     }
   }, [userRole, activeView]);
-  
+
   // Effect to persist activeView to URL and database
   useEffect(() => {
     if (!hasLoadedInitialView || !currentUser || !db) return;
-    
+
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
     params.set('view', activeView);
     router.replace(`?${params.toString()}`, { scroll: false });
-    
+
     // Save to database (debounced)
     const timeoutId = setTimeout(async () => {
       try {
@@ -419,7 +419,7 @@ function SettleEasePageContent() {
         console.error('Error saving last active view:', err);
       }
     }, 500);
-    
+
     return () => clearTimeout(timeoutId);
   }, [activeView, currentUser, db, hasLoadedInitialView, router, searchParams]);
 
@@ -428,7 +428,7 @@ function SettleEasePageContent() {
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
     let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
-    
+
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
       toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
@@ -476,7 +476,7 @@ function SettleEasePageContent() {
   if (isLoadingAuth && !currentUser && !hasSession) {
     return <div className="fixed inset-0 bg-background" />;
   }
-  
+
   // Show transparent loading screen during OAuth callback until initial view is loaded
   // This prevents showing wrong skeleton (dashboard) before correct view is determined
   if (isOAuthCallback && !hasLoadedInitialView) {
@@ -517,222 +517,224 @@ function SettleEasePageContent() {
         />
       )}
       <SidebarProvider defaultOpen={true}>
-        <AppSidebar 
-          activeView={activeView} 
-          setActiveView={handleSetActiveView} 
-          handleLogout={handleLogout} 
+        <AppSidebar
+          activeView={activeView}
+          setActiveView={handleSetActiveView}
+          handleLogout={handleLogout}
           currentUserEmail={currentUser?.email || null}
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
         />
-      <SidebarInset>
-        <div className="flex flex-col h-full">
-          <header className="p-4 md:hidden flex items-center sticky top-0 bg-background z-20 border-b shadow-sm">
-            <div className="w-10"> {/* Left part for trigger */}
-              <SidebarTrigger />
-            </div>
-            <div className="flex-grow flex items-center justify-center"> {/* Center part for logo */}
-              <HandCoins className="h-7 w-7 text-primary mr-2" />
-              <span className="text-xl font-bold text-primary">SettleEase</span>
-            </div>
-            <div className="w-10" /> {/* Right part, spacer for symmetry */}
-          </header>
-          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0">
-            <div className="min-h-full bg-background">
-              {isLoadingData && isDataFetchedAtLeastOnce && (
-                <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
-              )}
-              {activeView === 'dashboard' && (
-              <SettleEaseErrorBoundary
-                componentName="Dashboard"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <DashboardView
-                  expenses={expenses}
-                  people={people}
-                  peopleMap={peopleMap}
-                  dynamicCategories={categories}
-                  getCategoryIconFromName={getCategoryIconFromName}
-                  settlementPayments={settlementPayments}
-                  manualOverrides={manualOverrides}
-                  db={db}
-                  currentUserId={currentUser?.id || ''}
-                  onActionComplete={handleActionComplete}
-                  userRole={userRole}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingCategories={isLoadingCategories}
-                  isLoadingSettlements={isLoadingSettlements}
-                  isLoadingOverrides={isLoadingOverrides}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {activeView === 'analytics' && (
-              <SettleEaseErrorBoundary
-                componentName="Analytics"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <AnalyticsTab
-                  expenses={expenses}
-                  people={people}
-                  peopleMap={peopleMap}
-                  dynamicCategories={categories}
-                  getCategoryIconFromName={getCategoryIconFromName}
-                  settlementPayments={settlementPayments}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingCategories={isLoadingCategories}
-                  isLoadingSettlements={isLoadingSettlements}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {activeView === 'status' && (
-              <SettleEaseErrorBoundary
-                componentName="Status"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <StatusTab
-                  db={db}
-                  people={people}
-                  expenses={expenses}
-                  settlementPayments={settlementPayments}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingSettlements={isLoadingSettlements}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'addExpense' && (
-              <SettleEaseErrorBoundary
-                componentName="Add Expense"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <AddExpenseTab
-                  people={people}
-                  db={db}
-                  supabaseInitializationError={supabaseInitializationError}
-                  onExpenseAdded={handleExpenseAddedAndRedirect}
-                  dynamicCategories={categories}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingCategories={isLoadingCategories}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'editExpenses' && (
-              <SettleEaseErrorBoundary
-                componentName="Edit Expenses"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <EditExpensesTab
-                  people={people}
-                  expenses={expenses}
-                  db={db}
-                  supabaseInitializationError={supabaseInitializationError}
-                  onActionComplete={handleExpenseAddedAndRedirect}
-                  dynamicCategories={categories}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingCategories={isLoadingCategories}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'managePeople' && (
-              <SettleEaseErrorBoundary
-                componentName="Manage People"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <ManagePeopleTab
-                  people={people}
-                  db={db}
-                  supabaseInitializationError={supabaseInitializationError}
-                  isLoadingPeople={isLoadingPeople}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'manageCategories' && (
-              <SettleEaseErrorBoundary
-                componentName="Manage Categories"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <ManageCategoriesTab
-                  categories={categories}
-                  db={db}
-                  supabaseInitializationError={supabaseInitializationError}
-                  onCategoriesUpdate={handleActionComplete}
-                  isLoadingCategories={isLoadingCategories}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'manageSettlements' && (
-              <SettleEaseErrorBoundary
-                componentName="Manage Settlements"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <ManageSettlementsTab
-                  expenses={expenses}
-                  people={people}
-                  peopleMap={peopleMap}
-                  settlementPayments={settlementPayments}
-                  manualOverrides={manualOverrides}
-                  db={db}
-                  currentUserId={currentUser?.id || ''}
-                  onActionComplete={handleActionComplete}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingSettlements={isLoadingSettlements}
-                  isLoadingOverrides={isLoadingOverrides}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                  userRole={userRole}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            {userRole === 'admin' && activeView === 'testErrorBoundary' && (
-              <SettleEaseErrorBoundary
-                componentName="Test Error Boundary"
-                size="large"
-                onNavigateHome={() => setActiveView('dashboard')}
-              >
-                <TestErrorBoundaryTab
-                  userRole={userRole}
-                  setActiveView={handleSetActiveView}
-                  people={people}
-                  expenses={expenses}
-                  settlementPayments={settlementPayments}
-                  manualOverrides={manualOverrides}
-                  peopleMap={peopleMap}
-                  categories={categories}
-                  db={db}
-                  currentUserId={currentUser?.id}
-                  isLoadingPeople={isLoadingPeople}
-                  isLoadingExpenses={isLoadingExpenses}
-                  isLoadingCategories={isLoadingCategories}
-                  isLoadingSettlements={isLoadingSettlements}
-                  isLoadingOverrides={isLoadingOverrides}
-                  isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                />
-              </SettleEaseErrorBoundary>
-            )}
-            </div>
-          </main>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+        <SidebarInset>
+          <div className="flex flex-col h-full">
+            <header className="p-4 md:hidden flex items-center sticky top-0 bg-background z-20 border-b shadow-sm">
+              <div className="w-10"> {/* Left part for trigger */}
+                <SidebarTrigger />
+              </div>
+              <div className="flex-grow flex items-center justify-center"> {/* Center part for logo */}
+                <HandCoins className="h-7 w-7 text-primary mr-2" />
+                <span className="text-xl font-bold text-primary">SettleEase</span>
+              </div>
+              <div className="w-10" /> {/* Right part, spacer for symmetry */}
+            </header>
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0">
+              <div className="min-h-full bg-background">
+                {isLoadingData && isDataFetchedAtLeastOnce && (
+                  <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
+                )}
+                {activeView === 'dashboard' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Dashboard"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <DashboardView
+                      expenses={expenses}
+                      people={people}
+                      peopleMap={peopleMap}
+                      dynamicCategories={categories}
+                      getCategoryIconFromName={getCategoryIconFromName}
+                      settlementPayments={settlementPayments}
+                      manualOverrides={manualOverrides}
+                      db={db}
+                      currentUserId={currentUser?.id || ''}
+                      onActionComplete={handleActionComplete}
+                      userRole={userRole}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingCategories={isLoadingCategories}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isLoadingOverrides={isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {activeView === 'analytics' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Analytics"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <AnalyticsTab
+                      expenses={expenses}
+                      people={people}
+                      peopleMap={peopleMap}
+                      dynamicCategories={categories}
+                      getCategoryIconFromName={getCategoryIconFromName}
+                      settlementPayments={settlementPayments}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingCategories={isLoadingCategories}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {activeView === 'status' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Status"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <StatusTab
+                      db={db}
+                      people={people}
+                      expenses={expenses}
+                      settlementPayments={settlementPayments}
+                      manualOverrides={manualOverrides}
+                      peopleMap={peopleMap}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'addExpense' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Add Expense"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <AddExpenseTab
+                      people={people}
+                      db={db}
+                      supabaseInitializationError={supabaseInitializationError}
+                      onExpenseAdded={handleExpenseAddedAndRedirect}
+                      dynamicCategories={categories}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingCategories={isLoadingCategories}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'editExpenses' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Edit Expenses"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <EditExpensesTab
+                      people={people}
+                      expenses={expenses}
+                      db={db}
+                      supabaseInitializationError={supabaseInitializationError}
+                      onActionComplete={handleExpenseAddedAndRedirect}
+                      dynamicCategories={categories}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingCategories={isLoadingCategories}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'managePeople' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Manage People"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <ManagePeopleTab
+                      people={people}
+                      db={db}
+                      supabaseInitializationError={supabaseInitializationError}
+                      isLoadingPeople={isLoadingPeople}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'manageCategories' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Manage Categories"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <ManageCategoriesTab
+                      categories={categories}
+                      db={db}
+                      supabaseInitializationError={supabaseInitializationError}
+                      onCategoriesUpdate={handleActionComplete}
+                      isLoadingCategories={isLoadingCategories}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'manageSettlements' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Manage Settlements"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <ManageSettlementsTab
+                      expenses={expenses}
+                      people={people}
+                      peopleMap={peopleMap}
+                      settlementPayments={settlementPayments}
+                      manualOverrides={manualOverrides}
+                      db={db}
+                      currentUserId={currentUser?.id || ''}
+                      onActionComplete={handleActionComplete}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isLoadingOverrides={isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      userRole={userRole}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'testErrorBoundary' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Test Error Boundary"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <TestErrorBoundaryTab
+                      userRole={userRole}
+                      setActiveView={handleSetActiveView}
+                      people={people}
+                      expenses={expenses}
+                      settlementPayments={settlementPayments}
+                      manualOverrides={manualOverrides}
+                      peopleMap={peopleMap}
+                      categories={categories}
+                      db={db}
+                      currentUserId={currentUser?.id}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingCategories={isLoadingCategories}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isLoadingOverrides={isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+              </div>
+            </main>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
     </>
   );
 }

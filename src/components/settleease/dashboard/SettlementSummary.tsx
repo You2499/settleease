@@ -237,27 +237,35 @@ export default function SettlementSummary({
   // Build full debug object for hashing (excluding timestamp and user-specific UI state to ensure consistent hashing across all users)
   const fullDebug = useMemo(() => {
     const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
-    
+
     // Filter active manual overrides
     const activeManualOverrides = manualOverrides.filter(override => override.is_active);
-    
+
     // Filter expenses to exclude those marked as exclude_from_settlement
     const includedExpenses = allExpenses.filter(expense => !expense.exclude_from_settlement);
-    
+
+    // Calculate category totals from expenses (NOT from category definitions)
     // Calculate category totals from expenses (NOT from category definitions)
     const categoryTotals: Record<string, number> = {};
     includedExpenses.forEach(expense => {
-      const categoryName = expense.category || 'Uncategorized';
-      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + expense.total_amount;
+      if (expense.split_method === 'itemwise' && expense.items && expense.items.length > 0) {
+        expense.items.forEach(item => {
+          const categoryName = item.categoryName || expense.category || 'Uncategorized';
+          categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + Number(item.price);
+        });
+      } else {
+        const categoryName = expense.category || 'Uncategorized';
+        categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + expense.total_amount;
+      }
     });
-    
+
     // Create clean category data with actual totals
     const categoriesWithTotals = categories.map(cat => ({
       name: cat.name,
       icon_name: cat.icon_name,
       total_spent: categoryTotals[cat.name] || 0,
     }));
-    
+
     // Add uncategorized if it exists
     if (categoryTotals['Uncategorized']) {
       categoriesWithTotals.push({
@@ -266,10 +274,10 @@ export default function SettlementSummary({
         total_spent: categoryTotals['Uncategorized'],
       });
     }
-    
+
     // Create clean people data (names only, no IDs in the summary)
     const cleanPeople = people.map(p => ({ name: p.name }));
-    
+
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
@@ -302,11 +310,11 @@ export default function SettlementSummary({
 
   const handleSummarise = async () => {
     if (!fullDebug || isComputingHash || !db) return;
-    
+
     try {
       setIsComputingHash(true);
       console.log("🔄 Fetching active prompt version...");
-      
+
       // Fetch active prompt version from database
       const { data: promptData, error: promptError } = await db
         .from('ai_prompts')
@@ -314,24 +322,24 @@ export default function SettlementSummary({
         .eq('name', 'trump-summarizer')
         .eq('is_active', true)
         .single();
-      
+
       if (promptError || !promptData) {
         console.warn("⚠️ Could not fetch prompt version, using default");
       }
-      
+
       const promptVersion = promptData?.version || 2;
       console.log("✅ Using prompt version:", promptVersion);
-      
+
       // Include prompt version in the data for hashing
       const dataWithPromptVersion = {
         ...fullDebug,
         promptVersion,
       };
-      
+
       console.log("🔄 Computing hash for current data...");
       const hash = await computeJsonHash(dataWithPromptVersion);
       console.log("🔑 Generated hash:", hash);
-      
+
       setSummaryJsonData(fullDebug);
       setSummaryHash(hash);
       setIsSummaryDialogOpen(true);
@@ -564,7 +572,7 @@ export default function SettlementSummary({
                 isLoadingParent={isLoading}
                 setIsLoadingParent={setIsLoading}
                 userRole={userRole}
-                // onOpenHowItWorksModal={() => setIsInfoModalOpen(true)}
+              // onOpenHowItWorksModal={() => setIsInfoModalOpen(true)}
               />
             ) : (
               <div className="text-sm text-muted-foreground p-3 text-center min-h-[100px] flex items-center justify-center">

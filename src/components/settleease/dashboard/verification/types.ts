@@ -1,4 +1,4 @@
-import type { Person, Expense, SettlementPayment } from "@/lib/settleease/types";
+import type { Person, Expense, SettlementPayment, ManualSettlementOverride } from "@/lib/settleease/types";
 
 export interface TestResult {
   id: string;
@@ -46,6 +46,7 @@ export interface AlgorithmVerificationProps {
   people: Person[];
   expenses: Expense[];
   settlementPayments: SettlementPayment[];
+  manualOverrides?: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
   // UI-displayed data for verification
   uiSimplifiedTransactions?: any[];

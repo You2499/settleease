@@ -59,7 +59,7 @@ export default function TestErrorBoundaryTab({
   const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
   const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
   const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
-  
+
   // Calculate transactions for AlgorithmVerification
   const simplifiedTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments);
   const pairwiseTransactions = calculatePairwiseTransactions(people, expenses, settlementPayments);
@@ -438,7 +438,7 @@ export default function TestErrorBoundaryTab({
             </p>
           </div>
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button 
+            <Button
               onClick={() => {
                 if (isMobile) {
                   setIsDebugSheetOpen(true)
@@ -446,8 +446,8 @@ export default function TestErrorBoundaryTab({
                   setShowComprehensiveDebug((s) => !s)
                 }
               }}
-              variant="outline" 
-              size="sm" 
+              variant="outline"
+              size="sm"
               className="flex items-center gap-2 flex-1 sm:flex-initial"
             >
               <BarChart4 className="h-4 w-4" />
@@ -513,6 +513,7 @@ export default function TestErrorBoundaryTab({
             people={people}
             expenses={expenses}
             settlementPayments={settlementPayments}
+            manualOverrides={manualOverrides}
             peopleMap={peopleMap}
             uiSimplifiedTransactions={simplifiedTransactions}
             uiPairwiseTransactions={pairwiseTransactions}
