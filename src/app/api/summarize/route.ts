@@ -110,8 +110,18 @@ List people with zero net balance
 ## 3. WHERE THE MONEY WENT
 Break down spending by category - show totals and notable expenses
 
-LOOK FOR INTERESTING PATTERNS IN THE DATA:
-- Check expenses[].items array for itemwise details - look for:
+CRITICAL: CALCULATE CATEGORY TOTALS CORRECTLY:
+For each expense:
+- If split_method is "itemwise" and items[] exists:
+  * Sum up items by their items[].categoryName (NOT the expense's main category)
+  * Example: Expense has category "Food" but items have categoryName "Alcohol", "Food", "Taxes"
+  * Group and sum: Alcohol items, Food items, Taxes items separately
+- If split_method is NOT "itemwise":
+  * Use the expense's main category field
+  * Add the total_amount to that category
+
+THEN look for interesting patterns:
+- Check expenses[].items array for itemwise details:
   * Same items ordered multiple times (e.g., "Butter Cheese Garlic Naan" appearing 3 times)
   * Expensive individual items (e.g., "₹1,185 for Old Monk? That's a LOT of rum!")
   * Funny or unusual item names
