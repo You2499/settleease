@@ -319,6 +319,17 @@ export const runAllTests = async (
     let settlementImpactCorrect = true;
     const settlementDetails: string[] = [];
 
+    // Calculate expected total changes per person from all settlements
+    const expectedChanges: Record<string, number> = {};
+    people.forEach(p => expectedChanges[p.id] = 0);
+
+    for (const settlement of settlementPayments) {
+      const amount = Number(settlement.amount_settled);
+      expectedChanges[settlement.debtor_id] = (expectedChanges[settlement.debtor_id] || 0) + amount;
+      expectedChanges[settlement.creditor_id] = (expectedChanges[settlement.creditor_id] || 0) - amount;
+    }
+
+    // List all settlements
     for (const settlement of settlementPayments) {
       const debtorName =
         peopleMap[settlement.debtor_id] || settlement.debtor_id;
@@ -329,36 +340,27 @@ export const runAllTests = async (
       settlementDetails.push(
         `${debtorName} → ${creditorName}: ${formatCurrency(amount)}`
       );
+    }
 
-      // Check impact on balances - settlements should reduce debtor's debt and creditor's credit
-      const debtorBalanceChange =
-        balancesWithSettlements[settlement.debtor_id] -
-        balancesWithoutSettlements[settlement.debtor_id];
-      const creditorBalanceChange =
-        balancesWithSettlements[settlement.creditor_id] -
-        balancesWithoutSettlements[settlement.creditor_id];
+    // Check cumulative impact on balances
+    settlementDetails.push(`\nCumulative Balance Changes:`);
+    for (const personId of Object.keys(expectedChanges)) {
+      const expectedChange = expectedChanges[personId];
+      if (Math.abs(expectedChange) < 0.01) continue; // Skip people with no settlements
 
-      // For settlements: debtor balance should increase (less negative), creditor balance should decrease (less positive)
-      if (
-        Math.abs(debtorBalanceChange - amount) > 0.01 ||
-        Math.abs(creditorBalanceChange + amount) > 0.01
-      ) {
+      const actualChange =
+        balancesWithSettlements[personId] - balancesWithoutSettlements[personId];
+      const personName = peopleMap[personId] || personId;
+
+      if (Math.abs(actualChange - expectedChange) > 0.01) {
         settlementImpactCorrect = false;
         settlementDetails.push(
-          `  Balance changes don't match settlement amount`
-        );
-        settlementDetails.push(
-          `  Debtor change: ${formatCurrency(
-            debtorBalanceChange
-          )}, Expected: ${formatCurrency(amount)}`
-        );
-        settlementDetails.push(
-          `  Creditor change: ${formatCurrency(
-            creditorBalanceChange
-          )}, Expected: ${formatCurrency(-amount)}`
+          `FAIL ${personName}: Expected ${formatCurrency(expectedChange)}, Got ${formatCurrency(actualChange)}`
         );
       } else {
-        settlementDetails.push(`  Balances updated correctly`);
+        settlementDetails.push(
+          `PASS ${personName}: ${formatCurrency(actualChange)} (correct)`
+        );
       }
     }
 

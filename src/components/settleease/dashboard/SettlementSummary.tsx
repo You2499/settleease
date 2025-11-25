@@ -244,6 +244,32 @@ export default function SettlementSummary({
     // Filter expenses to exclude those marked as exclude_from_settlement
     const includedExpenses = allExpenses.filter(expense => !expense.exclude_from_settlement);
     
+    // Calculate category totals from expenses (NOT from category definitions)
+    const categoryTotals: Record<string, number> = {};
+    includedExpenses.forEach(expense => {
+      const categoryName = expense.category || 'Uncategorized';
+      categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + expense.total_amount;
+    });
+    
+    // Create clean category data with actual totals
+    const categoriesWithTotals = categories.map(cat => ({
+      name: cat.name,
+      icon_name: cat.icon_name,
+      total_spent: categoryTotals[cat.name] || 0,
+    }));
+    
+    // Add uncategorized if it exists
+    if (categoryTotals['Uncategorized']) {
+      categoriesWithTotals.push({
+        name: 'Uncategorized',
+        icon_name: 'HelpCircle',
+        total_spent: categoryTotals['Uncategorized'],
+      });
+    }
+    
+    // Create clean people data (names only, no IDs in the summary)
+    const cleanPeople = people.map(p => ({ name: p.name }));
+    
     return {
       // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
       // This enables cross-user caching of AI summaries
@@ -266,11 +292,11 @@ export default function SettlementSummary({
         pairwise: pairwiseTransactions,
         simplified: simplifiedTransactions,
       },
-      categories,
+      categories: categoriesWithTotals,
       settlementPayments,
       manualOverrides: activeManualOverrides,
       expenses: includedExpenses,
-      people,
+      people: cleanPeople,
     };
   }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories]);
 
