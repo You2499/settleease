@@ -180,13 +180,13 @@ export default function AlgorithmVerification({
               <div className="flex flex-col items-end">
                 <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Integrity Score</span>
                 <span className={`text-lg font-bold ${(integrityScore || 0) === 100 ? 'text-green-600' :
-                    (integrityScore || 0) > 80 ? 'text-yellow-600' : 'text-red-600'
+                  (integrityScore || 0) > 80 ? 'text-yellow-600' : 'text-red-600'
                   }`}>
                   {integrityScore}%
                 </span>
               </div>
               <div className={`h-10 w-1 rounded-full ${(integrityScore || 0) === 100 ? 'bg-green-500' :
-                  (integrityScore || 0) > 80 ? 'bg-yellow-500' : 'bg-red-500'
+                (integrityScore || 0) > 80 ? 'bg-yellow-500' : 'bg-red-500'
                 }`} />
             </div>
           )}
@@ -212,19 +212,19 @@ export default function AlgorithmVerification({
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-10">
-              <Card className="bg-background/60 backdrop-blur border shadow-sm hover:shadow-md transition-all">
+              <Card className="bg-background/60 backdrop-blur border shadow-sm">
                 <CardContent className="p-4 flex flex-col items-center">
                   <span className="text-3xl font-bold text-primary mb-1">{people.length}</span>
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">People</span>
                 </CardContent>
               </Card>
-              <Card className="bg-background/60 backdrop-blur border shadow-sm hover:shadow-md transition-all">
+              <Card className="bg-background/60 backdrop-blur border shadow-sm">
                 <CardContent className="p-4 flex flex-col items-center">
                   <span className="text-3xl font-bold text-primary mb-1">{expenses.length}</span>
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Expenses</span>
                 </CardContent>
               </Card>
-              <Card className="bg-background/60 backdrop-blur border shadow-sm hover:shadow-md transition-all">
+              <Card className="bg-background/60 backdrop-blur border shadow-sm">
                 <CardContent className="p-4 flex flex-col items-center">
                   <span className="text-3xl font-bold text-primary mb-1">{settlementPayments.length}</span>
                   <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Settlements</span>
@@ -236,7 +236,7 @@ export default function AlgorithmVerification({
               onClick={runTests}
               disabled={isRunning}
               size="lg"
-              className="h-12 px-8 text-base shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+              className="h-12 px-8 text-base shadow-lg"
             >
               <Play className="mr-2 h-5 w-5 fill-current" />
               Run Verification Suite

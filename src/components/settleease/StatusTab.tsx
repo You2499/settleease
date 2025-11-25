@@ -373,17 +373,17 @@ export default function StatusTab({
         <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6">
           {/* Overall Status Banner */}
           <div className={`rounded-xl border p-4 sm:p-6 transition-colors ${overallStatus === 'operational'
-              ? 'border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/10'
-              : overallStatus === 'down'
-                ? 'border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/10'
-                : 'border-yellow-200 bg-yellow-50/50 dark:border-yellow-900/50 dark:bg-yellow-950/10'
+            ? 'border-green-200 bg-green-50/50 dark:border-green-900/50 dark:bg-green-950/10'
+            : overallStatus === 'down'
+              ? 'border-red-200 bg-red-50/50 dark:border-red-900/50 dark:bg-red-950/10'
+              : 'border-yellow-200 bg-yellow-50/50 dark:border-yellow-900/50 dark:bg-yellow-950/10'
             }`}>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className={`p-3 rounded-full shadow-sm ${overallStatus === 'operational'
-                  ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300'
-                  : overallStatus === 'down'
-                    ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
-                    : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'
+                ? 'bg-green-100 text-green-600 dark:bg-green-900 dark:text-green-300'
+                : overallStatus === 'down'
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900 dark:text-red-300'
+                  : 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900 dark:text-yellow-300'
                 }`}>
                 {overallStatus === 'operational' ? (
                   <ShieldCheck className="h-8 w-8" />
@@ -432,13 +432,13 @@ export default function StatusTab({
               {services.map((service) => {
                 const Icon = service.icon;
                 return (
-                  <Card key={service.name} className="overflow-hidden border shadow-sm hover:shadow-md transition-shadow">
+                  <Card key={service.name} className="overflow-hidden border shadow-sm">
                     <CardContent className="p-5">
                       <div className="flex items-start gap-4">
                         <div className={`p-2.5 rounded-lg ${service.status === 'operational' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' :
-                            service.status === 'down' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                              service.status === 'degraded' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                          service.status === 'down' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+                            service.status === 'degraded' ? 'bg-yellow-100 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-400' :
+                              'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
                           }`}>
                           <Icon className="h-6 w-6" />
                         </div>
@@ -472,7 +472,7 @@ export default function StatusTab({
                   <ScrollArea className="h-[300px]">
                     <div className="divide-y">
                       {testResults.map((test) => (
-                        <div key={test.id} className="p-4 flex items-start gap-3 hover:bg-muted/50 transition-colors">
+                        <div key={test.id} className="p-4 flex items-start gap-3 border-b last:border-0">
                           <div className="mt-0.5">
                             {test.status === 'pass' ? (
                               <CheckCircle2 className="h-5 w-5 text-green-500" />
