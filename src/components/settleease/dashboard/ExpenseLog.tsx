@@ -36,13 +36,16 @@ export default function ExpenseLog({
 }: ExpenseLogProps) {
 
   // Combine expenses and settlements into a single activity list
+  // Filter out expenses that are excluded from settlements
   const allActivities: ActivityItem[] = [
-    ...expenses.map(expense => ({
-      type: 'expense' as const,
-      id: expense.id,
-      date: expense.created_at || new Date().toISOString(),
-      data: expense,
-    })),
+    ...expenses
+      .filter(expense => !expense.exclude_from_settlement)
+      .map(expense => ({
+        type: 'expense' as const,
+        id: expense.id,
+        date: expense.created_at || new Date().toISOString(),
+        data: expense,
+      })),
     ...settlementPayments.map(settlement => ({
       type: 'settlement' as const,
       id: settlement.id,
