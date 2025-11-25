@@ -74,7 +74,7 @@ export default function VerificationResults({
   // Group tests by category for better organization
   const testsByCategory = React.useMemo(() => {
     const categories: Record<string, TestResult[]> = {};
-    
+
     testResults.forEach((test) => {
       // Extract category from test name or use a default
       let category = "General Tests";
@@ -83,11 +83,11 @@ export default function VerificationResults({
       else if (test.name.includes("UI") || test.name.includes("Display")) category = "UI Consistency";
       else if (test.name.includes("Performance") || test.name.includes("Speed")) category = "Performance Tests";
       else if (test.name.includes("Algorithm") || test.name.includes("Calculation")) category = "Algorithm Integrity";
-      
+
       if (!categories[category]) categories[category] = [];
       categories[category].push(test);
     });
-    
+
     return categories;
   }, [testResults]);
 
@@ -116,71 +116,68 @@ export default function VerificationResults({
               warning: tests.filter(t => t.status === "warning").length,
             };
 
-            const categoryColor = categoryStats.fail > 0 ? "red" : 
-                                categoryStats.warning > 0 ? "yellow" : "green";
+            const categoryColor = categoryStats.fail > 0 ? "red" :
+              categoryStats.warning > 0 ? "yellow" : "green";
 
             return (
               <div
                 key={category}
-                className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
-                  categoryColor === "green"
+                className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${categoryColor === "green"
                     ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                     : categoryColor === "yellow"
-                    ? "bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/20 border-yellow-300 dark:border-yellow-700"
-                    : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
-                }`}
+                      ? "bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-950/30 dark:to-yellow-900/20 border-yellow-300 dark:border-yellow-700"
+                      : "bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/30 dark:to-red-900/20 border-red-300 dark:border-red-700"
+                  }`}
               >
-                {/* Category Status Badge */}
+                {/* Category Status Badge - Adjusted for mobile */}
                 <div
-                  className={`absolute -top-2 -right-2 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${
-                    categoryColor === "green"
+                  className={`absolute top-0 right-0 px-3 py-1 rounded-bl-xl rounded-tr-lg text-[10px] sm:text-xs font-bold shadow-sm ${categoryColor === "green"
                       ? "bg-green-500 text-white"
                       : categoryColor === "yellow"
-                      ? "bg-yellow-500 text-white"
-                      : "bg-red-500 text-white"
-                  }`}
+                        ? "bg-yellow-500 text-white"
+                        : "bg-red-500 text-white"
+                    }`}
                 >
-                  {categoryStats.fail > 0 ? "ISSUES" : 
-                   categoryStats.warning > 0 ? "WARNINGS" : "PASSED"}
+                  {categoryStats.fail > 0 ? "ISSUES" :
+                    categoryStats.warning > 0 ? "WARNINGS" : "PASSED"}
                 </div>
 
                 {/* Category Header */}
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3 mt-4 sm:mt-0">
                   <div className="flex items-center gap-3">
                     <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm ${
-                        categoryColor === "green"
+                      className={`w-10 h-10 rounded-full flex items-center justify-center shadow-sm flex-shrink-0 ${categoryColor === "green"
                           ? "bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200"
                           : categoryColor === "yellow"
-                          ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
-                          : "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
-                      }`}
+                            ? "bg-yellow-200 text-yellow-800 dark:bg-yellow-800 dark:text-yellow-200"
+                            : "bg-red-200 text-red-800 dark:bg-red-800 dark:text-red-200"
+                        }`}
                     >
                       <TestTube className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 dark:text-gray-100">
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm sm:text-base">
                         {category}
                       </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                      <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
                         {tests.length} test{tests.length !== 1 ? "s" : ""}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pl-13 sm:pl-0">
                     <div className="text-right">
-                      <div className="flex gap-1 text-xs items-center">
-                        <span className="text-green-600 font-medium flex items-center gap-1">
-                          {categoryStats.pass}<CircleCheck className="h-3 w-3" />
+                      <div className="flex gap-2 text-xs items-center">
+                        <span className="text-green-600 font-medium flex items-center gap-1 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-full">
+                          {categoryStats.pass} <span className="hidden sm:inline">Pass</span><CircleCheck className="h-3 w-3" />
                         </span>
                         {categoryStats.warning > 0 && (
-                          <span className="text-yellow-600 font-medium flex items-center gap-1">
-                            {categoryStats.warning}<TriangleAlert className="h-3 w-3" />
+                          <span className="text-yellow-600 font-medium flex items-center gap-1 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-full">
+                            {categoryStats.warning} <span className="hidden sm:inline">Warn</span><TriangleAlert className="h-3 w-3" />
                           </span>
                         )}
                         {categoryStats.fail > 0 && (
-                          <span className="text-red-600 font-medium flex items-center gap-1">
-                            {categoryStats.fail}<CircleX className="h-3 w-3" />
+                          <span className="text-red-600 font-medium flex items-center gap-1 bg-white/50 dark:bg-black/20 px-2 py-0.5 rounded-full">
+                            {categoryStats.fail} <span className="hidden sm:inline">Fail</span><CircleX className="h-3 w-3" />
                           </span>
                         )}
                       </div>
@@ -196,25 +193,30 @@ export default function VerificationResults({
                       className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
                     >
                       <div className="p-3">
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 sm:gap-3">
-                          <div className="flex items-start space-x-3 flex-1">
-                            {getStatusIcon(result.status)}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-sm sm:text-base leading-tight">
-                                {result.name}
-                              </h4>
-                              <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                                {result.description}
-                              </p>
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <div className="mt-0.5 flex-shrink-0">{getStatusIcon(result.status)}</div>
+                              <div className="min-w-0 flex-1">
+                                <h4 className="font-semibold text-sm leading-tight break-words">
+                                  {result.name}
+                                </h4>
+                                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                  {result.description}
+                                </p>
+                              </div>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2 flex-shrink-0">
-                            {result.executionTime && (
-                              <span className="text-xs text-muted-foreground flex items-center space-x-1">
-                                <Clock className="h-3 w-3" />
-                                <span>{result.executionTime}ms</span>
-                              </span>
-                            )}
+
+                          <div className="flex items-center justify-between pt-1 border-t border-gray-100 dark:border-gray-700/50 mt-1">
+                            <div className="flex items-center gap-1">
+                              {result.executionTime && (
+                                <span className="text-[10px] text-muted-foreground flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded">
+                                  <Clock className="h-3 w-3" />
+                                  {result.executionTime}ms
+                                </span>
+                              )}
+                            </div>
                             {getStatusBadge(result.status)}
                           </div>
                         </div>
@@ -313,8 +315,8 @@ export default function VerificationResults({
                     Tests are grouped by category to help you understand different aspects of the verification process.
                   </p>
                   <p>
-                    <strong>Green categories</strong> indicate all tests passed, 
-                    <strong> yellow categories</strong> have warnings that should be reviewed, and 
+                    <strong>Green categories</strong> indicate all tests passed,
+                    <strong> yellow categories</strong> have warnings that should be reviewed, and
                     <strong> red categories</strong> have critical failures requiring attention.
                   </p>
                   <p>
