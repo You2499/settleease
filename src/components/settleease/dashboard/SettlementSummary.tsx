@@ -234,8 +234,7 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
-  // Build full debug object for hashing (excluding timestamp and user-specific UI state to ensure consistent hashing across all users)
-  const fullDebug = useMemo(() => {
+  const generateSummaryData = () => {
     const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
 
     // Filter active manual overrides
@@ -244,8 +243,6 @@ export default function SettlementSummary({
     // Filter expenses to exclude those marked as exclude_from_settlement
     const includedExpenses = allExpenses.filter(expense => !expense.exclude_from_settlement);
 
-    // Calculate category totals from expenses (NOT from category definitions)
-    // Calculate category totals from expenses (NOT from category definitions)
     // Calculate category totals from expenses (NOT from category definitions)
     const categoryTotals: Record<string, number> = {};
     includedExpenses.forEach(expense => {
@@ -356,13 +353,17 @@ export default function SettlementSummary({
       expenses: expensesWithNames,
       people: cleanPeople,
     };
-  }, [people, allExpenses, settlementPayments, manualOverrides, pairwiseTransactions, simplifiedTransactions, personBalances, categories, peopleMap]);
+  };
 
   const handleSummarise = async () => {
-    if (!fullDebug || isComputingHash || !db) return;
+    if (isComputingHash || !db) return;
 
     try {
       setIsComputingHash(true);
+
+      // Generate the summary data on demand
+      const summaryData = generateSummaryData();
+
       console.log("🔄 Fetching active prompt version...");
 
       // Fetch active prompt version from database
@@ -382,7 +383,7 @@ export default function SettlementSummary({
 
       // Include prompt version in the data for hashing
       const dataWithPromptVersion = {
-        ...fullDebug,
+        ...summaryData,
         promptVersion,
       };
 
@@ -390,7 +391,7 @@ export default function SettlementSummary({
       const hash = await computeJsonHash(dataWithPromptVersion);
       console.log("🔑 Generated hash:", hash);
 
-      setSummaryJsonData(fullDebug);
+      setSummaryJsonData(summaryData);
       setSummaryHash(hash);
       setIsSummaryDialogOpen(true);
     } catch (error: any) {

@@ -22,7 +22,7 @@ interface ExpenseLogProps {
   isLoadingSettlements?: boolean;
 }
 
-type ActivityItem = 
+type ActivityItem =
   | { type: 'expense'; id: string; date: string; data: Expense }
   | { type: 'settlement'; id: string; date: string; data: SettlementPayment };
 
@@ -37,7 +37,9 @@ export default function ExpenseLog({
 
   // Combine expenses and settlements into a single activity list
   // Filter out expenses that are excluded from settlements
-  const allActivities: ActivityItem[] = [
+  // Combine expenses and settlements into a single activity list
+  // Filter out expenses that are excluded from settlements
+  const allActivities: ActivityItem[] = React.useMemo(() => [
     ...expenses
       .filter(expense => !expense.exclude_from_settlement)
       .map(expense => ({
@@ -52,22 +54,19 @@ export default function ExpenseLog({
       date: settlement.settled_at,
       data: settlement,
     })),
-  ];
-
-  // Sort by date, most recent first
-  allActivities.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [expenses, settlementPayments]);
 
   // Group by date
-  const groupedActivities = allActivities.reduce((acc, activity) => {
+  const groupedActivities = React.useMemo(() => allActivities.reduce((acc, activity) => {
     const date = new Date(activity.date).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(activity);
     return acc;
-  }, {} as Record<string, ActivityItem[]>);
+  }, {} as Record<string, ActivityItem[]>), [allActivities]);
 
-  const activityDates = Object.keys(groupedActivities);
+  const activityDates = React.useMemo(() => Object.keys(groupedActivities), [groupedActivities]);
 
   return (
     <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">

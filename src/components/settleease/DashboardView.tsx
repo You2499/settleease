@@ -9,7 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 
-import ExpenseDetailModal from './ExpenseDetailModal';
+import dynamic from 'next/dynamic';
+
+const ExpenseDetailModal = dynamic(() => import('./ExpenseDetailModal'), {
+  ssr: false,
+});
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
 
@@ -72,10 +76,10 @@ export default function DashboardView({
 
     const sTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments, manualOverrides);
     const pTransactions = calculatePairwiseTransactions(people, expenses, settlementPayments);
-    
+
     // Sort pairwise transactions for consistent display
-    pTransactions.sort((a,b) => 
-      (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '') || 
+    pTransactions.sort((a, b) =>
+      (peopleMap[a.from] || '').localeCompare(peopleMap[b.from] || '') ||
       (peopleMap[a.to] || '').localeCompare(peopleMap[b.to] || '')
     );
 
@@ -142,7 +146,7 @@ export default function DashboardView({
 
   // Check if we're currently loading any data OR if we haven't fetched data yet
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || !isDataFetchedAtLeastOnce;
-  
+
   // Show skeleton loaders while data is loading (on initial load OR refresh)
   if (isLoading) {
     return (
@@ -297,11 +301,11 @@ export default function DashboardView({
         onActionComplete={onActionComplete}
         userRole={userRole}
       />
-      
+
       <SettlementSummary
         simplifiedTransactions={simplifiedTransactions}
         pairwiseTransactions={pairwiseTransactions}
-        allExpenses={expenses} 
+        allExpenses={expenses}
         people={people}
         peopleMap={peopleMap}
         settlementPayments={settlementPayments}

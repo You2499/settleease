@@ -12,6 +12,7 @@ export default {
     extend: {
       fontFamily: {
         body: [
+          'var(--font-inter)',
           // System fonts for Apple devices
           '-apple-system',
           'BlinkMacSystemFont',
@@ -29,6 +30,7 @@ export default {
           'Segoe UI Symbol'
         ],
         headline: [
+          'var(--font-inter)',
           // System fonts for Apple devices
           '-apple-system',
           'BlinkMacSystemFont',
