@@ -477,7 +477,7 @@ export default function SettlementSummary({
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                {isComputingHash ? "Computing..." : "Summarise"}
+                {isComputingHash ? "Summarising..." : "Summarise"}
               </Button>
               {/* <Button
                 size="sm"
