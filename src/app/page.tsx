@@ -563,15 +563,11 @@ function SettleEasePageContent() {
         />
         <SidebarInset>
           <div className="flex flex-col h-full">
-            <header className="p-4 md:hidden flex items-center sticky top-0 bg-background z-20 border-b shadow-sm">
-              <div className="w-10"> {/* Left part for trigger */}
-                <SidebarTrigger />
-              </div>
-              <div className="flex-grow flex items-center justify-center"> {/* Center part for logo */}
+            <header className="p-4 md:hidden flex items-center justify-center sticky top-0 bg-background z-20 border-b shadow-sm">
+              <div className="flex items-center justify-center"> {/* Center part for logo */}
                 <HandCoins className="h-7 w-7 text-primary mr-2" />
                 <span className="text-xl font-bold text-primary">SettleEase</span>
               </div>
-              <div className="w-10" /> {/* Right part, spacer for symmetry */}
             </header>
             <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0 pb-24 md:pb-6">
               <div className="min-h-full bg-background">

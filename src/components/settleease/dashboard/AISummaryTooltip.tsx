@@ -459,7 +459,8 @@ export default function AISummaryTooltip({
         // Adjust for mobile - center on screen if not enough space
         if (viewportWidth < 768) {
           left = 16; // 16px margin on mobile
-          top = Math.min(top, viewportHeight * 0.15); // Don't go too far down
+          // On mobile, position it near the top but leave space for header
+          top = 80; 
         } else {
           // Desktop positioning
           const tooltipWidth = 600; // Actual tooltip width (updated)
@@ -910,8 +911,9 @@ export default function AISummaryTooltip({
   if (!open) return null;
 
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const tooltipWidth = isMobile ? window.innerWidth - 32 : 600; // Increased from 480 to 600
-  const tooltipHeight = isMobile ? window.innerHeight * 0.8 : 500; // Increased from 400 to 500
+  const tooltipWidth = isMobile ? window.innerWidth - 32 : 600; 
+  // On mobile: Viewport - Top(80) - BottomNav(80) - Margin(16)
+  const tooltipHeight = isMobile ? window.innerHeight - 176 : 500;
   const tooltipMinHeight = isMobile ? 300 : 300;
 
   return (
@@ -927,7 +929,7 @@ export default function AISummaryTooltip({
       {/* Floating Tooltip */}
       <div
         ref={tooltipRef}
-        className="fixed z-50 bg-background border border-border rounded-lg shadow-xl flex flex-col"
+        className="fixed z-[60] bg-background border border-border rounded-lg shadow-xl flex flex-col"
         style={{
           top: position.top,
           left: position.left,
