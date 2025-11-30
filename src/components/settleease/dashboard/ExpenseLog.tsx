@@ -144,21 +144,21 @@ export default function ExpenseLog({
         </div>
 
         {/* Search and Filters Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-2">
-          <div className="relative flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div className="relative sm:col-span-6 md:col-span-5">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               id="expense-search-input"
               ref={searchInputRef}
-              placeholder="Search transactions..."
-              className="pl-9"
+              placeholder="Search..."
+              className="pl-9 h-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:col-span-6 md:col-span-7">
             <Select value={filterPerson} onValueChange={setFilterPerson}>
-              <SelectTrigger className="w-[130px] sm:w-[150px]">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue placeholder="Person" />
               </SelectTrigger>
               <SelectContent>
@@ -170,7 +170,7 @@ export default function ExpenseLog({
             </Select>
 
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[130px] sm:w-[150px]">
+              <SelectTrigger className="h-9 w-full">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -183,7 +183,7 @@ export default function ExpenseLog({
           </div>
         </div>
       </CardHeader>
-      
+
       <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
         {filteredActivities.length > 0 ? (
           <ScrollArea className="flex-1 min-h-0">
