@@ -38,7 +38,7 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole }:
                                 isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <item.icon className={cn("h-5 w-5", isActive && "fill-current")} />
+                            <item.icon className="h-5 w-5" />
                             <span className="text-[10px] font-medium">{item.label}</span>
                         </button>
                     );
