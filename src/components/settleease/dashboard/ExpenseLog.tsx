@@ -1,9 +1,12 @@
 "use client";
 
-import React from 'react';
-import { FileText } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { FileText, Search, Filter, X } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense, SettlementPayment } from '@/lib/settleease/types';
 import type { Category } from '@/lib/settleease/types';
@@ -34,12 +37,13 @@ export default function ExpenseLog({
   getCategoryIconFromName,
   categories,
 }: ExpenseLogProps) {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterPerson, setFilterPerson] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Combine expenses and settlements into a single activity list
-  // Filter out expenses that are excluded from settlements
-  // Combine expenses and settlements into a single activity list
-  // Filter out expenses that are excluded from settlements
-  const allActivities: ActivityItem[] = React.useMemo(() => [
+  const allActivities: ActivityItem[] = useMemo(() => [
     ...expenses
       .filter(expense => !expense.exclude_from_settlement)
       .map(expense => ({
@@ -56,26 +60,132 @@ export default function ExpenseLog({
     })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [expenses, settlementPayments]);
 
+  // Filter activities
+  const filteredActivities = useMemo(() => {
+    return allActivities.filter(item => {
+      // 1. Search Query
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        if (item.type === 'expense') {
+          if (!item.data.description.toLowerCase().includes(query)) return false;
+        } else {
+          // Search in settlements (names or notes)
+          const debtor = peopleMap[item.data.debtor_id] || '';
+          const creditor = peopleMap[item.data.creditor_id] || '';
+          const note = item.data.notes || '';
+          const searchStr = `payment ${debtor} ${creditor} ${note}`.toLowerCase();
+          if (!searchStr.includes(query)) return false;
+        }
+      }
+
+      // 2. Person Filter
+      if (filterPerson !== 'all') {
+        if (item.type === 'expense') {
+          // Check if person is payer or involved in split
+          const isPayer = item.data.paid_by.some(p => p.personId === filterPerson);
+          const isSharer = item.data.shares.some(s => s.personId === filterPerson);
+          if (!isPayer && !isSharer) return false;
+        } else {
+          if (item.data.debtor_id !== filterPerson && item.data.creditor_id !== filterPerson) return false;
+        }
+      }
+
+      // 3. Category Filter
+      if (filterCategory !== 'all') {
+        if (item.type === 'expense') {
+          if (item.data.category !== filterCategory) return false;
+        } else {
+          // Settlements don't have categories, so hide them if a category is selected
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [allActivities, searchQuery, filterPerson, filterCategory, peopleMap]);
+
   // Group by date
-  const groupedActivities = React.useMemo(() => allActivities.reduce((acc, activity) => {
+  const groupedActivities = useMemo(() => filteredActivities.reduce((acc, activity) => {
     const date = new Date(activity.date).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(activity);
     return acc;
-  }, {} as Record<string, ActivityItem[]>), [allActivities]);
+  }, {} as Record<string, ActivityItem[]>), [filteredActivities]);
 
-  const activityDates = React.useMemo(() => Object.keys(groupedActivities), [groupedActivities]);
+  const activityDates = useMemo(() => Object.keys(groupedActivities), [groupedActivities]);
+
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterPerson('all');
+    setFilterCategory('all');
+  };
+
+  const hasActiveFilters = searchQuery || filterPerson !== 'all' || filterCategory !== 'all';
 
   return (
     <Card className="w-full h-full flex flex-col shadow-lg rounded-lg">
-      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2"> {/* Adjusted padding */}
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold"><FileText className="mr-2 h-5 w-5 text-primary" /> Activity Feed</CardTitle>
-        <CardDescription className="text-xs sm:text-sm">A chronological list of all expenses and settlement payments. Click an expense for details.</CardDescription>
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <FileText className="mr-2 h-5 w-5 text-primary" /> Activity Feed
+            </CardTitle>
+            <CardDescription className="text-xs sm:text-sm mt-1">
+              {filteredActivities.length} {filteredActivities.length === 1 ? 'transaction' : 'transactions'} found
+            </CardDescription>
+          </div>
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8 px-2 text-muted-foreground hover:text-foreground">
+              <X className="h-4 w-4 mr-1" /> Clear
+            </Button>
+          )}
+        </div>
+
+        {/* Search and Filters Toolbar */}
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="expense-search-input"
+              ref={searchInputRef}
+              placeholder="Search transactions..."
+              className="pl-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Select value={filterPerson} onValueChange={setFilterPerson}>
+              <SelectTrigger className="w-[130px] sm:w-[150px]">
+                <SelectValue placeholder="Person" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All People</SelectItem>
+                {Object.entries(peopleMap).map(([id, name]) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[130px] sm:w-[150px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>{cat.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0"> {/* Adjusted padding and flex-1 for fill */}
-        {allActivities.length > 0 ? (
+      
+      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+        {filteredActivities.length > 0 ? (
           <ScrollArea className="flex-1 min-h-0">
             <div className="space-y-4">
               {activityDates.map((date, index) => (
@@ -118,7 +228,17 @@ export default function ExpenseLog({
               ))}
             </div>
           </ScrollArea>
-        ) : (<p className="text-sm text-muted-foreground p-2">No activity recorded yet.</p>)}
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
+            <Filter className="h-10 w-10 mb-2 opacity-20" />
+            <p>No transactions found.</p>
+            {hasActiveFilters && (
+              <Button variant="link" onClick={clearFilters} className="mt-2">
+                Clear filters
+              </Button>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

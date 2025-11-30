@@ -35,6 +35,7 @@ import { useThemeSync } from '@/hooks/useThemeSync';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
+import MobileBottomNav from '@/components/settleease/MobileBottomNav';
 
 
 function SettleEasePageContent() {
@@ -423,6 +424,40 @@ function SettleEasePageContent() {
     return () => clearTimeout(timeoutId);
   }, [activeView, currentUser, db, hasLoadedInitialView, router, searchParams]);
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + E: Add Expense
+      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
+        e.preventDefault();
+        if (userRole === 'admin') {
+          setActiveView('addExpense');
+        } else {
+          toast({ title: "Access Denied", description: "You need admin permissions to add expenses.", variant: "destructive" });
+        }
+      }
+
+      // Cmd/Ctrl + F: Focus Search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+        e.preventDefault();
+        // If not on dashboard, go there first
+        if (activeView !== 'dashboard') {
+          setActiveView('dashboard');
+          // Wait for render then focus
+          setTimeout(() => {
+            const input = document.getElementById('expense-search-input');
+            input?.focus();
+          }, 100);
+        } else {
+          const input = document.getElementById('expense-search-input');
+          input?.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [userRole, activeView, setActiveView]);
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -538,7 +573,7 @@ function SettleEasePageContent() {
               </div>
               <div className="w-10" /> {/* Right part, spacer for symmetry */}
             </header>
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0 pb-24 md:pb-6">
               <div className="min-h-full bg-background">
                 {isLoadingData && isDataFetchedAtLeastOnce && (
                   <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
@@ -732,9 +767,10 @@ function SettleEasePageContent() {
                 )}
               </div>
             </main>
+            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} />
           </div>
         </SidebarInset>
-      </SidebarProvider>
+      </SidebarProvider >
     </>
   );
 }
