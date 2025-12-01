@@ -12,6 +12,7 @@ interface ExpenseListItemProps {
   onClick?: (expense: Expense) => void;
   actions?: React.ReactNode;
   showExcludedBadge?: boolean; // Only show badge in admin/edit contexts
+  highlightedCategory?: string;
 }
 
 export default function ExpenseListItem({
@@ -22,6 +23,7 @@ export default function ExpenseListItem({
   onClick,
   actions,
   showExcludedBadge = false,
+  highlightedCategory,
 }: ExpenseListItemProps) {
   const categoryObj = categories.find(cat => cat.name === expense.category);
   const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
@@ -55,6 +57,11 @@ export default function ExpenseListItem({
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
             <div className="flex items-center">
               <CategoryIcon className="mr-1 h-3 w-3" /> {expense.category}
+              {highlightedCategory && highlightedCategory !== 'all' && expense.category !== highlightedCategory && expense.split_method === 'itemwise' && expense.items?.some(i => i.categoryName === highlightedCategory) && (
+                <span className="ml-2 text-[10px] bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 px-1.5 py-0.5 rounded-full">
+                  Includes items in {highlightedCategory}
+                </span>
+              )}
             </div>
             <span className="mt-0.5 sm:mt-0">
               Paid by: <span className="font-medium">{displayPayerText}</span>

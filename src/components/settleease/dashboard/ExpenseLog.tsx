@@ -93,7 +93,13 @@ export default function ExpenseLog({
       // 3. Category Filter
       if (filterCategory !== 'all') {
         if (item.type === 'expense') {
-          if (item.data.category !== filterCategory) return false;
+          const mainCategoryMatch = item.data.category === filterCategory;
+          let itemCategoryMatch = false;
+          if (item.data.split_method === 'itemwise' && item.data.items) {
+            itemCategoryMatch = item.data.items.some(i => i.categoryName === filterCategory);
+          }
+
+          if (!mainCategoryMatch && !itemCategoryMatch) return false;
         } else {
           // Settlements don't have categories, so hide them if a category is selected
           return false;
@@ -211,6 +217,7 @@ export default function ExpenseLog({
                             getCategoryIconFromName={getCategoryIconFromName}
                             categories={categories}
                             onClick={handleExpenseCardClick}
+                            highlightedCategory={filterCategory}
                           />
                         );
                       } else {
