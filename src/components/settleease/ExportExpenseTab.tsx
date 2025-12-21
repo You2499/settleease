@@ -194,7 +194,7 @@ export default function ExportExpenseTab({
     }
     
     @page {
-      margin: 0.4in;
+      margin: 50px 0 0 0;
       size: A4;
     }
     
