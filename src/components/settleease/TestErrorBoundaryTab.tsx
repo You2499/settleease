@@ -393,7 +393,7 @@ export default function TestErrorBoundaryTab({
   }
 
   return (
-    <Card className="shadow-lg rounded-lg h-full flex flex-col">
+    <Card className="shadow-lg rounded-lg h-full flex flex-col overflow-hidden">
       <CardHeader className="p-4 sm:p-6 pb-4 border-b">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <Bug className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
@@ -404,7 +404,7 @@ export default function TestErrorBoundaryTab({
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <CardContent className="flex-1 flex flex-col min-h-0 p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-x-hidden">
         {/* Action Buttons Section */}
         <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -510,9 +510,9 @@ export default function TestErrorBoundaryTab({
         </Alert>
 
         {/* Test Components List */}
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-hidden">
           <ScrollArea className="h-full rounded-md border bg-background">
-            <div className="p-2 sm:p-4 space-y-6">
+            <div className="p-2 sm:p-4 space-y-6 max-w-full overflow-hidden">
               {Object.entries(groupedComponents).map(([category, components]) => {
                 const CategoryIcon = getCategoryIcon(category);
                 const activeCrashCount = components.filter(c => crashStates[c.id]).length;
@@ -543,22 +543,22 @@ export default function TestErrorBoundaryTab({
                           <li
                             key={test.id}
                             className={`flex flex-col sm:flex-row sm:items-center justify-between p-2.5 sm:p-3 rounded-md shadow-sm transition-colors group ${isActive
-                                ? 'bg-destructive/10 border border-destructive/30'
-                                : 'bg-card/70 hover:bg-card/90'
+                              ? 'bg-destructive/10 border border-destructive/30'
+                              : 'bg-card/70 hover:bg-card/90'
                               }`}
                           >
-                            <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0 mb-2 sm:mb-0">
-                              <div className={`p-1.5 rounded-md ${isActive ? 'bg-destructive/20' : 'bg-muted'}`}>
+                            <div className="flex items-start sm:items-center gap-2 sm:gap-3 flex-1 min-w-0 mb-2 sm:mb-0 overflow-hidden">
+                              <div className={`p-1.5 rounded-md flex-shrink-0 ${isActive ? 'bg-destructive/20' : 'bg-muted'}`}>
                                 <IconComponent className={`h-4 w-4 ${isActive ? 'text-destructive' : 'text-muted-foreground'}`} />
                               </div>
-                              <div className="flex-1 min-w-0">
+                              <div className="flex-1 min-w-0 overflow-hidden">
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="font-medium text-sm truncate">{test.name}</span>
-                                  <Badge variant={getRiskBadgeVariant(test.riskLevel)} className="text-[10px] px-1.5 py-0">
+                                  <span className="font-medium text-sm truncate max-w-[120px] sm:max-w-none">{test.name}</span>
+                                  <Badge variant={getRiskBadgeVariant(test.riskLevel)} className="text-[10px] px-1.5 py-0 flex-shrink-0">
                                     {test.riskLevel}
                                   </Badge>
                                   {isActive && (
-                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 animate-pulse gap-1">
+                                    <Badge variant="destructive" className="text-[10px] px-1.5 py-0 animate-pulse gap-1 flex-shrink-0">
                                       <Zap className="h-2.5 w-2.5" />
                                       CRASH
                                     </Badge>
@@ -569,7 +569,7 @@ export default function TestErrorBoundaryTab({
                             </div>
 
                             {/* Action Buttons */}
-                            <div className="flex items-center gap-1.5 sm:gap-2 pl-8 sm:pl-0">
+                            <div className="flex items-center gap-1.5 sm:gap-2 pl-8 sm:pl-0 flex-shrink-0">
                               {isActive ? (
                                 <CheckCircle className="h-4 w-4 text-green-600 hidden sm:block" />
                               ) : (
