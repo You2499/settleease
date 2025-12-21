@@ -838,7 +838,13 @@ export default function ExportExpenseTab({
       <h2>Detailed Expense Breakdown</h2>
     </div>
     
-    ${reportExpenses.map((expense, idx) => {
+    
+    ${[...reportExpenses].sort((a, b) => {
+      // Sort by category rank
+      const rankA = categoryRankMap[a.category] ?? 999;
+      const rankB = categoryRankMap[b.category] ?? 999;
+      return rankA - rankB;
+    }).map((expense, idx) => {
       const { totalOriginalBill, celebrationAmount, amountEffectivelySplit } = getExpenseDetails(expense);
       const sortedPaidBy = [...expense.paid_by].sort((a, b) =>
         (peopleMap[a.personId] || '').localeCompare(peopleMap[b.personId] || '')
