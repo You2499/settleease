@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil, HandCoins, Ban, CheckCircle2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import AddExpenseTab from './AddExpenseTab'; 
+import AddExpenseTab from './AddExpenseTab';
 import { EXPENSES_TABLE, formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 import { Separator } from '../ui/separator';
@@ -30,7 +30,7 @@ interface EditExpensesTabProps {
   expenses: Expense[];
   db: SupabaseClient | undefined;
   supabaseInitializationError: string | null;
-  onActionComplete: () => void; 
+  onActionComplete: () => void;
   dynamicCategories: DynamicCategory[];
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
@@ -38,12 +38,12 @@ interface EditExpensesTabProps {
   isDataFetchedAtLeastOnce?: boolean;
 }
 
-export default function EditExpensesTab({ 
-  people, 
-  expenses, 
-  db, 
-  supabaseInitializationError, 
-  onActionComplete, 
+export default function EditExpensesTab({
+  people,
+  expenses,
+  db,
+  supabaseInitializationError,
+  onActionComplete,
   dynamicCategories,
   isLoadingPeople = false,
   isLoadingExpenses = false,
@@ -54,7 +54,7 @@ export default function EditExpensesTab({
   useEffect(() => {
     crashTestManager.checkAndCrash('editExpenses', 'Edit Expenses Tab crashed: Expense modification failed with invalid data');
   });
-  
+
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -65,16 +65,39 @@ export default function EditExpensesTab({
     return acc;
   }, {} as Record<string, string>), [people]);
 
-  const groupedExpenses = expenses.reduce((acc, expense) => {
-    const date = new Date(expense.created_at || new Date()).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(expense);
-    return acc;
-  }, {} as Record<string, Expense[]>);
+  // Create a category rank lookup map
+  const categoryRankMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    dynamicCategories.forEach(cat => {
+      map[cat.name] = cat.rank ?? 999; // Default high rank for categories without rank
+    });
+    return map;
+  }, [dynamicCategories]);
 
-  const expenseDates = Object.keys(groupedExpenses);
+  // Group expenses by date and sort by category rank within each date
+  const groupedExpenses = useMemo(() => {
+    const grouped = expenses.reduce((acc, expense) => {
+      const date = new Date(expense.created_at || new Date()).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(expense);
+      return acc;
+    }, {} as Record<string, Expense[]>);
+
+    // Sort expenses within each date by category rank
+    Object.keys(grouped).forEach(date => {
+      grouped[date].sort((a, b) => {
+        const rankA = categoryRankMap[a.category] ?? 999;
+        const rankB = categoryRankMap[b.category] ?? 999;
+        return rankA - rankB;
+      });
+    });
+
+    return grouped;
+  }, [expenses, categoryRankMap]);
+
+  const expenseDates = useMemo(() => Object.keys(groupedExpenses), [groupedExpenses]);
 
   const handleEditExpense = (expense: Expense) => {
     setEditingExpense(expense);
@@ -89,24 +112,24 @@ export default function EditExpensesTab({
       toast({ title: "Error", description: `Cannot update expense: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
       return;
     }
-    
+
     const newExcludeStatus = !expense.exclude_from_settlement;
-    
+
     try {
       const { error } = await db
         .from(EXPENSES_TABLE)
         .update({ exclude_from_settlement: newExcludeStatus })
         .eq('id', expense.id);
-      
+
       if (error) throw error;
-      
-      toast({ 
-        title: newExcludeStatus ? "Excluded from Settlements" : "Included in Settlements", 
-        description: newExcludeStatus 
+
+      toast({
+        title: newExcludeStatus ? "Excluded from Settlements" : "Included in Settlements",
+        description: newExcludeStatus
           ? `${expense.description} will not be counted in settlement calculations (still in analytics).`
           : `${expense.description} will now be included in settlement calculations.`
       });
-      onActionComplete(); 
+      onActionComplete();
     } catch (error: any) {
       toast({ title: "Error", description: `Could not update expense: ${error.message}`, variant: "destructive" });
     }
@@ -122,7 +145,7 @@ export default function EditExpensesTab({
       const { error } = await db.from(EXPENSES_TABLE).delete().eq('id', expenseToDelete.id);
       if (error) throw error;
       toast({ title: "Expense Deleted", description: `${expenseToDelete.description} has been deleted.` });
-      onActionComplete(); 
+      onActionComplete();
     } catch (error: any) {
       toast({ title: "Error", description: `Could not delete expense: ${error.message}`, variant: "destructive" });
     } finally {
@@ -131,8 +154,8 @@ export default function EditExpensesTab({
   };
 
   const handleActionComplete = () => {
-    setEditingExpense(null); 
-    onActionComplete(); 
+    setEditingExpense(null);
+    onActionComplete();
   };
 
   // Show skeleton loaders while data is loading
@@ -154,7 +177,7 @@ export default function EditExpensesTab({
                 <Skeleton className="h-5 w-28 sm:w-32" />
               </div>
             </div>
-            
+
             {/* Expense items skeleton - Mobile Optimized */}
             <div className="space-y-2.5 px-0.5 sm:px-1">
               {[1, 2, 3].map((i) => (
@@ -180,7 +203,7 @@ export default function EditExpensesTab({
       </Card>
     );
   }
-  
+
   if (supabaseInitializationError && !db) {
     return (
       <Card className="shadow-lg rounded-lg h-full flex flex-col">
@@ -203,7 +226,7 @@ export default function EditExpensesTab({
         people={people}
         db={db}
         supabaseInitializationError={supabaseInitializationError}
-        onExpenseAdded={handleActionComplete} 
+        onExpenseAdded={handleActionComplete}
         expenseToEdit={editingExpense}
         onCancelEdit={() => setEditingExpense(null)}
         dynamicCategories={dynamicCategories}
@@ -226,53 +249,53 @@ export default function EditExpensesTab({
             <ScrollArea className="flex-1">
               <div className="space-y-4">
                 {expenseDates.map((date, index) => (
-                    <div key={date}>
-                        <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
-                            <div className="absolute inset-0 flex items-center">
-                                <Separator className="bg-border shadow-inner opacity-80" />
-                            </div>
-                            <div className="relative flex justify-center text-xs">
-                                <span className="bg-card px-2 text-muted-foreground font-semibold rounded shadow-inner border border-border/60" style={{ position: 'relative', top: '1px' }}>
-                                    {date}
-                                </span>
-                            </div>
-                        </div>
-                        <ul className="space-y-2.5 px-0.5 sm:px-1">
-                            {groupedExpenses[date].map(expense => (
-                                <ExpenseListItem
-                                  key={expense.id}
-                                  expense={expense}
-                                  peopleMap={peopleMap}
-                                  getCategoryIconFromName={(iconName: string) => (LucideIcons as any)[iconName] || Settings2}
-                                  categories={dynamicCategories}
-                                  showExcludedBadge={true}
-                                  actions={
-                                    <>
-                                      <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="w-full sm:w-auto">
-                                          <Pencil className="mr-1 h-4 w-4" /> Edit
-                                      </Button>
-                                      <Button 
-                                        variant={expense.exclude_from_settlement ? "default" : "outline"} 
-                                        size="sm" 
-                                        onClick={() => handleToggleExcludeFromSettlement(expense)} 
-                                        className="w-full sm:w-auto"
-                                        title={expense.exclude_from_settlement ? "Include in settlements" : "Exclude from settlements"}
-                                      >
-                                          {expense.exclude_from_settlement ? (
-                                            <><CheckCircle2 className="mr-1 h-4 w-4" /> Include</>
-                                          ) : (
-                                            <><Ban className="mr-1 h-4 w-4" /> Exclude</>
-                                          )}
-                                      </Button>
-                                      <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="w-full sm:w-auto">
-                                          <Trash2 className="mr-1 h-4 w-4" /> Delete
-                                      </Button>
-                                    </>
-                                  }
-                                />
-                            ))}
-                        </ul>
+                  <div key={date}>
+                    <div className={`relative ${index === 0 ? 'mb-3' : 'my-3'}`}>
+                      <div className="absolute inset-0 flex items-center">
+                        <Separator className="bg-border shadow-inner opacity-80" />
+                      </div>
+                      <div className="relative flex justify-center text-xs">
+                        <span className="bg-card px-2 text-muted-foreground font-semibold rounded shadow-inner border border-border/60" style={{ position: 'relative', top: '1px' }}>
+                          {date}
+                        </span>
+                      </div>
                     </div>
+                    <ul className="space-y-2.5 px-0.5 sm:px-1">
+                      {groupedExpenses[date].map(expense => (
+                        <ExpenseListItem
+                          key={expense.id}
+                          expense={expense}
+                          peopleMap={peopleMap}
+                          getCategoryIconFromName={(iconName: string) => (LucideIcons as any)[iconName] || Settings2}
+                          categories={dynamicCategories}
+                          showExcludedBadge={true}
+                          actions={
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} className="w-full sm:w-auto">
+                                <Pencil className="mr-1 h-4 w-4" /> Edit
+                              </Button>
+                              <Button
+                                variant={expense.exclude_from_settlement ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => handleToggleExcludeFromSettlement(expense)}
+                                className="w-full sm:w-auto"
+                                title={expense.exclude_from_settlement ? "Include in settlements" : "Exclude from settlements"}
+                              >
+                                {expense.exclude_from_settlement ? (
+                                  <><CheckCircle2 className="mr-1 h-4 w-4" /> Include</>
+                                ) : (
+                                  <><Ban className="mr-1 h-4 w-4" /> Exclude</>
+                                )}
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => handleConfirmDeleteExpense(expense)} className="w-full sm:w-auto">
+                                <Trash2 className="mr-1 h-4 w-4" /> Delete
+                              </Button>
+                            </>
+                          }
+                        />
+                      ))}
+                    </ul>
+                  </div>
                 ))}
               </div>
             </ScrollArea>
