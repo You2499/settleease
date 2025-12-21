@@ -617,7 +617,7 @@ export default function ExportExpenseTab({
   <!-- Header -->
   <div class="header">
     <div class="logo-section">
-      <div class="logo-icon">₹</div>
+      <div class="logo-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17"/><path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9"/><path d="m2 16 6 6"/><circle cx="16" cy="9" r="2.9"/><circle cx="6" cy="5" r="3"/></svg></div>
       <div class="logo-text">
         <h1>${reportName || 'SettleEase'}</h1>
         <p>${reportName ? 'Expense Report' : 'Expense Management Report'}</p>
@@ -889,7 +889,7 @@ export default function ExportExpenseTab({
   const pdfContent = useMemo(() => generatePDFContent(), [generatePDFContent]);
 
   return (
-    <Card className="shadow-xl rounded-lg h-full flex flex-col">
+    <Card className="shadow-xl rounded-lg">
       {/* Header */}
       <CardHeader className="p-4 sm:p-6 pb-4 border-b">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -915,7 +915,7 @@ export default function ExportExpenseTab({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 min-h-0 p-0 flex flex-col overflow-hidden">
+      <CardContent className="p-0">
         {/* Date Range Selection */}
         <div className="px-4 sm:px-6 py-4 border-b bg-muted/20">
           <div className="mb-3">
@@ -946,70 +946,68 @@ export default function ExportExpenseTab({
               })}
             </div>
 
-            {/* Custom Date Range Pickers */}
-            {selectedPreset && (
-              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs text-muted-foreground w-12">From:</span>
-                  <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="mr-2 h-3.5 w-3.5" />
-                        {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <FixedCalendar
-                        selected={startDate}
-                        onSelect={(date) => {
-                          setStartDate(date);
-                          setSelectedPreset('custom');
-                          setStartCalendarOpen(false);
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <ChevronRight className="hidden sm:block h-4 w-4 text-muted-foreground" />
-
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs text-muted-foreground w-12">To:</span>
-                  <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={cn(
-                          "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <Calendar className="mr-2 h-3.5 w-3.5" />
-                        {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <FixedCalendar
-                        selected={endDate}
-                        onSelect={(date) => {
-                          setEndDate(date);
-                          setSelectedPreset('custom');
-                          setEndCalendarOpen(false);
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+            {/* Custom Date Range Pickers - Always visible */}
+            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs text-muted-foreground w-12">From:</span>
+                <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
+                        !startDate && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5" />
+                      {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <FixedCalendar
+                      selected={startDate}
+                      onSelect={(date) => {
+                        setStartDate(date);
+                        setSelectedPreset('custom');
+                        setStartCalendarOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
-            )}
+
+              <ChevronRight className="hidden sm:block h-4 w-4 text-muted-foreground" />
+
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <span className="text-xs text-muted-foreground w-12">To:</span>
+                <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
+                        !endDate && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-3.5 w-3.5" />
+                      {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <FixedCalendar
+                      selected={endDate}
+                      onSelect={(date) => {
+                        setEndDate(date);
+                        setSelectedPreset('custom');
+                        setEndCalendarOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
 
             {/* Report Name Input (shown when date range selected) */}
             {isDateRangeSelected && (
@@ -1027,9 +1025,8 @@ export default function ExportExpenseTab({
           </div>
         </div>
 
-        {/* Conditional Content: Stats + Preview OR Empty State */}
         {isDateRangeSelected ? (
-          <div className="flex-1 min-h-0 flex flex-col">
+          <div>
             {/* Stats Grid */}
             <div className="px-4 sm:px-6 py-3 border-b bg-card/50">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
@@ -1059,11 +1056,12 @@ export default function ExportExpenseTab({
                 PDF Preview
               </p>
             </div>
-            <div className="flex-1 min-h-[400px] sm:min-h-[500px]">
+            <div>
               <iframe
                 ref={iframeRef}
                 srcDoc={pdfContent}
-                className="w-full h-full border-0"
+                className="w-full border-0"
+                style={{ height: '800px' }}
                 title="PDF Preview"
               />
             </div>
