@@ -214,7 +214,10 @@ export default function ExportExpenseTab({
         print-color-adjust: exact !important;
         color-adjust: exact !important;
       }
-      .page-break { page-break-before: always; }
+      .page-break { 
+        page-break-before: always; 
+        padding-top: 50px;
+      }
       .no-break { page-break-inside: avoid; }
       
       /* Force SVGs to render */
