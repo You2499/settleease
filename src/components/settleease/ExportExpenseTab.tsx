@@ -194,7 +194,7 @@ export default function ExportExpenseTab({
     }
     
     @page {
-      margin: 0;
+      margin: 0.75in 0.5in;
       size: A4;
     }
     
@@ -207,7 +207,7 @@ export default function ExportExpenseTab({
         color-adjust: exact !important;
       }
       body {
-        padding: 30px !important;
+        padding: 0 !important;
       }
       * {
         -webkit-print-color-adjust: exact !important;
