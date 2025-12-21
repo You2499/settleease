@@ -1059,7 +1059,7 @@ export default function ExportExpenseTab({
                 PDF Preview
               </p>
             </div>
-            <div className="flex-1 min-h-0">
+            <div className="flex-1 min-h-[400px] sm:min-h-[500px]">
               <iframe
                 ref={iframeRef}
                 srcDoc={pdfContent}
