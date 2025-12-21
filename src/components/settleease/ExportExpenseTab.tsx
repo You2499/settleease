@@ -194,32 +194,91 @@ export default function ExportExpenseTab({
     }
     
     @page {
-      margin: 0.5in;
+      margin: 0;
       size: A4;
     }
     
     @media print {
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      body {
+        padding: 30px !important;
+      }
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
         color-adjust: exact !important;
       }
-      body { 
-        padding: 20px; 
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
       .page-break { page-break-before: always; }
       .no-break { page-break-inside: avoid; }
+      
+      /* Force SVGs to render */
       svg {
         display: inline-block !important;
         visibility: visible !important;
+        overflow: visible !important;
       }
       .logo-icon svg {
         stroke: white !important;
       }
-      .summary-card, .section-header, .celebration-box, .settlement-card {
-        background: inherit !important;
+      
+      /* Force section headers to print with backgrounds */
+      .section-header {
+        background: #388E3C !important;
+        background-color: #388E3C !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .section-header.teal {
+        background: #00796b !important;
+        background-color: #00796b !important;
+      }
+      .section-header svg {
+        stroke: white !important;
+      }
+      .section-header h2 {
+        color: white !important;
+      }
+      
+      /* Force summary cards backgrounds */
+      .summary-card {
+        background: #f8fdf8 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .summary-card.accent {
+        background: #e0f7fa !important;
+      }
+      
+      /* Force logo icon background */
+      .logo-icon {
+        background: #388E3C !important;
+        background-color: #388E3C !important;
+      }
+      
+      /* Force settlement cards */
+      .settlement-card {
+        background: #e8f5e9 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      /* Force celebration box */
+      .celebration-box {
+        background: #fff8e1 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      
+      /* Force date header */
+      .activity-table .date-header {
+        background: #e8f5e9 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
@@ -865,7 +924,7 @@ export default function ExportExpenseTab({
     }).join('')}
   </div>
 
-  ${settlementPayments.length > 0 ? `
+  ${filteredSettlements.length > 0 ? `
     <div class="page-break"></div>
     
     <!-- Settlement Payments -->
@@ -875,7 +934,7 @@ export default function ExportExpenseTab({
         <h2>Settlement Payments</h2>
       </div>
       
-      ${settlementPayments.map(settlement => `
+      ${filteredSettlements.map(settlement => `
         <div class="settlement-card no-break">
           <div>
             <div class="settlement-parties">
