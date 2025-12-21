@@ -110,15 +110,46 @@ export default function ExpenseLog({
     });
   }, [allActivities, searchQuery, filterPerson, filterCategory, peopleMap]);
 
-  // Group by date
-  const groupedActivities = useMemo(() => filteredActivities.reduce((acc, activity) => {
-    const date = new Date(activity.date).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
-    if (!acc[date]) {
-      acc[date] = [];
-    }
-    acc[date].push(activity);
-    return acc;
-  }, {} as Record<string, ActivityItem[]>), [filteredActivities]);
+  // Create a category rank lookup map
+  const categoryRankMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    categories.forEach(cat => {
+      map[cat.name] = cat.rank ?? 999; // Default high rank for categories without rank
+    });
+    return map;
+  }, [categories]);
+
+  // Group by date and sort by category rank within each date
+  const groupedActivities = useMemo(() => {
+    const grouped = filteredActivities.reduce((acc, activity) => {
+      const date = new Date(activity.date).toLocaleDateString('default', { year: 'numeric', month: 'long', day: 'numeric' });
+      if (!acc[date]) {
+        acc[date] = [];
+      }
+      acc[date].push(activity);
+      return acc;
+    }, {} as Record<string, ActivityItem[]>);
+
+    // Sort activities within each date by category rank
+    Object.keys(grouped).forEach(date => {
+      grouped[date].sort((a, b) => {
+        // Expenses come before settlements
+        if (a.type === 'expense' && b.type === 'settlement') return -1;
+        if (a.type === 'settlement' && b.type === 'expense') return 1;
+
+        // If both are expenses, sort by category rank
+        if (a.type === 'expense' && b.type === 'expense') {
+          const rankA = categoryRankMap[a.data.category] ?? 999;
+          const rankB = categoryRankMap[b.data.category] ?? 999;
+          return rankA - rankB;
+        }
+
+        return 0; // Both are settlements, keep order
+      });
+    });
+
+    return grouped;
+  }, [filteredActivities, categoryRankMap]);
 
   const activityDates = useMemo(() => Object.keys(groupedActivities), [groupedActivities]);
 
