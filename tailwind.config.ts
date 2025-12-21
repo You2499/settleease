@@ -11,13 +11,14 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        sans: ['var(--font-geist-sans)'], // Add sans for utilities
         body: [
-          'var(--font-inter)',
+          'var(--font-geist-sans)',
           // System fonts for Apple devices
           '-apple-system',
           'BlinkMacSystemFont',
-          // Inter for other systems
-          'Inter',
+          // Geist for other systems
+          'Geist Sans',
           // Fallbacks
           'system-ui',
           'Segoe UI',
@@ -30,12 +31,12 @@ export default {
           'Segoe UI Symbol'
         ],
         headline: [
-          'var(--font-inter)',
+          'var(--font-geist-sans)',
           // System fonts for Apple devices
           '-apple-system',
           'BlinkMacSystemFont',
-          // Inter for other systems
-          'Inter',
+          // Geist for other systems
+          'Geist Sans',
           // Fallbacks
           'system-ui',
           'Segoe UI',
@@ -47,13 +48,14 @@ export default {
         code: ['SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'monospace'],
         // Override default mono to use system monospace fonts
         mono: [
+          'var(--font-geist-mono)',
           // Apple system monospace
           'SF Mono',
           'ui-monospace',
           // macOS fallback
           'Monaco',
-          // Inter monospace variants for non-Apple devices
-          'Inter Tight',
+          // Geist monospace variants for non-Apple devices
+          'Geist Mono',
           // Windows
           'Cascadia Code',
           'Consolas',
