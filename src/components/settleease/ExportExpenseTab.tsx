@@ -193,10 +193,36 @@ export default function ExportExpenseTab({
       padding: 40px;
     }
     
+    @page {
+      margin: 0.5in;
+      size: A4;
+    }
+    
     @media print {
-      body { padding: 20px; }
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      body { 
+        padding: 20px; 
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
       .page-break { page-break-before: always; }
       .no-break { page-break-inside: avoid; }
+      svg {
+        display: inline-block !important;
+        visibility: visible !important;
+      }
+      .logo-icon svg {
+        stroke: white !important;
+      }
+      .summary-card, .section-header, .celebration-box, .settlement-card {
+        background: inherit !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
     }
     
     /* Header */
