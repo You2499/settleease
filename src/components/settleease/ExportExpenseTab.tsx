@@ -194,7 +194,7 @@ export default function ExportExpenseTab({
     }
     
     @page {
-      margin: 50px 0 0 0;
+      margin: 0.4in;
       size: A4;
     }
     
@@ -968,10 +968,15 @@ export default function ExportExpenseTab({
   // Handle print/download
   const handleDownloadPDF = useCallback(() => {
     if (iframeRef.current?.contentWindow) {
+      // Set the document title for the PDF filename
+      const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+      if (iframeDoc) {
+        iframeDoc.title = reportName || 'SettleEase Expense Report';
+      }
       iframeRef.current.contentWindow.focus();
       iframeRef.current.contentWindow.print();
     }
-  }, []);
+  }, [reportName]);
 
   // Update iframe content when data changes
   const pdfContent = useMemo(() => generatePDFContent(), [generatePDFContent]);
