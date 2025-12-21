@@ -22,6 +22,7 @@ import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import StatusTab from '@/components/settleease/StatusTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
+import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
@@ -45,7 +46,7 @@ function SettleEasePageContent() {
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
     const viewParam = searchParams.get('view') as ActiveView | null;
-    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'].includes(viewParam)) {
+    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'].includes(viewParam)) {
       return viewParam;
     }
     return 'dashboard';
@@ -348,7 +349,8 @@ function SettleEasePageContent() {
                   managePeople: 'Manage People',
                   manageCategories: 'Manage Categories',
                   manageSettlements: 'Manage Settlements',
-                  testErrorBoundary: 'Test Error Boundary'
+                  testErrorBoundary: 'Test Error Boundary',
+                  exportExpense: 'Export Expense'
                 };
 
                 const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
@@ -389,7 +391,7 @@ function SettleEasePageContent() {
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
@@ -462,7 +464,7 @@ function SettleEasePageContent() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
@@ -758,6 +760,22 @@ function SettleEasePageContent() {
                       isLoadingSettlements={isLoadingSettlements}
                       isLoadingOverrides={isLoadingOverrides}
                       isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'exportExpense' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Export Expense"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <ExportExpenseTab
+                      expenses={expenses}
+                      settlementPayments={settlementPayments}
+                      people={people}
+                      categories={categories}
+                      peopleMap={peopleMap}
+                      getCategoryIconFromName={getCategoryIconFromName}
                     />
                   </SettleEaseErrorBoundary>
                 )}

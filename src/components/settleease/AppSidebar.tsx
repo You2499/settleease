@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -66,7 +66,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  
+
   const handleLogoutClick = async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent dropdown from closing
     setIsLoggingOut(true);
@@ -207,6 +207,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               </div>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  onClick={() => handleNavigation('exportExpense')}
+                  isActive={activeView === 'exportExpense'}
+                  tooltip={{ content: "Export Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start h-8"
+                >
+                  <FileDown className="h-4 w-4" />
+                  <span className="group-data-[state=collapsed]:hidden">Export</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
                   onClick={() => handleNavigation('testErrorBoundary')}
                   isActive={activeView === 'testErrorBoundary'}
                   tooltip={{ content: "Test Error Boundary", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
@@ -258,19 +269,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                       <Moon className="mr-2 h-4 w-4" /> Dark
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onSelect={(e) => {
                         e.preventDefault(); // Prevent dropdown from closing
                         handleLogoutClick(e as any);
                       }}
                       disabled={isLoggingOut}
-                      className={`transition-all duration-200 ${
-                        isLoggingOut 
-                          ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400' 
-                          : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                      }`}
+                      className={`transition-all duration-200 ${isLoggingOut
+                        ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                        : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                        }`}
                     >
-                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} /> 
+                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
                       {isLoggingOut ? 'Logging out...' : 'Logout'}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
