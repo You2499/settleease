@@ -172,9 +172,11 @@ export default function ExportExpenseTab({
   }, [reportExpenses, filteredSettlements]);
 
   // Helper function to format date
-  const formatDate = (dateStr: string | undefined) => {
-    if (!dateStr) return 'N/A';
-    return new Date(dateStr).toLocaleDateString('default', { year: 'numeric', month: 'short', day: 'numeric' });
+  // Helper function to format date
+  const formatDate = (dateInput: string | Date | null | undefined) => {
+    if (!dateInput) return 'N/A';
+    const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+    return date.toLocaleDateString('default', { year: 'numeric', month: 'short', day: 'numeric' });
   };
 
   // Helper to calculate expense payment details
@@ -1381,18 +1383,7 @@ export default function ExportExpenseTab({
   }, [exportMode, selectedPersonId, people, expenses, settlementPayments, formatDate, reportName, generatePDFContent]);
 
   // Handle save PDF (downloads as HTML file that can be opened and printed)
-  const handleSavePDF = useCallback(() => {
-    const fileName = getFileName();
-    const blob = new Blob([pdfContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${fileName}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [getFileName, pdfContent]);
+
 
   return (
     <Card className="shadow-xl rounded-lg">
@@ -1410,15 +1401,7 @@ export default function ExportExpenseTab({
           </div>
           {isDateRangeSelected && exportMode === 'summary' && (
             <div className="flex gap-2">
-              <Button
-                onClick={handleSavePDF}
-                size="sm"
-                variant="outline"
-                className="w-full sm:w-auto gap-2"
-              >
-                <Save className="h-4 w-4" />
-                Save
-              </Button>
+
               <Button
                 onClick={handlePrintPDF}
                 size="sm"
@@ -1623,14 +1606,7 @@ export default function ExportExpenseTab({
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    onClick={handleSavePDF}
-                    variant="outline"
-                    className="w-full sm:w-auto gap-2"
-                  >
-                    <Save className="h-4 w-4" />
-                    Save
-                  </Button>
+
                   <Button
                     onClick={handlePrintPDF}
                     className="w-full sm:w-auto gap-2"
