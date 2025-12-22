@@ -61,17 +61,14 @@ export function generatePersonalReportPDF({
     let displayDescription = expense.description;
     let displayCategory = expense.category;
 
-    // Check if expense contains sensitive keywords
-    const isSensitive = /alcohol|cigarettes/i.test(expense.description) || /alcohol|cigarettes/i.test(expense.category);
+    // Check if expense contains sensitive keywords (expanded list)
+    // Matches: alcohol, cigarettes, beer, wine, liquor, drink(s), vape, tobacco, smoke
+    const sensitiveRegex = /alcohol|cigarettes|beer|wine|liquor|drink|vape|tobacco|smoke/i;
+    const isSensitive = sensitiveRegex.test(expense.description) || sensitiveRegex.test(expense.category);
 
     if (isRedacted && isSensitive) {
       displayDescription = 'Misc';
-
-      // Only change category to General if the category ITSELF is sensitive.
-      // Otherwise, keep the original category (e.g. "Food" or "Groceries")
-      if (/alcohol|cigarettes/i.test(expense.category)) {
-        displayCategory = 'General';
-      }
+      displayCategory = 'General';
     }
 
     const myPaidAmount = expense.paid_by?.find(p => p.personId === selectedPersonId)?.amount || 0;
