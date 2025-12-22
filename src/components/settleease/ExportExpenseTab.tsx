@@ -1434,7 +1434,7 @@ export default function ExportExpenseTab({
             >
               <CalendarDays className="h-5 w-5" />
               <span className="text-xs font-medium">Summary Report</span>
-              <span className="text-[10px] text-muted-foreground">Date-filtered overview</span>
+              <span className={cn("text-[10px]", exportMode === 'summary' ? "text-primary-foreground/80" : "text-muted-foreground")}>Date-filtered overview</span>
             </Button>
             <Button
               variant={exportMode === 'activityFeed' ? "default" : "outline"}
@@ -1447,7 +1447,7 @@ export default function ExportExpenseTab({
             >
               <Users className="h-5 w-5" />
               <span className="text-xs font-medium">Activity Feed</span>
-              <span className="text-[10px] text-muted-foreground">Full audit trail</span>
+              <span className={cn("text-[10px]", exportMode === 'activityFeed' ? "text-primary-foreground/80" : "text-muted-foreground")}>Full audit trail</span>
             </Button>
           </div>
         </div>
