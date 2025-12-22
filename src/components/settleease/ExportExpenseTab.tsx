@@ -4,62 +4,25 @@ import React, { useMemo, useRef, useCallback, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight } from "lucide-react";
+import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight, Users } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
-import { calculateNetBalances, calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
+import { calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { format, subDays, subMonths, startOfYear } from "date-fns";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import type { Expense, SettlementPayment, Person, Category, ExpenseItemDetail } from "@/lib/settleease/types";
 
-interface ExportExpenseTabProps {
-  expenses: Expense[];
-  settlementPayments: SettlementPayment[];
-  people: Person[];
-  categories: Category[];
-  peopleMap: Record<string, string>;
-  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
-}
-
-type ActivityItem =
-  | { type: 'expense'; id: string; date: string; data: Expense }
-  | { type: 'settlement'; id: string; date: string; data: SettlementPayment };
-
-type DatePreset = 'last7days' | 'last30days' | 'last3months' | 'thisYear' | 'allTime' | 'custom';
-
-const DATE_PRESETS: { id: DatePreset; label: string; icon: React.FC<React.SVGProps<SVGSVGElement>>; getRange: () => { start: Date; end: Date } }[] = [
-  {
-    id: 'last7days',
-    label: 'Last 7 Days',
-    icon: CalendarDays,
-    getRange: () => ({ start: subDays(new Date(), 7), end: new Date() })
-  },
-  {
-    id: 'last30days',
-    label: 'Last 30 Days',
-    icon: Calendar,
-    getRange: () => ({ start: subDays(new Date(), 30), end: new Date() })
-  },
-  {
-    id: 'last3months',
-    label: 'Last 3 Months',
-    icon: CalendarRange,
-    getRange: () => ({ start: subMonths(new Date(), 3), end: new Date() })
-  },
-  {
-    id: 'thisYear',
-    label: 'This Year',
-    icon: CalendarClock,
-    getRange: () => ({ start: startOfYear(new Date()), end: new Date() })
-  },
-  {
-    id: 'allTime',
-    label: 'All Time',
-    icon: Infinity as any,
-    getRange: () => ({ start: new Date(2020, 0, 1), end: new Date() })
-  },
-];
+// Import from refactored modules
+import {
+  DATE_PRESETS,
+  useExportData,
+  ExportModeToggle,
+  type ExportExpenseTabProps,
+  type DatePreset,
+  type ExportMode,
+  type ActivityItem
+} from "./export-tab";
 
 export default function ExportExpenseTab({
   expenses,
@@ -77,6 +40,10 @@ export default function ExportExpenseTab({
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [endCalendarOpen, setEndCalendarOpen] = useState(false);
   const [reportName, setReportName] = useState<string>("");
+
+  // Export mode state: 'summary' for date-filtered report, 'activityFeed' for full audit trail
+  const [exportMode, setExportMode] = useState<'summary' | 'activityFeed'>('summary');
+
 
   // Handle preset selection
   const handlePresetSelect = useCallback((preset: DatePreset) => {
@@ -1038,312 +1005,6 @@ export default function ExportExpenseTab({
   ` : ''
       }
 
-  <!-- Simplified Settlement Transactions -->
-  <div class="page-break"></div>
-  <div class="section">
-    <div class="section-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <h2>Simplified Settlement Transactions</h2>
-    </div>
-    
-    <p style="color: #666; font-size: 12px; margin-bottom: 20px;">
-      These are the minimum transactions needed to settle all debts for this period. Each transaction shows which expenses contributed to the amount owed.
-    </p>
-    
-    ${(() => {
-        // Calculate simplified transactions for this date range
-        const simplifiedTransactions = calculateSimplifiedTransactions(
-          people,
-          reportExpenses,
-          filteredSettlements
-        );
-
-        if (simplifiedTransactions.length === 0) {
-          return '<p style="text-align: center; color: #666; padding: 20px;">All balances are settled for this period. No transactions needed.</p>';
-        }
-
-        return simplifiedTransactions.map(transaction => {
-          const fromPerson = people.find(p => p.id === transaction.from);
-          const toPerson = people.find(p => p.id === transaction.to);
-          const fromName = fromPerson?.name || 'Unknown';
-          const toName = toPerson?.name || 'Unknown';
-
-          // Find expenses that involve BOTH the debtor and creditor
-          // These are expenses where the creditor paid and the debtor owes
-          const contributingExpenses = reportExpenses.filter(expense => {
-            if (expense.exclude_from_settlement) return false;
-
-            // Check if creditor (toPerson) paid for this expense
-            const creditorPaid = expense.paid_by?.some(p => p.personId === transaction.to && Number(p.amount) > 0);
-            // Check if debtor (fromPerson) owes for this expense
-            const debtorOwes = expense.shares?.some(s => s.personId === transaction.from && Number(s.amount) > 0) ||
-              (expense.celebration_contribution?.personId === transaction.from && Number(expense.celebration_contribution.amount) > 0);
-
-            return creditorPaid && debtorOwes;
-          });
-
-          // Calculate contribution breakdown for each expense
-          const expenseBreakdown = contributingExpenses.map(expense => {
-            // How much did creditor pay for this expense?
-            const creditorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.to)?.amount || 0;
-            // What is debtor's share in this expense?
-            const debtorShareAmount = expense.shares?.find(s => s.personId === transaction.from)?.amount || 0;
-            const debtorCelebrationAmount = expense.celebration_contribution?.personId === transaction.from
-              ? expense.celebration_contribution.amount
-              : 0;
-            const debtorTotalOwed = Number(debtorShareAmount) + Number(debtorCelebrationAmount);
-
-            // The contribution to this specific debt is the portion the creditor "covered" for the debtor
-            // If creditor paid for the whole expense, then debtor owes them their share
-            return {
-              expense,
-              creditorPaid: Number(creditorPaidAmount),
-              debtorOwed: debtorTotalOwed,
-              description: expense.description,
-              category: expense.category,
-              date: expense.created_at
-            };
-          });
-
-          // Also show expenses where debtor paid and is owed by creditor (reduces the debt)
-          const offsetExpenses = reportExpenses.filter(expense => {
-            if (expense.exclude_from_settlement) return false;
-
-            // Check if debtor (fromPerson) paid for this expense
-            const debtorPaid = expense.paid_by?.some(p => p.personId === transaction.from && Number(p.amount) > 0);
-            // Check if creditor (toPerson) owes for this expense
-            const creditorOwes = expense.shares?.some(s => s.personId === transaction.to && Number(s.amount) > 0) ||
-              (expense.celebration_contribution?.personId === transaction.to && Number(expense.celebration_contribution.amount) > 0);
-
-            return debtorPaid && creditorOwes;
-          });
-
-          const offsetBreakdown = offsetExpenses.map(expense => {
-            const debtorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.from)?.amount || 0;
-            const creditorShareAmount = expense.shares?.find(s => s.personId === transaction.to)?.amount || 0;
-            const creditorCelebrationAmount = expense.celebration_contribution?.personId === transaction.to
-              ? expense.celebration_contribution.amount
-              : 0;
-            const creditorTotalOwed = Number(creditorShareAmount) + Number(creditorCelebrationAmount);
-
-            return {
-              expense,
-              debtorPaid: Number(debtorPaidAmount),
-              creditorOwed: creditorTotalOwed,
-              description: expense.description,
-              category: expense.category,
-              date: expense.created_at
-            };
-          });
-
-          // Calculate PRIOR BALANCE from historical expenses (before selected date range)
-          // This shows unsettled amounts from before the report period
-          let priorDebtorOwesToCreditor = 0;
-          let priorCreditorOwesToDebtor = 0;
-
-          // Historical expenses where creditor paid for debtor
-          historicalExpenses.forEach(expense => {
-            const creditorPaid = expense.paid_by?.some(p => p.personId === transaction.to && Number(p.amount) > 0);
-            const debtorOwes = expense.shares?.some(s => s.personId === transaction.from && Number(s.amount) > 0) ||
-              (expense.celebration_contribution?.personId === transaction.from && Number(expense.celebration_contribution.amount) > 0);
-
-            if (creditorPaid && debtorOwes) {
-              const debtorShareAmount = expense.shares?.find(s => s.personId === transaction.from)?.amount || 0;
-              const debtorCelebrationAmount = expense.celebration_contribution?.personId === transaction.from
-                ? expense.celebration_contribution.amount
-                : 0;
-              priorDebtorOwesToCreditor += Number(debtorShareAmount) + Number(debtorCelebrationAmount);
-            }
-          });
-
-          // Historical expenses where debtor paid for creditor
-          historicalExpenses.forEach(expense => {
-            const debtorPaid = expense.paid_by?.some(p => p.personId === transaction.from && Number(p.amount) > 0);
-            const creditorOwes = expense.shares?.some(s => s.personId === transaction.to && Number(s.amount) > 0) ||
-              (expense.celebration_contribution?.personId === transaction.to && Number(expense.celebration_contribution.amount) > 0);
-
-            if (debtorPaid && creditorOwes) {
-              const creditorShareAmount = expense.shares?.find(s => s.personId === transaction.to)?.amount || 0;
-              const creditorCelebrationAmount = expense.celebration_contribution?.personId === transaction.to
-                ? expense.celebration_contribution.amount
-                : 0;
-              priorCreditorOwesToDebtor += Number(creditorShareAmount) + Number(creditorCelebrationAmount);
-            }
-          });
-
-          // Adjust for historical settlements between these two people
-          historicalSettlements.forEach(settlement => {
-            if (settlement.debtor_id === transaction.from && settlement.creditor_id === transaction.to) {
-              priorDebtorOwesToCreditor -= Number(settlement.amount_settled);
-            }
-            if (settlement.debtor_id === transaction.to && settlement.creditor_id === transaction.from) {
-              priorCreditorOwesToDebtor -= Number(settlement.amount_settled);
-            }
-          });
-
-          const priorNetBalance = priorDebtorOwesToCreditor - priorCreditorOwesToDebtor;
-          const hasPriorBalance = Math.abs(priorNetBalance) > 0.01;
-
-          const totalDebtorOwesToCreditor = expenseBreakdown.reduce((sum, e) => sum + e.debtorOwed, 0);
-          const totalCreditorOwesToDebtor = offsetBreakdown.reduce((sum, e) => sum + e.creditorOwed, 0);
-          const currentPeriodNet = totalDebtorOwesToCreditor - totalCreditorOwesToDebtor;
-
-          return `
-          <div class="no-break" style="margin-bottom: 24px; padding: 16px; border: 2px solid #16a34a30; border-radius: 12px; background: #f0fdf4;">
-            <!-- Transaction Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #16a34a40;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: #dc262620; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #dc2626;">
-                  ${fromName.charAt(0).toUpperCase()}
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
-                </div>
-                <div style="width: 44px; height: 44px; border-radius: 50%; background: #16a34a20; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #16a34a;">
-                  ${toName.charAt(0).toUpperCase()}
-                </div>
-              </div>
-              <div style="text-align: right;">
-                <div style="font-size: 24px; font-weight: 700; color: #16a34a;">
-                  ${formatCurrency(transaction.amount)}
-                </div>
-              </div>
-            </div>
-            
-            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;">
-              <span style="font-size: 14px; font-weight: 600; color: #dc2626;">${fromName}</span>
-              <span style="font-size: 14px; color: #6b7280;">pays</span>
-              <span style="font-size: 14px; font-weight: 600; color: #16a34a;">${toName}</span>
-            </div>
-            
-            <!-- Expense Breakdown: What debtor owes to creditor -->
-            ${expenseBreakdown.length > 0 ? `
-            <div style="margin-bottom: 16px;">
-              <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                Expenses where ${toName} paid for ${fromName} (${expenseBreakdown.length})
-              </div>
-              <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                <thead>
-                  <tr style="background: #dcfce7;">
-                    <th style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #bbf7d0;">Expense</th>
-                    <th style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #bbf7d0;">${fromName}'s Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${expenseBreakdown.map(({ description, category, date, debtorOwed }) => `
-                    <tr style="border-bottom: 1px solid #f0fdf4;">
-                      <td style="padding: 6px 8px;">
-                        <div style="font-weight: 500;">${description}</div>
-                        <div style="font-size: 10px; color: #6b7280;">${category} • ${formatDate(date)}</div>
-                      </td>
-                      <td style="padding: 6px 8px; text-align: right; color: #dc2626; font-weight: 500;">
-                        ${formatCurrency(debtorOwed)}
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-                <tfoot>
-                  <tr style="background: #dcfce7; font-weight: 600;">
-                    <td style="padding: 8px; border-top: 2px solid #16a34a;">Subtotal (${fromName} owes ${toName})</td>
-                    <td style="padding: 8px; text-align: right; border-top: 2px solid #16a34a; color: #dc2626;">${formatCurrency(totalDebtorOwesToCreditor)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            ` : ''}
-            
-            <!-- Offset: What creditor owes to debtor -->
-            ${offsetBreakdown.length > 0 ? `
-            <div style="margin-bottom: 16px;">
-              <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                Expenses where ${fromName} paid for ${toName} (reduces debt) (${offsetBreakdown.length})
-              </div>
-              <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                <thead>
-                  <tr style="background: #fef2f2;">
-                    <th style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #fecaca;">Expense</th>
-                    <th style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #fecaca;">${toName}'s Share</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${offsetBreakdown.map(({ description, category, date, creditorOwed }) => `
-                    <tr style="border-bottom: 1px solid #fef2f2;">
-                      <td style="padding: 6px 8px;">
-                        <div style="font-weight: 500;">${description}</div>
-                        <div style="font-size: 10px; color: #6b7280;">${category} • ${formatDate(date)}</div>
-                      </td>
-                      <td style="padding: 6px 8px; text-align: right; color: #16a34a; font-weight: 500;">
-                        -${formatCurrency(creditorOwed)}
-                      </td>
-                    </tr>
-                  `).join('')}
-                </tbody>
-                <tfoot>
-                  <tr style="background: #fef2f2; font-weight: 600;">
-                    <td style="padding: 8px; border-top: 2px solid #dc2626;">Subtotal (${toName} owes ${fromName})</td>
-                    <td style="padding: 8px; text-align: right; border-top: 2px solid #dc2626; color: #16a34a;">-${formatCurrency(totalCreditorOwesToDebtor)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-            ` : ''}
-            
-            <!-- Prior Balance from Historical Expenses -->
-            ${hasPriorBalance ? `
-            <div style="margin-bottom: 16px; padding: 12px; background: #fefce8; border-radius: 8px; border: 2px solid #ca8a04;">
-              <div style="font-size: 11px; font-weight: 600; color: #854d0e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                ⏳ Prior Unsettled Balance (Before ${formatDate(startDate?.toISOString() || '')})
-              </div>
-              <div style="font-size: 12px; color: #713f12;">
-                <p style="margin: 0 0 8px 0;">This amount carried over from expenses before the selected report period:</p>
-                <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px; font-weight: 600;">
-                  <span>${fromName} owed ${toName}:</span>
-                  <span style="color: ${priorNetBalance > 0 ? '#dc2626' : '#16a34a'};">
-                    ${priorNetBalance > 0 ? '' : '-'}${formatCurrency(Math.abs(priorNetBalance))}
-                  </span>
-                </div>
-              </div>
-            </div>
-            ` : ''}
-            
-            <!-- Final Calculation -->
-            <div style="padding: 12px; background: white; border-radius: 8px; border: 2px solid #16a34a;">
-              <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                Net Settlement Calculation
-              </div>
-              <div style="font-size: 12px;">
-                ${hasPriorBalance ? `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #854d0e;">
-                  <span>Prior Balance (carried over):</span>
-                  <span style="font-weight: 600;">${priorNetBalance > 0 ? '' : '-'}${formatCurrency(Math.abs(priorNetBalance))}</span>
-                </div>
-                ` : ''}
-                ${expenseBreakdown.length > 0 ? `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span>This Period: ${fromName} owes ${toName}:</span>
-                  <span style="color: #dc2626; font-weight: 600;">${formatCurrency(totalDebtorOwesToCreditor)}</span>
-                </div>
-                ` : ''}
-                ${offsetBreakdown.length > 0 ? `
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span>This Period: ${toName} owes ${fromName}:</span>
-                  <span style="color: #16a34a; font-weight: 600;">-${formatCurrency(totalCreditorOwesToDebtor)}</span>
-                </div>
-                ` : ''}
-                <div style="display: flex; justify-content: space-between; padding: 8px 0; margin-top: 8px; border-top: 2px solid #e5e7eb; font-weight: 700;">
-                  <span>Final Amount ${fromName} Pays ${toName}:</span>
-                  <span style="color: #16a34a; font-size: 16px;">
-                    ${formatCurrency(transaction.amount)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-        }).join('');
-      })()}
-  </div>
-
   <!-- Footer -->
     <div class="footer">
       <p>Generated by SettleEase • Expense Management Made Simple</p>
@@ -1353,6 +1014,317 @@ export default function ExportExpenseTab({
 </html >
     `;
   }, [groupedActivities, reportExpenses, settlementPayments, stats, peopleMap, people, formatDate, reportName, startDate, endDate]);
+
+  // Generate Activity Feed PDF HTML content - shows COMPLETE audit trail for each transaction
+  const generateActivityFeedPDF = useCallback(() => {
+    // Use ALL expenses (not date-filtered)
+    const allNonExcludedExpenses = expenses.filter(e => !e.exclude_from_settlement);
+
+    // Calculate simplified transactions using ALL expenses
+    const simplifiedTransactions = calculateSimplifiedTransactions(
+      people,
+      allNonExcludedExpenses,
+      settlementPayments
+    );
+
+    const reportDate = new Date().toLocaleDateString('default', {
+      year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    // Generate transaction breakdown HTML
+    const transactionBreakdowns = simplifiedTransactions.map(transaction => {
+      const fromPerson = people.find(p => p.id === transaction.from);
+      const toPerson = people.find(p => p.id === transaction.to);
+      const fromName = fromPerson?.name || 'Unknown';
+      const toName = toPerson?.name || 'Unknown';
+
+      // Find ALL expenses where both parties are involved
+      // Group 1: Expenses where creditor (toPerson) paid and debtor (fromPerson) owes
+      const expensesCreditorPaidForDebtor = allNonExcludedExpenses.filter(expense => {
+        const creditorPaid = expense.paid_by?.some(p => p.personId === transaction.to && Number(p.amount) > 0);
+        const debtorOwes = expense.shares?.some(s => s.personId === transaction.from && Number(s.amount) > 0) ||
+          (expense.celebration_contribution?.personId === transaction.from && Number(expense.celebration_contribution.amount) > 0);
+        return creditorPaid && debtorOwes;
+      }).map(expense => {
+        const debtorShare = expense.shares?.find(s => s.personId === transaction.from)?.amount || 0;
+        const debtorCelebration = expense.celebration_contribution?.personId === transaction.from
+          ? expense.celebration_contribution.amount : 0;
+        const creditorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.to)?.amount || 0;
+        return {
+          expense,
+          contribution: Number(debtorShare) + Number(debtorCelebration),
+          creditorPaid: Number(creditorPaidAmount),
+          direction: 'debtor_owes' as const
+        };
+      });
+
+      // Group 2: Expenses where debtor (fromPerson) paid and creditor (toPerson) owes (reduces debt)
+      const expensesDebtorPaidForCreditor = allNonExcludedExpenses.filter(expense => {
+        const debtorPaid = expense.paid_by?.some(p => p.personId === transaction.from && Number(p.amount) > 0);
+        const creditorOwes = expense.shares?.some(s => s.personId === transaction.to && Number(s.amount) > 0) ||
+          (expense.celebration_contribution?.personId === transaction.to && Number(expense.celebration_contribution.amount) > 0);
+        return debtorPaid && creditorOwes;
+      }).map(expense => {
+        const creditorShare = expense.shares?.find(s => s.personId === transaction.to)?.amount || 0;
+        const creditorCelebration = expense.celebration_contribution?.personId === transaction.to
+          ? expense.celebration_contribution.amount : 0;
+        const debtorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.from)?.amount || 0;
+        return {
+          expense,
+          offset: Number(creditorShare) + Number(creditorCelebration),
+          debtorPaid: Number(debtorPaidAmount),
+          direction: 'creditor_owes' as const
+        };
+      });
+
+      // Calculate totals
+      const totalDebtorOwes = expensesCreditorPaidForDebtor.reduce((sum, e) => sum + e.contribution, 0);
+      const totalCreditorOwes = expensesDebtorPaidForCreditor.reduce((sum, e) => sum + e.offset, 0);
+
+      // Find settlements between these two people
+      const relevantSettlements = settlementPayments.filter(s =>
+        (s.debtor_id === transaction.from && s.creditor_id === transaction.to) ||
+        (s.debtor_id === transaction.to && s.creditor_id === transaction.from)
+      );
+
+      const settledAmount = relevantSettlements.reduce((sum, s) => {
+        if (s.debtor_id === transaction.from && s.creditor_id === transaction.to) {
+          return sum + Number(s.amount_settled);
+        } else if (s.debtor_id === transaction.to && s.creditor_id === transaction.from) {
+          return sum - Number(s.amount_settled);
+        }
+        return sum;
+      }, 0);
+
+      return `
+      <div class="page-break" style="margin-bottom: 32px; page-break-inside: avoid;">
+        <!-- Transaction Header -->
+        <div style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; padding: 16px 20px; border-radius: 12px 12px 0 0;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;">
+                ${fromName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <span style="font-size: 20px;">→</span>
+              </div>
+              <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700;">
+                ${toName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <div style="font-size: 18px; font-weight: 700;">${fromName} pays ${toName}</div>
+                <div style="font-size: 12px; opacity: 0.8;">Complete expense breakdown</div>
+              </div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 28px; font-weight: 700;">${formatCurrency(transaction.amount)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="border: 2px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px; padding: 16px;">
+          <!-- Expenses where creditor paid for debtor -->
+          ${expensesCreditorPaidForDebtor.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; font-weight: 600; color: #dc2626; margin-bottom: 12px; padding: 8px 12px; background: #fef2f2; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <span>📋 Expenses where ${toName} paid for ${fromName} (${expensesCreditorPaidForDebtor.length})</span>
+              <span>${formatCurrency(totalDebtorOwes)}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <thead>
+                <tr style="background: #f9fafb;">
+                  <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Expense</th>
+                  <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">${toName} Paid</th>
+                  <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">${fromName}'s Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${expensesCreditorPaidForDebtor.map(({ expense, contribution, creditorPaid }) => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 10px 12px;">
+                    <div style="font-weight: 600; color: #111827;">${expense.description}</div>
+                    <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">${expense.category} • ${formatDate(expense.created_at)}</div>
+                  </td>
+                  <td style="padding: 10px 12px; text-align: right; color: #6b7280;">${formatCurrency(creditorPaid)}</td>
+                  <td style="padding: 10px 12px; text-align: right; color: #dc2626; font-weight: 600;">${formatCurrency(contribution)}</td>
+                </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: #fef2f2; font-weight: 600;">
+                  <td style="padding: 10px 12px; border-top: 2px solid #dc2626;">Subtotal: ${fromName} owes ${toName}</td>
+                  <td style="padding: 10px 12px; border-top: 2px solid #dc2626;"></td>
+                  <td style="padding: 10px 12px; text-align: right; border-top: 2px solid #dc2626; color: #dc2626;">${formatCurrency(totalDebtorOwes)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          ` : ''}
+
+          <!-- Expenses where debtor paid for creditor (reduces debt) -->
+          ${expensesDebtorPaidForCreditor.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; font-weight: 600; color: #16a34a; margin-bottom: 12px; padding: 8px 12px; background: #f0fdf4; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+              <span>📋 Expenses where ${fromName} paid for ${toName} (offsets debt) (${expensesDebtorPaidForCreditor.length})</span>
+              <span>-${formatCurrency(totalCreditorOwes)}</span>
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <thead>
+                <tr style="background: #f9fafb;">
+                  <th style="padding: 8px 12px; text-align: left; border-bottom: 2px solid #e5e7eb;">Expense</th>
+                  <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">${fromName} Paid</th>
+                  <th style="padding: 8px 12px; text-align: right; border-bottom: 2px solid #e5e7eb;">${toName}'s Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${expensesDebtorPaidForCreditor.map(({ expense, offset, debtorPaid }) => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 10px 12px;">
+                    <div style="font-weight: 600; color: #111827;">${expense.description}</div>
+                    <div style="font-size: 10px; color: #6b7280; margin-top: 2px;">${expense.category} • ${formatDate(expense.created_at)}</div>
+                  </td>
+                  <td style="padding: 10px 12px; text-align: right; color: #6b7280;">${formatCurrency(debtorPaid)}</td>
+                  <td style="padding: 10px 12px; text-align: right; color: #16a34a; font-weight: 600;">-${formatCurrency(offset)}</td>
+                </tr>
+                `).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: #f0fdf4; font-weight: 600;">
+                  <td style="padding: 10px 12px; border-top: 2px solid #16a34a;">Subtotal: ${toName} owes ${fromName}</td>
+                  <td style="padding: 10px 12px; border-top: 2px solid #16a34a;"></td>
+                  <td style="padding: 10px 12px; text-align: right; border-top: 2px solid #16a34a; color: #16a34a;">-${formatCurrency(totalCreditorOwes)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          ` : ''}
+
+          <!-- Previous Settlements -->
+          ${relevantSettlements.length > 0 ? `
+          <div style="margin-bottom: 20px;">
+            <div style="font-size: 13px; font-weight: 600; color: #7c3aed; margin-bottom: 12px; padding: 8px 12px; background: #f5f3ff; border-radius: 6px;">
+              💰 Previous Settlements (${relevantSettlements.length})
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <tbody>
+                ${relevantSettlements.map(s => `
+                <tr style="border-bottom: 1px solid #f3f4f6;">
+                  <td style="padding: 8px 12px;">
+                    ${people.find(p => p.id === s.debtor_id)?.name} paid ${people.find(p => p.id === s.creditor_id)?.name}
+                    <div style="font-size: 10px; color: #6b7280;">${formatDate(s.settled_at)}</div>
+                  </td>
+                  <td style="padding: 8px 12px; text-align: right; color: #7c3aed; font-weight: 600;">
+                    ${s.debtor_id === transaction.from ? '-' : '+'}${formatCurrency(Number(s.amount_settled))}
+                  </td>
+                </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          ` : ''}
+
+          <!-- Final Calculation -->
+          <div style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); padding: 16px; border-radius: 8px; border: 2px solid #16a34a;">
+            <div style="font-size: 12px; font-weight: 700; color: #166534; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
+              📊 Settlement Calculation
+            </div>
+            <div style="font-size: 13px; color: #374151;">
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #bbf7d0;">
+                <span>${fromName} owes ${toName} from expenses:</span>
+                <span style="color: #dc2626; font-weight: 600;">${formatCurrency(totalDebtorOwes)}</span>
+              </div>
+              ${totalCreditorOwes > 0 ? `
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #bbf7d0;">
+                <span>${toName} owes ${fromName} from expenses:</span>
+                <span style="color: #16a34a; font-weight: 600;">-${formatCurrency(totalCreditorOwes)}</span>
+              </div>
+              ` : ''}
+              ${Math.abs(settledAmount) > 0.01 ? `
+              <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #bbf7d0;">
+                <span>Already settled:</span>
+                <span style="color: #7c3aed; font-weight: 600;">-${formatCurrency(Math.abs(settledAmount))}</span>
+              </div>
+              ` : ''}
+              <div style="display: flex; justify-content: space-between; padding: 12px 0; margin-top: 8px; font-size: 16px; font-weight: 700;">
+                <span>FINAL AMOUNT TO PAY:</span>
+                <span style="color: #16a34a; font-size: 20px;">${formatCurrency(transaction.amount)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      `;
+    }).join('');
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${reportName || 'SettleEase Activity Feed'}</title>
+  <style>
+    @page { margin: 0.4in; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      font-size: 12px; 
+      line-height: 1.5; 
+      color: #1f2937; 
+      background: white;
+    }
+    .page-break { page-break-before: always; }
+    @media print {
+      .page-break { page-break-before: always; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div style="background: linear-gradient(135deg, #1e40af, #7c3aed); color: white; padding: 24px; border-radius: 12px; margin-bottom: 24px;">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 4px;">Activity Feed Export</h1>
+        <p style="font-size: 14px; opacity: 0.9;">${reportName || 'Complete Settlement Audit Trail'}</p>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 11px; opacity: 0.8;">Generated</div>
+        <div style="font-size: 13px; font-weight: 600;">${reportDate}</div>
+      </div>
+    </div>
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.3);">
+      <div style="display: flex; gap: 24px;">
+        <div>
+          <div style="font-size: 11px; opacity: 0.8;">Total Expenses</div>
+          <div style="font-size: 18px; font-weight: 700;">${allNonExcludedExpenses.length}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; opacity: 0.8;">People</div>
+          <div style="font-size: 18px; font-weight: 700;">${people.length}</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; opacity: 0.8;">Transactions Required</div>
+          <div style="font-size: 18px; font-weight: 700;">${simplifiedTransactions.length}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transaction Breakdowns -->
+  ${simplifiedTransactions.length === 0
+        ? '<div style="text-align: center; padding: 40px; color: #6b7280;"><p style="font-size: 18px;">✅ All balances are settled. No transactions needed.</p></div>'
+        : transactionBreakdowns
+      }
+
+  <!-- Footer -->
+  <div style="margin-top: 32px; padding: 16px; text-align: center; color: #9ca3af; font-size: 11px; border-top: 1px solid #e5e7eb;">
+    <p>Generated by SettleEase • Complete Settlement Audit Trail</p>
+    <p>This report shows ALL ${allNonExcludedExpenses.length} expenses and ${settlementPayments.length} settlements that contribute to each transaction.</p>
+  </div>
+</body>
+</html>
+    `;
+  }, [expenses, settlementPayments, people, formatDate, reportName, formatCurrency]);
 
   // Handle print/download
   const handleDownloadPDF = useCallback(() => {
@@ -1367,8 +1339,13 @@ export default function ExportExpenseTab({
     }
   }, [reportName]);
 
-  // Update iframe content when data changes
-  const pdfContent = useMemo(() => generatePDFContent(), [generatePDFContent]);
+  // PDF content based on export mode
+  const pdfContent = useMemo(() => {
+    if (exportMode === 'activityFeed') {
+      return generateActivityFeedPDF();
+    }
+    return generatePDFContent();
+  }, [exportMode, generateActivityFeedPDF, generatePDFContent]);
 
   return (
     <Card className="shadow-xl rounded-lg">
@@ -1398,116 +1375,200 @@ export default function ExportExpenseTab({
       </CardHeader>
 
       <CardContent className="p-0">
-        {/* Date Range Selection */}
-        <div className="px-4 sm:px-6 py-4 border-b bg-muted/20">
-          <div className="mb-3">
-            <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Select Date Range
-            </p>
-
-            {/* Preset Buttons */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-              {DATE_PRESETS.map((preset) => {
-                const IconComponent = preset.icon;
-                return (
-                  <Button
-                    key={preset.id}
-                    variant={selectedPreset === preset.id ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handlePresetSelect(preset.id)}
-                    className={cn(
-                      "h-auto py-2 px-3 flex flex-col items-center gap-1 text-xs",
-                      selectedPreset === preset.id && "ring-2 ring-primary ring-offset-2"
-                    )}
-                  >
-                    <IconComponent className="h-4 w-4" />
-                    <span className="font-medium">{preset.label}</span>
-                  </Button>
-                );
-              })}
-            </div>
-
-            {/* Custom Date Range Pickers - Always visible */}
-            <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs text-muted-foreground w-12">From:</span>
-                <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
-                        !startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <Calendar className="mr-2 h-3.5 w-3.5" />
-                      {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <FixedCalendar
-                      selected={startDate}
-                      onSelect={(date) => {
-                        setStartDate(date);
-                        setSelectedPreset('custom');
-                        setStartCalendarOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <ChevronRight className="hidden sm:block h-4 w-4 text-muted-foreground" />
-
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <span className="text-xs text-muted-foreground w-12">To:</span>
-                <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
-                        !endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <Calendar className="mr-2 h-3.5 w-3.5" />
-                      {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <FixedCalendar
-                      selected={endDate}
-                      onSelect={(date) => {
-                        setEndDate(date);
-                        setSelectedPreset('custom');
-                        setEndCalendarOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            {/* Report Name Input (shown when date range selected) */}
-            {isDateRangeSelected && (
-              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                <span className="text-xs text-muted-foreground w-16">Report Name:</span>
-                <Input
-                  type="text"
-                  placeholder="e.g., Goa Trip Expenses (optional)"
-                  value={reportName}
-                  onChange={(e) => setReportName(e.target.value)}
-                  className="flex-1 h-8 text-xs"
-                />
-              </div>
-            )}
+        {/* Export Mode Toggle */}
+        <div className="px-4 sm:px-6 py-4 border-b bg-muted/30">
+          <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+            <FileDown className="h-4 w-4" />
+            Export Type
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant={exportMode === 'summary' ? "default" : "outline"}
+              size="sm"
+              onClick={() => setExportMode('summary')}
+              className={cn(
+                "flex-1 h-auto py-3 flex flex-col items-center gap-1",
+                exportMode === 'summary' && "ring-2 ring-primary ring-offset-2"
+              )}
+            >
+              <CalendarDays className="h-5 w-5" />
+              <span className="text-xs font-medium">Summary Report</span>
+              <span className="text-[10px] text-muted-foreground">Date-filtered overview</span>
+            </Button>
+            <Button
+              variant={exportMode === 'activityFeed' ? "default" : "outline"}
+              size="sm"
+              onClick={() => setExportMode('activityFeed')}
+              className={cn(
+                "flex-1 h-auto py-3 flex flex-col items-center gap-1",
+                exportMode === 'activityFeed' && "ring-2 ring-primary ring-offset-2"
+              )}
+            >
+              <Users className="h-5 w-5" />
+              <span className="text-xs font-medium">Activity Feed</span>
+              <span className="text-[10px] text-muted-foreground">Full audit trail</span>
+            </Button>
           </div>
         </div>
 
-        {isDateRangeSelected ? (
+        {/* Date Range Selection - Only for Summary mode */}
+        {exportMode === 'summary' && (
+          <div className="px-4 sm:px-6 py-4 border-b bg-muted/20">
+            <div className="mb-3">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Select Date Range
+              </p>
+
+              {/* Preset Buttons */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {DATE_PRESETS.map((preset) => {
+                  const IconComponent = preset.icon;
+                  return (
+                    <Button
+                      key={preset.id}
+                      variant={selectedPreset === preset.id ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePresetSelect(preset.id)}
+                      className={cn(
+                        "h-auto py-2 px-3 flex flex-col items-center gap-1 text-xs",
+                        selectedPreset === preset.id && "ring-2 ring-primary ring-offset-2"
+                      )}
+                    >
+                      <IconComponent className="h-4 w-4" />
+                      <span className="font-medium">{preset.label}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+
+              {/* Custom Date Range Pickers - Always visible */}
+              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs text-muted-foreground w-12">From:</span>
+                  <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-3.5 w-3.5" />
+                        {startDate ? format(startDate, "MMM d, yyyy") : "Start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <FixedCalendar
+                        selected={startDate}
+                        onSelect={(date) => {
+                          setStartDate(date);
+                          setSelectedPreset('custom');
+                          setStartCalendarOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <ChevronRight className="hidden sm:block h-4 w-4 text-muted-foreground" />
+
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <span className="text-xs text-muted-foreground w-12">To:</span>
+                  <Popover open={endCalendarOpen} onOpenChange={setEndCalendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={cn(
+                          "flex-1 sm:w-[140px] justify-start text-left font-normal text-xs",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <Calendar className="mr-2 h-3.5 w-3.5" />
+                        {endDate ? format(endDate, "MMM d, yyyy") : "End date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <FixedCalendar
+                        selected={endDate}
+                        onSelect={(date) => {
+                          setEndDate(date);
+                          setSelectedPreset('custom');
+                          setEndCalendarOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Report Name Input (shown when date range selected) */}
+              {isDateRangeSelected && (
+                <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                  <span className="text-xs text-muted-foreground w-16">Report Name:</span>
+                  <Input
+                    type="text"
+                    placeholder="e.g., Goa Trip Expenses (optional)"
+                    value={reportName}
+                    onChange={(e) => setReportName(e.target.value)}
+                    className="flex-1 h-8 text-xs"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Activity Feed Mode - No date selection needed, shows immediately */}
+        {exportMode === 'activityFeed' && (
+          <div className="px-4 sm:px-6 py-4 border-b bg-muted/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex-1">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Report Name (Optional)
+                </p>
+                <Input
+                  type="text"
+                  placeholder="e.g., Goa Trip Settlement Audit"
+                  value={reportName}
+                  onChange={(e) => setReportName(e.target.value)}
+                  className="max-w-sm h-9"
+                />
+              </div>
+              <Button
+                onClick={handleDownloadPDF}
+                className="w-full sm:w-auto gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Download Activity Feed PDF
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              This export shows a complete audit trail of ALL expenses and how they contribute to each settlement transaction.
+            </p>
+          </div>
+        )}
+
+        {/* Preview Section for Activity Feed Mode */}
+        {exportMode === 'activityFeed' && (
+          <div className="px-4 sm:px-6 py-4 bg-card/50">
+            <div className="h-[450px] sm:h-[600px] rounded-lg overflow-hidden border bg-white">
+              <iframe
+                ref={iframeRef}
+                srcDoc={pdfContent}
+                className="w-full h-full"
+                title="Activity Feed PDF Preview"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Summary Mode - Preview when date selected */}
+        {exportMode === 'summary' && isDateRangeSelected ? (
           <div>
             {/* Stats Grid */}
             <div className="px-4 sm:px-6 py-3 border-b bg-card/50">
