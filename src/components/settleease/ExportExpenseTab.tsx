@@ -113,6 +113,25 @@ export default function ExportExpenseTab({
     });
   }, [settlementPayments, isDateRangeSelected, startDate, endDate]);
 
+  // Filter expenses BEFORE the selected date range (historical)
+  const historicalExpenses = useMemo(() => {
+    if (!isDateRangeSelected) return [];
+    return expenses.filter(expense => {
+      if (expense.exclude_from_settlement) return false;
+      const expenseDate = new Date(expense.created_at || 0);
+      return expenseDate < startDate!;
+    });
+  }, [expenses, isDateRangeSelected, startDate]);
+
+  // Filter settlements BEFORE the selected date range (historical)
+  const historicalSettlements = useMemo(() => {
+    if (!isDateRangeSelected) return [];
+    return settlementPayments.filter(settlement => {
+      const settlementDate = new Date(settlement.settled_at);
+      return settlementDate < startDate!;
+    });
+  }, [settlementPayments, isDateRangeSelected, startDate]);
+
   // Combine and sort all activities
   const allActivities: ActivityItem[] = useMemo(() => [
     ...reportExpenses.map(expense => ({
@@ -1019,179 +1038,302 @@ export default function ExportExpenseTab({
   ` : ''
       }
 
-  <!-- Per-Person Settlement Breakdown -->
+  <!-- Simplified Settlement Transactions -->
   <div class="page-break"></div>
   <div class="section">
     <div class="section-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      <h2>Per-Person Settlement Breakdown</h2>
+      <h2>Simplified Settlement Transactions</h2>
     </div>
     
     <p style="color: #666; font-size: 12px; margin-bottom: 20px;">
-      This section explains how each person's pending settlement amount was calculated from the expenses above.
+      These are the minimum transactions needed to settle all debts for this period. Each transaction shows which expenses contributed to the amount owed.
     </p>
     
     ${(() => {
-        // Calculate net balances for people based on filtered expenses only
-        const netBalances: Record<string, number> = {};
-        people.forEach(p => netBalances[p.id] = 0);
+        // Calculate simplified transactions for this date range
+        const simplifiedTransactions = calculateSimplifiedTransactions(
+          people,
+          reportExpenses,
+          filteredSettlements
+        );
 
-        // Process expenses
-        reportExpenses.forEach(expense => {
-          if (expense.exclude_from_settlement) return;
-
-          // Credit payers
-          if (Array.isArray(expense.paid_by)) {
-            expense.paid_by.forEach(payment => {
-              netBalances[payment.personId] = (netBalances[payment.personId] || 0) + Number(payment.amount);
-            });
-          }
-
-          // Debit shares
-          if (Array.isArray(expense.shares)) {
-            expense.shares.forEach(share => {
-              netBalances[share.personId] = (netBalances[share.personId] || 0) - Number(share.amount);
-            });
-          }
-
-          // Debit celebration
-          if (expense.celebration_contribution && expense.celebration_contribution.amount > 0) {
-            const contributorId = expense.celebration_contribution.personId;
-            netBalances[contributorId] = (netBalances[contributorId] || 0) - Number(expense.celebration_contribution.amount);
-          }
-        });
-
-        // Adjust for settlements in range
-        filteredSettlements.forEach(payment => {
-          if (netBalances[payment.debtor_id] !== undefined) {
-            netBalances[payment.debtor_id] += Number(payment.amount_settled);
-          }
-          if (netBalances[payment.creditor_id] !== undefined) {
-            netBalances[payment.creditor_id] -= Number(payment.amount_settled);
-          }
-        });
-
-        // Get people with non-zero balances
-        const peopleWithBalances = people.filter(p => Math.abs(netBalances[p.id]) > 0.01);
-
-        if (peopleWithBalances.length === 0) {
-          return '<p style="text-align: center; color: #666; padding: 20px;">All balances are settled for this period.</p>';
+        if (simplifiedTransactions.length === 0) {
+          return '<p style="text-align: center; color: #666; padding: 20px;">All balances are settled for this period. No transactions needed.</p>';
         }
 
-        return peopleWithBalances.map(person => {
-          const balance = netBalances[person.id];
-          const status = balance > 0.01 ? 'RECEIVES' : balance < -0.01 ? 'PAYS' : 'BALANCED';
-          const statusColor = balance > 0.01 ? '#16a34a' : balance < -0.01 ? '#dc2626' : '#6b7280';
-          const bgColor = balance > 0.01 ? '#f0fdf4' : balance < -0.01 ? '#fef2f2' : '#f9fafb';
+        return simplifiedTransactions.map(transaction => {
+          const fromPerson = people.find(p => p.id === transaction.from);
+          const toPerson = people.find(p => p.id === transaction.to);
+          const fromName = fromPerson?.name || 'Unknown';
+          const toName = toPerson?.name || 'Unknown';
 
-          // Calculate per-expense breakdown for this person
-          let totalPaid = 0;
-          let totalOwed = 0;
+          // Find expenses that involve BOTH the debtor and creditor
+          // These are expenses where the creditor paid and the debtor owes
+          const contributingExpenses = reportExpenses.filter(expense => {
+            if (expense.exclude_from_settlement) return false;
 
-          const expenseDetails = reportExpenses.filter(expense => {
-            const isPayer = expense.paid_by?.some(p => p.personId === person.id);
-            const isSharer = expense.shares?.some(s => s.personId === person.id);
-            const isContributor = expense.celebration_contribution?.personId === person.id;
-            return isPayer || isSharer || isContributor;
-          }).map(expense => {
-            const amountPaid = expense.paid_by?.find(p => p.personId === person.id)?.amount || 0;
-            const shareAmount = expense.shares?.find(s => s.personId === person.id)?.amount || 0;
-            const celebrationAmount = expense.celebration_contribution?.personId === person.id
-              ? expense.celebration_contribution.amount
-              : 0;
+            // Check if creditor (toPerson) paid for this expense
+            const creditorPaid = expense.paid_by?.some(p => p.personId === transaction.to && Number(p.amount) > 0);
+            // Check if debtor (fromPerson) owes for this expense
+            const debtorOwes = expense.shares?.some(s => s.personId === transaction.from && Number(s.amount) > 0) ||
+              (expense.celebration_contribution?.personId === transaction.from && Number(expense.celebration_contribution.amount) > 0);
 
-            const owed = Number(shareAmount) + Number(celebrationAmount);
-            const paid = Number(amountPaid);
-            const net = paid - owed;
-
-            totalPaid += paid;
-            totalOwed += owed;
-
-            return { expense, paid, owed, shareAmount: Number(shareAmount), celebrationAmount: Number(celebrationAmount), net };
+            return creditorPaid && debtorOwes;
           });
 
-          // Calculate settlements for this person
-          const settlementsAsPayer = filteredSettlements.filter(s => s.debtor_id === person.id);
-          const settlementsAsReceiver = filteredSettlements.filter(s => s.creditor_id === person.id);
-          const totalSettledOut = settlementsAsPayer.reduce((sum, s) => sum + Number(s.amount_settled), 0);
-          const totalSettledIn = settlementsAsReceiver.reduce((sum, s) => sum + Number(s.amount_settled), 0);
+          // Calculate contribution breakdown for each expense
+          const expenseBreakdown = contributingExpenses.map(expense => {
+            // How much did creditor pay for this expense?
+            const creditorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.to)?.amount || 0;
+            // What is debtor's share in this expense?
+            const debtorShareAmount = expense.shares?.find(s => s.personId === transaction.from)?.amount || 0;
+            const debtorCelebrationAmount = expense.celebration_contribution?.personId === transaction.from
+              ? expense.celebration_contribution.amount
+              : 0;
+            const debtorTotalOwed = Number(debtorShareAmount) + Number(debtorCelebrationAmount);
+
+            // The contribution to this specific debt is the portion the creditor "covered" for the debtor
+            // If creditor paid for the whole expense, then debtor owes them their share
+            return {
+              expense,
+              creditorPaid: Number(creditorPaidAmount),
+              debtorOwed: debtorTotalOwed,
+              description: expense.description,
+              category: expense.category,
+              date: expense.created_at
+            };
+          });
+
+          // Also show expenses where debtor paid and is owed by creditor (reduces the debt)
+          const offsetExpenses = reportExpenses.filter(expense => {
+            if (expense.exclude_from_settlement) return false;
+
+            // Check if debtor (fromPerson) paid for this expense
+            const debtorPaid = expense.paid_by?.some(p => p.personId === transaction.from && Number(p.amount) > 0);
+            // Check if creditor (toPerson) owes for this expense
+            const creditorOwes = expense.shares?.some(s => s.personId === transaction.to && Number(s.amount) > 0) ||
+              (expense.celebration_contribution?.personId === transaction.to && Number(expense.celebration_contribution.amount) > 0);
+
+            return debtorPaid && creditorOwes;
+          });
+
+          const offsetBreakdown = offsetExpenses.map(expense => {
+            const debtorPaidAmount = expense.paid_by?.find(p => p.personId === transaction.from)?.amount || 0;
+            const creditorShareAmount = expense.shares?.find(s => s.personId === transaction.to)?.amount || 0;
+            const creditorCelebrationAmount = expense.celebration_contribution?.personId === transaction.to
+              ? expense.celebration_contribution.amount
+              : 0;
+            const creditorTotalOwed = Number(creditorShareAmount) + Number(creditorCelebrationAmount);
+
+            return {
+              expense,
+              debtorPaid: Number(debtorPaidAmount),
+              creditorOwed: creditorTotalOwed,
+              description: expense.description,
+              category: expense.category,
+              date: expense.created_at
+            };
+          });
+
+          // Calculate PRIOR BALANCE from historical expenses (before selected date range)
+          // This shows unsettled amounts from before the report period
+          let priorDebtorOwesToCreditor = 0;
+          let priorCreditorOwesToDebtor = 0;
+
+          // Historical expenses where creditor paid for debtor
+          historicalExpenses.forEach(expense => {
+            const creditorPaid = expense.paid_by?.some(p => p.personId === transaction.to && Number(p.amount) > 0);
+            const debtorOwes = expense.shares?.some(s => s.personId === transaction.from && Number(s.amount) > 0) ||
+              (expense.celebration_contribution?.personId === transaction.from && Number(expense.celebration_contribution.amount) > 0);
+
+            if (creditorPaid && debtorOwes) {
+              const debtorShareAmount = expense.shares?.find(s => s.personId === transaction.from)?.amount || 0;
+              const debtorCelebrationAmount = expense.celebration_contribution?.personId === transaction.from
+                ? expense.celebration_contribution.amount
+                : 0;
+              priorDebtorOwesToCreditor += Number(debtorShareAmount) + Number(debtorCelebrationAmount);
+            }
+          });
+
+          // Historical expenses where debtor paid for creditor
+          historicalExpenses.forEach(expense => {
+            const debtorPaid = expense.paid_by?.some(p => p.personId === transaction.from && Number(p.amount) > 0);
+            const creditorOwes = expense.shares?.some(s => s.personId === transaction.to && Number(s.amount) > 0) ||
+              (expense.celebration_contribution?.personId === transaction.to && Number(expense.celebration_contribution.amount) > 0);
+
+            if (debtorPaid && creditorOwes) {
+              const creditorShareAmount = expense.shares?.find(s => s.personId === transaction.to)?.amount || 0;
+              const creditorCelebrationAmount = expense.celebration_contribution?.personId === transaction.to
+                ? expense.celebration_contribution.amount
+                : 0;
+              priorCreditorOwesToDebtor += Number(creditorShareAmount) + Number(creditorCelebrationAmount);
+            }
+          });
+
+          // Adjust for historical settlements between these two people
+          historicalSettlements.forEach(settlement => {
+            if (settlement.debtor_id === transaction.from && settlement.creditor_id === transaction.to) {
+              priorDebtorOwesToCreditor -= Number(settlement.amount_settled);
+            }
+            if (settlement.debtor_id === transaction.to && settlement.creditor_id === transaction.from) {
+              priorCreditorOwesToDebtor -= Number(settlement.amount_settled);
+            }
+          });
+
+          const priorNetBalance = priorDebtorOwesToCreditor - priorCreditorOwesToDebtor;
+          const hasPriorBalance = Math.abs(priorNetBalance) > 0.01;
+
+          const totalDebtorOwesToCreditor = expenseBreakdown.reduce((sum, e) => sum + e.debtorOwed, 0);
+          const totalCreditorOwesToDebtor = offsetBreakdown.reduce((sum, e) => sum + e.creditorOwed, 0);
+          const currentPeriodNet = totalDebtorOwesToCreditor - totalCreditorOwesToDebtor;
 
           return `
-          <div class="no-break" style="margin-bottom: 24px; padding: 16px; border: 2px solid ${statusColor}30; border-radius: 12px; background: ${bgColor};">
-            <!-- Person Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+          <div class="no-break" style="margin-bottom: 24px; padding: 16px; border: 2px solid #16a34a30; border-radius: 12px; background: #f0fdf4;">
+            <!-- Transaction Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #16a34a40;">
               <div style="display: flex; align-items: center; gap: 12px;">
-                <div style="width: 48px; height: 48px; border-radius: 50%; background: ${statusColor}20; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: ${statusColor};">
-                  ${person.name.charAt(0).toUpperCase()}
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: #dc262620; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #dc2626;">
+                  ${fromName.charAt(0).toUpperCase()}
                 </div>
-                <div>
-                  <div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">${person.name}</div>
-                  <div style="font-size: 12px; color: ${statusColor}; font-weight: 600; text-transform: uppercase;">${status}</div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </div>
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: #16a34a20; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #16a34a;">
+                  ${toName.charAt(0).toUpperCase()}
                 </div>
               </div>
               <div style="text-align: right;">
-                <div style="font-size: 24px; font-weight: 700; color: ${statusColor};">
-                  ${balance > 0.01 ? '+' : balance < -0.01 ? '-' : ''}${formatCurrency(Math.abs(balance))}
+                <div style="font-size: 24px; font-weight: 700; color: #16a34a;">
+                  ${formatCurrency(transaction.amount)}
                 </div>
               </div>
             </div>
             
-            <!-- Expense Breakdown -->
+            <div style="display: flex; justify-content: center; gap: 8px; margin-bottom: 16px;">
+              <span style="font-size: 14px; font-weight: 600; color: #dc2626;">${fromName}</span>
+              <span style="font-size: 14px; color: #6b7280;">pays</span>
+              <span style="font-size: 14px; font-weight: 600; color: #16a34a;">${toName}</span>
+            </div>
+            
+            <!-- Expense Breakdown: What debtor owes to creditor -->
+            ${expenseBreakdown.length > 0 ? `
             <div style="margin-bottom: 16px;">
-              <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                Expense-by-Expense Breakdown (${expenseDetails.length} expenses)
+              <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Expenses where ${toName} paid for ${fromName} (${expenseBreakdown.length})
               </div>
               <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                 <thead>
-                  <tr style="background: #f3f4f6;">
-                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb;">Expense</th>
-                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #16a34a;">Paid</th>
-                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #dc2626;">Owed</th>
-                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 700;">Net</th>
+                  <tr style="background: #dcfce7;">
+                    <th style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #bbf7d0;">Expense</th>
+                    <th style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #bbf7d0;">${fromName}'s Share</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${expenseDetails.map(({ expense, paid, owed, net }) => `
-                    <tr style="border-bottom: 1px solid #f3f4f6;">
-                      <td style="padding: 8px;">
-                        <div style="font-weight: 500;">${expense.description}</div>
-                        <div style="font-size: 10px; color: #6b7280;">${expense.category} • ${formatDate(expense.created_at)}</div>
+                  ${expenseBreakdown.map(({ description, category, date, debtorOwed }) => `
+                    <tr style="border-bottom: 1px solid #f0fdf4;">
+                      <td style="padding: 6px 8px;">
+                        <div style="font-weight: 500;">${description}</div>
+                        <div style="font-size: 10px; color: #6b7280;">${category} • ${formatDate(date)}</div>
                       </td>
-                      <td style="padding: 8px; text-align: right; color: #16a34a;">${paid > 0 ? '+' + formatCurrency(paid) : '-'}</td>
-                      <td style="padding: 8px; text-align: right; color: #dc2626;">${owed > 0 ? '-' + formatCurrency(owed) : '-'}</td>
-                      <td style="padding: 8px; text-align: right; font-weight: 600; color: ${net > 0.01 ? '#16a34a' : net < -0.01 ? '#dc2626' : '#6b7280'};">
-                        ${net > 0.01 ? '+' : net < -0.01 ? '' : ''}${formatCurrency(net)}
+                      <td style="padding: 6px 8px; text-align: right; color: #dc2626; font-weight: 500;">
+                        ${formatCurrency(debtorOwed)}
                       </td>
                     </tr>
                   `).join('')}
                 </tbody>
+                <tfoot>
+                  <tr style="background: #dcfce7; font-weight: 600;">
+                    <td style="padding: 8px; border-top: 2px solid #16a34a;">Subtotal (${fromName} owes ${toName})</td>
+                    <td style="padding: 8px; text-align: right; border-top: 2px solid #16a34a; color: #dc2626;">${formatCurrency(totalDebtorOwesToCreditor)}</td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
+            ` : ''}
+            
+            <!-- Offset: What creditor owes to debtor -->
+            ${offsetBreakdown.length > 0 ? `
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 11px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Expenses where ${fromName} paid for ${toName} (reduces debt) (${offsetBreakdown.length})
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                  <tr style="background: #fef2f2;">
+                    <th style="padding: 6px 8px; text-align: left; border-bottom: 1px solid #fecaca;">Expense</th>
+                    <th style="padding: 6px 8px; text-align: right; border-bottom: 1px solid #fecaca;">${toName}'s Share</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${offsetBreakdown.map(({ description, category, date, creditorOwed }) => `
+                    <tr style="border-bottom: 1px solid #fef2f2;">
+                      <td style="padding: 6px 8px;">
+                        <div style="font-weight: 500;">${description}</div>
+                        <div style="font-size: 10px; color: #6b7280;">${category} • ${formatDate(date)}</div>
+                      </td>
+                      <td style="padding: 6px 8px; text-align: right; color: #16a34a; font-weight: 500;">
+                        -${formatCurrency(creditorOwed)}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+                <tfoot>
+                  <tr style="background: #fef2f2; font-weight: 600;">
+                    <td style="padding: 8px; border-top: 2px solid #dc2626;">Subtotal (${toName} owes ${fromName})</td>
+                    <td style="padding: 8px; text-align: right; border-top: 2px solid #dc2626; color: #16a34a;">-${formatCurrency(totalCreditorOwesToDebtor)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+            ` : ''}
+            
+            <!-- Prior Balance from Historical Expenses -->
+            ${hasPriorBalance ? `
+            <div style="margin-bottom: 16px; padding: 12px; background: #fefce8; border-radius: 8px; border: 2px solid #ca8a04;">
+              <div style="font-size: 11px; font-weight: 600; color: #854d0e; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                ⏳ Prior Unsettled Balance (Before ${formatDate(startDate?.toISOString() || '')})
+              </div>
+              <div style="font-size: 12px; color: #713f12;">
+                <p style="margin: 0 0 8px 0;">This amount carried over from expenses before the selected report period:</p>
+                <div style="display: flex; justify-content: space-between; padding: 8px; background: white; border-radius: 4px; font-weight: 600;">
+                  <span>${fromName} owed ${toName}:</span>
+                  <span style="color: ${priorNetBalance > 0 ? '#dc2626' : '#16a34a'};">
+                    ${priorNetBalance > 0 ? '' : '-'}${formatCurrency(Math.abs(priorNetBalance))}
+                  </span>
+                </div>
+              </div>
+            </div>
+            ` : ''}
             
             <!-- Final Calculation -->
-            <div style="padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div style="padding: 12px; background: white; border-radius: 8px; border: 2px solid #16a34a;">
               <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
-                Final Calculation
+                Net Settlement Calculation
               </div>
               <div style="font-size: 12px;">
-                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span>Total Paid:</span>
-                  <span style="color: #16a34a; font-weight: 600;">+${formatCurrency(totalPaid)}</span>
+                ${hasPriorBalance ? `
+                <div style="display: flex; justify-content: space-between; padding: 4px 0; color: #854d0e;">
+                  <span>Prior Balance (carried over):</span>
+                  <span style="font-weight: 600;">${priorNetBalance > 0 ? '' : '-'}${formatCurrency(Math.abs(priorNetBalance))}</span>
                 </div>
+                ` : ''}
+                ${expenseBreakdown.length > 0 ? `
                 <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                  <span>Total Owed (Shares + Celebrations):</span>
-                  <span style="color: #dc2626; font-weight: 600;">-${formatCurrency(totalOwed)}</span>
+                  <span>This Period: ${fromName} owes ${toName}:</span>
+                  <span style="color: #dc2626; font-weight: 600;">${formatCurrency(totalDebtorOwesToCreditor)}</span>
                 </div>
-                ${totalSettledOut > 0 || totalSettledIn > 0 ? `
-                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
-                    <span>Settlements (Paid: ${formatCurrency(totalSettledOut)}, Received: ${formatCurrency(totalSettledIn)}):</span>
-                    <span style="color: #2563eb; font-weight: 600;">${totalSettledOut - totalSettledIn >= 0 ? '+' : ''}${formatCurrency(totalSettledOut - totalSettledIn)}</span>
-                  </div>
+                ` : ''}
+                ${offsetBreakdown.length > 0 ? `
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span>This Period: ${toName} owes ${fromName}:</span>
+                  <span style="color: #16a34a; font-weight: 600;">-${formatCurrency(totalCreditorOwesToDebtor)}</span>
+                </div>
                 ` : ''}
                 <div style="display: flex; justify-content: space-between; padding: 8px 0; margin-top: 8px; border-top: 2px solid #e5e7eb; font-weight: 700;">
-                  <span>Final Balance:</span>
-                  <span style="color: ${statusColor}; font-size: 16px;">
-                    ${balance > 0.01 ? '+' : balance < -0.01 ? '' : ''}${formatCurrency(balance)}
+                  <span>Final Amount ${fromName} Pays ${toName}:</span>
+                  <span style="color: #16a34a; font-size: 16px;">
+                    ${formatCurrency(transaction.amount)}
                   </span>
                 </div>
               </div>
