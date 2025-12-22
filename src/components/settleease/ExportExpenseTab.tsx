@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useCallback, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight, Users } from "lucide-react";
+import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight, Users, Download, Save } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import { calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
@@ -1330,18 +1330,35 @@ export default function ExportExpenseTab({
     `;
   }, [expenses, settlementPayments, people, formatDate, reportName, formatCurrency]);
 
-  // Handle print/download
-  const handleDownloadPDF = useCallback(() => {
+  // Generate filename based on mode and custom name
+  const getFileName = useCallback(() => {
+    if (exportMode === 'activityFeed' && selectedPersonId) {
+      const personName = people.find(p => p.id === selectedPersonId)?.name || 'Unknown';
+      if (reportName && reportName.trim()) {
+        return `${reportName.trim().replace(/\s+/g, '_')}_Personal_Report`;
+      }
+      return `${personName.replace(/\s+/g, '_')}_Personal_Report`;
+    } else {
+      if (reportName && reportName.trim()) {
+        return `${reportName.trim().replace(/\s+/g, '_')}_Summary_Report`;
+      }
+      return 'Summary_Report';
+    }
+  }, [exportMode, selectedPersonId, people, reportName]);
+
+  // Handle print PDF
+  const handlePrintPDF = useCallback(() => {
     if (iframeRef.current?.contentWindow) {
-      // Set the document title for the PDF filename
       const iframeDoc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
       if (iframeDoc) {
-        iframeDoc.title = reportName || 'SettleEase Expense Report';
+        iframeDoc.title = getFileName();
       }
       iframeRef.current.contentWindow.focus();
       iframeRef.current.contentWindow.print();
     }
-  }, [reportName]);
+  }, [getFileName]);
+
+
 
   // PDF content based on export mode
   const pdfContent = useMemo(() => {
@@ -1363,6 +1380,20 @@ export default function ExportExpenseTab({
     return generatePDFContent();
   }, [exportMode, selectedPersonId, people, expenses, settlementPayments, formatDate, reportName, generatePDFContent]);
 
+  // Handle save PDF (downloads as HTML file that can be opened and printed)
+  const handleSavePDF = useCallback(() => {
+    const fileName = getFileName();
+    const blob = new Blob([pdfContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${fileName}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [getFileName, pdfContent]);
+
   return (
     <Card className="shadow-xl rounded-lg">
       {/* Header */}
@@ -1377,15 +1408,26 @@ export default function ExportExpenseTab({
               Select a date range to generate a detailed PDF report of expenses and settlements
             </CardDescription>
           </div>
-          {isDateRangeSelected && (
-            <Button
-              onClick={handleDownloadPDF}
-              size="sm"
-              className="w-full sm:w-auto gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Download PDF
-            </Button>
+          {isDateRangeSelected && exportMode === 'summary' && (
+            <div className="flex gap-2">
+              <Button
+                onClick={handleSavePDF}
+                size="sm"
+                variant="outline"
+                className="w-full sm:w-auto gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Save
+              </Button>
+              <Button
+                onClick={handlePrintPDF}
+                size="sm"
+                className="w-full sm:w-auto gap-2"
+              >
+                <Printer className="h-4 w-4" />
+                Print
+              </Button>
+            </div>
           )}
         </div>
       </CardHeader>
@@ -1580,13 +1622,23 @@ export default function ExportExpenseTab({
                     className="max-w-sm h-9"
                   />
                 </div>
-                <Button
-                  onClick={handleDownloadPDF}
-                  className="w-full sm:w-auto gap-2"
-                >
-                  <Printer className="h-4 w-4" />
-                  Download {people.find(p => p.id === selectedPersonId)?.name}'s Report
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleSavePDF}
+                    variant="outline"
+                    className="w-full sm:w-auto gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    Save
+                  </Button>
+                  <Button
+                    onClick={handlePrintPDF}
+                    className="w-full sm:w-auto gap-2"
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print
+                  </Button>
+                </div>
               </div>
             )}
 

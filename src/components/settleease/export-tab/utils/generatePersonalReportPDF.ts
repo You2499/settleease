@@ -216,21 +216,9 @@ export function generatePersonalReportPDF({
     </div>
   `).join('') : '<div class="all-settled">✓ All balances are settled!</div>';
 
-  // Calculate total settlement impact (positive = received money, negative = paid out money)
-  let totalSettlementImpact = 0;
-  personSettlements.forEach(s => {
-    if (s.debtor_id === selectedPersonId) {
-      // I paid someone - reduces my debt
-      totalSettlementImpact += Number(s.amount_settled);
-    } else {
-      // Someone paid me - reduces what they owe me
-      totalSettlementImpact -= Number(s.amount_settled);
-    }
-  });
-
-  // Net position = (what others owe me - what I owe others) + settlement impact
-  // Settlement impact: if I paid out money, it improves my position (reduces what I owe)
-  const netPosition = (totalOwedToMe - totalIOwe) + totalSettlementImpact;
+  // Net position = sum of all final balances (already includes settlements)
+  // Positive = others owe you, Negative = you owe others
+  const netPosition = finalBalances.reduce((sum, b) => sum + b.amount, 0);
 
   return `<!DOCTYPE html>
 <html lang="en">
