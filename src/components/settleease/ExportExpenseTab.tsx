@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
+import { calculateNetBalances, calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, subDays, subMonths, startOfYear } from "date-fns";
@@ -1018,7 +1019,190 @@ export default function ExportExpenseTab({
   ` : ''
       }
 
-  < !--Footer -->
+  <!-- Per-Person Settlement Breakdown -->
+  <div class="page-break"></div>
+  <div class="section">
+    <div class="section-header" style="background: linear-gradient(135deg, #7c3aed, #6d28d9);">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      <h2>Per-Person Settlement Breakdown</h2>
+    </div>
+    
+    <p style="color: #666; font-size: 12px; margin-bottom: 20px;">
+      This section explains how each person's pending settlement amount was calculated from the expenses above.
+    </p>
+    
+    ${(() => {
+        // Calculate net balances for people based on filtered expenses only
+        const netBalances: Record<string, number> = {};
+        people.forEach(p => netBalances[p.id] = 0);
+
+        // Process expenses
+        reportExpenses.forEach(expense => {
+          if (expense.exclude_from_settlement) return;
+
+          // Credit payers
+          if (Array.isArray(expense.paid_by)) {
+            expense.paid_by.forEach(payment => {
+              netBalances[payment.personId] = (netBalances[payment.personId] || 0) + Number(payment.amount);
+            });
+          }
+
+          // Debit shares
+          if (Array.isArray(expense.shares)) {
+            expense.shares.forEach(share => {
+              netBalances[share.personId] = (netBalances[share.personId] || 0) - Number(share.amount);
+            });
+          }
+
+          // Debit celebration
+          if (expense.celebration_contribution && expense.celebration_contribution.amount > 0) {
+            const contributorId = expense.celebration_contribution.personId;
+            netBalances[contributorId] = (netBalances[contributorId] || 0) - Number(expense.celebration_contribution.amount);
+          }
+        });
+
+        // Adjust for settlements in range
+        filteredSettlements.forEach(payment => {
+          if (netBalances[payment.debtor_id] !== undefined) {
+            netBalances[payment.debtor_id] += Number(payment.amount_settled);
+          }
+          if (netBalances[payment.creditor_id] !== undefined) {
+            netBalances[payment.creditor_id] -= Number(payment.amount_settled);
+          }
+        });
+
+        // Get people with non-zero balances
+        const peopleWithBalances = people.filter(p => Math.abs(netBalances[p.id]) > 0.01);
+
+        if (peopleWithBalances.length === 0) {
+          return '<p style="text-align: center; color: #666; padding: 20px;">All balances are settled for this period.</p>';
+        }
+
+        return peopleWithBalances.map(person => {
+          const balance = netBalances[person.id];
+          const status = balance > 0.01 ? 'RECEIVES' : balance < -0.01 ? 'PAYS' : 'BALANCED';
+          const statusColor = balance > 0.01 ? '#16a34a' : balance < -0.01 ? '#dc2626' : '#6b7280';
+          const bgColor = balance > 0.01 ? '#f0fdf4' : balance < -0.01 ? '#fef2f2' : '#f9fafb';
+
+          // Calculate per-expense breakdown for this person
+          let totalPaid = 0;
+          let totalOwed = 0;
+
+          const expenseDetails = reportExpenses.filter(expense => {
+            const isPayer = expense.paid_by?.some(p => p.personId === person.id);
+            const isSharer = expense.shares?.some(s => s.personId === person.id);
+            const isContributor = expense.celebration_contribution?.personId === person.id;
+            return isPayer || isSharer || isContributor;
+          }).map(expense => {
+            const amountPaid = expense.paid_by?.find(p => p.personId === person.id)?.amount || 0;
+            const shareAmount = expense.shares?.find(s => s.personId === person.id)?.amount || 0;
+            const celebrationAmount = expense.celebration_contribution?.personId === person.id
+              ? expense.celebration_contribution.amount
+              : 0;
+
+            const owed = Number(shareAmount) + Number(celebrationAmount);
+            const paid = Number(amountPaid);
+            const net = paid - owed;
+
+            totalPaid += paid;
+            totalOwed += owed;
+
+            return { expense, paid, owed, shareAmount: Number(shareAmount), celebrationAmount: Number(celebrationAmount), net };
+          });
+
+          // Calculate settlements for this person
+          const settlementsAsPayer = filteredSettlements.filter(s => s.debtor_id === person.id);
+          const settlementsAsReceiver = filteredSettlements.filter(s => s.creditor_id === person.id);
+          const totalSettledOut = settlementsAsPayer.reduce((sum, s) => sum + Number(s.amount_settled), 0);
+          const totalSettledIn = settlementsAsReceiver.reduce((sum, s) => sum + Number(s.amount_settled), 0);
+
+          return `
+          <div class="no-break" style="margin-bottom: 24px; padding: 16px; border: 2px solid ${statusColor}30; border-radius: 12px; background: ${bgColor};">
+            <!-- Person Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: ${statusColor}20; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: ${statusColor};">
+                  ${person.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div style="font-size: 18px; font-weight: 700; color: #1a1a2e;">${person.name}</div>
+                  <div style="font-size: 12px; color: ${statusColor}; font-weight: 600; text-transform: uppercase;">${status}</div>
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 24px; font-weight: 700; color: ${statusColor};">
+                  ${balance > 0.01 ? '+' : balance < -0.01 ? '-' : ''}${formatCurrency(Math.abs(balance))}
+                </div>
+              </div>
+            </div>
+            
+            <!-- Expense Breakdown -->
+            <div style="margin-bottom: 16px;">
+              <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Expense-by-Expense Breakdown (${expenseDetails.length} expenses)
+              </div>
+              <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                  <tr style="background: #f3f4f6;">
+                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #e5e7eb;">Expense</th>
+                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #16a34a;">Paid</th>
+                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; color: #dc2626;">Owed</th>
+                    <th style="padding: 8px; text-align: right; border-bottom: 1px solid #e5e7eb; font-weight: 700;">Net</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${expenseDetails.map(({ expense, paid, owed, net }) => `
+                    <tr style="border-bottom: 1px solid #f3f4f6;">
+                      <td style="padding: 8px;">
+                        <div style="font-weight: 500;">${expense.description}</div>
+                        <div style="font-size: 10px; color: #6b7280;">${expense.category} • ${formatDate(expense.created_at)}</div>
+                      </td>
+                      <td style="padding: 8px; text-align: right; color: #16a34a;">${paid > 0 ? '+' + formatCurrency(paid) : '-'}</td>
+                      <td style="padding: 8px; text-align: right; color: #dc2626;">${owed > 0 ? '-' + formatCurrency(owed) : '-'}</td>
+                      <td style="padding: 8px; text-align: right; font-weight: 600; color: ${net > 0.01 ? '#16a34a' : net < -0.01 ? '#dc2626' : '#6b7280'};">
+                        ${net > 0.01 ? '+' : net < -0.01 ? '' : ''}${formatCurrency(net)}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            
+            <!-- Final Calculation -->
+            <div style="padding: 12px; background: white; border-radius: 8px; border: 1px solid #e5e7eb;">
+              <div style="font-size: 12px; font-weight: 600; color: #374151; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;">
+                Final Calculation
+              </div>
+              <div style="font-size: 12px;">
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span>Total Paid:</span>
+                  <span style="color: #16a34a; font-weight: 600;">+${formatCurrency(totalPaid)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                  <span>Total Owed (Shares + Celebrations):</span>
+                  <span style="color: #dc2626; font-weight: 600;">-${formatCurrency(totalOwed)}</span>
+                </div>
+                ${totalSettledOut > 0 || totalSettledIn > 0 ? `
+                  <div style="display: flex; justify-content: space-between; padding: 4px 0;">
+                    <span>Settlements (Paid: ${formatCurrency(totalSettledOut)}, Received: ${formatCurrency(totalSettledIn)}):</span>
+                    <span style="color: #2563eb; font-weight: 600;">${totalSettledOut - totalSettledIn >= 0 ? '+' : ''}${formatCurrency(totalSettledOut - totalSettledIn)}</span>
+                  </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; padding: 8px 0; margin-top: 8px; border-top: 2px solid #e5e7eb; font-weight: 700;">
+                  <span>Final Balance:</span>
+                  <span style="color: ${statusColor}; font-size: 16px;">
+                    ${balance > 0.01 ? '+' : balance < -0.01 ? '' : ''}${formatCurrency(balance)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        }).join('');
+      })()}
+  </div>
+
+  <!-- Footer -->
     <div class="footer">
       <p>Generated by SettleEase • Expense Management Made Simple</p>
       <p>Report contains ${stats.expenseCount} expenses and ${stats.settlementCount} settlement payments</p>
