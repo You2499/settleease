@@ -9,3 +9,6 @@ export { useExportData } from './hooks/useExportData';
 
 // Export components
 export { ExportModeToggle } from './components/ExportModeToggle';
+
+// Export utils
+export { generatePersonalReportPDF } from './utils/generatePersonalReportPDF';

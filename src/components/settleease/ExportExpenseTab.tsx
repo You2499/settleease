@@ -18,6 +18,7 @@ import {
   DATE_PRESETS,
   useExportData,
   ExportModeToggle,
+  generatePersonalReportPDF,
   type ExportExpenseTabProps,
   type DatePreset,
   type ExportMode,
@@ -43,6 +44,9 @@ export default function ExportExpenseTab({
 
   // Export mode state: 'summary' for date-filtered report, 'activityFeed' for full audit trail
   const [exportMode, setExportMode] = useState<'summary' | 'activityFeed'>('summary');
+
+  // Selected person for Activity Feed personal report
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
 
   // Handle preset selection
@@ -1342,10 +1346,22 @@ export default function ExportExpenseTab({
   // PDF content based on export mode
   const pdfContent = useMemo(() => {
     if (exportMode === 'activityFeed') {
-      return generateActivityFeedPDF();
+      // Use new personal report generator
+      if (selectedPersonId) {
+        return generatePersonalReportPDF({
+          selectedPersonId,
+          people,
+          expenses,
+          settlementPayments,
+          formatDate,
+          formatCurrency,
+          reportName,
+        });
+      }
+      return ''; // No person selected yet
     }
     return generatePDFContent();
-  }, [exportMode, generateActivityFeedPDF, generatePDFContent]);
+  }, [exportMode, selectedPersonId, people, expenses, settlementPayments, formatDate, reportName, generatePDFContent]);
 
   return (
     <Card className="shadow-xl rounded-lg">
@@ -1521,106 +1537,138 @@ export default function ExportExpenseTab({
             </div>
           </div>
         )}
-
-        {/* Activity Feed Mode - No date selection needed, shows immediately */}
+        {/* Activity Feed Mode - Person selector for personal reports */}
         {exportMode === 'activityFeed' && (
           <div className="px-4 sm:px-6 py-4 border-b bg-muted/20">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex-1">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Report Name (Optional)
-                </p>
-                <Input
-                  type="text"
-                  placeholder="e.g., Goa Trip Settlement Audit"
-                  value={reportName}
-                  onChange={(e) => setReportName(e.target.value)}
-                  className="max-w-sm h-9"
-                />
+            {/* Person Selector */}
+            <div className="mb-4">
+              <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-3 flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Select Person for Personal Report
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {people.map((person) => (
+                  <Button
+                    key={person.id}
+                    variant={selectedPersonId === person.id ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setSelectedPersonId(person.id)}
+                    className={cn(
+                      "h-9 px-4",
+                      selectedPersonId === person.id && "ring-2 ring-primary ring-offset-2"
+                    )}
+                  >
+                    {person.name}
+                  </Button>
+                ))}
               </div>
-              <Button
-                onClick={handleDownloadPDF}
-                className="w-full sm:w-auto gap-2"
-              >
-                <Printer className="h-4 w-4" />
-                Download Activity Feed PDF
-              </Button>
             </div>
+
+            {/* Report Name & Download - only when person selected */}
+            {selectedPersonId && (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-3 border-t">
+                <div className="flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Report Name (Optional)
+                  </p>
+                  <Input
+                    type="text"
+                    placeholder={`e.g., ${people.find(p => p.id === selectedPersonId)?.name}'s Expense Report`}
+                    value={reportName}
+                    onChange={(e) => setReportName(e.target.value)}
+                    className="max-w-sm h-9"
+                  />
+                </div>
+                <Button
+                  onClick={handleDownloadPDF}
+                  className="w-full sm:w-auto gap-2"
+                >
+                  <Printer className="h-4 w-4" />
+                  Download {people.find(p => p.id === selectedPersonId)?.name}'s Report
+                </Button>
+              </div>
+            )}
+
             <p className="text-xs text-muted-foreground mt-3">
-              This export shows a complete audit trail of ALL expenses and how they contribute to each settlement transaction.
+              {selectedPersonId
+                ? `This report shows every expense ${people.find(p => p.id === selectedPersonId)?.name} participated in, with complete breakdown of who paid, how it was split, and net effect.`
+                : "Select a person above to generate their personal expense report."
+              }
             </p>
           </div>
         )}
 
-        {/* Preview Section for Activity Feed Mode */}
-        {exportMode === 'activityFeed' && (
+        {/* Preview Section for Activity Feed Mode - only when person selected */}
+        {exportMode === 'activityFeed' && selectedPersonId && (
           <div className="px-4 sm:px-6 py-4 bg-card/50">
             <div className="h-[450px] sm:h-[600px] rounded-lg overflow-hidden border bg-white">
               <iframe
                 ref={iframeRef}
                 srcDoc={pdfContent}
                 className="w-full h-full"
-                title="Activity Feed PDF Preview"
+                title="Personal Report PDF Preview"
               />
             </div>
           </div>
         )}
 
         {/* Summary Mode - Preview when date selected */}
-        {exportMode === 'summary' && isDateRangeSelected ? (
-          <div>
-            {/* Stats Grid */}
-            <div className="px-4 sm:px-6 py-3 border-b bg-card/50">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                <div className="bg-card/70 border rounded-lg p-2 sm:p-3 text-center">
-                  <div className="text-lg sm:text-2xl font-bold text-primary">{stats.expenseCount}</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Expenses</div>
-                </div>
-                <div className="bg-card/70 border rounded-lg p-2 sm:p-3 text-center">
-                  <div className="text-lg sm:text-2xl font-bold text-primary truncate">{formatCurrency(stats.totalExpenseAmount)}</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Total Amount</div>
-                </div>
-                <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 sm:p-3 text-center">
-                  <div className="text-lg sm:text-2xl font-bold text-accent">{stats.settlementCount}</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Settlements</div>
-                </div>
-                <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 sm:p-3 text-center">
-                  <div className="text-lg sm:text-2xl font-bold text-accent truncate">{formatCurrency(stats.totalSettlementAmount)}</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Settled</div>
+        {
+          exportMode === 'summary' && isDateRangeSelected ? (
+            <div>
+              {/* Stats Grid */}
+              <div className="px-4 sm:px-6 py-3 border-b bg-card/50">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+                  <div className="bg-card/70 border rounded-lg p-2 sm:p-3 text-center">
+                    <div className="text-lg sm:text-2xl font-bold text-primary">{stats.expenseCount}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Expenses</div>
+                  </div>
+                  <div className="bg-card/70 border rounded-lg p-2 sm:p-3 text-center">
+                    <div className="text-lg sm:text-2xl font-bold text-primary truncate">{formatCurrency(stats.totalExpenseAmount)}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Total Amount</div>
+                  </div>
+                  <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 sm:p-3 text-center">
+                    <div className="text-lg sm:text-2xl font-bold text-accent">{stats.settlementCount}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Settlements</div>
+                  </div>
+                  <div className="bg-accent/10 border border-accent/30 rounded-lg p-2 sm:p-3 text-center">
+                    <div className="text-lg sm:text-2xl font-bold text-accent truncate">{formatCurrency(stats.totalSettlementAmount)}</div>
+                    <div className="text-[10px] sm:text-xs text-muted-foreground">Settled</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* PDF Preview */}
-            <div className="px-4 sm:px-6 py-2 border-b bg-muted/30">
-              <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                PDF Preview
+              {/* PDF Preview */}
+              <div className="px-4 sm:px-6 py-2 border-b bg-muted/30">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  PDF Preview
+                </p>
+              </div>
+              <div>
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={pdfContent}
+                  className="w-full border-0"
+                  style={{ height: '800px' }}
+                  title="PDF Preview"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Calendar className="h-8 w-8 text-primary/50" />
+              </div>
+              <h3 className="text-lg font-medium text-foreground mb-2">Select a Date Range</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Choose a preset option above or select custom dates to generate your expense report.
               </p>
             </div>
-            <div>
-              <iframe
-                ref={iframeRef}
-                srcDoc={pdfContent}
-                className="w-full border-0"
-                style={{ height: '800px' }}
-                title="PDF Preview"
-              />
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Calendar className="h-8 w-8 text-primary/50" />
-            </div>
-            <h3 className="text-lg font-medium text-foreground mb-2">Select a Date Range</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Choose a preset option above or select custom dates to generate your expense report.
-            </p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          )
+        }
+      </CardContent >
+    </Card >
   );
 }
