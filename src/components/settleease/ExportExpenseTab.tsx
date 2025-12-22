@@ -4,7 +4,7 @@ import React, { useMemo, useRef, useCallback, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight, Users, Download, Save } from "lucide-react";
+import { FileDown, Printer, FileText, Calendar, CalendarRange, CalendarDays, CalendarClock, Infinity, ChevronRight, Users, Download, Save, EyeOff } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import { calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
@@ -35,18 +35,17 @@ export default function ExportExpenseTab({
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Date range selection state
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [reportName, setReportName] = useState("");
+  const [isRedacted, setIsRedacted] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<DatePreset | null>(null);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [endCalendarOpen, setEndCalendarOpen] = useState(false);
-  const [reportName, setReportName] = useState<string>("");
 
   // Export mode state: 'summary' for date-filtered report, 'activityFeed' for full audit trail
   const [exportMode, setExportMode] = useState<'summary' | 'activityFeed'>('summary');
-
-  // Selected person for Activity Feed personal report
-  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
 
 
   // Handle preset selection
@@ -1375,12 +1374,13 @@ export default function ExportExpenseTab({
           formatDate,
           formatCurrency,
           reportName,
+          isRedacted,
         });
       }
       return ''; // No person selected yet
     }
     return generatePDFContent();
-  }, [exportMode, selectedPersonId, people, expenses, settlementPayments, formatDate, reportName, generatePDFContent]);
+  }, [exportMode, selectedPersonId, people, expenses, settlementPayments, formatDate, reportName, isRedacted, generatePersonalReportPDF, generatePDFContent]);
 
   // Handle save PDF (downloads as HTML file that can be opened and printed)
 
@@ -1606,7 +1606,15 @@ export default function ExportExpenseTab({
                   />
                 </div>
                 <div className="flex gap-2">
-
+                  <Button
+                    variant={isRedacted ? "default" : "outline"}
+                    size="icon"
+                    onClick={() => setIsRedacted(!isRedacted)}
+                    className="w-10"
+                    title="Redacted Mode (Renames sensitive items to Misc)"
+                  >
+                    <EyeOff className="h-4 w-4" />
+                  </Button>
                   <Button
                     onClick={handlePrintPDF}
                     className="w-full sm:w-auto gap-2"

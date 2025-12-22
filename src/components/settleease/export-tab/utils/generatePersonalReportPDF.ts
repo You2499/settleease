@@ -10,6 +10,7 @@ interface GeneratePersonalReportPDFParams {
   formatDate: (date: string | Date | null | undefined) => string;
   formatCurrency: (amount: number) => string;
   reportName: string;
+  isRedacted?: boolean;
 }
 
 /**
@@ -24,6 +25,7 @@ export function generatePersonalReportPDF({
   formatDate,
   formatCurrency,
   reportName,
+  isRedacted = false,
 }: GeneratePersonalReportPDFParams): string {
   if (!selectedPersonId) return '';
 
@@ -55,6 +57,23 @@ export function generatePersonalReportPDF({
 
   // Generate expense cards HTML
   const expenseCards = personExpenses.map((expense) => {
+    // Redaction logic
+    let displayDescription = expense.description;
+    let displayCategory = expense.category;
+
+    // Check if expense contains sensitive keywords
+    const isSensitive = /alcohol|cigarettes/i.test(expense.description) || /alcohol|cigarettes/i.test(expense.category);
+
+    if (isRedacted && isSensitive) {
+      displayDescription = 'Misc';
+
+      // Only change category to General if the category ITSELF is sensitive.
+      // Otherwise, keep the original category (e.g. "Food" or "Groceries")
+      if (/alcohol|cigarettes/i.test(expense.category)) {
+        displayCategory = 'General';
+      }
+    }
+
     const myPaidAmount = expense.paid_by?.find(p => p.personId === selectedPersonId)?.amount || 0;
     const myShare = expense.shares?.find(s => s.personId === selectedPersonId)?.amount || 0;
     const myCelebration = expense.celebration_contribution?.personId === selectedPersonId
@@ -137,8 +156,8 @@ export function generatePersonalReportPDF({
     <div class="expense-detail no-break">
       <div class="expense-detail-header">
         <div>
-          <div class="expense-detail-title">${expense.description}</div>
-          <div class="expense-detail-meta">${expense.category} • ${formatDate(expense.created_at)}</div>
+          <div class="expense-detail-title">${displayDescription}</div>
+          <div class="expense-detail-meta">${displayCategory} • ${formatDate(expense.created_at)}</div>
         </div>
         <div class="expense-detail-amount">${formatCurrency(Number(expense.total_amount))}</div>
       </div>
