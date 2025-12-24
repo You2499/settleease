@@ -199,7 +199,7 @@ export default function ExportExpenseTab({
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${reportName || 'SettleEase Expense Report'}</title>
-  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -208,7 +208,7 @@ export default function ExportExpenseTab({
     }
     
     body {
-      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       font-size: 11px;
       line-height: 1.5;
       color: #1a1a2e;
@@ -480,7 +480,7 @@ export default function ExportExpenseTab({
       font-weight: 600;
       color: #388E3C;
       text-align: right;
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
     }
     
     .activity-table .settlement-amount {
@@ -540,7 +540,7 @@ export default function ExportExpenseTab({
       font-size: 20px;
       font-weight: 700;
       color: #388E3C;
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
     }
     
     .expense-subsection {
@@ -589,7 +589,7 @@ export default function ExportExpenseTab({
     }
     
     .data-value.money {
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
       color: #388E3C;
     }
     
@@ -632,7 +632,7 @@ export default function ExportExpenseTab({
     
     .split-table .amount-col {
       text-align: right;
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
     }
     
     .net-effect-grid {
@@ -655,7 +655,7 @@ export default function ExportExpenseTab({
     }
     
     .net-effect-item .amount {
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
       font-size: 13px;
     }
     
@@ -700,7 +700,7 @@ export default function ExportExpenseTab({
       font-size: 18px;
       font-weight: 700;
       color: #388E3C;
-      font-family: 'Geist Mono', monospace;
+      font-family: 'Google Sans', monospace;
     }
     
     .settlement-meta {
@@ -1271,7 +1271,7 @@ export default function ExportExpenseTab({
     @page { margin: 0.4in; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+      font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
       font-size: 12px; 
       line-height: 1.5; 
       color: #1f2937; 

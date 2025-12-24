@@ -255,10 +255,10 @@ export function generatePersonalReportPDF({
 <head>
 <meta charset="UTF-8">
 <title>${reportName || `${personName}'s Personal Report`}</title>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #1a1a2e; background: #fff; padding: 40px; }
+body { font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #1a1a2e; background: #fff; padding: 40px; }
 @page { margin: 0.4in; size: A4; }
 @media print {
   html, body { margin: 0!important; padding: 0!important; -webkit-print-color-adjust: exact!important; print-color-adjust: exact!important; }
@@ -286,7 +286,7 @@ body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 .summary-card.accent { background: linear-gradient(135deg, #e0f7fa, #b2ebf2); border-color: #80deea; }
 .summary-card .icon { margin-bottom: 8px; color: #388E3C; }
 .summary-card.accent .icon { color: #00796b; }
-.summary-card .value { font-size: 22px; font-weight: 700; color: #388E3C; letter-spacing: -0.5px; font-family: 'Geist Mono', monospace; }
+.summary-card .value { font-size: 22px; font-weight: 700; color: #388E3C; letter-spacing: -0.5px; font-family: 'Google Sans', monospace; }
 .summary-card.accent .value { color: #00796b; }
 .summary-card .label { font-size: 11px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
 /* Section Headers */
@@ -300,7 +300,7 @@ body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 .expense-detail-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e0e0e0; }
 .expense-detail-title { font-size: 16px; font-weight: 600; color: #1a1a2e; }
 .expense-detail-meta { font-size: 11px; color: #666; margin-top: 4px; }
-.expense-detail-amount { font-size: 20px; font-weight: 700; color: #388E3C; font-family: 'Geist Mono', monospace; }
+.expense-detail-amount { font-size: 20px; font-weight: 700; color: #388E3C; font-family: 'Google Sans', monospace; }
 .expense-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 16px; }
 .expense-subsection { margin-bottom: 14px; }
 .expense-subsection-title { font-size: 11px; font-weight: 600; text-transform: uppercase; color: #666; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
@@ -308,20 +308,20 @@ body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 .split-table { width: 100%; border-collapse: collapse; }
 .split-table th, .split-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #e0e0e0; }
 .split-table th { background: #f5f5f5; font-weight: 600; font-size: 10px; text-transform: uppercase; color: #666; }
-.split-table .amount-col { text-align: right; font-family: 'Geist Mono', monospace; }
+.split-table .amount-col { text-align: right; font-family: 'Google Sans', monospace; }
 .split-table .highlight-you { background: #e8f5e9; }
 .you-badge { font-size: 9px; color: #388E3C; font-weight: 600; }
 .no-data { color: #999; font-style: italic; text-align: center; }
 .your-summary { display: flex; gap: 24px; margin-bottom: 12px; }
 .your-summary-item { display: flex; flex-direction: column; }
 .your-summary-item .label { font-size: 10px; color: #666; margin-bottom: 2px; }
-.your-summary-item .value { font-size: 14px; font-weight: 600; font-family: 'Geist Mono', monospace; }
+.your-summary-item .value { font-size: 14px; font-weight: 600; font-family: 'Google Sans', monospace; }
 .your-summary-item .value.positive { color: #388E3C; }
 .your-summary-item .value.negative { color: #d32f2f; }
 .net-effect-grid { display: flex; flex-wrap: wrap; gap: 10px; }
 .net-effect-item { display: flex; flex-direction: column; padding: 8px 12px; background: white; border: 1px solid #e0e0e0; border-radius: 6px; min-width: 100px; }
 .net-effect-item .name { font-size: 11px; font-weight: 600; margin-bottom: 2px; }
-.net-effect-item .amount { font-size: 13px; font-weight: 700; font-family: 'Geist Mono', monospace; }
+.net-effect-item .amount { font-size: 13px; font-weight: 700; font-family: 'Google Sans', monospace; }
 .net-effect-item .amount.positive { color: #388E3C; }
 .net-effect-item .amount.negative { color: #d32f2f; }
 .net-effect-item .label { font-size: 9px; color: #888; margin-top: 1px; }
@@ -332,7 +332,7 @@ body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 .settlement-card.incoming { border-color: #c8e6c9; background: #e8f5e9; }
 .settlement-parties { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 12px; }
 .settlement-arrow { color: #888; font-size: 14px; }
-.settlement-amount { font-size: 15px; font-weight: 700; font-family: 'Geist Mono', monospace; text-align: right; }
+.settlement-amount { font-size: 15px; font-weight: 700; font-family: 'Google Sans', monospace; text-align: right; }
 .settlement-amount.positive { color: #388E3C; }
 .settlement-amount.negative { color: #d32f2f; }
 .settlement-meta { font-size: 10px; color: #666; text-align: right; margin-top: 2px; }
@@ -342,7 +342,7 @@ body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Robo
 .balance-card.positive { border-color: #c8e6c9; background: #f1f8e9; }
 .balance-card.negative { border-color: #ffcdd2; background: #ffebee; }
 .balance-name { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
-.balance-amount { font-size: 18px; font-weight: 700; font-family: 'Geist Mono', monospace; margin-bottom: 4px; }
+.balance-amount { font-size: 18px; font-weight: 700; font-family: 'Google Sans', monospace; margin-bottom: 4px; }
 .balance-card.positive .balance-amount { color: #388E3C; }
 .balance-card.negative .balance-amount { color: #d32f2f; }
 .balance-label { font-size: 10px; text-transform: uppercase; color: #666; letter-spacing: 0.5px; }

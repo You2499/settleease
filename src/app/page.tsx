@@ -33,7 +33,6 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
-import { useFontSync } from '@/hooks/useFontSync';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -132,9 +131,6 @@ function SettleEasePageContent() {
 
   // Sync theme with database and enable real-time updates
   useThemeSync(db, currentUser?.id, userProfile);
-
-  // Sync font with database and enable real-time updates
-  const { currentFont, setFont } = useFontSync(db, currentUser?.id, userProfile);
 
   // Helper function to detect Google OAuth users and parse their names
   const getGoogleUserInfo = useCallback(() => {
@@ -566,8 +562,6 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
-          currentFont={currentFont}
-          setFont={setFont}
         />
         <SidebarInset>
           <div className="flex flex-col h-full">

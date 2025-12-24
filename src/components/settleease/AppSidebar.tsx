@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, Type, Check
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -26,7 +26,7 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
-import type { ActiveView, UserRole, FontPreference } from '@/lib/settleease';
+import type { ActiveView, UserRole } from '@/lib/settleease';
 
 // Google Gemini SVG Icon
 const GeminiIcon = () => (
@@ -58,11 +58,9 @@ interface AppSidebarProps {
   currentUserName?: string;
   userRole: UserRole;
   onEditName?: () => void;
-  currentFont?: FontPreference;
-  setFont?: (font: FontPreference) => void;
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, currentFont = 'geist', setFont }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -270,28 +268,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     <DropdownMenuItem onClick={() => setTheme("dark")}>
                       <Moon className="mr-2 h-4 w-4" /> Dark
                     </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Font</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setFont?.('google-sans')}>
-                      <Type className="mr-2 h-4 w-4" />
-                      Google Sans
-                      {currentFont === 'google-sans' && <Check className="ml-auto h-4 w-4" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFont?.('system')}>
-                      <Type className="mr-2 h-4 w-4" />
-                      System Font
-                      {currentFont === 'system' && <Check className="ml-auto h-4 w-4" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFont?.('inter')}>
-                      <Type className="mr-2 h-4 w-4" />
-                      Inter
-                      {currentFont === 'inter' && <Check className="ml-auto h-4 w-4" />}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFont?.('geist')}>
-                      <Type className="mr-2 h-4 w-4" />
-                      Geist
-                      {currentFont === 'geist' && <Check className="ml-auto h-4 w-4" />}
-                    </DropdownMenuItem>
+
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onSelect={(e) => {
