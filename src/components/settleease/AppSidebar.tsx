@@ -272,10 +272,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuLabel>Font</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setFont?.('geist')}>
+                    <DropdownMenuItem onClick={() => setFont?.('google-sans')}>
                       <Type className="mr-2 h-4 w-4" />
-                      Geist
-                      {currentFont === 'geist' && <Check className="ml-auto h-4 w-4" />}
+                      Google Sans
+                      {currentFont === 'google-sans' && <Check className="ml-auto h-4 w-4" />}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => setFont?.('system')}>
                       <Type className="mr-2 h-4 w-4" />
@@ -287,10 +287,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                       Inter
                       {currentFont === 'inter' && <Check className="ml-auto h-4 w-4" />}
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setFont?.('google-sans')}>
+                    <DropdownMenuItem onClick={() => setFont?.('geist')}>
                       <Type className="mr-2 h-4 w-4" />
-                      Google Sans
-                      {currentFont === 'google-sans' && <Check className="ml-auto h-4 w-4" />}
+                      Geist
+                      {currentFont === 'geist' && <Check className="ml-auto h-4 w-4" />}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

@@ -2,6 +2,23 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Sans Variable Font - Local Files */
+@font-face {
+  font-family: 'Google Sans';
+  src: url('/fonts/GoogleSans-VariableFont_GRAD,opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Google Sans';
+  src: url('/fonts/GoogleSans-Italic-VariableFont_GRAD,opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
 /* Removed body { font-family: Arial, Helvetica, sans-serif; } to allow Tailwind and layout.tsx to manage Inter font */
 
 @layer base {

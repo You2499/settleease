@@ -12,7 +12,7 @@ export function useFontSync(
     userId: string | undefined,
     userProfile: any
 ) {
-    const [currentFont, setCurrentFont] = useState<FontPreference>('geist');
+    const [currentFont, setCurrentFont] = useState<FontPreference>('google-sans');
     const [isInitialized, setIsInitialized] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const isUpdatingFromRemote = useRef(false);
@@ -29,7 +29,7 @@ export function useFontSync(
             setIsInitialized(false);
             lastSyncedFont.current = null;
             isUpdatingFromRemote.current = false;
-            setCurrentFont('geist');
+            setCurrentFont('google-sans');
         }
     }, [userId]);
 
@@ -92,13 +92,13 @@ export function useFontSync(
                 isUpdatingFromRemote.current = false;
             }, 200);
         } else if (!dbFont) {
-            // If no font in database, default to geist and save it
-            console.log('🔤 No font in database, defaulting to geist');
+            // If no font in database, default to google-sans and save it
+            console.log('🔤 No font in database, defaulting to google-sans');
             isUpdatingFromRemote.current = true;
-            lastSyncedFont.current = 'geist';
-            setCurrentFont('geist');
-            applyFontToDocument('geist');
-            updateFontInDatabase('geist');
+            lastSyncedFont.current = 'google-sans';
+            setCurrentFont('google-sans');
+            applyFontToDocument('google-sans');
+            updateFontInDatabase('google-sans');
             setTimeout(() => {
                 isUpdatingFromRemote.current = false;
             }, 200);
