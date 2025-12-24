@@ -99,6 +99,27 @@
   html::-webkit-scrollbar {
     display: none;
   }
+
+  /* Font Preference Classes - Applied to html element */
+  html.font-geist,
+  html.font-geist body {
+    font-family: var(--font-geist-sans), 'Geist Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html.font-system,
+  html.font-system body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html.font-inter,
+  html.font-inter body {
+    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  html.font-google-sans,
+  html.font-google-sans body {
+    font-family: 'Google Sans', 'Product Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
 }
 
 /* Toast Progress Bar Styles */

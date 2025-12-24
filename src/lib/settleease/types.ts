@@ -55,12 +55,17 @@ export interface PayerInputRow {
 // User Roles
 export type UserRole = 'admin' | 'user' | null;
 
+// Font Preferences
+export type FontPreference = 'geist' | 'system' | 'inter' | 'google-sans';
+
 export interface UserProfile {
   id: string; // profile ID
   user_id: string; // maps to auth.users.id
   role: UserRole;
   first_name?: string | null;
   last_name?: string | null;
+  font_preference?: FontPreference;
+  theme_preference?: string;
   created_at?: string;
   updated_at?: string;
 }
