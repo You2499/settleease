@@ -79,8 +79,13 @@ export default function PerPersonSettlementDetails({
     let totalSettledAsDebtor = 0;
     let totalSettledAsCreditor = 0;
 
-    // Calculate totals from expenses
+    // Calculate totals from expenses (excluding those marked as exclude_from_settlement)
     allExpenses.forEach((expense) => {
+      // Skip expenses excluded from settlement calculations (same as calculateNetBalances)
+      if (expense.exclude_from_settlement) {
+        return;
+      }
+
       // What they paid
       expense.paid_by?.forEach((payment) => {
         if (payment.personId === selectedPerson.id) {
@@ -204,11 +209,9 @@ export default function PerPersonSettlementDetails({
       });
     }
     setRelevantExpenses(relevant);
-    const title = `Expenses related to ${
-      type === "debt" ? peopleMap[debtorId] : peopleMap[creditorId]
-    }'s payment to ${
-      type === "debt" ? peopleMap[creditorId] : peopleMap[debtorId]
-    }`;
+    const title = `Expenses related to ${type === "debt" ? peopleMap[debtorId] : peopleMap[creditorId]
+      }'s payment to ${type === "debt" ? peopleMap[creditorId] : peopleMap[debtorId]
+      }`;
     setModalTitle(title);
     setPreservedModalTitle(title);
     setIsRelevantExpensesModalOpen(true);

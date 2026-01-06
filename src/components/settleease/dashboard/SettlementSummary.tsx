@@ -151,8 +151,13 @@ export default function SettlementSummary({
       };
     });
 
-    // Calculate from expenses
+    // Calculate from expenses (excluding those marked as exclude_from_settlement)
     allExpenses.forEach((expense) => {
+      // Skip expenses excluded from settlement calculations (same as calculateNetBalances)
+      if (expense.exclude_from_settlement) {
+        return;
+      }
+
       // What they paid
       if (Array.isArray(expense.paid_by)) {
         expense.paid_by.forEach((payment) => {

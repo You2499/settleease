@@ -501,12 +501,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           }
 
           // Check if this is an invalid credentials error and if the email is associated with a Google account
-          if (signInError.code === 'invalid_login_credentials' || 
-              (signInError.message && signInError.message.toLowerCase().includes('invalid') && signInError.message.toLowerCase().includes('credentials'))) {
-            
+          if (signInError.code === 'invalid_login_credentials' ||
+            (signInError.message && signInError.message.toLowerCase().includes('invalid') && signInError.message.toLowerCase().includes('credentials'))) {
+
             // Check if this email is associated with a Google account
             const isGoogleAccount = await checkIfGoogleAccount(email);
-            
+
             if (isGoogleAccount) {
               toast({
                 title: "Google Account Detected",
@@ -618,7 +618,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           try {
             await db
               .from('user_profiles')
-              .update({ 
+              .update({
                 last_sign_in_at: new Date().toISOString(),
                 should_show_welcome_toast: true
               })
@@ -626,7 +626,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           } catch (err) {
             console.error('Error updating sign-in flags:', err);
           }
-          
+
           setHasAuthError(false);
           setAuthErrorType('');
           if (onAuthSuccess) onAuthSuccess(data.user);
@@ -666,7 +666,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const handleGoogleOAuthConfirm = async () => {
     console.log("Google OAuth: Starting authentication process");
     setIsGoogleLoading(true);
-    
+
     // Add a small delay to ensure the loading state is rendered before redirect
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
@@ -682,14 +682,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           queryParams: getGoogleOAuthParams(isLoginView),
         },
       });
-      
+
       if (googleError) {
         console.error("Google OAuth: Error from signInWithOAuth:", googleError);
         throw googleError;
       }
 
       console.log("Google OAuth: signInWithOAuth successful, user should be redirected");
-      
+
       // Set a timeout to reset states if OAuth doesn't complete
       // This handles cases where user closes the OAuth popup or navigates back
       setTimeout(() => {
@@ -728,7 +728,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
                   <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
                     Sign in to continue simplifying your group expenses.
                   </p>
-                  
+
                   {/* Mobile Security Badge - Only show on mobile for login view */}
                   <div className="md:hidden mt-6 space-y-2">
                     <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
@@ -958,6 +958,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           <span className="text-xs text-muted-foreground font-medium">
             Protected by <span className="text-primary font-semibold">SettleSecure</span>
           </span>
+          <span className="text-muted-foreground/50">•</span>
+          <a href="/test" className="text-xs text-primary hover:underline font-medium">
+            Test Lab
+          </a>
         </div>
         <p className="text-xs text-muted-foreground/70 text-center">SettleEase v{packageJson.version}</p>
       </div>
