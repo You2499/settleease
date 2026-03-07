@@ -154,7 +154,8 @@ export default function StatusTab({
       const allHealthy = data.checks?.geminiApiKey &&
         data.checks?.supabaseUrl &&
         data.checks?.supabaseServiceKey &&
-        data.checks?.promptFetch;
+        data.checks?.promptFetch &&
+        data.checks?.promptHasPlaceholder;
 
       newServices.push({
         name: 'AI Summarization API',
@@ -170,6 +171,7 @@ export default function StatusTab({
             <div className="flex items-center gap-2">
               <span className={data.checks?.geminiApiKey ? "text-green-500" : "text-red-500"}>●</span> Gemini API
               <span className={data.checks?.promptFetch ? "text-green-500" : "text-red-500"}>●</span> Prompt v{data.checks?.promptVersion || '?'}
+              <span className={data.checks?.promptHasPlaceholder ? "text-green-500" : "text-red-500"}>●</span> Prompt Placeholder
             </div>
           </div>
         )

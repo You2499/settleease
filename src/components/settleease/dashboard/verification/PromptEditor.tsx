@@ -21,6 +21,7 @@ import { toast } from "@/hooks/use-toast";
 import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import { AI_PROMPTS_TABLE } from '@/lib/settleease/constants';
 import type { AIPrompt } from '@/lib/settleease/types';
+import { DEFAULT_PRODUCTION_SUMMARY_PROMPT } from '@/lib/settleease/aiSummarization';
 
 interface PromptEditorProps {
   db?: SupabaseClient;
@@ -195,6 +196,13 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
     setShowDeleteConfirm(true);
   };
 
+  const handleLoadProductionTemplate = () => {
+    setEditedPromptText(DEFAULT_PRODUCTION_SUMMARY_PROMPT);
+    if (!versionDescription.trim()) {
+      setVersionDescription("Switch to production-grade neutral summary template with strict output contract");
+    }
+  };
+
   const executeDeleteSummaries = async () => {
     if (!db) return;
 
@@ -275,9 +283,20 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
         <CardContent className="px-4 sm:px-6 py-4 sm:py-6 space-y-4">
           {/* Prompt Text Editor */}
           <div className="space-y-2">
-            <Label htmlFor="prompt-text" className="text-sm font-medium">
-              Prompt Text
-            </Label>
+            <div className="flex items-center justify-between gap-3">
+              <Label htmlFor="prompt-text" className="text-sm font-medium">
+                Prompt Text
+              </Label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleLoadProductionTemplate}
+                className="h-8 text-xs"
+              >
+                Use Production Template
+              </Button>
+            </div>
             <Textarea
               id="prompt-text"
               value={editedPromptText}

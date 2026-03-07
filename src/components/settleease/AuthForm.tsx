@@ -958,10 +958,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           <span className="text-xs text-muted-foreground font-medium">
             Protected by <span className="text-primary font-semibold">SettleSecure</span>
           </span>
-          <span className="text-muted-foreground/50">•</span>
-          <a href="/test" className="text-xs text-primary hover:underline font-medium">
-            Test Lab
-          </a>
         </div>
         <p className="text-xs text-muted-foreground/70 text-center">SettleEase v{packageJson.version}</p>
       </div>
@@ -977,4 +973,3 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     </>
   );
 }
-

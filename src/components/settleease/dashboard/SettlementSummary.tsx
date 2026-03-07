@@ -36,6 +36,10 @@ import {
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeJsonHash } from "@/lib/settleease/hashUtils";
 import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
+import {
+  buildSettlementSummaryPayload,
+  type PersonBalanceSnapshot,
+} from "@/lib/settleease/summaryPayload";
 import AISummaryTooltip from "./AISummaryTooltip";
 import {
   Dialog,
@@ -107,6 +111,7 @@ export default function SettlementSummary({
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
   const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
   const [summaryHash, setSummaryHash] = useState<string>("");
+  const [summaryPromptVersion, setSummaryPromptVersion] = useState<number | undefined>(undefined);
   const [isComputingHash, setIsComputingHash] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -129,16 +134,7 @@ export default function SettlementSummary({
 
   // Calculate person balances using the same logic as DashboardView
   const personBalances = useMemo(() => {
-    const balances: Record<
-      string,
-      {
-        totalPaid: number;
-        totalOwed: number;
-        settledAsDebtor: number;
-        settledAsCreditor: number;
-        netBalance: number;
-      }
-    > = {};
+    const balances: Record<string, PersonBalanceSnapshot> = {};
 
     // Initialize balances for all people
     people.forEach((person) => {
@@ -239,126 +235,18 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
-  const generateSummaryData = () => {
-    const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
-
-    // Filter active manual overrides
-    const activeManualOverrides = manualOverrides.filter(override => override.is_active);
-
-    // Filter expenses to exclude those marked as exclude_from_settlement
-    const includedExpenses = allExpenses.filter(expense => !expense.exclude_from_settlement);
-
-    // Calculate category totals from expenses (NOT from category definitions)
-    const categoryTotals: Record<string, number> = {};
-    includedExpenses.forEach(expense => {
-      if (expense.split_method === 'itemwise' && expense.items && expense.items.length > 0) {
-        expense.items.forEach(item => {
-          const categoryName = item.categoryName || expense.category || 'Uncategorized';
-          categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + (Number(item.price) || 0);
-        });
-      } else {
-        const categoryName = expense.category || 'Uncategorized';
-        categoryTotals[categoryName] = (categoryTotals[categoryName] || 0) + expense.total_amount;
-      }
+  const generateSummaryData = () =>
+    buildSettlementSummaryPayload({
+      people,
+      peopleMap,
+      allExpenses,
+      categories,
+      pairwiseTransactions,
+      simplifiedTransactions,
+      settlementPayments,
+      manualOverrides,
+      personBalances,
     });
-
-    // Create clean category data with actual totals
-    const categoriesWithTotals = categories.map(cat => ({
-      name: cat.name,
-      icon_name: cat.icon_name,
-      total_spent: categoryTotals[cat.name] || 0,
-    }));
-
-    // Add uncategorized if it exists
-    if (categoryTotals['Uncategorized']) {
-      categoriesWithTotals.push({
-        name: 'Uncategorized',
-        icon_name: 'HelpCircle',
-        total_spent: categoryTotals['Uncategorized'],
-      });
-    }
-
-    // Create clean people data (names only, no IDs in the summary)
-    const cleanPeople = people.map(p => ({ name: p.name }));
-
-    // Create a map of ID to Name for easy lookup
-    const idToName = (id: string) => peopleMap[id] || "Unknown";
-
-    // Hydrate person balances with names
-    const balancesWithNames: Record<string, any> = {};
-    Object.entries(personBalances).forEach(([id, balance]) => {
-      balancesWithNames[idToName(id)] = balance;
-    });
-
-    // Hydrate transactions with names
-    const pairwiseWithNames = pairwiseTransactions.map(t => ({
-      ...t,
-      from: idToName(t.from),
-      to: idToName(t.to),
-    }));
-
-    const simplifiedWithNames = simplifiedTransactions.map(t => ({
-      ...t,
-      from: idToName(t.from),
-      to: idToName(t.to),
-    }));
-
-    // Hydrate settlement payments
-    const paymentsWithNames = settlementPayments.map(p => ({
-      ...p,
-      debtor: idToName(p.debtor_id),
-      creditor: idToName(p.creditor_id),
-      // Remove raw IDs to avoid confusion
-      debtor_id: undefined,
-      creditor_id: undefined,
-    }));
-
-    // Hydrate manual overrides
-    const overridesWithNames = activeManualOverrides.map(o => ({
-      ...o,
-      debtor: idToName(o.debtor_id),
-      creditor: idToName(o.creditor_id),
-      debtor_id: undefined,
-      creditor_id: undefined,
-    }));
-
-    // Hydrate expenses
-    const expensesWithNames = includedExpenses.map(e => ({
-      ...e,
-      paid_by: Array.isArray(e.paid_by) ? e.paid_by.map(p => ({ ...p, person: idToName(p.personId), personId: undefined })) : e.paid_by,
-      shares: Array.isArray(e.shares) ? e.shares.map(s => ({ ...s, person: idToName(s.personId), personId: undefined })) : e.shares,
-      celebration_contribution: e.celebration_contribution ? { ...e.celebration_contribution, person: idToName(e.celebration_contribution.personId), personId: undefined } : undefined,
-    }));
-
-    return {
-      // NOTE: No timestamp or user-specific UI state here to ensure ALL users get the same hash for the same data
-      // This enables cross-user caching of AI summaries
-      // IMPORTANT: promptVersion is fetched from database and added dynamically before hashing
-      counts: {
-        people: people.length,
-        expenses: includedExpenses.length,
-        excludedExpenses: allExpenses.length - includedExpenses.length,
-        settlementPayments: settlementPayments.length,
-        pairwiseTransactions: pairwiseTransactions.length,
-        simplifiedTransactions: simplifiedTransactions.length,
-        activeManualOverrides: activeManualOverrides.length,
-      },
-      overviewDescriptions: {
-        simplifyOn: "Minimum transactions required to settle all debts.",
-        simplifyOff: "Detailed pairwise debts reflecting direct expense involvements and payments.",
-      },
-      personBalances: balancesWithNames,
-      transactions: {
-        pairwise: pairwiseWithNames,
-        simplified: simplifiedWithNames,
-      },
-      categories: categoriesWithTotals,
-      settlementPayments: paymentsWithNames,
-      manualOverrides: overridesWithNames,
-      expenses: expensesWithNames,
-      people: cleanPeople,
-    };
-  };
 
   const handleSummarise = async () => {
     if (isComputingHash || !db) return;
@@ -398,6 +286,7 @@ export default function SettlementSummary({
 
       setSummaryJsonData(summaryData);
       setSummaryHash(hash);
+      setSummaryPromptVersion(promptVersion);
       setIsSummaryDialogOpen(true);
     } catch (error: any) {
       console.error("❌ Error computing hash:", error);
@@ -726,6 +615,7 @@ export default function SettlementSummary({
           onOpenChange={setIsSummaryDialogOpen}
           jsonData={summaryJsonData}
           hash={summaryHash}
+          promptVersion={summaryPromptVersion}
           db={db}
           currentUserId={currentUserId || ""}
           triggerRef={summaryButtonRef}

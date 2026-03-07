@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
+import { injectSummaryJsonIntoPrompt } from '@/lib/settleease/aiSummarization';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest) {
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
-    // Replace {{JSON_DATA}} placeholder with actual data
-    const prompt = promptData.prompt_text.replace('{{JSON_DATA}}', JSON.stringify(jsonData, null, 2));
+    // Replace placeholder with actual data and fail fast for invalid prompt templates.
+    const prompt = injectSummaryJsonIntoPrompt(promptData.prompt_text, jsonData);
 
     // Try models in fallback order until one succeeds
     let result;
@@ -127,7 +128,11 @@ export async function POST(request: NextRequest) {
             }
           }
           console.log(`✅ Streaming complete. Sent ${chunkCount} chunks`);
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true, hash, model: successfulModel })}\n\n`));
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ done: true, hash, model: successfulModel, promptVersion })}\n\n`
+            )
+          );
           controller.close();
         } catch (error: any) {
           console.error('❌ Streaming error:', error);
@@ -163,6 +168,8 @@ export async function POST(request: NextRequest) {
       userMessage = 'AI service configuration error. Please contact administrator.';
     } else if (error.message?.includes('All AI models')) {
       userMessage = error.message; // Use the detailed message from fallback
+    } else if (error.message?.includes('{{JSON_DATA}}')) {
+      userMessage = 'AI prompt configuration error (missing JSON placeholder). Please contact administrator.';
     }
 
     return new Response(
@@ -177,4 +184,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

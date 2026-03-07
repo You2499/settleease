@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildSummarizeRequestPayload } from "@/lib/settleease/aiSummarization";
 
 // Gemini Sparkle Icon Component
 const GeminiSparkle = ({ className = "h-5 w-5" }: { className?: string }) => (
@@ -121,6 +122,7 @@ interface AISummaryTooltipProps {
   onOpenChange: (open: boolean) => void;
   jsonData: any;
   hash: string;
+  promptVersion?: number;
   db?: SupabaseClient;
   currentUserId: string;
   triggerRef: React.RefObject<HTMLButtonElement>;
@@ -430,6 +432,7 @@ export default function AISummaryTooltip({
   onOpenChange,
   jsonData,
   hash,
+  promptVersion,
   db,
   currentUserId,
   triggerRef,
@@ -637,7 +640,9 @@ export default function AISummaryTooltip({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ jsonData, hash }),
+        body: JSON.stringify(
+          buildSummarizeRequestPayload(jsonData, hash, promptVersion)
+        ),
       });
 
       if (!response.ok) {
@@ -1035,4 +1040,3 @@ export default function AISummaryTooltip({
     </>
   );
 }
-

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { SUMMARY_PROMPT_PLACEHOLDER } from '@/lib/settleease/aiSummarization';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -10,6 +11,7 @@ export async function GET(request: NextRequest) {
     supabaseUrl: !!SUPABASE_URL,
     supabaseServiceKey: !!SUPABASE_SERVICE_KEY,
     promptFetch: false,
+    promptHasPlaceholder: false,
     promptVersion: null as number | null,
   };
 
@@ -18,7 +20,7 @@ export async function GET(request: NextRequest) {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
     const { data, error } = await supabase
       .from('ai_prompts')
-      .select('version')
+      .select('version, prompt_text')
       .eq('name', 'trump-summarizer')
       .eq('is_active', true)
       .single();
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
     if (!error && data) {
       checks.promptFetch = true;
       checks.promptVersion = data.version;
+      checks.promptHasPlaceholder = data.prompt_text?.includes(SUMMARY_PROMPT_PLACEHOLDER) || false;
     }
   } catch (error) {
     // Prompt fetch failed
