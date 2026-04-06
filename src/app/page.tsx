@@ -25,6 +25,7 @@ import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
+import BetaDashboardView from '@/components/settleease/BetaDashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 
@@ -33,6 +34,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
+import { useBetaDashboard } from '@/hooks/useBetaDashboard';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -56,6 +58,9 @@ function SettleEasePageContent() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
+
+  // Beta design hook
+  const { isBeta, toggleBeta } = useBetaDashboard();
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -562,6 +567,8 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
+          isBeta={isBeta}
+          onToggleBeta={toggleBeta}
         />
         <SidebarInset>
           <div className="flex flex-col h-full">
@@ -582,25 +589,47 @@ function SettleEasePageContent() {
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <DashboardView
-                      expenses={expenses}
-                      people={people}
-                      peopleMap={peopleMap}
-                      dynamicCategories={categories}
-                      getCategoryIconFromName={getCategoryIconFromName}
-                      settlementPayments={settlementPayments}
-                      manualOverrides={manualOverrides}
-                      db={db}
-                      currentUserId={currentUser?.id || ''}
-                      onActionComplete={handleActionComplete}
-                      userRole={userRole}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingCategories={isLoadingCategories}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isLoadingOverrides={isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                    />
+                    {isBeta ? (
+                      <BetaDashboardView
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        dynamicCategories={categories}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                        settlementPayments={settlementPayments}
+                        manualOverrides={manualOverrides}
+                        db={db}
+                        currentUserId={currentUser?.id || ''}
+                        onActionComplete={handleActionComplete}
+                        userRole={userRole}
+                        isLoadingPeople={isLoadingPeople}
+                        isLoadingExpenses={isLoadingExpenses}
+                        isLoadingCategories={isLoadingCategories}
+                        isLoadingSettlements={isLoadingSettlements}
+                        isLoadingOverrides={isLoadingOverrides}
+                        isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      />
+                    ) : (
+                      <DashboardView
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        dynamicCategories={categories}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                        settlementPayments={settlementPayments}
+                        manualOverrides={manualOverrides}
+                        db={db}
+                        currentUserId={currentUser?.id || ''}
+                        onActionComplete={handleActionComplete}
+                        userRole={userRole}
+                        isLoadingPeople={isLoadingPeople}
+                        isLoadingExpenses={isLoadingExpenses}
+                        isLoadingCategories={isLoadingCategories}
+                        isLoadingSettlements={isLoadingSettlements}
+                        isLoadingOverrides={isLoadingOverrides}
+                        isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      />
+                    )}
                   </SettleEaseErrorBoundary>
                 )}
                 {activeView === 'analytics' && (

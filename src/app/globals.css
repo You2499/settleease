@@ -138,6 +138,114 @@
     --sidebar-ring: 180 100% 45%;
     /* Consistent with main ring color - Lighter */
   }
+
+  /* ========================================
+     BETA DESIGN — ElevenLabs Design System
+     Light Mode Overrides
+     ======================================== */
+  .beta-design {
+    --background: 0 0% 100%;
+    /* Pure white canvas */
+    --foreground: 0 0% 0%;
+    /* Pure black text */
+    --card: 0 0% 100%;
+    /* White cards */
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    /* Black primary — buttons, links */
+    --primary-foreground: 0 0% 100%;
+    /* White on primary */
+    --secondary: 30 20% 96%;
+    /* Warm stone #f5f2ef */
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 96%;
+    /* Light gray #f5f5f5 */
+    --muted-foreground: 0 0% 31%;
+    /* Dark gray #4e4e4e */
+    --accent: 37 5% 47%;
+    /* Warm gray #777169 */
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 90%;
+    /* #e5e5e5 */
+    --input: 0 0% 93%;
+    /* Light input bg */
+    --ring: 213 60% 78%;
+    /* Blue focus ring */
+    --radius: 1rem;
+    /* Generous card radius */
+    --chart-1: 0 0% 0%;
+    --chart-2: 37 5% 47%;
+    --chart-3: 0 0% 60%;
+    --chart-4: 30 20% 75%;
+    --chart-5: 0 0% 40%;
+    --sidebar-background: 0 0% 100%;
+    /* Pure white sidebar */
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    /* Black active item*/
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 30 20% 96%;
+    /* Warm stone hover */
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 92%;
+    /* Subtle border */
+    --sidebar-ring: 213 60% 78%;
+  }
+
+  /* ========================================
+     BETA DESIGN — ElevenLabs Design System
+     Dark Mode Overrides (Warm-Dark)
+     ======================================== */
+  .dark.beta-design {
+    --background: 30 5% 10%;
+    /* Warm near-black */
+    --foreground: 30 10% 92%;
+    /* Warm off-white */
+    --card: 30 4% 14%;
+    /* Warm dark card */
+    --card-foreground: 30 10% 92%;
+    --popover: 30 4% 14%;
+    --popover-foreground: 30 10% 92%;
+    --primary: 30 10% 92%;
+    /* Off-white primary */
+    --primary-foreground: 30 5% 10%;
+    /* Dark on primary */
+    --secondary: 30 5% 18%;
+    /* Warm dark stone */
+    --secondary-foreground: 30 10% 92%;
+    --muted: 30 3% 18%;
+    /* Warm muted */
+    --muted-foreground: 30 5% 55%;
+    /* Warm gray text */
+    --accent: 37 5% 50%;
+    /* Warm gray accent */
+    --accent-foreground: 30 10% 92%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 30 3% 22%;
+    /* Warm dark border */
+    --input: 30 3% 20%;
+    --ring: 213 60% 60%;
+    --radius: 1rem;
+    --chart-1: 30 10% 92%;
+    --chart-2: 37 5% 50%;
+    --chart-3: 30 5% 65%;
+    --chart-4: 30 20% 60%;
+    --chart-5: 30 5% 45%;
+    --sidebar-background: 30 5% 12%;
+    /* Warm dark sidebar */
+    --sidebar-foreground: 30 10% 92%;
+    --sidebar-primary: 30 10% 92%;
+    --sidebar-primary-foreground: 30 5% 10%;
+    --sidebar-accent: 30 5% 18%;
+    --sidebar-accent-foreground: 30 10% 92%;
+    --sidebar-border: 30 3% 20%;
+    --sidebar-ring: 213 60% 60%;
+  }
 }
 
 @layer base {
@@ -300,4 +408,147 @@
     max-width: 100% !important;
     box-sizing: border-box !important;
   }
+}
+
+/* ========================================
+   BETA DESIGN — ElevenLabs Refinements
+   Styles that CSS variables alone can't achieve
+   ======================================== */
+
+/* Multi-layer shadow system for cards */
+.beta-design .shadow-lg,
+.beta-design .shadow-xl {
+  box-shadow:
+    rgba(0,0,0,0.075) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.06) 0px 0px 0px 1px,
+    rgba(0,0,0,0.04) 0px 1px 2px,
+    rgba(0,0,0,0.04) 0px 2px 4px !important;
+}
+
+.beta-design .shadow-sm {
+  box-shadow:
+    rgba(0,0,0,0.075) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.04) 0px 1px 2px !important;
+}
+
+.dark.beta-design .shadow-lg,
+.dark.beta-design .shadow-xl {
+  box-shadow:
+    rgba(255,255,255,0.03) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.15) 0px 0px 0px 1px,
+    rgba(0,0,0,0.12) 0px 1px 2px,
+    rgba(0,0,0,0.1) 0px 2px 4px !important;
+}
+
+.dark.beta-design .shadow-sm {
+  box-shadow:
+    rgba(255,255,255,0.03) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.1) 0px 1px 2px !important;
+}
+
+/* Typography: whisper-thin display headings */
+.beta-design .text-xl,
+.beta-design .text-2xl,
+.beta-design .text-3xl {
+  font-weight: 300 !important;
+  letter-spacing: -0.02em;
+}
+
+/* Body text: positive letter-spacing */
+.beta-design .text-xs,
+.beta-design .text-sm,
+.beta-design .text-base {
+  letter-spacing: 0.01em;
+}
+
+/* Card hover: warm shadow lift */
+.beta-design .shadow-lg:hover,
+.beta-design .shadow-xl:hover {
+  box-shadow:
+    rgba(0,0,0,0.075) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.06) 0px 0px 0px 1px,
+    rgba(78,50,23,0.04) 0px 6px 16px !important;
+  transition: box-shadow 0.2s ease;
+}
+
+.dark.beta-design .shadow-lg:hover,
+.dark.beta-design .shadow-xl:hover {
+  box-shadow:
+    rgba(255,255,255,0.03) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.15) 0px 0px 0px 1px,
+    rgba(0,0,0,0.2) 0px 6px 16px !important;
+  transition: box-shadow 0.2s ease;
+}
+
+/* Pill-shaped primary buttons */
+.beta-design button.rounded-md,
+.beta-design [role="tab"] {
+  border-radius: 9999px !important;
+}
+
+/* Card radius enforcement */
+.beta-design .rounded-lg,
+.beta-design .rounded-xl {
+  border-radius: 1rem !important;
+}
+
+/* Mobile bottom nav treatment */
+.beta-design .fixed.bottom-0 {
+  box-shadow: rgba(0,0,0,0.04) 0px -2px 8px;
+}
+
+.dark.beta-design .fixed.bottom-0 {
+  box-shadow: rgba(0,0,0,0.2) 0px -2px 8px;
+}
+
+/* Mobile top header treatment */
+.beta-design header.sticky {
+  box-shadow: none !important;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.dark.beta-design header.sticky {
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+/* Badge: warm stone style */
+.beta-design .bg-green-50,
+.beta-design .bg-green-100 {
+  background-color: rgba(245, 242, 239, 0.8) !important;
+  color: #000 !important;
+}
+
+.dark.beta-design .bg-green-50,
+.dark.beta-design .bg-green-100 {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+  color: hsl(30 10% 92%) !important;
+}
+
+/* Green text → black/white in beta */
+.beta-design .text-green-600,
+.beta-design .text-green-700 {
+  color: hsl(var(--foreground)) !important;
+}
+
+.dark.beta-design .text-green-600,
+.dark.beta-design .text-green-700,
+.dark.beta-design .text-green-400 {
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Smooth transition for theme switching */
+.beta-design,
+.beta-design *,
+.dark.beta-design,
+.dark.beta-design * {
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Override gradient backgrounds in beta */
+.beta-design .bg-gradient-to-br {
+  background: hsl(var(--background)) !important;
+}
+
+.dark.beta-design .bg-gradient-to-br {
+  background: hsl(var(--background)) !important;
 }
