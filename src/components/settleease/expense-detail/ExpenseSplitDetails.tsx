@@ -18,9 +18,9 @@ import {
   Settings2,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
+import { groupExpenseItemsForDisplay } from "@/lib/settleease/itemwiseDisplay";
 import type {
   Expense,
-  ExpenseItemDetail,
   PersonAggregatedItemShares,
   Category,
 } from "@/lib/settleease/types";
@@ -71,6 +71,14 @@ export default function ExpenseSplitDetails({
     ids
       .slice()
       .sort((a, b) => (peopleMap[a] || "").localeCompare(peopleMap[b] || ""));
+
+  const groupedOriginalItems = useMemo(() => {
+    if (expense.split_method !== "itemwise" || !Array.isArray(expense.items)) {
+      return [];
+    }
+
+    return groupExpenseItemsForDisplay(expense.items);
+  }, [expense.split_method, expense.items]);
 
   return (
     <Card>
@@ -150,14 +158,12 @@ export default function ExpenseSplitDetails({
                   Original Items & Prices:
                 </h4>
                 <ul className="space-y-1 text-xs">
-                  {expense.items && (
+                  {groupedOriginalItems.length > 0 && (
                     <>
                       {(() => {
-                        const itemsByCategory: Record<
-                          string,
-                          ExpenseItemDetail[]
-                        > = {};
-                        expense.items!.forEach((item) => {
+                        const itemsByCategory: Record<string, typeof groupedOriginalItems> =
+                          {};
+                        groupedOriginalItems.forEach((item) => {
                           const cat = item.categoryName || "";
                           if (!itemsByCategory[cat]) itemsByCategory[cat] = [];
                           itemsByCategory[cat].push(item);
@@ -185,44 +191,78 @@ export default function ExpenseSplitDetails({
                             </li>
                           ) : null,
                           ...itemsByCategory[catName].map((item) => {
+                            const sharingDetails =
+                              item.sharingVariants.length === 1
+                                ? item.sharingVariants[0]
+                                : null;
+
                             return (
                               <li
-                                key={item.id}
+                                key={`${catName}-${item.name}-${item.unitPrice}-${item.firstSeenIndex}`}
                                 className="p-1.5 bg-secondary/20 rounded-sm"
                               >
-                                <div className="flex justify-between items-center">
-                                  <span
-                                    className="font-medium truncate flex items-center mr-2"
-                                    title={item.name}
-                                  >
-                                    {item.name}
-                                  </span>
-                                  <span className="font-semibold text-primary whitespace-nowrap">
-                                    {formatCurrency(Number(item.price))}
-                                  </span>
-                                </div>
-                                {(() => {
-                                  const sortedSharedBy = sortPersonIdsByName(
-                                    item.sharedBy
-                                  );
-                                  return (
-                                    <div
-                                      className="text-muted-foreground/80 pl-1.5 text-[10px] sm:text-xs truncate"
-                                      title={`Shared by: ${sortedSharedBy
-                                        .map(
-                                          (pid) => peopleMap[pid] || "Unknown"
-                                        )
-                                        .join(", ")}`}
+                                <div className="flex justify-between items-start gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <span
+                                      className="font-medium truncate block"
+                                      title={item.name}
                                     >
-                                      Shared by:{" "}
-                                      {sortedSharedBy
-                                        .map(
-                                          (pid) => peopleMap[pid] || "Unknown"
-                                        )
-                                        .join(", ")}
+                                      {item.name}
+                                    </span>
+                                    {item.quantity > 1 && (
+                                      <span className="text-[10px] sm:text-xs text-muted-foreground/80">
+                                        {formatCurrency(item.unitPrice)} each
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <div className="font-semibold text-primary whitespace-nowrap">
+                                      {formatCurrency(item.totalPrice)}
                                     </div>
-                                  );
-                                })()}
+                                    <div className="text-[10px] sm:text-xs text-muted-foreground/80 whitespace-nowrap">
+                                      Qty {item.quantity}
+                                    </div>
+                                  </div>
+                                </div>
+                                {sharingDetails ? (
+                                  <div
+                                    className="text-muted-foreground/80 pl-1.5 text-[10px] sm:text-xs"
+                                    title={`Shared by: ${sortPersonIdsByName(
+                                      sharingDetails.sharedBy
+                                    )
+                                      .map((pid) => peopleMap[pid] || "Unknown")
+                                      .join(", ")}`}
+                                  >
+                                    {item.quantity > 1
+                                      ? `${sharingDetails.quantity}x shared by `
+                                      : "Shared by: "}
+                                    {sortPersonIdsByName(sharingDetails.sharedBy)
+                                      .map((pid) => peopleMap[pid] || "Unknown")
+                                      .join(", ")}
+                                  </div>
+                                ) : (
+                                  <div className="text-muted-foreground/80 pl-1.5 text-[10px] sm:text-xs space-y-0.5">
+                                    {item.sharingVariants.map((variant) => (
+                                      <div
+                                        key={variant.sharedBy.join("::")}
+                                        title={`${variant.quantity}x shared by ${sortPersonIdsByName(
+                                          variant.sharedBy
+                                        )
+                                          .map(
+                                            (pid) => peopleMap[pid] || "Unknown"
+                                          )
+                                          .join(", ")}`}
+                                      >
+                                        {variant.quantity}x shared by{" "}
+                                        {sortPersonIdsByName(variant.sharedBy)
+                                          .map(
+                                            (pid) => peopleMap[pid] || "Unknown"
+                                          )
+                                          .join(", ")}
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </li>
                             );
                           }),
