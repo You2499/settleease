@@ -30,3 +30,20 @@ export function formatCurrencyForAxis(amount: number | string | undefined | null
   return `${currencySymbol}${numericAmount.toFixed(0)}`; // No decimals for amounts < 1000 on axis
 }
 
+export function coerceChartValueToNumber(value: unknown): number {
+  const candidate = Array.isArray(value) ? value[0] : value;
+  const numericValue =
+    typeof candidate === 'number'
+      ? candidate
+      : typeof candidate === 'string'
+      ? parseFloat(candidate)
+      : Number(candidate);
+
+  return Number.isFinite(numericValue) ? numericValue : 0;
+}
+
+export function coerceChartName(name: unknown): string {
+  if (typeof name === 'string') return name;
+  if (typeof name === 'number') return String(name);
+  return '';
+}

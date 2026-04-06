@@ -125,7 +125,7 @@ interface AISummaryTooltipProps {
   promptVersion?: number;
   db?: SupabaseClient;
   currentUserId: string;
-  triggerRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 // Enhanced markdown renderer with comprehensive formatting support
@@ -322,15 +322,17 @@ const renderMarkdown = (text: string) => {
         4: "text-xs font-semibold text-muted-foreground mb-1 mt-2 first:mt-0 uppercase tracking-wide"
       };
       
-      const HeaderTag = `h${Math.min(headerLevel, 4)}` as keyof JSX.IntrinsicElements;
+      const HeaderTag = `h${Math.min(headerLevel, 4)}` as "h1" | "h2" | "h3" | "h4";
       
       elements.push(
-        <HeaderTag 
-          key={lineIndex} 
-          className={headerClasses[headerLevel as keyof typeof headerClasses]}
-        >
-          {renderInlineMarkdown(headerText)}
-        </HeaderTag>
+        React.createElement(
+          HeaderTag,
+          {
+            key: lineIndex,
+            className: headerClasses[headerLevel as keyof typeof headerClasses],
+          },
+          renderInlineMarkdown(headerText)
+        )
       );
       return;
     }

@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Target } from 'lucide-react';
-import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
@@ -142,9 +142,9 @@ export default function AverageExpenseByCategory({
             <YAxis type="category" dataKey="category" width={90} tick={ANALYTICS_STYLES.axisTickSmall} />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
-                formatter={(value: number, _name: string, props: any) => [
-                formatCurrency(value),
-                `Average (${props.payload.count} expense${props.payload.count !== 1 ? 's' : ''})`
+                formatter={(value, _name, props: any) => [
+                formatCurrency(coerceChartValueToNumber(value)),
+                `Average (${props?.payload?.count ?? 0} expense${props?.payload?.count !== 1 ? 's' : ''})`
               ]} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="average" name="Average Amount" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={ANALYTICS_STYLES.barSizeCompact} />

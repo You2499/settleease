@@ -60,7 +60,7 @@ const SheetContent = React.forwardRef<
 >(({ side = "right", className, children, ...props }, ref) => {
   const findTitle = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === SheetTitle) return true
       if (node.props.children) return findTitle(node.props.children)
@@ -71,7 +71,7 @@ const SheetContent = React.forwardRef<
 
   const findDescription = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === SheetDescription) return true
       if (node.props.children) return findDescription(node.props.children)

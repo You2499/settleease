@@ -34,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
 >(({ className, children, ...props }, ref) => {
   const findTitle = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === AlertDialogTitle) return true
       if (node.props.children) return findTitle(node.props.children)
@@ -45,7 +45,7 @@ const AlertDialogContent = React.forwardRef<
 
   const findDescription = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === AlertDialogDescription) return true
       if (node.props.children) return findDescription(node.props.children)

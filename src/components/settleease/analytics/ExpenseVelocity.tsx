@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
+import { coerceChartName, coerceChartValueToNumber } from '@/lib/settleease/utils';
 
 interface ExpenseVelocityProps {
   expenses: Expense[];
@@ -247,11 +248,12 @@ export default function ExpenseVelocity({
             />
             <Tooltip
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value: number, name: string) => {
-                if (name === 'Average') {
-                  return [`${value.toFixed(1)} expenses/week`, 'Average'];
+              formatter={(value, name) => {
+                const numericValue = coerceChartValueToNumber(value);
+                if (coerceChartName(name) === 'Average') {
+                  return [`${numericValue.toFixed(1)} expenses/week`, 'Average'];
                 }
-                return [`${value} expense${value !== 1 ? 's' : ''}/week`, 'Velocity'];
+                return [`${numericValue} expense${numericValue !== 1 ? 's' : ''}/week`, 'Velocity'];
               }}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />

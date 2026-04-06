@@ -4,7 +4,7 @@ import React from 'react';
 import { PieChart as RechartsPieChart, Pie, Cell as RechartsCell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart as PieChartIconLucide } from 'lucide-react';
-import { formatCurrency } from '@/lib/settleease/utils';
+import { coerceChartValueToNumber, formatCurrency } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
@@ -39,7 +39,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
                 cy="50%"
                 outerRadius={90}
                 labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                 fontSize={12}
               >
                 {pieChartData.map((_, index) => (
@@ -48,7 +48,7 @@ export default function CategorySpendingPieChart({ pieChartData, analyticsViewMo
               </Pie>
               <RechartsTooltip 
                 {...ANALYTICS_STYLES.tooltip}
-                formatter={(value:number) => [formatCurrency(value), "Amount"]} />
+                formatter={(value) => [formatCurrency(coerceChartValueToNumber(value)), "Amount"]} />
               <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             </RechartsPieChart>
           </ResponsiveContainer>

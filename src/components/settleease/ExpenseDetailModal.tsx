@@ -69,8 +69,6 @@ export default function ExpenseDetailModal({
   showBackButton = false,
   onBack,
 }: ExpenseDetailModalProps) {
-  if (!expense) return null;
-
   const categoryObj = categories.find((cat) => cat.name === expense.category);
   const CategoryIcon = getCategoryIconFromName(categoryObj?.icon_name || "");
 

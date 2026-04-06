@@ -38,7 +38,7 @@ const DialogContent = React.forwardRef<
 >(({ className, children, hideCloseButton = false, ...props }, ref) => {
   const findTitle = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === DialogTitle) return true
       if (node.props.children) return findTitle(node.props.children)
@@ -49,7 +49,7 @@ const DialogContent = React.forwardRef<
 
   const findDescription = (nodes: React.ReactNode): boolean => {
     return React.Children.toArray(nodes).some(node => {
-      if (!React.isValidElement(node)) return false
+      if (!React.isValidElement<{ children?: React.ReactNode }>(node)) return false
       // @ts-ignore
       if (node.type === DialogDescription) return true
       if (node.props.children) return findDescription(node.props.children)

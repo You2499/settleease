@@ -1,8 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
-const chalk = require('chalk');
-
 const ICONS_DIR = path.join(__dirname, '../lucide-icons');
 const GITHUB_API_URL = 'https://api.github.com/repos/lucide-icons/lucide/git/trees/main?recursive=1';
 const RAW_BASE_URL = 'https://raw.githubusercontent.com/lucide-icons/lucide/main/';
@@ -86,6 +84,8 @@ async function downloadAll(files) {
 }
 
 async function main() {
+  const { default: chalk } = await import('chalk');
+
   if (!fs.existsSync(ICONS_DIR)) {
     fs.mkdirSync(ICONS_DIR);
   }

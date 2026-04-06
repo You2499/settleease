@@ -83,7 +83,7 @@ export default function ExpenseDistributionChart({ expenses, analyticsViewMode, 
             <YAxis type="category" dataKey="range" width={55} tick={{ ...ANALYTICS_STYLES.axisTickSmall, fontSize: 7 }} />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
-                formatter={(value: number) => [value, "Number of Expenses/Shares"]} />
+                formatter={(value) => [String(Number(value ?? 0)), "Number of Expenses/Shares"]} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="count" name="Count" fill="hsl(var(--chart-4))" radius={[0, 2, 2, 0]} barSize={ANALYTICS_STYLES.barSizeCompact} />
           </BarChart>
