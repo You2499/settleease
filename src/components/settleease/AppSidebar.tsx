@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, FlaskConical, ScanLine
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, ScanLine
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -16,8 +16,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   Sidebar,
   SidebarHeader,
@@ -60,11 +58,9 @@ interface AppSidebarProps {
   currentUserName?: string;
   userRole: UserRole;
   onEditName?: () => void;
-  isBeta?: boolean;
-  onToggleBeta?: () => void;
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isBeta = false, onToggleBeta }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
   const { isMobile, setOpenMobile } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -305,21 +301,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            </div>
-          )}
-          {/* Beta Design Toggle */}
-          {onToggleBeta && (
-            <div className="flex items-center justify-between px-2 py-2 rounded-md bg-muted/50 mb-2">
-              <div className="flex items-center gap-1.5">
-                <FlaskConical className="h-3.5 w-3.5 text-muted-foreground" />
-                <Label htmlFor="beta-design-toggle" className="text-xs font-medium cursor-pointer">Beta Design</Label>
-              </div>
-              <Switch
-                id="beta-design-toggle"
-                checked={isBeta}
-                onCheckedChange={onToggleBeta}
-                aria-label="Toggle beta design"
-              />
             </div>
           )}
           <div className="text-center border-t pt-2">

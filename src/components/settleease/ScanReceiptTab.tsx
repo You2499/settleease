@@ -528,9 +528,6 @@ export default function ScanReceiptTab({
             <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
               <ScanLine className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
               Smart Scan
-              <span className="ml-2 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-primary/10 text-primary rounded-full">
-                Beta
-              </span>
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm mt-1">
               {step === 'upload' && 'Upload a receipt photo to auto-fill your expense'}

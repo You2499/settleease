@@ -35,7 +35,6 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
-import { useBetaDashboard } from '@/hooks/useBetaDashboard';
 
 import type { ActiveView } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
@@ -59,9 +58,6 @@ function SettleEasePageContent() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
-
-  // Beta design hook
-  const { isBeta, toggleBeta } = useBetaDashboard();
 
   // Use custom hooks for auth, data, and realtime
   const {
@@ -569,8 +565,6 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
-          isBeta={isBeta}
-          onToggleBeta={toggleBeta}
         />
         <SidebarInset>
           <div className="flex flex-col h-full">
