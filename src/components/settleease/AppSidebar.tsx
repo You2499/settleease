@@ -159,10 +159,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                   className="justify-start h-8"
                 >
                   <ScanLine className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden flex items-center gap-1.5">
-                    Smart Scan
-                    <span className="px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider bg-primary/10 text-primary rounded-full leading-relaxed">Beta</span>
-                  </span>
+                  <span className="group-data-[state=collapsed]:hidden">Smart Scan</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
