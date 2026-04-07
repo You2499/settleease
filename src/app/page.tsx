@@ -25,7 +25,6 @@ import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
-import DashboardView from '@/components/settleease/DashboardView';
 import BetaDashboardView from '@/components/settleease/BetaDashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
@@ -585,47 +584,25 @@ function SettleEasePageContent() {
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    {isBeta ? (
-                      <BetaDashboardView
-                        expenses={expenses}
-                        people={people}
-                        peopleMap={peopleMap}
-                        dynamicCategories={categories}
-                        getCategoryIconFromName={getCategoryIconFromName}
-                        settlementPayments={settlementPayments}
-                        manualOverrides={manualOverrides}
-                        db={db}
-                        currentUserId={currentUser?.id || ''}
-                        onActionComplete={handleActionComplete}
-                        userRole={userRole}
-                        isLoadingPeople={isLoadingPeople}
-                        isLoadingExpenses={isLoadingExpenses}
-                        isLoadingCategories={isLoadingCategories}
-                        isLoadingSettlements={isLoadingSettlements}
-                        isLoadingOverrides={isLoadingOverrides}
-                        isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                      />
-                    ) : (
-                      <DashboardView
-                        expenses={expenses}
-                        people={people}
-                        peopleMap={peopleMap}
-                        dynamicCategories={categories}
-                        getCategoryIconFromName={getCategoryIconFromName}
-                        settlementPayments={settlementPayments}
-                        manualOverrides={manualOverrides}
-                        db={db}
-                        currentUserId={currentUser?.id || ''}
-                        onActionComplete={handleActionComplete}
-                        userRole={userRole}
-                        isLoadingPeople={isLoadingPeople}
-                        isLoadingExpenses={isLoadingExpenses}
-                        isLoadingCategories={isLoadingCategories}
-                        isLoadingSettlements={isLoadingSettlements}
-                        isLoadingOverrides={isLoadingOverrides}
-                        isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                      />
-                    )}
+                    <BetaDashboardView
+                      expenses={expenses}
+                      people={people}
+                      peopleMap={peopleMap}
+                      dynamicCategories={categories}
+                      getCategoryIconFromName={getCategoryIconFromName}
+                      settlementPayments={settlementPayments}
+                      manualOverrides={manualOverrides}
+                      db={db}
+                      currentUserId={currentUser?.id || ''}
+                      onActionComplete={handleActionComplete}
+                      userRole={userRole}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingExpenses={isLoadingExpenses}
+                      isLoadingCategories={isLoadingCategories}
+                      isLoadingSettlements={isLoadingSettlements}
+                      isLoadingOverrides={isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                    />
                   </SettleEaseErrorBoundary>
                 )}
                 {activeView === 'analytics' && (
