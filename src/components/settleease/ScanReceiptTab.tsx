@@ -6,10 +6,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 import {
   ScanLine, Upload, Camera, ArrowLeft, ArrowRight, Check, Loader2,
   AlertTriangle, RotateCcw, Sparkles, Receipt, ImageIcon,
-  CreditCard, Wallet, X
+  CreditCard, Wallet, X, Zap, FileImage
 } from 'lucide-react';
 
 import PayerInputSection from './addexpense/PayerInputSection';
@@ -26,6 +27,7 @@ import type {
   Category as DynamicCategory, ParsedReceiptData
 } from '@/lib/settleease/types';
 import { formatCurrency } from '@/lib/settleease/utils';
+import { compressImage, formatFileSize, isSupportedImageType } from '@/lib/settleease/imageUtils';
 
 interface ScanReceiptTabProps {
   people: Person[];
@@ -40,13 +42,13 @@ interface ScanReceiptTabProps {
 
 type WizardStep = 'upload' | 'analyzing' | 'split' | 'form';
 
-const ANALYZING_MESSAGES = [
-  'Scanning receipt...',
-  'Reading line items...',
-  'Extracting prices...',
-  'Parsing tax details...',
-  'Calculating totals...',
-  'Almost done...',
+const ANALYZING_STAGES = [
+  { message: 'Uploading image...', progress: 15 },
+  { message: 'AI analyzing receipt...', progress: 35 },
+  { message: 'Detecting items...', progress: 55 },
+  { message: 'Extracting prices...', progress: 75 },
+  { message: 'Parsing taxes...', progress: 90 },
+  { message: 'Finalizing...', progress: 98 },
 ];
 
 function fuzzyMatchCategory(hint: string, categories: DynamicCategory[]): string {
@@ -100,6 +102,12 @@ export default function ScanReceiptTab({
   const [parsedData, setParsedData] = useState<ParsedReceiptData | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
   const [analyzingMessageIndex, setAnalyzingMessageIndex] = useState(0);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressionInfo, setCompressionInfo] = useState<{
+    original: number;
+    compressed: number;
+  } | null>(null);
+  const [canRetry, setCanRetry] = useState(false);
 
   // Form state (same as AddExpenseTab)
   const [description, setDescription] = useState('');
@@ -117,6 +125,7 @@ export default function ScanReceiptTab({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const defaultPayerId = useMemo(() => {
     if (people.length > 0) {
@@ -138,8 +147,8 @@ export default function ScanReceiptTab({
   useEffect(() => {
     if (step !== 'analyzing') return;
     const interval = setInterval(() => {
-      setAnalyzingMessageIndex(prev => (prev + 1) % ANALYZING_MESSAGES.length);
-    }, 2000);
+      setAnalyzingMessageIndex(prev => (prev + 1) % ANALYZING_STAGES.length);
+    }, 2500);
     return () => clearInterval(interval);
   }, [step]);
 
@@ -163,27 +172,53 @@ export default function ScanReceiptTab({
     }
   }, [totalAmount, isMultiplePayers]);
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = useCallback(async (file: File) => {
+    // Validate file type
     if (!file.type.startsWith('image/')) {
       setScanError('Please select an image file.');
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-      setScanError('Image is too large. Please use an image under 4MB.');
+
+    if (!isSupportedImageType(file)) {
+      setScanError('Unsupported image format. Please use JPEG, PNG, or WebP.');
       return;
     }
 
-    setScanError(null);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setImagePreview(dataUrl);
-      // Extract base64 data (remove data URL prefix)
-      const base64 = dataUrl.split(',')[1];
-      setImageBase64(base64);
-      setImageMimeType(file.type);
-    };
-    reader.readAsDataURL(file);
+    // Check file size (warn if very large)
+    if (file.size > 8 * 1024 * 1024) {
+      setScanError('Image is very large. Compressing...');
+    } else {
+      setScanError(null);
+    }
+
+    setIsCompressing(true);
+    setCompressionInfo(null);
+
+    try {
+      // Compress image to optimize upload
+      const compressed = await compressImage(file, 1200, 1600, 0.85);
+      
+      setCompressionInfo({
+        original: compressed.originalSize,
+        compressed: compressed.compressedSize,
+      });
+
+      // Create preview
+      const previewUrl = `data:${compressed.mimeType};base64,${compressed.base64}`;
+      setImagePreview(previewUrl);
+      setImageBase64(compressed.base64);
+      setImageMimeType(compressed.mimeType);
+      
+      setScanError(null);
+      setIsCompressing(false);
+    } catch (error: any) {
+      console.error('Compression error:', error);
+      setScanError('Failed to process image. Please try another image.');
+      setIsCompressing(false);
+      setImagePreview(null);
+      setImageBase64(null);
+      setImageMimeType(null);
+    }
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -198,12 +233,17 @@ export default function ScanReceiptTab({
     setStep('analyzing');
     setAnalyzingMessageIndex(0);
     setScanError(null);
+    setCanRetry(false);
+
+    // Create abort controller for cancellation
+    abortControllerRef.current = new AbortController();
 
     try {
       const response = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: imageBase64, mimeType: imageMimeType }),
+        signal: abortControllerRef.current.signal,
       });
 
       const data = await response.json();
@@ -214,12 +254,33 @@ export default function ScanReceiptTab({
 
       setParsedData(data);
       setStep('split');
+      setCanRetry(false);
     } catch (error: any) {
       console.error('Scan error:', error);
-      setScanError(error.message || 'Failed to scan receipt. Please try again.');
+      
+      if (error.name === 'AbortError') {
+        setScanError('Scan cancelled.');
+        setCanRetry(true);
+      } else {
+        setScanError(error.message || 'Failed to scan receipt. Please try again.');
+        setCanRetry(true);
+      }
+      
       setStep('upload');
+    } finally {
+      abortControllerRef.current = null;
     }
   }, [imageBase64, imageMimeType]);
+
+  const handleCancelScan = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setStep('upload');
+    setScanError('Scan cancelled.');
+    setCanRetry(true);
+  }, []);
 
   const handleSplitMethodConfirm = useCallback(() => {
     if (!parsedData) return;
@@ -296,6 +357,12 @@ export default function ScanReceiptTab({
   }, [parsedData, splitMethod, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
 
   const handleReset = useCallback(() => {
+    // Cancel any ongoing scan
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
     setStep('upload');
     setImagePreview(null);
     setImageBase64(null);
@@ -303,6 +370,9 @@ export default function ScanReceiptTab({
     setParsedData(null);
     setScanError(null);
     setAnalyzingMessageIndex(0);
+    setIsCompressing(false);
+    setCompressionInfo(null);
+    setCanRetry(false);
     setDescription('');
     setTotalAmount('');
     setCategory('');
@@ -536,11 +606,35 @@ export default function ScanReceiptTab({
                     variant="secondary"
                     size="icon"
                     className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm"
-                    onClick={() => { setImagePreview(null); setImageBase64(null); setImageMimeType(null); }}
+                    onClick={() => { 
+                      setImagePreview(null); 
+                      setImageBase64(null); 
+                      setImageMimeType(null);
+                      setCompressionInfo(null);
+                    }}
                   >
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+                
+                {/* Compression info */}
+                {compressionInfo && (
+                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                    <FileImage className="h-3.5 w-3.5" />
+                    <span>
+                      Compressed from {formatFileSize(compressionInfo.original)} to {formatFileSize(compressionInfo.compressed)}
+                    </span>
+                    <Zap className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Compression progress */}
+            {isCompressing && (
+              <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-primary/10 text-primary text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Optimizing image...</span>
               </div>
             )}
 
@@ -551,11 +645,24 @@ export default function ScanReceiptTab({
               </div>
             )}
 
+            {/* Retry button */}
+            {canRetry && imageBase64 && (
+              <Button
+                onClick={handleScan}
+                variant="outline"
+                className="w-full h-11"
+                disabled={isCompressing}
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Retry Scan
+              </Button>
+            )}
+
             {/* Hidden file inputs */}
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              accept="image/jpeg,image/jpg,image/png,image/webp"
               className="hidden"
               onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }}
             />
@@ -565,7 +672,16 @@ export default function ScanReceiptTab({
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => { if (e.target.files?.[0]) handleFileSelect(e.target.files[0]); }}
+              onChange={(e) => { 
+                if (e.target.files?.[0]) {
+                  const file = e.target.files[0];
+                  // Show warning for very large files
+                  if (file.size > 8 * 1024 * 1024) {
+                    setScanError('Large image detected. Compressing...');
+                  }
+                  handleFileSelect(file);
+                }
+              }}
             />
           </div>
         )}
@@ -590,15 +706,31 @@ export default function ScanReceiptTab({
                 </div>
               )}
             </div>
-            <div className="text-center space-y-2">
-              <div className="flex items-center gap-2 text-primary font-medium">
-                <Sparkles className="h-4 w-4 animate-pulse" />
-                {ANALYZING_MESSAGES[analyzingMessageIndex]}
+            
+            {/* Progress bar */}
+            <div className="w-full max-w-xs space-y-3">
+              <Progress value={ANALYZING_STAGES[analyzingMessageIndex]?.progress || 0} className="h-2" />
+              <div className="text-center space-y-2">
+                <div className="flex items-center justify-center gap-2 text-primary font-medium">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                  {ANALYZING_STAGES[analyzingMessageIndex]?.message}
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  This usually takes 5-15 seconds
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground">
-                This usually takes 5-10 seconds
-              </p>
             </div>
+
+            {/* Cancel button */}
+            <Button
+              onClick={handleCancelScan}
+              variant="outline"
+              size="sm"
+              className="mt-4"
+            >
+              <X className="mr-1 h-4 w-4" />
+              Cancel
+            </Button>
           </div>
         )}
 
@@ -768,11 +900,20 @@ export default function ScanReceiptTab({
             <div />
             <Button
               onClick={handleScan}
-              disabled={!imageBase64}
-              className="w-full sm:w-auto h-11"
+              disabled={!imageBase64 || isCompressing}
+              className="w-full sm:w-auto h-12 sm:h-11"
             >
-              <ScanLine className="mr-2 h-4 w-4" />
-              Scan Receipt
+              {isCompressing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <ScanLine className="mr-2 h-4 w-4" />
+                  Scan Receipt
+                </>
+              )}
             </Button>
           </>
         )}
