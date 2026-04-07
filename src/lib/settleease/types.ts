@@ -114,7 +114,7 @@ export interface CalculatedTransaction {
 
 
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'status' | 'testErrorBoundary' | 'exportExpense' | 'scanReceipt';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'status' | 'testErrorBoundary' | 'exportExpense' | 'scanReceipt' | 'settings';
 
 export interface ParsedReceiptData {
   restaurant_name: string | null;

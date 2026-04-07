@@ -24,6 +24,7 @@ import StatusTab from '@/components/settleease/StatusTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
+import SettingsTab from '@/components/settleease/SettingsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import BetaDashboardView from '@/components/settleease/BetaDashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
@@ -47,7 +48,7 @@ function SettleEasePageContent() {
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
     const viewParam = searchParams.get('view') as ActiveView | null;
-    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'].includes(viewParam)) {
+    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'].includes(viewParam)) {
       return viewParam;
     }
     return 'dashboard';
@@ -393,7 +394,7 @@ function SettleEasePageContent() {
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
@@ -466,7 +467,7 @@ function SettleEasePageContent() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
@@ -797,6 +798,15 @@ function SettleEasePageContent() {
                       isLoadingCategories={isLoadingCategories}
                       isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                     />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'settings' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Settings"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <SettingsTab onNavigate={handleSetActiveView} />
                   </SettleEaseErrorBoundary>
                 )}
               </div>

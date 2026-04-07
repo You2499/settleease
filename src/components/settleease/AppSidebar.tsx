@@ -1,8 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, ScanLine
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, Activity, ScanLine, ChevronDown, ChevronRight, Keyboard
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -26,29 +26,13 @@ import {
   SidebarMenuButton,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-
-// Google Gemini SVG Icon
-const GeminiIcon = () => (
-  <svg
-    width="1em"
-    height="1em"
-    viewBox="0 0 16 16"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className="inline-block align-middle"
-  >
-    <path d="M16 8.016A8.522 8.522 0 008.016 16h-.032A8.521 8.521 0 000 8.016v-.032A8.521 8.521 0 007.984 0h.032A8.522 8.522 0 0016 7.984v.032z" fill="url(#prefix__paint0_radial_980_20147)" />
-    <defs>
-      <radialGradient id="prefix__paint0_radial_980_20147" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="matrix(16.1326 5.4553 -43.70045 129.2322 1.588 6.503)">
-        <stop offset=".067" stopColor="#9168C0" />
-        <stop offset=".343" stopColor="#5684D1" />
-        <stop offset=".672" stopColor="#1BA1E3" />
-      </radialGradient>
-    </defs>
-  </svg>
-);
-
+import KeyboardShortcutsModal from './KeyboardShortcutsModal';
 
 interface AppSidebarProps {
   activeView: ActiveView;
@@ -61,17 +45,23 @@ interface AppSidebarProps {
 }
 
 const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
-  const { isMobile, setOpenMobile } = useSidebar();
+  const { isMobile, setOpenMobile, state } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const [showShortcuts, setShowShortcuts] = React.useState(false);
+  
+  // Collapsible section states
+  const [expensesOpen, setExpensesOpen] = useState(true);
+  const [dataOpen, setDataOpen] = useState(true);
+
+  const isCollapsed = state === 'collapsed';
 
   const handleLogoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault(); // Prevent dropdown from closing
+    e.preventDefault();
     setIsLoggingOut(true);
     await handleLogout();
-    // Note: Component will unmount after logout, so no need to set isLoggingOut back to false
   };
 
   const handleNavigation = (view: ActiveView) => {
@@ -82,233 +72,309 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   };
 
   return (
-    <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
-      {!isMobile && (
-        <SidebarHeader className="flex flex-row items-center justify-center p-3 border-b">
-          <div className="flex items-center gap-2">
-            <HandCoins className="h-6 w-6 text-primary flex-shrink-0" />
-            <h2 className="text-lg font-bold text-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
-          </div>
-        </SidebarHeader>
-      )}
-      <SidebarContent className="p-2">
-        <SidebarMenu className="space-y-1">
-          {/* Dashboard */}
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => handleNavigation('dashboard')}
-              isActive={activeView === 'dashboard'}
-              tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start h-8"
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          {/* Insights Section */}
-          <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insights</p>
-          </div>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => handleNavigation('analytics')}
-              isActive={activeView === 'analytics'}
-              tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start h-8"
-            >
-              <BarChartBig className="h-4 w-4" />
-              <span className="group-data-[state=collapsed]:hidden">Analytics</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              onClick={() => handleNavigation('status')}
-              isActive={activeView === 'status'}
-              tooltip={{ content: "Status", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-              className="justify-start h-8"
-            >
-              <Activity className="h-4 w-4" />
-              <span className="group-data-[state=collapsed]:hidden">Status</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          {/* Admin Only Sections */}
-          {userRole === 'admin' && (
-            <>
-              {/* Expenses Section */}
-              <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Expenses</p>
-              </div>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('addExpense')}
-                  isActive={activeView === 'addExpense'}
-                  tooltip={{ content: "Add Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('scanReceipt')}
-                  isActive={activeView === 'scanReceipt'}
-                  tooltip={{ content: "Smart Scan", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <ScanLine className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Smart Scan</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('editExpenses')}
-                  isActive={activeView === 'editExpenses'}
-                  tooltip={{ content: "Edit Expenses", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <FilePenLine className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Edit Expenses</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('manageSettlements')}
-                  isActive={activeView === 'manageSettlements'}
-                  tooltip={{ content: "Manage Settlements", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <Handshake className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Settlements</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {/* Data Section */}
-              <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</p>
-              </div>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('managePeople')}
-                  isActive={activeView === 'managePeople'}
-                  tooltip={{ content: "Manage People", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <Users className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">People</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('manageCategories')}
-                  isActive={activeView === 'manageCategories'}
-                  tooltip={{ content: "Manage Categories", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <ListChecks className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Categories</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
-              {/* System Section */}
-              <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">System</p>
-              </div>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('exportExpense')}
-                  isActive={activeView === 'exportExpense'}
-                  tooltip={{ content: "Export Expense", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <FileDown className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Export</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => handleNavigation('testErrorBoundary')}
-                  isActive={activeView === 'testErrorBoundary'}
-                  tooltip={{ content: "Test Error Boundary", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                  className="justify-start h-8"
-                >
-                  <Bug className="h-4 w-4" />
-                  <span className="group-data-[state=collapsed]:hidden">Debug</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </>
-          )}
-        </SidebarMenu>
-      </SidebarContent>
-      <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
-        <div className="p-2">
-          {(currentUserName || currentUserEmail) && (
-            <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
-              <div className="flex items-center justify-between">
-                <div className="flex-grow overflow-hidden">
-                  <p className="text-sm font-medium truncate" title={currentUserName || currentUserEmail || ''}>
-                    {currentUserName || currentUserEmail}
-                  </p>
-                  {userRole && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <RoleIcon className="h-3 w-3" />
-                      <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
-                    </div>
-                  )}
-                </div>
-                <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
-                      <Settings className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuLabel>Profile</DropdownMenuLabel>
-                    {onEditName && (
-                      <DropdownMenuItem onClick={onEditName}>
-                        <Edit3 className="mr-2 h-4 w-4" /> Edit Name
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuLabel>Theme</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => setTheme("light")}>
-                      <Sun className="mr-2 h-4 w-4" /> Light
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTheme("dark")}>
-                      <Moon className="mr-2 h-4 w-4" /> Dark
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault(); // Prevent dropdown from closing
-                        handleLogoutClick(e as any);
-                      }}
-                      disabled={isLoggingOut}
-                      className={`transition-all duration-200 ${isLoggingOut
-                        ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                        : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                        }`}
-                    >
-                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
-                      {isLoggingOut ? 'Logging out...' : 'Logout'}
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+    <>
+      <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
+        {!isMobile && (
+          <SidebarHeader className="flex flex-row items-center justify-center p-3 border-b">
+            <div className="flex items-center gap-2">
+              <HandCoins className="h-6 w-6 text-primary flex-shrink-0" />
+              <h2 className="text-lg font-bold text-primary group-data-[state=collapsed]:hidden">SettleEase</h2>
             </div>
-          )}
-          <div className="text-center border-t pt-2">
-            <p className="text-xs text-muted-foreground">Made by Gagan Gupta</p>
-            <p className="text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
+          </SidebarHeader>
+        )}
+        <SidebarContent className="p-2">
+          <SidebarMenu className="space-y-1">
+            {/* Dashboard */}
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => handleNavigation('dashboard')}
+                isActive={activeView === 'dashboard'}
+                tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                className="justify-start h-8"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            {/* Insights Section */}
+            <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insights</p>
+            </div>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => handleNavigation('analytics')}
+                isActive={activeView === 'analytics'}
+                tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                className="justify-start h-8"
+              >
+                <BarChartBig className="h-4 w-4" />
+                <span className="group-data-[state=collapsed]:hidden">Analytics</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => handleNavigation('status')}
+                isActive={activeView === 'status'}
+                tooltip={{ content: "Status", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                className="justify-start h-8"
+              >
+                <Activity className="h-4 w-4" />
+                <span className="group-data-[state=collapsed]:hidden">Status</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
+            {/* Admin Only Sections */}
+            {userRole === 'admin' && (
+              <>
+                {/* Expenses Section - Collapsible */}
+                {!isCollapsed ? (
+                  <Collapsible open={expensesOpen} onOpenChange={setExpensesOpen} className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <div className="px-2 py-1 flex items-center justify-between cursor-pointer hover:bg-sidebar-accent rounded-md transition-colors">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Expenses</p>
+                        {expensesOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('addExpense')}
+                          isActive={activeView === 'addExpense'}
+                          className="justify-start h-8"
+                        >
+                          <CreditCard className="h-4 w-4" />
+                          <span>Add Expense</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('scanReceipt')}
+                          isActive={activeView === 'scanReceipt'}
+                          className="justify-start h-8"
+                        >
+                          <ScanLine className="h-4 w-4" />
+                          <span>Smart Scan</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('editExpenses')}
+                          isActive={activeView === 'editExpenses'}
+                          className="justify-start h-8"
+                        >
+                          <FilePenLine className="h-4 w-4" />
+                          <span>Edit Expenses</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('manageSettlements')}
+                          isActive={activeView === 'manageSettlements'}
+                          className="justify-start h-8"
+                        >
+                          <Handshake className="h-4 w-4" />
+                          <span>Settlements</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  // Collapsed state - show icons with tooltips
+                  <>
+                    <div className="px-2 py-1 mt-4" />
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('addExpense')}
+                        isActive={activeView === 'addExpense'}
+                        tooltip={{ content: "Add Expense", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <CreditCard className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('scanReceipt')}
+                        isActive={activeView === 'scanReceipt'}
+                        tooltip={{ content: "Smart Scan", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <ScanLine className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('editExpenses')}
+                        isActive={activeView === 'editExpenses'}
+                        tooltip={{ content: "Edit Expenses", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <FilePenLine className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('manageSettlements')}
+                        isActive={activeView === 'manageSettlements'}
+                        tooltip={{ content: "Settlements", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <Handshake className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                )}
+
+                {/* Data Section - Collapsible */}
+                {!isCollapsed ? (
+                  <Collapsible open={dataOpen} onOpenChange={setDataOpen} className="mt-4">
+                    <CollapsibleTrigger asChild>
+                      <div className="px-2 py-1 flex items-center justify-between cursor-pointer hover:bg-sidebar-accent rounded-md transition-colors">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Data</p>
+                        {dataOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-1 mt-1">
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('managePeople')}
+                          isActive={activeView === 'managePeople'}
+                          className="justify-start h-8"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>People</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          onClick={() => handleNavigation('manageCategories')}
+                          isActive={activeView === 'manageCategories'}
+                          className="justify-start h-8"
+                        >
+                          <ListChecks className="h-4 w-4" />
+                          <span>Categories</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </CollapsibleContent>
+                  </Collapsible>
+                ) : (
+                  // Collapsed state
+                  <>
+                    <div className="px-2 py-1 mt-4" />
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('managePeople')}
+                        isActive={activeView === 'managePeople'}
+                        tooltip={{ content: "People", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <Users className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => handleNavigation('manageCategories')}
+                        isActive={activeView === 'manageCategories'}
+                        tooltip={{ content: "Categories", side: "right", align: "center" }}
+                        className="justify-start h-8"
+                      >
+                        <ListChecks className="h-4 w-4" />
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </>
+                )}
+
+                {/* Settings */}
+                <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">System</p>
+                </div>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleNavigation('settings')}
+                    isActive={activeView === 'settings'}
+                    tooltip={{ content: "Settings", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                    className="justify-start h-8"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span className="group-data-[state=collapsed]:hidden">Settings</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
+            )}
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
+          <div className="p-2">
+            {(currentUserName || currentUserEmail) && (
+              <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex-grow overflow-hidden">
+                    <p className="text-sm font-medium truncate" title={currentUserName || currentUserEmail || ''}>
+                      {currentUserName || currentUserEmail}
+                    </p>
+                    {userRole && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <RoleIcon className="h-3 w-3" />
+                        <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
+                      </div>
+                    )}
+                  </div>
+                  <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
+                        <Settings className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuLabel>Profile</DropdownMenuLabel>
+                      {onEditName && (
+                        <DropdownMenuItem onClick={onEditName}>
+                          <Edit3 className="mr-2 h-4 w-4" /> Edit Name
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuLabel>Theme</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => setTheme("light")}>
+                        <Sun className="mr-2 h-4 w-4" /> Light
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setTheme("dark")}>
+                        <Moon className="mr-2 h-4 w-4" /> Dark
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowShortcuts(true)}>
+                        <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={(e) => {
+                          e.preventDefault();
+                          handleLogoutClick(e as any);
+                        }}
+                        disabled={isLoggingOut}
+                        className={`transition-all duration-200 ${isLoggingOut
+                          ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                          : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                        }`}
+                      >
+                        <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
+                        {isLoggingOut ? 'Logging out...' : 'Logout'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+            )}
+            <div className="text-center border-t pt-2">
+              <p className="text-xs text-muted-foreground">Made by Gagan Gupta</p>
+              <p className="text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
+            </div>
           </div>
-        </div>
-      </SidebarFooter>
-    </Sidebar>
+        </SidebarFooter>
+      </Sidebar>
+      <KeyboardShortcutsModal isOpen={showShortcuts} onOpenChange={setShowShortcuts} />
+    </>
   );
 });
 
 export default AppSidebar;
-
