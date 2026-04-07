@@ -7,13 +7,9 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// List of models to try in order of preference (fastest to most capable)
+// Gemma 4 open-source model served via Google AI Studio (same API key)
 const MODEL_FALLBACK_ORDER = [
-  'gemini-2.5-flash',
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash-preview-09-2025',
-  'gemini-2.5-flash-lite-preview-09-2025',
-  'gemini-2.5-pro',
+  'gemma-4-31b-it',
 ];
 
 export async function POST(request: NextRequest) {

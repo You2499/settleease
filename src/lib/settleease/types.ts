@@ -114,7 +114,24 @@ export interface CalculatedTransaction {
 
 
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'status' | 'testErrorBoundary' | 'exportExpense';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'status' | 'testErrorBoundary' | 'exportExpense' | 'scanReceipt';
+
+export interface ParsedReceiptData {
+  restaurant_name: string | null;
+  date: string | null;
+  items: {
+    name: string;
+    quantity: number;
+    unit_price: number;
+    total_price: number;
+    category_hint: 'food' | 'drinks' | 'alcohol' | 'other';
+  }[];
+  subtotals: { label: string; amount: number }[];
+  taxes: { label: string; amount: number }[];
+  total_amount: number;
+  currency: string;
+  additional_charges: { label: string; amount: number }[];
+}
 
 
 // Analytics Specific Types

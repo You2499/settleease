@@ -2,7 +2,7 @@
 
 import React from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, FlaskConical
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Bug, Edit3, Activity, FileDown, FlaskConical, ScanLine
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -153,6 +153,20 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                 >
                   <CreditCard className="h-4 w-4" />
                   <span className="group-data-[state=collapsed]:hidden">Add Expense</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => handleNavigation('scanReceipt')}
+                  isActive={activeView === 'scanReceipt'}
+                  tooltip={{ content: "Smart Scan", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                  className="justify-start h-8"
+                >
+                  <ScanLine className="h-4 w-4" />
+                  <span className="group-data-[state=collapsed]:hidden flex items-center gap-1.5">
+                    Smart Scan
+                    <span className="px-1.5 py-0 text-[9px] font-semibold uppercase tracking-wider bg-primary/10 text-primary rounded-full leading-relaxed">Beta</span>
+                  </span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

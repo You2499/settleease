@@ -23,6 +23,7 @@ import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import StatusTab from '@/components/settleease/StatusTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
+import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import BetaDashboardView from '@/components/settleease/BetaDashboardView';
@@ -48,7 +49,7 @@ function SettleEasePageContent() {
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
     const viewParam = searchParams.get('view') as ActiveView | null;
-    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'].includes(viewParam)) {
+    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'].includes(viewParam)) {
       return viewParam;
     }
     return 'dashboard';
@@ -355,7 +356,8 @@ function SettleEasePageContent() {
                   manageCategories: 'Manage Categories',
                   manageSettlements: 'Manage Settlements',
                   testErrorBoundary: 'Test Error Boundary',
-                  exportExpense: 'Export Expense'
+                  exportExpense: 'Export Expense',
+                  scanReceipt: 'Smart Scan'
                 };
 
                 const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
@@ -396,7 +398,7 @@ function SettleEasePageContent() {
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
@@ -469,7 +471,7 @@ function SettleEasePageContent() {
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense'];
+    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt'];
 
     // Check role-based restrictions
     if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
@@ -805,6 +807,24 @@ function SettleEasePageContent() {
                       categories={categories}
                       peopleMap={peopleMap}
                       getCategoryIconFromName={getCategoryIconFromName}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
+                {userRole === 'admin' && activeView === 'scanReceipt' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Smart Scan"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <ScanReceiptTab
+                      people={people}
+                      db={db}
+                      supabaseInitializationError={supabaseInitializationError}
+                      onExpenseAdded={handleExpenseAddedAndRedirect}
+                      dynamicCategories={categories}
+                      isLoadingPeople={isLoadingPeople}
+                      isLoadingCategories={isLoadingCategories}
+                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
