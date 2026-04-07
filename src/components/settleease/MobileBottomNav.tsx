@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { LayoutDashboard, CreditCard, BarChartBig, Activity, Menu } from 'lucide-react';
+import { LayoutDashboard, CreditCard, BarChartBig, ScanLine, Menu } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { ActiveView, UserRole } from '@/lib/settleease';
 import { useSidebar } from "@/components/ui/sidebar";
@@ -18,8 +18,8 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole }:
     const navItems = [
         { view: 'dashboard', label: 'Home', icon: LayoutDashboard },
         { view: 'analytics', label: 'Analytics', icon: BarChartBig },
+        { view: 'scanReceipt', label: 'Smart Scan', icon: ScanLine, adminOnly: true },
         { view: 'addExpense', label: 'Add', icon: CreditCard, adminOnly: true },
-        { view: 'status', label: 'Status', icon: Activity },
     ];
 
     return (
