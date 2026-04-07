@@ -4,8 +4,11 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // Use Gemini 1.5 Flash for fast, cost-effective vision processing
-// Alternative: 'gemini-1.5-pro' for higher accuracy but slower/more expensive
-const MODEL_NAME = 'gemini-1.5-flash';
+// Alternative models:
+// - 'gemini-1.5-flash-latest' (recommended, always latest version)
+// - 'gemini-1.5-pro-latest' (higher accuracy but slower/more expensive)
+// - 'gemini-1.5-flash' (specific version)
+const MODEL_NAME = 'gemini-3.1-flash-lite-preview';
 
 // Request timeout: 30 seconds
 const REQUEST_TIMEOUT_MS = 30000;
@@ -116,15 +119,45 @@ export async function POST(request: NextRequest) {
     console.log(`✅ Image received (${Math.round(estimatedSize / 1024)}KB), calling Gemini ${MODEL_NAME}...`);
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ 
-      model: MODEL_NAME,
-      generationConfig: {
-        temperature: 0.1, // Low temperature for consistent, deterministic parsing
-        topP: 0.8,
-        topK: 40,
-        maxOutputTokens: 2048, // Sufficient for receipt data
-      },
-    });
+    
+    // Try to get the model - with fallback to alternative names
+    let model;
+    try {
+      model = genAI.getGenerativeModel({ 
+        model: MODEL_NAME,
+        generationConfig: {
+          temperature: 0.1, // Low temperature for consistent, deterministic parsing
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048, // Sufficient for receipt data
+        },
+      });
+    } catch (modelError: any) {
+      console.error('❌ Error getting model:', modelError);
+      // Try fallback model names
+      const fallbackModels = ['gemini-1.5-flash', 'gemini-pro-vision', 'gemini-1.5-pro-latest'];
+      for (const fallbackModel of fallbackModels) {
+        try {
+          console.log(`Trying fallback model: ${fallbackModel}`);
+          model = genAI.getGenerativeModel({ 
+            model: fallbackModel,
+            generationConfig: {
+              temperature: 0.1,
+              topP: 0.8,
+              topK: 40,
+              maxOutputTokens: 2048,
+            },
+          });
+          console.log(`✅ Using fallback model: ${fallbackModel}`);
+          break;
+        } catch (e) {
+          console.error(`Failed to use ${fallbackModel}:`, e);
+        }
+      }
+      if (!model) {
+        throw new Error('Could not initialize any Gemini model. Please check API key and model availability.');
+      }
+    }
 
     const result = await model.generateContent([
       RECEIPT_PARSE_PROMPT,
@@ -139,9 +172,23 @@ export async function POST(request: NextRequest) {
     clearTimeout(timeoutId);
 
     const response = result.response;
-    const text = response.text();
+    
+    // Check if response was blocked
+    if (!response || !response.candidates || response.candidates.length === 0) {
+      console.error('❌ No candidates in response:', JSON.stringify(response));
+      throw new Error('AI could not process the image. Please try a different image.');
+    }
 
+    // Check for safety blocks
+    const candidate = response.candidates[0];
+    if (candidate.finishReason === 'SAFETY') {
+      console.error('❌ Response blocked by safety filters');
+      throw new Error('SAFETY: Image was blocked by content filters');
+    }
+
+    const text = response.text();
     console.log('✅ Gemini response received, parsing JSON...');
+    console.log('Response preview:', text.substring(0, 200));
 
     // Try to extract JSON from the response (handle cases where model wraps in markdown)
     let parsedData;
@@ -191,6 +238,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     clearTimeout(timeoutId);
     console.error('❌ Scan Receipt Error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error details:', JSON.stringify(error, null, 2));
 
     // Handle abort/timeout
     if (error.name === 'AbortError' || controller.signal.aborted) {
@@ -204,31 +253,43 @@ export async function POST(request: NextRequest) {
     let userMessage = 'Failed to scan receipt. Please try again.';
     let statusCode = 500;
 
-    if (error.message?.includes('Could not extract valid JSON')) {
+    const errorMsg = error.message || '';
+    const errorStr = JSON.stringify(error);
+
+    if (errorMsg.includes('Could not extract valid JSON')) {
       userMessage = 'Could not read the receipt clearly. Please try with a clearer, well-lit image.';
       statusCode = 422;
-    } else if (error.message?.includes('API key')) {
+    } else if (errorMsg.includes('No candidates') || errorMsg.includes('could not process')) {
+      userMessage = 'AI could not process the image. Please try a clearer photo with better lighting.';
+      statusCode = 422;
+    } else if (errorMsg.includes('API key') || errorStr.includes('API_KEY')) {
       userMessage = 'AI service configuration error. Please contact support.';
       statusCode = 500;
-    } else if (error.message?.includes('quota') || error.message?.includes('429')) {
+    } else if (errorMsg.includes('quota') || errorMsg.includes('429') || errorStr.includes('RESOURCE_EXHAUSTED')) {
       userMessage = 'API quota exceeded. Please try again later.';
       statusCode = 429;
-    } else if (error.message?.includes('overloaded') || error.message?.includes('503')) {
+    } else if (errorMsg.includes('overloaded') || errorMsg.includes('503') || errorStr.includes('UNAVAILABLE')) {
       userMessage = 'AI service is currently busy. Please try again in a moment.';
       statusCode = 503;
-    } else if (error.message?.includes('SAFETY') || error.message?.includes('blocked')) {
+    } else if (errorMsg.includes('SAFETY') || errorMsg.includes('blocked')) {
       userMessage = 'Image content was blocked by safety filters. Please try a different image.';
       statusCode = 400;
-    } else if (error.message?.includes('invalid') || error.message?.includes('format')) {
-      userMessage = 'Invalid image format. Please use JPEG, PNG, or WebP.';
+    } else if (errorMsg.includes('invalid') || errorMsg.includes('format') || errorStr.includes('INVALID_ARGUMENT')) {
+      userMessage = 'Invalid image format or data. Please try a different image.';
       statusCode = 400;
+    } else if (errorStr.includes('NOT_FOUND') || errorMsg.includes('not found')) {
+      userMessage = 'AI model not available. Please contact support.';
+      statusCode = 503;
+    } else if (errorStr.includes('PERMISSION_DENIED')) {
+      userMessage = 'API key does not have permission. Please contact support.';
+      statusCode = 403;
     }
 
     return Response.json(
       {
         error: userMessage,
         technicalDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        retryable: statusCode !== 400, // Indicate if retry might help
+        retryable: statusCode !== 400 && statusCode !== 403,
       },
       { status: statusCode }
     );
