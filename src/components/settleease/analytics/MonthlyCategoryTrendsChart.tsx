@@ -5,7 +5,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, CalendarRange } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { coerceChartName, coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { CHART_COLORS } from '@/lib/settleease/constants';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
@@ -299,9 +299,9 @@ export default function MonthlyCategoryTrendsChart({
                         />
                         <Tooltip
                             {...ANALYTICS_STYLES.tooltip}
-                            formatter={(value, name) => [
-                                formatCurrency(coerceChartValueToNumber(value)),
-                                coerceChartName(name)
+                            formatter={(value: number, name: string) => [
+                                formatCurrency(value),
+                                name
                             ]}
                         />
                         <Legend wrapperStyle={ANALYTICS_STYLES.legend} />

@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from 'lucide-react';
-import { coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense, SettlementPayment } from '@/lib/settleease/types';
@@ -204,13 +204,10 @@ export default function DebtCreditBalanceOverTime({
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value) => {
-                const numericValue = coerceChartValueToNumber(value);
-                return [
-                  formatCurrency(numericValue), 
-                  numericValue >= 0 ? 'You are owed' : 'You owe'
-                ];
-              }}
+              formatter={(value: number) => [
+                formatCurrency(value), 
+                value >= 0 ? 'You are owed' : 'You owe'
+              ]}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             {/* Zero line */}

@@ -4,7 +4,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Calendar, CalendarRange } from 'lucide-react';
-import { coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense } from '@/lib/settleease/types';
@@ -14,12 +14,6 @@ interface MonthlySpendingChartProps {
   expenses: Expense[];
   analyticsViewMode: 'group' | 'personal';
   selectedPersonIdForAnalytics?: string | null;
-}
-
-interface SpendingChartPoint {
-  label: string;
-  totalAmount: number;
-  sortKey: string;
 }
 
 function getWeekKey(date: Date) {
@@ -35,13 +29,11 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
   const [view, setView] = React.useState<'monthly' | 'weekly'>('monthly');
 
   // Compute monthly data
-  const monthlyExpenseData = React.useMemo<SpendingChartPoint[]>(() => {
-    const data: Record<string, { amount: number; label: string }> = {};
+  const monthlyExpenseData = React.useMemo(() => {
+    const data: Record<string, number> = {};
     expenses.forEach(exp => {
       if (exp.created_at) {
-        const expenseDate = new Date(exp.created_at);
-        const monthKey = `${expenseDate.getFullYear()}-${String(expenseDate.getMonth() + 1).padStart(2, '0')}`;
-        const monthYear = expenseDate.toLocaleDateString('default', { year: 'numeric', month: 'short' });
+        const monthYear = new Date(exp.created_at).toLocaleDateString('default', { year: 'numeric', month: 'short' });
         let amountToLog = 0;
         if (analyticsViewMode === 'group') {
           amountToLog = Number(exp.total_amount);
@@ -50,20 +42,17 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
           amountToLog = Number(personShare?.amount || 0);
         }
         if (amountToLog > 0.001) {
-          if (!data[monthKey]) {
-            data[monthKey] = { amount: 0, label: monthYear };
-          }
-          data[monthKey].amount += amountToLog;
+          data[monthYear] = (data[monthYear] || 0) + amountToLog;
         }
       }
     });
     return Object.entries(data)
-      .map(([sortKey, { amount, label }]) => ({ label, totalAmount: amount, sortKey }))
-      .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+      .map(([month, totalAmount]) => ({ month, totalAmount }))
+      .sort((a, b) => new Date(a.month).getTime() - new Date(b.month).getTime());
   }, [expenses, analyticsViewMode, selectedPersonIdForAnalytics]);
 
   // Compute weekly data
-  const weeklyExpenseData = React.useMemo<SpendingChartPoint[]>(() => {
+  const weeklyExpenseData = React.useMemo(() => {
     const data: Record<string, { amount: number, weekStart: Date }> = {};
     expenses.forEach(exp => {
       if (exp.created_at) {
@@ -91,7 +80,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
     });
     return Object.entries(data)
       .map(([weekKey, { amount, weekStart }]) => ({
-        label: `Week of ${weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' })}`,
+        week: `Week of ${weekStart.toLocaleDateString('default', { month: 'short', day: 'numeric' })}`,
         totalAmount: amount,
         sortKey: weekKey
       }))
@@ -100,6 +89,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
 
   const isMonthly = view === 'monthly';
   const chartData = isMonthly ? monthlyExpenseData : weeklyExpenseData;
+  const xKey = isMonthly ? 'month' : 'week';
   const chartLabel = analyticsViewMode === 'personal'
     ? (isMonthly ? 'Your Spending Over Time (Monthly)' : 'Your Spending Over Time (Weekly)')
     : (isMonthly ? 'Group Expenses Over Time (Monthly)' : 'Group Expenses Over Time (Weekly)');
@@ -176,7 +166,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
         <ResponsiveContainer width="100%" height={380}>
           <LineChart data={chartData} margin={ANALYTICS_STYLES.chartMargins}>
             <CartesianGrid {...ANALYTICS_STYLES.grid} />
-            <XAxis dataKey="label" tick={ANALYTICS_STYLES.axisTick} />
+            <XAxis dataKey={xKey} tick={ANALYTICS_STYLES.axisTick} />
             <YAxis
               tickFormatter={(value) => formatCurrencyForAxis(value, '₹')}
               tick={ANALYTICS_STYLES.axisTick}
@@ -184,7 +174,7 @@ export default function MonthlySpendingChart({ expenses, analyticsViewMode, sele
             />
             <Tooltip
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value) => [formatCurrency(coerceChartValueToNumber(value)), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
+              formatter={(value: number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Line type="monotone" dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
           </LineChart>

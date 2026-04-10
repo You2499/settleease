@@ -110,13 +110,10 @@ export default function ExpenseSizeDistribution({
             />
             <Tooltip 
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value) => {
-                const numericValue = Number(value ?? 0);
-                return [
-                  `${numericValue} expense${numericValue !== 1 ? 's' : ''}`, 
-                  'Count'
-                ];
-              }}
+              formatter={(value: number) => [
+                `${value} expense${value !== 1 ? 's' : ''}`, 
+                'Count'
+              ]}
             />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar 

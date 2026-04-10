@@ -4,7 +4,7 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BarChart4 } from 'lucide-react';
-import { coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { ShareVsPaidDataPoint } from '@/lib/settleease/types';
@@ -75,7 +75,7 @@ export default function ShareVsPaidComparisonChart({
             />
             <Tooltip
               {...ANALYTICS_STYLES.tooltip}
-              formatter={(value) => [formatCurrency(coerceChartValueToNumber(value)), 'Amount']} />
+              formatter={(value: number) => [formatCurrency(value), 'Amount']} />
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="paid" name="Total Paid" fill="hsl(var(--chart-1))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />
             <Bar dataKey="share" name="Total Share" fill="hsl(var(--chart-2))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />

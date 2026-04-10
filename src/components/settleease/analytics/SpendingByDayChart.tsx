@@ -4,7 +4,7 @@ import React, { useMemo, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CalendarClock } from 'lucide-react';
-import { coerceChartValueToNumber, formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
+import { formatCurrency, formatCurrencyForAxis } from '@/lib/settleease/utils';
 import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
 import { createEmptyState } from './EmptyState';
 import type { Expense, SpendingByDayOfWeekData } from '@/lib/settleease/types';
@@ -93,7 +93,7 @@ export default function SpendingByDayChart({ expenses, analyticsViewMode, select
             />
             <Tooltip 
                 {...ANALYTICS_STYLES.tooltip}
-                formatter={(value) => [formatCurrency(coerceChartValueToNumber(value)), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
+                formatter={(value:number) => [formatCurrency(value), analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"]}/>
             <Legend wrapperStyle={ANALYTICS_STYLES.legend} />
             <Bar dataKey="totalAmount" name={analyticsViewMode === 'personal' ? "Your Total Share" : "Total Spent"} fill="hsl(var(--chart-3))" radius={[2, 2, 0, 0]} barSize={ANALYTICS_STYLES.barSize} />
           </BarChart>
