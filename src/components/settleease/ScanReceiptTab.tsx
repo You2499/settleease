@@ -4,12 +4,13 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
   ScanLine, Upload, Camera, ArrowLeft, ArrowRight, Check, Loader2,
   AlertTriangle, RotateCcw, Sparkles, Receipt, ImageIcon,
-  CreditCard, Wallet, X, Zap, FileImage
+  CreditCard, Wallet, X, Zap, FileImage, CheckCircle2, Users, ListChecks
 } from 'lucide-react';
 
 import PayerInputSection from './addexpense/PayerInputSection';
@@ -38,6 +39,35 @@ interface ScanReceiptTabProps {
 }
 
 type WizardStep = 'upload' | 'analyzing' | 'split' | 'form';
+
+const STEP_ORDER: WizardStep[] = ['upload', 'analyzing', 'split', 'form'];
+
+const WORKFLOW_STEPS = [
+  {
+    key: 'upload' as WizardStep,
+    label: 'Capture',
+    description: 'Receipt image',
+    Icon: Camera,
+  },
+  {
+    key: 'analyzing' as WizardStep,
+    label: 'Read',
+    description: 'AI extraction',
+    Icon: Sparkles,
+  },
+  {
+    key: 'split' as WizardStep,
+    label: 'Split',
+    description: 'Review items',
+    Icon: ListChecks,
+  },
+  {
+    key: 'form' as WizardStep,
+    label: 'Save',
+    description: 'Expense details',
+    Icon: CheckCircle2,
+  },
+];
 
 const ANALYZING_STAGES = [
   { message: 'Uploading image...', progress: 15 },
@@ -77,6 +107,64 @@ function fuzzyMatchCategory(hint: string, categories: DynamicCategory[]): string
   }
 
   return categories[0]?.name || '';
+}
+
+function getStepIndex(step: WizardStep) {
+  return STEP_ORDER.indexOf(step);
+}
+
+function StepRail({ step }: { step: WizardStep }) {
+  const currentIndex = getStepIndex(step);
+
+  return (
+    <div className="grid grid-cols-4 gap-1.5 sm:gap-2">
+      {WORKFLOW_STEPS.map(({ key, label, description, Icon }, index) => {
+        const isActive = key === step;
+        const isComplete = index < currentIndex;
+
+        return (
+          <div
+            key={key}
+            className={`rounded-lg border px-2 py-2 transition-colors ${
+              isActive
+                ? 'border-primary bg-primary/10 text-primary'
+                : isComplete
+                  ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-300'
+                  : 'border-border bg-background text-muted-foreground'
+            }`}
+          >
+            <div className="flex items-center gap-1.5">
+              <Icon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate text-xs font-semibold">{label}</span>
+            </div>
+            <p className="mt-1 hidden truncate text-[11px] sm:block">{description}</p>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function SectionTitle({
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+}) {
+  return (
+    <div className="flex items-start gap-3">
+      <div className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <h3 className="text-base font-semibold leading-tight text-foreground">{title}</h3>
+        {subtitle && <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{subtitle}</p>}
+      </div>
+    </div>
+  );
 }
 
 export default function ScanReceiptTab({
@@ -463,18 +551,25 @@ export default function ScanReceiptTab({
     );
   };
 
-  // Loading state
   if (isLoadingData) {
     return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col bg-background">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
-          <Skeleton className="h-7 sm:h-8 w-full max-w-[250px]" />
-          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
+      <Card className="h-full overflow-hidden rounded-lg border shadow-xl">
+        <CardHeader className="border-b p-4 sm:p-6">
+          <Skeleton className="h-8 w-44" />
+          <Skeleton className="h-4 w-full max-w-md" />
+          <div className="grid grid-cols-4 gap-2 pt-3">
+            {[1, 2, 3, 4].map((item) => (
+              <Skeleton key={item} className="h-12 rounded-lg" />
+            ))}
+          </div>
         </CardHeader>
-        <CardContent className="flex-1 px-4 sm:px-6 py-8 flex flex-col items-center justify-center gap-4">
-          <Skeleton className="h-48 w-48 rounded-xl" />
-          <Skeleton className="h-4 w-64" />
-          <Skeleton className="h-10 w-40" />
+        <CardContent className="flex h-full flex-1 flex-col justify-center gap-4 p-4 sm:p-6">
+          <Skeleton className="h-64 rounded-lg" />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+            <Skeleton className="h-20 rounded-lg" />
+          </div>
         </CardContent>
       </Card>
     );
@@ -482,155 +577,183 @@ export default function ScanReceiptTab({
 
   if (!isLoadingData && people.length === 0) {
     return (
-      <Card className="text-center py-8 sm:py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center p-4">
+      <Card className="flex h-full flex-col items-center justify-center rounded-lg border p-4 text-center shadow-xl">
+        <div className="grid h-14 w-14 place-items-center rounded-lg bg-primary/10 text-primary">
+          <Users className="h-7 w-7" />
+        </div>
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
-            Add People First
-          </CardTitle>
+          <CardTitle className="text-xl font-semibold text-primary">Add People First</CardTitle>
+          <CardDescription>
+            Smart Scan needs participants before it can prepare a split.
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">You need to add people before scanning receipts.</p>
-        </CardContent>
       </Card>
     );
   }
 
+  const stepDescription = {
+    upload: 'Capture a clear receipt and let Smart Scan prepare the expense.',
+    analyzing: 'Smart Scan is reading line items, totals, and taxes.',
+    split: 'Review what was extracted and choose the split style.',
+    form: 'Confirm the expense details before saving.',
+  }[step];
+
   return (
-    <Card className="shadow-xl rounded-lg h-full flex flex-col">
-      <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-              <ScanLine className="mr-2 sm:mr-3 h-5 w-5 sm:h-6 sm:w-6 text-primary" />
-              Smart Scan
-            </CardTitle>
-            <CardDescription className="text-xs sm:text-sm mt-1">
-              {step === 'upload' && 'Upload a receipt photo to auto-fill your expense'}
-              {step === 'analyzing' && 'AI is reading your receipt...'}
-              {step === 'split' && 'Choose how to split this expense'}
-              {step === 'form' && 'Review and edit the pre-filled expense'}
-            </CardDescription>
+    <Card className="flex h-full flex-col overflow-hidden rounded-lg border shadow-xl">
+      <CardHeader className="border-b p-4 sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+                <ScanLine className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-2xl font-bold leading-tight text-primary">Smart Scan</CardTitle>
+                <CardDescription className="mt-1 text-sm">{stepDescription}</CardDescription>
+              </div>
+            </div>
           </div>
-          {step !== 'upload' && step !== 'analyzing' && (
-            <Button variant="ghost" size="sm" onClick={handleReset} className="text-muted-foreground">
-              <RotateCcw className="h-4 w-4 mr-1" /> Start Over
-            </Button>
-          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="rounded">
+              {people.length} participants
+            </Badge>
+            {step !== 'upload' && step !== 'analyzing' && (
+              <Button variant="outline" size="sm" onClick={handleReset} className="h-9">
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Start Over
+              </Button>
+            )}
+          </div>
         </div>
 
-        {/* Step indicator */}
-        <div className="flex items-center gap-1 mt-4">
-          {(['upload', 'analyzing', 'split', 'form'] as WizardStep[]).map((s, i) => (
-            <React.Fragment key={s}>
-              <div className={`h-1.5 flex-1 rounded-full transition-all duration-500 ${
-                i <= ['upload', 'analyzing', 'split', 'form'].indexOf(step)
-                  ? 'bg-primary'
-                  : 'bg-muted'
-              }`} />
-            </React.Fragment>
-          ))}
+        <div className="pt-1">
+          <StepRail step={step} />
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 pt-4 sm:pt-6">
-        {/* === STEP 1: Upload === */}
+      <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         {step === 'upload' && (
-          <div className="space-y-4">
-            {/* Drop zone / preview */}
-            {!imagePreview ? (
-              <div
-                className="border-2 border-dashed border-muted-foreground/25 rounded-xl p-8 sm:p-12 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all min-h-[280px]"
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-                  <ImageIcon className="h-10 w-10 text-primary" />
-                </div>
-                <p className="text-base sm:text-lg font-medium mb-1">Drop a receipt image here</p>
-                <p className="text-sm text-muted-foreground mb-6">or tap to browse files</p>
-                <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-12"
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                  >
-                    <Upload className="h-4 w-4 mr-2" /> Browse
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-12"
-                    onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
-                  >
-                    <Camera className="h-4 w-4 mr-2" /> Camera
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative rounded-xl overflow-hidden border bg-muted/20 max-h-[400px] flex items-center justify-center">
-                  <img
-                    src={imagePreview}
-                    alt="Receipt preview"
-                    className="max-h-[400px] w-auto object-contain"
-                  />
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-background/80 backdrop-blur-sm"
-                    onClick={() => { 
-                      setImagePreview(null); 
-                      setImageBase64(null); 
-                      setImageMimeType(null);
-                      setCompressionInfo(null);
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* Compression info */}
-                {compressionInfo && (
-                  <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                    <FileImage className="h-3.5 w-3.5" />
-                    <span>
-                      Compressed from {formatFileSize(compressionInfo.original)} to {formatFileSize(compressionInfo.compressed)}
-                    </span>
-                    <Zap className="h-3.5 w-3.5 text-primary" />
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+            <section className="overflow-hidden rounded-lg border bg-background">
+              {!imagePreview ? (
+                <div
+                  className="flex min-h-[360px] cursor-pointer flex-col items-center justify-center p-5 text-center transition-colors hover:bg-primary/5 sm:p-8"
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <div className="grid h-20 w-20 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <ImageIcon className="h-10 w-10" />
                   </div>
-                )}
-              </div>
-            )}
+                  <h3 className="mt-5 text-xl font-semibold text-foreground">Capture the receipt</h3>
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+                    Use a clear, uncropped photo. Smart Scan will compress it locally before reading the bill.
+                  </p>
+                  <div className="mt-6 grid w-full max-w-sm gap-3 sm:grid-cols-2">
+                    <Button
+                      variant="outline"
+                      className="h-12"
+                      onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+                    >
+                      <Upload className="mr-2 h-4 w-4" />
+                      Browse
+                    </Button>
+                    <Button
+                      className="h-12"
+                      onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
+                    >
+                      <Camera className="mr-2 h-4 w-4" />
+                      Camera
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_220px]">
+                  <div className="relative flex min-h-[320px] items-center justify-center bg-muted/30 p-3">
+                    <img
+                      src={imagePreview}
+                      alt="Receipt preview"
+                      className="max-h-[520px] w-auto max-w-full rounded-md object-contain shadow-sm"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="absolute right-3 top-3 h-9 w-9 rounded-md bg-background/90 shadow-sm"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageBase64(null);
+                        setImageMimeType(null);
+                        setCompressionInfo(null);
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="border-t p-4 lg:border-l lg:border-t-0">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Image ready</p>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Check the receipt is readable, then start the scan.
+                    </p>
+                    {compressionInfo && (
+                      <div className="mt-4 rounded-lg bg-muted/40 p-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-2 font-medium text-foreground">
+                          <Zap className="h-3.5 w-3.5 text-primary" />
+                          Optimized
+                        </div>
+                        <p className="mt-1">
+                          {formatFileSize(compressionInfo.original)} to {formatFileSize(compressionInfo.compressed)}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </section>
 
-            {/* Compression progress */}
-            {isCompressing && (
-              <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-primary/10 text-primary text-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Optimizing image...</span>
-              </div>
-            )}
+            <aside className="space-y-4">
+              <section className="rounded-lg border bg-background p-4">
+                <SectionTitle
+                  icon={FileImage}
+                  title="Scan readiness"
+                  subtitle="Best results come from bright, flat, full-receipt images."
+                />
+                <div className="mt-4 space-y-3 text-sm">
+                  {[
+                    'JPEG, PNG, and WebP are supported.',
+                    'Large photos are compressed before upload.',
+                    'Items, taxes, totals, and restaurant names are extracted.',
+                  ].map((item) => (
+                    <div key={item} className="flex gap-2 text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-            {scanError && (
-              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">
-                <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                <span>{scanError}</span>
-              </div>
-            )}
+              {isCompressing && (
+                <div className="flex items-center gap-3 rounded-lg border border-primary/30 bg-primary/10 p-4 text-sm text-primary">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Optimizing image...
+                </div>
+              )}
 
-            {/* Retry button */}
-            {canRetry && imageBase64 && (
-              <Button
-                onClick={handleScan}
-                variant="outline"
-                className="w-full h-11"
-                disabled={isCompressing}
-              >
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Retry Scan
-              </Button>
-            )}
+              {scanError && (
+                <div className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <span>{scanError}</span>
+                </div>
+              )}
 
-            {/* Hidden file inputs */}
+              {canRetry && imageBase64 && (
+                <Button onClick={handleScan} variant="outline" className="h-11 w-full" disabled={isCompressing}>
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Retry Scan
+                </Button>
+              )}
+            </aside>
+
             <input
               ref={fileInputRef}
               type="file"
@@ -644,10 +767,9 @@ export default function ScanReceiptTab({
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => { 
+              onChange={(e) => {
                 if (e.target.files?.[0]) {
                   const file = e.target.files[0];
-                  // Show warning for very large files
                   if (file.size > 8 * 1024 * 1024) {
                     setScanError('Large image detected. Compressing...');
                   }
@@ -658,132 +780,161 @@ export default function ScanReceiptTab({
           </div>
         )}
 
-        {/* === STEP 2: Analyzing === */}
         {step === 'analyzing' && (
-          <div className="flex flex-col items-center justify-center py-12 sm:py-16 space-y-6">
-            <div className="relative">
-              {imagePreview && (
-                <div className="w-48 h-64 rounded-xl overflow-hidden border-2 border-primary/30 relative">
-                  <img src={imagePreview} alt="Scanning" className="w-full h-full object-cover" />
-                  {/* Scanning animation overlay */}
+          <div className="grid min-h-[420px] gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-center">
+            <div className="flex justify-center">
+              {imagePreview ? (
+                <div className="relative h-[360px] w-full max-w-[240px] overflow-hidden rounded-lg border bg-muted/30 shadow-sm">
+                  <img src={imagePreview} alt="Scanning" className="h-full w-full object-cover" />
                   <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent animate-scan-line" />
+                    <div className="animate-scan-line absolute inset-x-0 h-1 bg-primary" />
                   </div>
-                  <div className="absolute inset-0 bg-primary/5 animate-pulse" />
+                  <div className="absolute inset-0 bg-primary/5" />
                 </div>
-              )}
-              {!imagePreview && (
-                <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <Loader2 className="h-10 w-10 text-primary animate-spin" />
+              ) : (
+                <div className="grid h-24 w-24 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <Loader2 className="h-10 w-10 animate-spin" />
                 </div>
               )}
             </div>
-            
-            {/* Progress bar */}
-            <div className="w-full max-w-xs space-y-3">
-              <Progress value={ANALYZING_STAGES[analyzingMessageIndex]?.progress || 0} className="h-2" />
-              <div className="text-center space-y-2">
-                <div className="flex items-center justify-center gap-2 text-primary font-medium">
-                  <Sparkles className="h-4 w-4 animate-pulse" />
+
+            <section className="rounded-lg border bg-background p-5 sm:p-6">
+              <div className="flex items-center gap-2 text-primary">
+                <Sparkles className="h-5 w-5 animate-pulse" />
+                <h3 className="text-xl font-semibold">Reading your receipt</h3>
+              </div>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Smart Scan is extracting line items, totals, and taxes. This usually takes 5-15 seconds.
+              </p>
+              <div className="mt-6 space-y-3">
+                <Progress value={ANALYZING_STAGES[analyzingMessageIndex]?.progress || 0} className="h-2" />
+                <p className="text-sm font-medium text-foreground">
                   {ANALYZING_STAGES[analyzingMessageIndex]?.message}
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  This usually takes 5-15 seconds
                 </p>
               </div>
-            </div>
-
-            {/* Cancel button */}
-            <Button
-              onClick={handleCancelScan}
-              variant="outline"
-              size="sm"
-              className="mt-4"
-            >
-              <X className="mr-1 h-4 w-4" />
-              Cancel
-            </Button>
-          </div>
-        )}
-
-        {/* === STEP 3: Split Method === */}
-        {step === 'split' && parsedData && (
-          <div className="space-y-6">
-            {/* Extraction summary card */}
-            <div className="p-4 sm:p-5 rounded-xl border bg-primary/5 space-y-3">
-              <div className="flex items-center gap-2 text-primary font-semibold">
-                <Receipt className="h-5 w-5" />
-                Receipt Scanned Successfully
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {parsedData.restaurant_name && (
-                  <div>
-                    <p className="text-muted-foreground text-xs">Restaurant</p>
-                    <p className="font-medium">{parsedData.restaurant_name}</p>
-                  </div>
-                )}
-                {parsedData.date && (
-                  <div>
-                    <p className="text-muted-foreground text-xs">Date</p>
-                    <p className="font-medium">{new Date(parsedData.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
-                  </div>
-                )}
-                <div>
-                  <p className="text-muted-foreground text-xs">Items Found</p>
-                  <p className="font-medium">{parsedData.items.length} items</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground text-xs">Total Amount</p>
-                  <p className="font-semibold text-primary text-lg">{formatCurrency(parsedData.total_amount)}</p>
-                </div>
-              </div>
-              {parsedData.taxes.length > 0 && (
-                <div className="pt-2 border-t border-primary/10">
-                  <p className="text-xs text-muted-foreground mb-1">Taxes detected:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {parsedData.taxes.map((tax, i) => (
-                      <span key={i} className="text-xs bg-primary/10 px-2 py-1 rounded-md">
-                        {tax.label}: {formatCurrency(tax.amount)}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Items breakdown */}
-            <div className="p-4 sm:p-5 border rounded-lg">
-              <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-primary" />
-                Items Detected
-              </h4>
-              <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                {parsedData.items.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm py-1.5 border-b border-muted/50 last:border-0">
-                    <span className="flex-1 mr-2">
-                      {item.name}
-                      {item.quantity > 1 && <span className="text-muted-foreground"> x{item.quantity}</span>}
-                    </span>
-                    <span className="font-mono font-medium">{formatCurrency(item.total_price)}</span>
+              <div className="mt-5 grid gap-2 sm:grid-cols-2">
+                {ANALYZING_STAGES.map((stage, index) => (
+                  <div
+                    key={stage.message}
+                    className={`rounded-lg border px-3 py-2 text-xs ${
+                      index <= analyzingMessageIndex
+                        ? 'border-primary/30 bg-primary/10 text-primary'
+                        : 'bg-muted/30 text-muted-foreground'
+                    }`}
+                  >
+                    {stage.message}
                   </div>
                 ))}
               </div>
-            </div>
-
-            {/* Split method selector */}
-            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-              <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
-                <Wallet className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                How do you want to split this?
-              </h3>
-              <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
-            </div>
+              <Button onClick={handleCancelScan} variant="outline" size="sm" className="mt-6 h-10">
+                <X className="mr-2 h-4 w-4" />
+                Cancel Scan
+              </Button>
+            </section>
           </div>
         )}
 
-        {/* === STEP 4: Pre-filled Form === */}
+        {step === 'split' && parsedData && (
+          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="space-y-5">
+              <section className="rounded-lg border bg-primary/5 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <SectionTitle
+                    icon={Receipt}
+                    title={parsedData.restaurant_name || 'Receipt scanned'}
+                    subtitle={parsedData.date ? new Date(parsedData.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Date not detected'}
+                  />
+                  <div className="sm:text-right">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Total</p>
+                    <p className="text-2xl font-bold text-primary">{formatCurrency(parsedData.total_amount)}</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-3 gap-2">
+                  <div className="rounded-lg bg-background/70 p-3">
+                    <p className="text-[11px] text-muted-foreground">Items</p>
+                    <p className="text-base font-semibold">{parsedData.items.length}</p>
+                  </div>
+                  <div className="rounded-lg bg-background/70 p-3">
+                    <p className="text-[11px] text-muted-foreground">Taxes</p>
+                    <p className="text-base font-semibold">{parsedData.taxes.length}</p>
+                  </div>
+                  <div className="rounded-lg bg-background/70 p-3">
+                    <p className="text-[11px] text-muted-foreground">Charges</p>
+                    <p className="text-base font-semibold">{parsedData.additional_charges.length}</p>
+                  </div>
+                </div>
+              </section>
+
+              <section className="rounded-lg border bg-background p-4 sm:p-5">
+                <SectionTitle
+                  icon={CreditCard}
+                  title="Detected line items"
+                  subtitle="Review the extracted bill before choosing a split."
+                />
+                <div className="mt-4 max-h-[320px] space-y-1 overflow-y-auto pr-1">
+                  {parsedData.items.map((item, i) => (
+                    <div key={`${item.name}-${i}`} className="flex items-start justify-between gap-3 border-b py-2 text-sm last:border-0">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {item.quantity > 1 ? `Quantity ${item.quantity}` : item.category_hint}
+                        </p>
+                      </div>
+                      <span className="shrink-0 font-semibold">{formatCurrency(item.total_price)}</span>
+                    </div>
+                  ))}
+                </div>
+                {(parsedData.taxes.length > 0 || parsedData.additional_charges.length > 0) && (
+                  <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+                    {parsedData.taxes.map((tax, i) => (
+                      <Badge key={`tax-${i}`} variant="outline" className="rounded">
+                        {tax.label}: {formatCurrency(tax.amount)}
+                      </Badge>
+                    ))}
+                    {parsedData.additional_charges
+                      .filter((charge) => Math.abs(charge.amount) > 0.01)
+                      .map((charge, i) => (
+                        <Badge key={`charge-${i}`} variant="outline" className="rounded">
+                          {charge.label}: {formatCurrency(charge.amount)}
+                        </Badge>
+                      ))}
+                  </div>
+                )}
+              </section>
+            </div>
+
+            <aside className="space-y-4">
+              <section className="rounded-lg border bg-background p-4 sm:p-5">
+                <SectionTitle
+                  icon={Wallet}
+                  title="Choose split style"
+                  subtitle="You can still edit participants and item shares before saving."
+                />
+                <div className="mt-4">
+                  <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+                </div>
+              </section>
+            </aside>
+          </div>
+        )}
+
         {step === 'form' && (
-          <div className="space-y-6 sm:space-y-8">
+          <div className="space-y-5 sm:space-y-6">
+            <section className="rounded-lg border bg-primary/5 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-primary">Generated expense</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Review the details Smart Scan prepared from the receipt.
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="text-xs text-muted-foreground">Amount</p>
+                  <p className="text-xl font-bold text-primary">{formatCurrency(amountToSplit)}</p>
+                </div>
+              </div>
+            </section>
+
             <SettleEaseErrorBoundary componentName="Expense Basic Info" size="medium">
               <ExpenseBasicInfo
                 description={description}
@@ -801,31 +952,29 @@ export default function ScanReceiptTab({
             </SettleEaseErrorBoundary>
 
             <SettleEaseErrorBoundary componentName="Payment Details" size="medium">
-              <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-                <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
-                  <Wallet className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Payment Details
-                </h3>
-                <PayerInputSection
-                  payers={payers}
-                  people={people}
-                  isMultiplePayers={isMultiplePayers}
-                  handlePayerChange={handlePayerChange}
-                  addPayer={addPayer}
-                  removePayer={removePayer}
-                  onToggleMultiplePayers={handleToggleMultiplePayers}
-                  defaultPayerId={defaultPayerId}
-                />
-              </div>
+              <section className="rounded-lg border bg-background p-4 sm:p-5">
+                <SectionTitle icon={Wallet} title="Payment details" />
+                <div className="mt-4">
+                  <PayerInputSection
+                    payers={payers}
+                    people={people}
+                    isMultiplePayers={isMultiplePayers}
+                    handlePayerChange={handlePayerChange}
+                    addPayer={addPayer}
+                    removePayer={removePayer}
+                    onToggleMultiplePayers={handleToggleMultiplePayers}
+                    defaultPayerId={defaultPayerId}
+                  />
+                </div>
+              </section>
             </SettleEaseErrorBoundary>
 
             <SettleEaseErrorBoundary componentName="Split Method" size="medium">
-              <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
-                <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
-                  <Wallet className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                  Split Method
-                </h3>
-                <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+              <section className="rounded-lg border bg-background p-4 sm:p-5">
+                <SectionTitle icon={Users} title="Split method" />
+                <div className="mt-4">
+                  <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
+                </div>
 
                 {splitMethod === 'equal' && (
                   <div className="mt-4">
@@ -859,21 +1008,22 @@ export default function ScanReceiptTab({
                     />
                   </div>
                 )}
-              </div>
+              </section>
             </SettleEaseErrorBoundary>
           </div>
         )}
       </CardContent>
 
-      {/* Footer with action buttons */}
-      <CardFooter className="border-t p-4 sm:pt-6 flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-3">
+      <CardFooter className="flex flex-col gap-2 border-t bg-background/95 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         {step === 'upload' && (
           <>
-            <div />
+            <p className="hidden text-sm text-muted-foreground sm:block">
+              {imageBase64 ? 'Ready when the receipt is readable.' : 'Add an image to begin.'}
+            </p>
             <Button
               onClick={handleScan}
               disabled={!imageBase64 || isCompressing}
-              className="w-full sm:w-auto h-12 sm:h-11"
+              className="h-12 w-full sm:h-11 sm:w-auto"
             >
               {isCompressing ? (
                 <>
@@ -892,33 +1042,41 @@ export default function ScanReceiptTab({
 
         {step === 'split' && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setStep('upload')} className="w-full sm:w-auto">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            <Button variant="outline" onClick={() => setStep('upload')} className="h-11 w-full sm:w-auto">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
             </Button>
-            <Button onClick={handleSplitMethodConfirm} className="w-full sm:w-auto h-11">
-              Continue <ArrowRight className="ml-1 h-4 w-4" />
+            <Button onClick={handleSplitMethodConfirm} className="h-11 w-full sm:w-auto">
+              Continue
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </>
         )}
 
         {step === 'form' && (
           <>
-            <Button variant="outline" size="sm" onClick={() => setStep('split')} className="w-full sm:w-auto">
-              <ArrowLeft className="mr-1 h-4 w-4" /> Back
+            <Button variant="outline" onClick={() => setStep('split')} className="h-11 w-full sm:w-auto">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
             </Button>
-            <Button onClick={onSubmit} disabled={isLoading || people.length === 0} className="w-full sm:w-auto h-11">
-              <Check className="mr-1 h-4 w-4" />
+            <Button onClick={onSubmit} disabled={isLoading || people.length === 0} className="h-11 w-full sm:w-auto">
+              {isLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Check className="mr-2 h-4 w-4" />
+              )}
               {isLoading ? 'Adding...' : 'Add Expense'}
             </Button>
           </>
         )}
       </CardFooter>
 
-      {/* CSS for scan animation */}
       <style jsx>{`
         @keyframes scan-line {
-          0% { top: -4px; }
-          100% { top: 100%; }
+          0% { top: -4px; opacity: 0.4; }
+          12% { opacity: 1; }
+          88% { opacity: 1; }
+          100% { top: 100%; opacity: 0.4; }
         }
         .animate-scan-line {
           animation: scan-line 2s linear infinite;
