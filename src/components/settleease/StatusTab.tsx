@@ -150,10 +150,11 @@ export default function StatusTab({
       const aiTime = Date.now() - aiStart;
       const data = await response.json();
 
-      const allHealthy = data.checks?.geminiApiKey &&
+      const allHealthy = Boolean(data.checks?.geminiApiKey &&
         data.checks?.convexUrl &&
         data.checks?.promptFetch &&
-        data.checks?.promptHasPlaceholder;
+        data.checks?.promptHasPlaceholder &&
+        data.checks?.activeModel);
 
       newServices.push({
         name: 'AI Summarization API',
@@ -170,6 +171,7 @@ export default function StatusTab({
               <span className={data.checks?.geminiApiKey ? "text-green-500" : "text-red-500"}>●</span> Gemini API
               <span className={data.checks?.promptFetch ? "text-green-500" : "text-red-500"}>●</span> Prompt v{data.checks?.promptVersion || '?'}
               <span className={data.checks?.promptHasPlaceholder ? "text-green-500" : "text-red-500"}>●</span> Prompt Placeholder
+              <span className={data.checks?.activeModel ? "text-green-500" : "text-red-500"}>●</span> {data.checks?.activeModelName || 'AI Model'}
             </div>
           </div>
         )

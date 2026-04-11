@@ -1,14 +1,8 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { fetchAiModelAttemptOrder } from '@/lib/settleease/aiModelConfigServer';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-
-// Use Gemini 1.5 Flash for fast, cost-effective vision processing
-// Alternative models:
-// - 'gemini-1.5-flash-latest' (recommended, always latest version)
-// - 'gemini-1.5-pro-latest' (higher accuracy but slower/more expensive)
-// - 'gemini-1.5-flash' (specific version)
-const MODEL_NAME = 'gemini-3.1-flash-lite-preview';
 
 // Request timeout: 30 seconds
 const REQUEST_TIMEOUT_MS = 30000;
@@ -116,58 +110,50 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`✅ Image received (${Math.round(estimatedSize / 1024)}KB), calling Gemini ${MODEL_NAME}...`);
+    const modelAttemptOrder = await fetchAiModelAttemptOrder();
+
+    console.log(`✅ Image received (${Math.round(estimatedSize / 1024)}KB), calling Gemini ${modelAttemptOrder[0]}...`);
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    
-    // Try to get the model - with fallback to alternative names
-    let model;
-    try {
-      model = genAI.getGenerativeModel({ 
-        model: MODEL_NAME,
-        generationConfig: {
-          temperature: 0.1, // Low temperature for consistent, deterministic parsing
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 2048, // Sufficient for receipt data
-        },
-      });
-    } catch (modelError: any) {
-      console.error('❌ Error getting model:', modelError);
-      // Try fallback model names
-      const fallbackModels = ['gemini-1.5-flash', 'gemini-pro-vision', 'gemini-1.5-pro-latest'];
-      for (const fallbackModel of fallbackModels) {
-        try {
-          console.log(`Trying fallback model: ${fallbackModel}`);
-          model = genAI.getGenerativeModel({ 
-            model: fallbackModel,
-            generationConfig: {
-              temperature: 0.1,
-              topP: 0.8,
-              topK: 40,
-              maxOutputTokens: 2048,
+
+    let result;
+    let successfulModel = '';
+    const modelErrors: string[] = [];
+
+    for (const modelName of modelAttemptOrder) {
+      try {
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            temperature: 0.1, // Low temperature for consistent, deterministic parsing
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 2048, // Sufficient for receipt data
+          },
+        });
+
+        result = await model.generateContent([
+          RECEIPT_PARSE_PROMPT,
+          {
+            inlineData: {
+              mimeType,
+              data: image,
             },
-          });
-          console.log(`✅ Using fallback model: ${fallbackModel}`);
-          break;
-        } catch (e) {
-          console.error(`Failed to use ${fallbackModel}:`, e);
-        }
-      }
-      if (!model) {
-        throw new Error('Could not initialize any Gemini model. Please check API key and model availability.');
+          },
+        ]);
+        successfulModel = modelName;
+        console.log(`✅ Successfully scanned receipt with ${modelName}`);
+        break;
+      } catch (modelError: any) {
+        const message = modelError?.message || 'Unknown model error';
+        console.warn(`⚠️ Model ${modelName} failed: ${message}`);
+        modelErrors.push(`${modelName}: ${message}`);
       }
     }
 
-    const result = await model.generateContent([
-      RECEIPT_PARSE_PROMPT,
-      {
-        inlineData: {
-          mimeType,
-          data: image,
-        },
-      },
-    ]);
+    if (!result || !successfulModel) {
+      throw new Error(`Could not initialize any Gemini model. Errors: ${modelErrors.join('; ')}`);
+    }
 
     clearTimeout(timeoutId);
 
@@ -187,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     const text = response.text();
-    console.log('✅ Gemini response received, parsing JSON...');
+    console.log(`✅ Gemini response received from ${successfulModel}, parsing JSON...`);
     console.log('Response preview:', text.substring(0, 200));
 
     // Try to extract JSON from the response (handle cases where model wraps in markdown)

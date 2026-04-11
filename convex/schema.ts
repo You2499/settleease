@@ -100,6 +100,14 @@ export default defineSchema({
     description: v.optional(v.union(v.string(), v.null())),
   }).index("by_name_active", ["name", "isActive"]),
 
+  aiConfigs: defineTable({
+    key: v.string(),
+    modelCode: v.string(),
+    fallbackModelCodes: v.array(v.string()),
+    updatedAt: v.string(),
+    updatedByUserId: v.optional(v.union(v.string(), v.null())),
+  }).index("by_key", ["key"]),
+
   aiSummaries: defineTable({
     userId: v.string(),
     dataHash: v.string(),

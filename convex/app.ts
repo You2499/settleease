@@ -21,6 +21,12 @@ const celebrationContribution = v.object({
   amount: v.number(),
 });
 
+const aiModelCode = v.union(
+  v.literal("gemini-3.1-flash-lite-preview"),
+  v.literal("gemini-3-flash-preview"),
+  v.literal("gemini-2.5-flash"),
+);
+
 const activeView = v.union(
   v.literal("dashboard"),
   v.literal("addExpense"),
@@ -129,6 +135,18 @@ function aiPromptDto(prompt: any) {
     updated_at: prompt.updatedAt,
     version: prompt.version,
     description: prompt.description ?? null,
+  };
+}
+
+function aiConfigDto(config: any) {
+  if (!config) return null;
+  return {
+    id: config._id,
+    key: config.key,
+    modelCode: config.modelCode,
+    fallbackModelCodes: config.fallbackModelCodes ?? [],
+    updatedAt: config.updatedAt,
+    updatedByUserId: config.updatedByUserId ?? null,
   };
 }
 
@@ -677,6 +695,58 @@ export const getActiveAiPrompt = query({
       .withIndex("by_name_active", (q) => q.eq("name", args.name).eq("isActive", true))
       .first();
     return aiPromptDto(prompt);
+  },
+});
+
+export const getActiveAiConfig = query({
+  args: { key: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    const configKey = args.key ?? "global-ai-config";
+    const config = await ctx.db
+      .query("aiConfigs")
+      .withIndex("by_key", (q) => q.eq("key", configKey))
+      .first();
+    return aiConfigDto(config);
+  },
+});
+
+export const saveAiConfig = mutation({
+  args: {
+    key: v.optional(v.string()),
+    modelCode: aiModelCode,
+    fallbackModelCodes: v.array(aiModelCode),
+    currentUserId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const configKey = args.key ?? "global-ai-config";
+    const timestamp = nowIso();
+    const uniqueFallbacks = [...new Set(args.fallbackModelCodes)].filter(
+      (modelCode) => modelCode !== args.modelCode,
+    );
+
+    const existing = await ctx.db
+      .query("aiConfigs")
+      .withIndex("by_key", (q) => q.eq("key", configKey))
+      .first();
+
+    const update = {
+      modelCode: args.modelCode,
+      fallbackModelCodes: uniqueFallbacks,
+      updatedAt: timestamp,
+      updatedByUserId: args.currentUserId ?? null,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, update);
+      return existing._id;
+    }
+
+    return await ctx.db.insert("aiConfigs", {
+      key: configKey,
+      ...update,
+    });
   },
 });
 

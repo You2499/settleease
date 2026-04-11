@@ -98,7 +98,7 @@ export interface ManualSettlementOverride {
 
 export interface AIPrompt {
   id: string; // Convex document ID mapped to the legacy DTO shape
-  name: string; // Unique name for the prompt (e.g., "trump-summarizer")
+  name: string; // Unique name for the prompt (e.g., "settlement-summary")
   prompt_text: string; // The actual prompt text
   is_active: boolean; // Only one prompt can be active per name
   created_by_user_id?: string | null; // FK to auth.users.id
@@ -106,6 +106,15 @@ export interface AIPrompt {
   updated_at: string; // ISO date string
   version: number; // Version number for tracking changes
   description?: string | null; // Optional description
+}
+
+export interface AIConfig {
+  id: string; // Convex document ID mapped to the legacy DTO shape
+  key: string;
+  modelCode: string;
+  fallbackModelCodes: string[];
+  updatedAt: string;
+  updatedByUserId?: string | null;
 }
 
 // Used for displaying calculated settlements

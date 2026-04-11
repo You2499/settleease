@@ -41,7 +41,9 @@ import {
   buildSettlementSummaryPayload,
   type PersonBalanceSnapshot,
 } from "@/lib/settleease/summaryPayload";
-import AISummaryTooltip from "./AISummaryTooltip";
+import { SETTLEMENT_SUMMARY_PROMPT_NAME } from "@/lib/settleease/aiSummarization";
+import AISummaryDialog from "./AISummaryDialog";
+import { AI_CONFIG_KEY, resolveAiModelConfig } from "@/lib/settleease/aiModels";
 import {
   Dialog,
   DialogContent,
@@ -113,7 +115,9 @@ export default function SettlementSummary({
   const [summaryPromptVersion, setSummaryPromptVersion] = useState<number | undefined>(undefined);
   const [isComputingHash, setIsComputingHash] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
-  const activePrompt = useQuery(api.app.getActiveAiPrompt, { name: "trump-summarizer" }) as any;
+  const activePrompt = useQuery(api.app.getActiveAiPrompt, { name: SETTLEMENT_SUMMARY_PROMPT_NAME }) as any;
+  const activeAiConfig = useQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }) as any;
+  const resolvedAiConfig = useMemo(() => resolveAiModelConfig(activeAiConfig), [activeAiConfig]);
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -257,13 +261,14 @@ export default function SettlementSummary({
       // Generate the summary data on demand
       const summaryData = generateSummaryData();
 
-      const promptVersion = activePrompt?.version || 2;
+      const promptVersion = activePrompt?.version || 0;
       console.log("✅ Using prompt version:", promptVersion);
 
       // Include prompt version in the data for hashing
       const dataWithPromptVersion = {
         ...summaryData,
         promptVersion,
+        modelCode: resolvedAiConfig.modelCode,
       };
 
       console.log("🔄 Computing hash for current data...");
@@ -596,14 +601,14 @@ export default function SettlementSummary({
 
       {/* AI Summary Dialog */}
       {summaryJsonData && (
-        <AISummaryTooltip
+        <AISummaryDialog
           open={isSummaryDialogOpen}
           onOpenChange={setIsSummaryDialogOpen}
           jsonData={summaryJsonData}
           hash={summaryHash}
           promptVersion={summaryPromptVersion}
+          modelCode={resolvedAiConfig.modelCode}
           currentUserId={currentUserId || ""}
-          triggerRef={summaryButtonRef}
         />
       )}
     </Card>

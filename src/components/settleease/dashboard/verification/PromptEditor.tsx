@@ -11,6 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -19,9 +27,22 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
-import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { History, Sparkles, CircleAlert, Check, Clock, Trash2, AlertTriangle } from 'lucide-react';
 import type { AIPrompt } from '@/lib/settleease/types';
-import { DEFAULT_PRODUCTION_SUMMARY_PROMPT } from '@/lib/settleease/aiSummarization';
+import {
+  DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+  SETTLEMENT_SUMMARY_PROMPT_NAME,
+} from '@/lib/settleease/aiSummarization';
+import {
+  AI_CONFIG_KEY,
+  AI_MODEL_OPTIONS,
+  DEFAULT_AI_MODEL_CODE,
+  getAiModelOption,
+  getDefaultFallbackModelCodes,
+  isSupportedAiModelCode,
+  resolveAiModelConfig,
+  type AiModelCode,
+} from '@/lib/settleease/aiModels';
 
 interface PromptEditorProps {
   currentUserId: string;
@@ -34,13 +55,20 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
   const [promptHistory, setPromptHistory] = useState<AIPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingModel, setIsSavingModel] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const promptData = useQuery(api.app.getAiPromptEditorData, { name: 'trump-summarizer' }) as
+  const [selectedModelCode, setSelectedModelCode] = useState<AiModelCode>(DEFAULT_AI_MODEL_CODE);
+  const promptData = useQuery(api.app.getAiPromptEditorData, { name: SETTLEMENT_SUMMARY_PROMPT_NAME }) as
     | { activePrompt: AIPrompt | null; promptHistory: AIPrompt[] }
     | undefined;
+  const aiConfigData = useQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }) as any;
   const saveAiPrompt = useMutation(api.app.saveAiPrompt);
+  const saveAiConfig = useMutation(api.app.saveAiConfig);
   const clearAiSummaries = useMutation(api.app.clearAiSummaries);
+  const resolvedAiConfig = resolveAiModelConfig(aiConfigData);
+  const selectedModel = getAiModelOption(selectedModelCode);
+  const hasModelChanges = selectedModelCode !== resolvedAiConfig.modelCode;
 
   // Load active prompt and history
   useEffect(() => {
@@ -50,8 +78,8 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
     }
 
     const active = promptData.activePrompt || {
-      id: 'default-trump-summarizer',
-      name: 'trump-summarizer',
+      id: 'default-settlement-summary',
+      name: SETTLEMENT_SUMMARY_PROMPT_NAME,
       prompt_text: DEFAULT_PRODUCTION_SUMMARY_PROMPT,
       is_active: true,
       created_by_user_id: null,
@@ -66,6 +94,11 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
     setPromptHistory(promptData.promptHistory || []);
     setIsLoading(false);
   }, [promptData]);
+
+  useEffect(() => {
+    if (aiConfigData === undefined) return;
+    setSelectedModelCode(resolveAiModelConfig(aiConfigData).modelCode);
+  }, [aiConfigData]);
 
   // Track unsaved changes
   useEffect(() => {
@@ -91,7 +124,7 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
       const newVersion = activePrompt.version + 1;
 
       await saveAiPrompt({
-        name: 'trump-summarizer',
+        name: SETTLEMENT_SUMMARY_PROMPT_NAME,
         promptText: editedPromptText,
         description: versionDescription,
         currentUserId,
@@ -136,7 +169,7 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
       const newVersion = activePrompt.version + 1;
 
       await saveAiPrompt({
-        name: 'trump-summarizer',
+        name: SETTLEMENT_SUMMARY_PROMPT_NAME,
         promptText: version.prompt_text,
         description: `Restored from version ${version.version}`,
         currentUserId,
@@ -166,6 +199,32 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
     setEditedPromptText(DEFAULT_PRODUCTION_SUMMARY_PROMPT);
     if (!versionDescription.trim()) {
       setVersionDescription("Switch to production-grade neutral summary template with strict output contract");
+    }
+  };
+
+  const handleSaveModel = async () => {
+    setIsSavingModel(true);
+    try {
+      await saveAiConfig({
+        key: AI_CONFIG_KEY,
+        modelCode: selectedModelCode,
+        fallbackModelCodes: getDefaultFallbackModelCodes(selectedModelCode),
+        currentUserId,
+      });
+
+      toast({
+        title: "Model Updated",
+        description: `All AI features will now try ${selectedModel.displayName} first.`,
+      });
+    } catch (error: any) {
+      console.error('Error saving AI model config:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save AI model configuration",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingModel(false);
     }
   };
 
@@ -213,7 +272,100 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <Tabs defaultValue="model" className="space-y-4 sm:space-y-6">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="model">Model</TabsTrigger>
+        <TabsTrigger value="prompt">Prompt</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="model" className="mt-0 space-y-4">
+        <Card>
+          <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
+            <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <Sparkles className="h-5 w-5 text-primary" />
+              AI Model
+              <Badge variant={selectedModel.status === "Stable" ? "secondary" : "outline"}>
+                {selectedModel.status}
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Select the shared Gemini model used by AI Summary and Smart Scan.
+            </CardDescription>
+          </CardHeader>
+          <Separator />
+          <CardContent className="px-4 sm:px-6 py-4 sm:py-6 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ai-model">Current Model</Label>
+              <Select
+                value={selectedModelCode}
+                onValueChange={(value) => {
+                  if (isSupportedAiModelCode(value)) {
+                    setSelectedModelCode(value);
+                  }
+                }}
+              >
+                <SelectTrigger id="ai-model">
+                  <SelectValue placeholder="Select model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AI_MODEL_OPTIONS.map((model) => (
+                    <SelectItem key={model.code} value={model.code}>
+                      {model.displayName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+              <div>
+                <div className="text-sm font-semibold">{selectedModel.displayName}</div>
+                <div className="mt-1 font-mono text-xs text-muted-foreground">{selectedModel.code}</div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border bg-background p-3">
+                  <div className="text-xs font-medium text-muted-foreground">Free Tier</div>
+                  <div className="mt-1 text-sm">{selectedModel.freeTierLabel}</div>
+                </div>
+                <div className="rounded-lg border bg-background p-3">
+                  <div className="text-xs font-medium text-muted-foreground">Paid Pricing</div>
+                  <div className="mt-1 text-sm">{selectedModel.paidPricingLabel}</div>
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">{selectedModel.recommendedFor}</p>
+              <div className="text-xs text-muted-foreground">
+                Fallback order after this model: {getDefaultFallbackModelCodes(selectedModelCode)
+                  .map((code) => getAiModelOption(code).displayName)
+                  .join(", ")}
+              </div>
+            </div>
+
+            {hasModelChanges && (
+              <Alert>
+                <CircleAlert className="h-4 w-4" />
+                <AlertDescription className="text-xs sm:text-sm">
+                  Saving changes the shared model for all AI features. Summary cache keys include the model code, so future summaries regenerate under the new model.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleSaveModel} disabled={isSavingModel || !hasModelChanges}>
+                {isSavingModel ? "Saving..." : "Save Model"}
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!hasModelChanges || isSavingModel}
+                onClick={() => setSelectedModelCode(resolvedAiConfig.modelCode)}
+              >
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="prompt" className="mt-0 space-y-4 sm:space-y-6">
       {/* Editor Card */}
       <Card>
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
@@ -437,6 +589,7 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
           </div>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

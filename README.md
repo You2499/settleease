@@ -173,9 +173,10 @@ GEMINI_API_KEY=your_gemini_api_key
 ### AI Summaries
 
 - Powered by Google Gemini
-- Streaming responses with real-time updates
+- Structured settlement summaries with deterministic analytics cards
+- Shared Gemini model configuration for summaries and Smart Scan
 - Global Convex caching by data hash
-- Markdown formatting with rich text
+- Copy-ready Markdown export from structured summary data
 
 ---
 

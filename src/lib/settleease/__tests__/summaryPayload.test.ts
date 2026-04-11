@@ -252,4 +252,34 @@ describe("buildSettlementSummaryPayload", () => {
     expect(hashV1).toBe(hashV1Repeat);
     expect(hashV2).not.toBe(hashV1);
   });
+
+  it("does not expose raw unknown person identifiers in integrity warnings", () => {
+    const payload = buildSettlementSummaryPayload({
+      people,
+      peopleMap,
+      allExpenses: [
+        {
+          id: "bad-expense",
+          description: "Broken Dinner",
+          total_amount: 30,
+          category: "Food",
+          paid_by: [{ personId: "unknown-person-id", amount: 30 }],
+          split_method: "equal",
+          shares: [{ personId: "p1", amount: 30 }],
+          created_at: "2026-01-05T00:00:00Z",
+        },
+      ],
+      categories,
+      pairwiseTransactions: [],
+      simplifiedTransactions: [],
+      settlementPayments: [],
+      manualOverrides: [],
+      personBalances,
+    });
+
+    expect(payload.analysis.integrity.warningList).toContain(
+      'Expense "Broken Dinner" references an unknown payer.'
+    );
+    expect(JSON.stringify(payload.analysis.integrity.warningList)).not.toContain("unknown-person-id");
+  });
 });

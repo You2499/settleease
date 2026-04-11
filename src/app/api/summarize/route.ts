@@ -4,17 +4,18 @@ import { fetchQuery } from 'convex/nextjs';
 import { api } from '@convex/_generated/api';
 import {
   DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+  SETTLEMENT_SUMMARY_PROMPT_NAME,
+  STRUCTURED_SUMMARY_RESPONSE_SCHEMA,
   injectSummaryJsonIntoPrompt,
+  normalizeStructuredSummary,
+  parseStructuredSummaryText,
 } from '@/lib/settleease/aiSummarization';
 import { getConvexUrl } from '@/lib/settleease/convexUrl';
+import { fetchActiveAiModelConfig } from '@/lib/settleease/aiModelConfigServer';
+import { buildAiModelAttemptOrder, getAiModelOption } from '@/lib/settleease/aiModels';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const CONVEX_URL = getConvexUrl();
-
-// Gemma 4 open-source model served via Google AI Studio (same API key)
-const MODEL_FALLBACK_ORDER = [
-  'gemma-4-31b-it',
-];
 
 export async function POST(request: NextRequest) {
   try {
@@ -47,13 +48,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ API key found, fetching prompt from Convex...');
+    console.log('✅ API key found, fetching prompt and model config from Convex...');
 
     const promptData = await fetchQuery(api.app.getActiveAiPrompt, {
-      name: 'trump-summarizer',
+      name: SETTLEMENT_SUMMARY_PROMPT_NAME,
     }, { url: CONVEX_URL });
+    const aiConfig = await fetchActiveAiModelConfig();
+    const modelAttemptOrder = buildAiModelAttemptOrder(aiConfig);
 
-    console.log(`✅ Using prompt version ${promptData?.version || 2}`);
+    const resolvedPromptVersion = promptData?.version || promptVersion || 0;
+    console.log(`✅ Using prompt version ${resolvedPromptVersion}`);
+    console.log(`✅ Model attempt order: ${modelAttemptOrder.join(', ')}`);
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -65,15 +70,32 @@ export async function POST(request: NextRequest) {
     );
 
     // Try models in fallback order until one succeeds
-    let result;
+    let summary = null;
     let successfulModel = null;
     const errors: string[] = [];
 
-    for (const modelName of MODEL_FALLBACK_ORDER) {
+    for (const modelName of modelAttemptOrder) {
       try {
         console.log(`🔄 Trying model: ${modelName}...`);
-        const model = genAI.getGenerativeModel({ model: modelName });
-        result = await model.generateContentStream(prompt);
+        const model = genAI.getGenerativeModel({
+          model: modelName,
+          generationConfig: {
+            temperature: 0.2,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 1800,
+            responseMimeType: 'application/json',
+            responseSchema: STRUCTURED_SUMMARY_RESPONSE_SCHEMA as any,
+          },
+        });
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        const parsedSummary = parseStructuredSummaryText(responseText);
+        if (!parsedSummary) {
+          throw new Error('Model returned invalid structured summary JSON');
+        }
+
+        summary = normalizeStructuredSummary(parsedSummary);
         successfulModel = modelName;
         console.log(`✅ Successfully using model: ${modelName}`);
         break;
@@ -83,7 +105,7 @@ export async function POST(request: NextRequest) {
         errors.push(`${modelName}: ${errorMsg}`);
 
         // If this is the last model, throw the error
-        if (modelName === MODEL_FALLBACK_ORDER[MODEL_FALLBACK_ORDER.length - 1]) {
+        if (modelName === modelAttemptOrder[modelAttemptOrder.length - 1]) {
           console.error('❌ All models failed');
           throw new Error(
             `All AI models are currently unavailable. Please try again later. Errors: ${errors.join('; ')}`
@@ -94,49 +116,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!result || !successfulModel) {
+    if (!summary || !successfulModel) {
       throw new Error('Failed to generate content with any available model');
     }
 
-    console.log('✅ Stream created, starting to send chunks...');
-
-    // Create a readable stream for the response
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          let chunkCount = 0;
-          for await (const chunk of result.stream) {
-            const chunkText = chunk.text();
-            if (chunkText) {
-              chunkCount++;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: chunkText })}\n\n`));
-            }
-          }
-          console.log(`✅ Streaming complete. Sent ${chunkCount} chunks`);
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ done: true, hash, model: successfulModel, promptVersion })}\n\n`
-            )
-          );
-          controller.close();
-        } catch (error: any) {
-          console.error('❌ Streaming error:', error);
-          console.error('Error details:', error.message, error.stack);
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: error.message || 'Streaming failed' })}\n\n`)
-          );
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
+    return Response.json({
+      summary,
+      hash,
+      model: successfulModel,
+      modelDisplayName: getAiModelOption(successfulModel).displayName,
+      promptVersion: resolvedPromptVersion,
     });
   } catch (error: any) {
     console.error('❌ API Error:', error);

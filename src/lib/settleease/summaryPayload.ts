@@ -437,7 +437,7 @@ export function buildSettlementSummaryPayload({
     (Array.isArray(expense.paid_by) ? expense.paid_by : []).forEach((payment) => {
       if (!knownPersonIds.has(payment.personId)) {
         integrityWarnings.push(
-          `Expense "${label}" references unknown payer "${payment.personId}".`
+          `Expense "${label}" references an unknown payer.`
         );
       }
     });
@@ -445,7 +445,7 @@ export function buildSettlementSummaryPayload({
     (Array.isArray(expense.shares) ? expense.shares : []).forEach((share) => {
       if (!knownPersonIds.has(share.personId)) {
         integrityWarnings.push(
-          `Expense "${label}" references unknown sharer "${share.personId}".`
+          `Expense "${label}" references an unknown sharer.`
         );
       }
     });
@@ -455,7 +455,7 @@ export function buildSettlementSummaryPayload({
       !knownPersonIds.has(expense.celebration_contribution.personId)
     ) {
       integrityWarnings.push(
-        `Expense "${label}" references unknown celebration contributor "${expense.celebration_contribution.personId}".`
+        `Expense "${label}" references an unknown celebration contributor.`
       );
     }
 
@@ -463,7 +463,7 @@ export function buildSettlementSummaryPayload({
       item.sharedBy.forEach((personId) => {
         if (!knownPersonIds.has(personId)) {
           integrityWarnings.push(
-            `Expense "${label}" item "${item.name}" references unknown participant "${personId}".`
+            `Expense "${label}" item "${item.name}" references an unknown participant.`
           );
         }
       });
@@ -473,12 +473,12 @@ export function buildSettlementSummaryPayload({
   settlementPayments.forEach((payment) => {
     if (!knownPersonIds.has(payment.debtor_id)) {
       integrityWarnings.push(
-        `Settlement payment references unknown debtor "${payment.debtor_id}".`
+        `Settlement payment references an unknown debtor.`
       );
     }
     if (!knownPersonIds.has(payment.creditor_id)) {
       integrityWarnings.push(
-        `Settlement payment references unknown creditor "${payment.creditor_id}".`
+        `Settlement payment references an unknown creditor.`
       );
     }
   });
