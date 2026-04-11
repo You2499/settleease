@@ -57,12 +57,12 @@ export const STRUCTURED_SUMMARY_RESPONSE_SCHEMA = {
       type: "integer",
       description: "The structured summary schema version. Use 1.",
     },
-    settlementSnapshot: stringListSchema("Concise bullets describing the current settlement state.", 2, 3),
+  settlementSnapshot: stringListSchema("Concise bullets describing the current settlement state without repeating key numbers.", 1, 2),
     keyNumbers: stringListSchema("Key financial numbers from the provided JSON only.", 4, 6),
     whoShouldReceiveMoney: stringListSchema("Ranked creditors, amounts, and short reasons.", 1, 6),
     whoShouldPay: stringListSchema("Ranked debtors, amounts, and short reasons.", 1, 6),
     recommendedSettlementActions: stringListSchema("Outstanding payment actions in priority order.", 1, 8),
-    spendingDrivers: stringListSchema("Top categories and notable spending patterns.", 2, 7),
+  spendingDrivers: stringListSchema("Top categories and notable spending patterns without repeating the same item twice.", 1, 5),
     manualOverridesAndExceptions: stringListSchema("Manual override and exception status.", 1, 5),
     dataQuality: stringListSchema("Integrity and consistency status, including explicit warnings.", 1, 8),
     nextBestActions: stringListSchema("Immediate operational actions for admins and participants.", 2, 5),
@@ -87,12 +87,15 @@ Rules:
 - Never expose internal IDs, UUIDs, or raw technical fields.
 - If data is inconsistent, explicitly call it out in "Data Quality".
 - Do not invent values; if unavailable, say "Not available in input data".
-- Keep the combined text across all string arrays between 220 and 420 words.
+- Keep the combined text across all string arrays between 110 and 220 words.
 - Return ONLY a JSON object matching the response schema. No Markdown, no code fences, no tables.
 - Every array item must be a complete user-facing bullet sentence.
 - Preserve the requested section meanings exactly. The application will render headings and ordering.
+- Do not repeat the same fact in multiple sections. Prefer one precise mention over several reworded mentions.
+- Settlement Snapshot should explain state and urgency, not restate all key numbers.
 - Recommended settlement actions must include only outstanding actionable payments from transactions.recommendedPaymentOrder.
 - Key Numbers must use the analysis.totals values exactly as provided.
+- Who Should Receive Money and Who Should Pay should summarize only role and priority; avoid restating every payment already in Recommended Settlement Actions.
 - Data Quality must mention conservationCheck and expenseConsistency. If warningList has entries, include them explicitly.
 
 Data:

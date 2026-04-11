@@ -5,6 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   AlertTriangle,
+  ArrowRight,
   CheckCircle2,
   Copy,
   Loader2,
@@ -19,29 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { getAiModelOption } from "@/lib/settleease/aiModels";
 import {
-  STRUCTURED_SUMMARY_SECTION_ORDER,
-  STRUCTURED_SUMMARY_SECTION_TITLES,
   buildSummarizeRequestPayload,
   normalizeStructuredSummary,
   parseStructuredSummaryText,
-  structuredSummaryToMarkdown,
   type StructuredSettlementSummary,
-  type StructuredSummarySectionKey,
 } from "@/lib/settleease/aiSummarization";
 import {
   buildBalanceBars,
@@ -50,6 +38,10 @@ import {
   buildSettlementProgress,
   buildSummaryMetricCards,
   getDataQualityMessages,
+  type BalanceBarRow,
+  type CategoryBarRow,
+  type PaymentActionRow,
+  type SummaryMetricCard,
 } from "@/lib/settleease/aiSummaryViewModel";
 import { formatCurrency } from "@/lib/settleease/utils";
 
@@ -65,51 +57,154 @@ interface AISummaryDialogProps {
 
 type SummarySource = "cached" | "generated" | "loading";
 
+const BAR_COLORS = [
+  "bg-primary",
+  "bg-emerald-500",
+  "bg-sky-500",
+  "bg-amber-500",
+  "bg-rose-500",
+];
+
 function parseCachedSummary(value: string | null | undefined): StructuredSettlementSummary | null {
   if (!value) return null;
   return parseStructuredSummaryText(value);
 }
 
-function SectionList({
-  sectionKey,
+function normalizeForDedupe(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[0-9.,₹$%]/g, "")
+    .replace(/[^a-z\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function uniqueItems(items: string[] | undefined, max: number, existing: string[] = []): string[] {
+  const seen = new Set(existing.map(normalizeForDedupe).filter(Boolean));
+  const result: string[] = [];
+
+  for (const item of items || []) {
+    const trimmed = String(item || "").trim();
+    const key = normalizeForDedupe(trimmed);
+    if (!trimmed || !key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+    if (result.length >= max) break;
+  }
+
+  return result;
+}
+
+function isNoExceptionText(items: string[]): boolean {
+  if (items.length === 0) return true;
+  return items.every((item) => {
+    const text = item.toLowerCase();
+    return (
+      text.includes("no manual") ||
+      text.includes("none active") ||
+      text.includes("no exceptions") ||
+      text.includes("not available in input data")
+    );
+  });
+}
+
+function buildCompactMarkdown({
   summary,
+  metricCards,
+  paymentRows,
+  categoryBars,
+  balanceBars,
   dataQualityMessages,
 }: {
-  sectionKey: StructuredSummarySectionKey;
   summary: StructuredSettlementSummary;
+  metricCards: SummaryMetricCard[];
+  paymentRows: PaymentActionRow[];
+  categoryBars: CategoryBarRow[];
+  balanceBars: BalanceBarRow[];
   dataQualityMessages: string[];
 }) {
-  const title = STRUCTURED_SUMMARY_SECTION_TITLES[sectionKey];
-  const items = sectionKey === "dataQuality" ? dataQualityMessages : summary[sectionKey];
-  const ListTag =
-    sectionKey === "recommendedSettlementActions" || sectionKey === "nextBestActions" ? "ol" : "ul";
+  const lines: string[] = ["# AI Settlement Summary", ""];
 
-  return (
-    <section className="space-y-2 rounded-lg border bg-background p-3">
-      <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-      <ListTag className={ListTag === "ol" ? "list-decimal space-y-1 pl-5" : "list-disc space-y-1 pl-5"}>
-        {items.map((item, index) => (
-          <li key={`${sectionKey}-${index}`} className="text-sm leading-relaxed text-muted-foreground">
-            {item}
-          </li>
-        ))}
-      </ListTag>
-    </section>
-  );
+  lines.push("## Settlement Snapshot");
+  uniqueItems(summary.settlementSnapshot, 3).forEach((item) => lines.push(`- ${item}`));
+  lines.push("");
+
+  lines.push("## Key Numbers");
+  metricCards.forEach((metric) => lines.push(`- ${metric.label}: ${metric.value}`));
+  lines.push("");
+
+  lines.push("## Payment Actions");
+  if (paymentRows.length === 0) {
+    lines.push("- No outstanding payments.");
+  } else {
+    paymentRows.forEach((payment) => {
+      lines.push(`- ${payment.from} to ${payment.to}: ${formatCurrency(payment.amount)} (${payment.status})`);
+    });
+  }
+  lines.push("");
+
+  lines.push("## Spending Mix");
+  if (categoryBars.length === 0) {
+    lines.push("- Not available in input data.");
+  } else {
+    categoryBars.forEach((category) => {
+      lines.push(`- ${category.name}: ${formatCurrency(category.amount)} (${category.share}%)`);
+    });
+  }
+  lines.push("");
+
+  lines.push("## Balance Pressure");
+  if (balanceBars.length === 0) {
+    lines.push("- No active balances.");
+  } else {
+    balanceBars.forEach((balance) => {
+      lines.push(`- ${balance.name}: ${balance.direction} ${formatCurrency(balance.amount)}`);
+    });
+  }
+  lines.push("");
+
+  lines.push("## Data Quality");
+  dataQualityMessages.forEach((message) => lines.push(`- ${message}`));
+  lines.push("");
+
+  lines.push("## Next Best Actions");
+  uniqueItems(summary.nextBestActions, 4, summary.settlementSnapshot).forEach((item) => lines.push(`- ${item}`));
+
+  return lines.join("\n").trim();
 }
 
 function LoadingState() {
   return (
-    <div className="grid gap-4 lg:grid-cols-[1fr_1.2fr]">
-      <div className="space-y-3">
-        <Skeleton className="h-24 rounded-lg" />
-        <Skeleton className="h-48 rounded-lg" />
-        <Skeleton className="h-40 rounded-lg" />
+    <div className="space-y-4 pt-2">
+      <Skeleton className="h-28 rounded-lg" />
+      <Skeleton className="h-40 rounded-lg" />
+      <Skeleton className="h-52 rounded-lg" />
+      <Skeleton className="h-24 rounded-lg" />
+    </div>
+  );
+}
+
+function SettlementDonut({ percent }: { percent: number }) {
+  const degrees = Math.max(0, Math.min(100, percent)) * 3.6;
+
+  return (
+    <div className="flex items-center gap-4">
+      <div
+        className="grid h-24 w-24 shrink-0 place-items-center rounded-full"
+        style={{
+          background: `conic-gradient(hsl(var(--primary)) ${degrees}deg, hsl(var(--muted)) 0deg)`,
+        }}
+        aria-label={`${percent}% settled`}
+      >
+        <div className="grid h-16 w-16 place-items-center rounded-full bg-background">
+          <span className="text-lg font-semibold text-foreground">{percent}%</span>
+        </div>
       </div>
-      <div className="space-y-3">
-        {Array.from({ length: 5 }).map((_, index) => (
-          <Skeleton key={index} className="h-24 rounded-lg" />
-        ))}
+      <div className="min-w-0">
+        <p className="text-sm font-semibold text-foreground">Settlement progress</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Track what has already moved against what is still open.
+        </p>
       </div>
     </div>
   );
@@ -146,8 +241,26 @@ export default function AISummaryDialog({
   const hasDataQualityWarnings = dataQualityMessages.some(
     (message) => !message.toLowerCase().includes("no material data-quality issues"),
   );
+  const activeManualOverrides = Number(jsonData?.analysis?.totals?.activeManualOverrides || 0);
 
   const activeModelDisplayName = modelName || getAiModelOption(modelCode).displayName;
+  const sourceLabel = source === "loading" ? "Loading" : source === "cached" ? "Cached" : "Generated";
+
+  const snapshotItems = useMemo(
+    () => uniqueItems(summary?.settlementSnapshot, 2),
+    [summary],
+  );
+  const nextActions = useMemo(
+    () => uniqueItems(summary?.nextBestActions, 3, snapshotItems),
+    [snapshotItems, summary],
+  );
+  const exceptionItems = useMemo(() => {
+    const items = uniqueItems(summary?.manualOverridesAndExceptions, 2, [
+      ...snapshotItems,
+      ...nextActions,
+    ]);
+    return activeManualOverrides > 0 || !isNoExceptionText(items) ? items : [];
+  }, [activeManualOverrides, nextActions, snapshotItems, summary]);
 
   const storeSummary = useCallback(
     async (summaryData: StructuredSettlementSummary, dataHash: string, usedModelName: string) => {
@@ -240,9 +353,13 @@ export default function AISummaryDialog({
     if (!summary) return;
 
     try {
-      await navigator.clipboard.writeText(structuredSummaryToMarkdown({
-        ...summary,
-        dataQuality: dataQualityMessages,
+      await navigator.clipboard.writeText(buildCompactMarkdown({
+        summary,
+        metricCards,
+        paymentRows,
+        categoryBars,
+        balanceBars,
+        dataQualityMessages,
       }));
       toast({
         title: "Copied",
@@ -259,227 +376,235 @@ export default function AISummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-hidden p-0 sm:max-h-[92vh] sm:w-[96vw]"
-        hideCloseButton={false}
-      >
-        <div className="flex max-h-[calc(100dvh-1rem)] flex-col sm:max-h-[92vh]">
-          <DialogHeader className="border-b px-4 py-4 pr-12 sm:px-6 sm:pr-14">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0 space-y-1">
-                <DialogTitle className="flex items-center gap-2 text-lg leading-tight sm:text-xl">
-                  <Sparkles className="h-5 w-5 shrink-0 text-primary" />
-                  <span className="min-w-0">AI Settlement Summary</span>
-                </DialogTitle>
-                <DialogDescription className="break-words text-xs sm:text-sm">
-                  {activeModelDisplayName}
-                </DialogDescription>
-              </div>
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-                <Badge variant={source === "cached" ? "outline" : "secondary"}>
-                  {source === "loading" ? "Loading" : source === "cached" ? "Cached" : "Generated"}
-                </Badge>
-                {summary && (
-                  <Button variant="outline" size="sm" onClick={handleCopyMarkdown} className="h-10 w-full gap-2 sm:h-9 sm:w-auto">
-                    <Copy className="h-4 w-4" />
-                    Copy Markdown
-                  </Button>
-                )}
-              </div>
-            </div>
-          </DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
+        <DialogHeader className="border-b pb-3 pr-8">
+          <DialogTitle className="flex items-center gap-2 text-xl text-primary sm:text-2xl">
+            <Sparkles className="h-5 w-5 shrink-0" />
+            AI Settlement Summary
+          </DialogTitle>
+          <DialogDescription className="flex flex-wrap items-center gap-2 pt-1 text-left">
+            <span>{activeModelDisplayName}</span>
+            <Badge variant={source === "cached" ? "outline" : "secondary"} className="h-5 rounded">
+              {sourceLabel}
+            </Badge>
+          </DialogDescription>
+        </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6">
-            {error && !summary ? (
-              <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
-                {error}
-              </div>
-            ) : !summary ? (
-              <LoadingState />
-            ) : (
-              <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-                  {metricCards.map((metric) => (
-                    <div key={metric.label} className="min-w-0 rounded-lg border bg-background p-3">
-                      <div className="text-xs font-medium leading-snug text-muted-foreground">{metric.label}</div>
-                      <div className="mt-1 break-words text-lg font-semibold leading-tight text-foreground sm:text-xl">{metric.value}</div>
-                    </div>
+        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
+          {error && !summary ? (
+            <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+              {error}
+            </div>
+          ) : !summary ? (
+            <LoadingState />
+          ) : (
+            <div className="space-y-4 pt-2 sm:space-y-6">
+              <section className="rounded-lg border bg-card p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base font-semibold text-foreground">What needs attention</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      A concise readout for closing the current settlement.
+                    </p>
+                  </div>
+                  <Badge variant={paymentRows.length > 0 ? "secondary" : "outline"} className="shrink-0 rounded">
+                    {paymentRows.length > 0 ? `${paymentRows.length} open` : "Clear"}
+                  </Badge>
+                </div>
+                <ul className="mt-3 space-y-2">
+                  {(snapshotItems.length > 0 ? snapshotItems : ["Not available in input data."]).map((item, index) => (
+                    <li key={index} className="flex gap-2 text-sm leading-relaxed text-muted-foreground">
+                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                      <span>{item}</span>
+                    </li>
                   ))}
+                </ul>
+              </section>
+
+              <section className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <ReceiptText className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Settle next</h3>
                 </div>
 
-                <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
-                  <div className="space-y-4">
-                    <section className="rounded-lg border bg-background p-3 sm:p-4">
-                      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <h3 className="text-sm font-semibold">Settlement Progress</h3>
-                          <p className="text-xs text-muted-foreground">
-                            {formatCurrency(progress.alreadySettled)} settled of {formatCurrency(progress.totalSettlement)}
-                          </p>
+                {paymentRows.length === 0 ? (
+                  <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                    No outstanding payments.
+                  </div>
+                ) : (
+                  <div className="divide-y rounded-lg border bg-background">
+                    {paymentRows.map((payment, index) => (
+                      <div key={`${payment.from}-${payment.to}-${index}`} className="p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                              <span className="truncate">{payment.from}</span>
+                              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+                              <span className="truncate">{payment.to}</span>
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">{payment.status}</p>
+                          </div>
+                          <div className="shrink-0 text-right text-base font-semibold">
+                            {formatCurrency(payment.amount)}
+                          </div>
                         </div>
-                        <Badge variant="outline" className="w-fit">{progress.percentSettled}% settled</Badge>
                       </div>
-                      <Progress value={progress.percentSettled} className="h-2" />
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        Remaining: {formatCurrency(progress.remaining)}
-                      </div>
-                    </section>
+                    ))}
+                  </div>
+                )}
+              </section>
 
-                    <section className="rounded-lg border bg-background p-3 sm:p-4">
-                      <h3 className="mb-3 text-sm font-semibold">Balance Pressure</h3>
-                      <div className="space-y-3">
-                        {balanceBars.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">No active balances.</p>
-                        ) : (
-                          balanceBars.map((row) => (
-                            <div key={`${row.direction}-${row.name}`} className="space-y-1">
-                              <div className="flex items-center justify-between gap-3 text-xs">
-                                <span className="truncate font-medium">{row.name}</span>
-                                <span className="shrink-0 text-right text-muted-foreground">
-                                  {row.direction} {formatCurrency(row.amount)}
-                                </span>
-                              </div>
-                              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className={
-                                    row.direction === "Receives"
-                                      ? "h-full rounded-full bg-emerald-500"
-                                      : "h-full rounded-full bg-rose-500"
-                                  }
-                                  style={{ width: `${row.width}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </section>
+              <section className="grid grid-cols-2 gap-2">
+                {metricCards.map((metric) => (
+                  <div key={metric.label} className="min-w-0 rounded-lg border bg-background p-3">
+                    <p className="text-[11px] font-medium leading-snug text-muted-foreground">{metric.label}</p>
+                    <p className="mt-1 break-words text-base font-semibold leading-tight text-foreground">
+                      {metric.value}
+                    </p>
+                  </div>
+                ))}
+              </section>
 
-                    <section className="rounded-lg border bg-background p-3 sm:p-4">
-                      <h3 className="mb-3 text-sm font-semibold">Spending Mix</h3>
-                      <div className="space-y-3">
-                        {categoryBars.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Not available in input data.</p>
-                        ) : (
-                          categoryBars.map((category) => (
-                            <div key={category.name} className="space-y-1">
-                              <div className="flex items-center justify-between gap-3 text-xs">
-                                <span className="truncate font-medium">{category.name}</span>
-                                <span className="shrink-0 text-right text-muted-foreground">
-                                  {formatCurrency(category.amount)} ({category.share}%)
-                                </span>
-                              </div>
-                              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="h-full rounded-full bg-primary"
-                                  style={{ width: `${Math.min(100, Math.max(0, category.share))}%` }}
-                                />
-                              </div>
+              <section className="rounded-lg border bg-background p-4">
+                <SettlementDonut percent={progress.percentSettled} />
+
+                <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3 text-sm">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Settled</p>
+                    <p className="font-semibold">{formatCurrency(progress.alreadySettled)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Remaining</p>
+                    <p className="font-semibold">{formatCurrency(progress.remaining)}</p>
+                  </div>
+                </div>
+
+                <div className="mt-5 space-y-4">
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <h4 className="text-sm font-semibold">Spending mix</h4>
+                      <span className="text-xs text-muted-foreground">Top categories</span>
+                    </div>
+                    <div className="space-y-2">
+                      {categoryBars.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">Not available in input data.</p>
+                      ) : (
+                        categoryBars.slice(0, 4).map((category, index) => (
+                          <div key={category.name} className="space-y-1">
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                              <span className="truncate font-medium">{category.name}</span>
+                              <span className="shrink-0 text-muted-foreground">
+                                {formatCurrency(category.amount)} ({category.share}%)
+                              </span>
                             </div>
-                          ))
-                        )}
-                      </div>
-                    </section>
+                            <div className="h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={`h-full rounded-full ${BAR_COLORS[index % BAR_COLORS.length]}`}
+                                style={{ width: `${Math.min(100, Math.max(0, category.share))}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
 
-                  <div className="space-y-4">
-                    <section className="rounded-lg border bg-background p-3 sm:p-4">
-                      <div className="mb-3 flex items-center gap-2">
-                        <ReceiptText className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-semibold">Payment Actions</h3>
-                      </div>
-                      {paymentRows.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">No outstanding payments.</p>
+                  <div>
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <h4 className="text-sm font-semibold">Balance pressure</h4>
+                      <span className="text-xs text-muted-foreground">Who is exposed</span>
+                    </div>
+                    <div className="space-y-2">
+                      {balanceBars.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">No active balances.</p>
                       ) : (
-                        <>
-                          <div className="space-y-2 sm:hidden">
-                            {paymentRows.map((payment, index) => (
-                              <div key={`${payment.from}-${payment.to}-${index}`} className="rounded-lg border bg-muted/20 p-3">
-                                <div className="flex items-start justify-between gap-3">
-                                  <div className="min-w-0">
-                                    <p className="truncate text-sm font-semibold">{payment.from} to {payment.to}</p>
-                                    <p className="text-xs text-muted-foreground">Payment action</p>
-                                  </div>
-                                  <Badge variant="outline" className="shrink-0">{payment.status}</Badge>
-                                </div>
-                                <div className="mt-3 text-lg font-semibold">{formatCurrency(payment.amount)}</div>
-                              </div>
-                            ))}
+                        balanceBars.slice(0, 4).map((row) => (
+                          <div key={`${row.direction}-${row.name}`} className="space-y-1">
+                            <div className="flex items-center justify-between gap-3 text-xs">
+                              <span className="truncate font-medium">{row.name}</span>
+                              <span className="shrink-0 text-muted-foreground">
+                                {row.direction} {formatCurrency(row.amount)}
+                              </span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-muted">
+                              <div
+                                className={
+                                  row.direction === "Receives"
+                                    ? "h-full rounded-full bg-emerald-500"
+                                    : "h-full rounded-full bg-rose-500"
+                                }
+                                style={{ width: `${row.width}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="hidden overflow-x-auto sm:block">
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Payer</TableHead>
-                                  <TableHead>Receiver</TableHead>
-                                  <TableHead className="text-right">Amount</TableHead>
-                                  <TableHead>Status</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {paymentRows.map((payment, index) => (
-                                  <TableRow key={`${payment.from}-${payment.to}-${index}`}>
-                                    <TableCell className="font-medium">{payment.from}</TableCell>
-                                    <TableCell>{payment.to}</TableCell>
-                                    <TableCell className="text-right font-semibold">
-                                      {formatCurrency(payment.amount)}
-                                    </TableCell>
-                                    <TableCell>
-                                      <Badge variant="outline">{payment.status}</Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        </>
+                        ))
                       )}
-                    </section>
+                    </div>
+                  </div>
+                </div>
+              </section>
 
-                    <section
-                      className={
-                        hasDataQualityWarnings
-                          ? "rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100 sm:p-4"
-                          : "rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100 sm:p-4"
-                      }
-                    >
-                      <div className="mb-2 flex items-center gap-2">
-                        {hasDataQualityWarnings ? (
-                          <AlertTriangle className="h-4 w-4" />
-                        ) : (
-                          <CheckCircle2 className="h-4 w-4" />
-                        )}
-                        <h3 className="text-sm font-semibold">Data Quality</h3>
-                      </div>
-                      <ul className="list-disc space-y-1 pl-5 text-sm">
-                        {dataQualityMessages.map((message, index) => (
-                          <li key={index}>{message}</li>
+              {(nextActions.length > 0 || exceptionItems.length > 0) && (
+                <section className="rounded-lg border bg-background p-4">
+                  {nextActions.length > 0 && (
+                    <>
+                      <h3 className="text-sm font-semibold text-foreground">Next best actions</h3>
+                      <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
+                        {nextActions.map((item, index) => (
+                          <li key={index}>{item}</li>
+                        ))}
+                      </ol>
+                    </>
+                  )}
+
+                  {exceptionItems.length > 0 && (
+                    <div className={nextActions.length > 0 ? "mt-4 border-t pt-3" : ""}>
+                      <h3 className="text-sm font-semibold text-foreground">Exceptions</h3>
+                      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-muted-foreground">
+                        {exceptionItems.map((item, index) => (
+                          <li key={index}>{item}</li>
                         ))}
                       </ul>
-                    </section>
-                  </div>
-                </div>
+                    </div>
+                  )}
+                </section>
+              )}
 
-                <div className="grid gap-3 lg:grid-cols-2">
-                  {STRUCTURED_SUMMARY_SECTION_ORDER.map((sectionKey) => (
-                    <SectionList
-                      key={sectionKey}
-                      sectionKey={sectionKey}
-                      summary={summary}
-                      dataQualityMessages={dataQualityMessages}
-                    />
+              <section
+                className={
+                  hasDataQualityWarnings
+                    ? "rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
+                    : "rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100"
+                }
+              >
+                <div className="mb-2 flex items-center gap-2">
+                  {hasDataQualityWarnings ? (
+                    <AlertTriangle className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  <h3 className="text-sm font-semibold">Data Quality</h3>
+                </div>
+                <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
+                  {dataQualityMessages.map((message, index) => (
+                    <li key={index}>{message}</li>
                   ))}
-                </div>
-              </div>
-            )}
+                </ul>
+              </section>
 
-            {isLoading && summary && (
-              <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Refreshing summary...
-              </div>
-            )}
-          </div>
+              <Button variant="outline" onClick={handleCopyMarkdown} className="h-10 w-full gap-2">
+                <Copy className="h-4 w-4" />
+                Copy Markdown
+              </Button>
+            </div>
+          )}
+
+          {isLoading && summary && (
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Refreshing summary...
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
