@@ -1,4 +1,4 @@
-import { Calendar, CalendarDays, CalendarRange, CalendarClock, Infinity } from "lucide-react";
+import { Calendar, CalendarDays, CalendarRange, CalendarClock, Infinity as InfinityIcon } from "lucide-react";
 import { subDays, subMonths, startOfYear } from "date-fns";
 import type { DatePresetConfig } from "./types";
 
@@ -30,7 +30,7 @@ export const DATE_PRESETS: DatePresetConfig[] = [
     {
         id: 'allTime',
         label: 'All Time',
-        icon: Infinity as any,
-        getRange: () => ({ start: new Date(2020, 0, 1), end: new Date() })
+        icon: InfinityIcon,
+        getRange: () => ({ start: undefined, end: undefined })
     },
 ];

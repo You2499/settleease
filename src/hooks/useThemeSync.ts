@@ -15,19 +15,47 @@ export function useThemeSync(
   const [isMounted, setIsMounted] = useState(false);
   const isUpdatingFromRemote = useRef(false);
   const lastSyncedTheme = useRef<string | null>(null);
+  const pendingLocalTheme = useRef<string | null>(null);
+  const pendingLocalThemeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const updateUserProfile = useMutation(api.app.updateUserProfile);
+
+  const clearPendingLocalTheme = useCallback(() => {
+    if (pendingLocalThemeTimeout.current) {
+      clearTimeout(pendingLocalThemeTimeout.current);
+      pendingLocalThemeTimeout.current = null;
+    }
+    pendingLocalTheme.current = null;
+  }, []);
+
+  const markPendingLocalTheme = useCallback((newTheme: string) => {
+    pendingLocalTheme.current = newTheme;
+
+    if (pendingLocalThemeTimeout.current) {
+      clearTimeout(pendingLocalThemeTimeout.current);
+    }
+
+    pendingLocalThemeTimeout.current = setTimeout(() => {
+      pendingLocalTheme.current = null;
+      pendingLocalThemeTimeout.current = null;
+    }, 10000);
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
   useEffect(() => {
+    return () => clearPendingLocalTheme();
+  }, [clearPendingLocalTheme]);
+
+  useEffect(() => {
     if (!userId) {
       setIsInitialized(false);
       lastSyncedTheme.current = null;
       isUpdatingFromRemote.current = false;
+      clearPendingLocalTheme();
     }
-  }, [userId]);
+  }, [clearPendingLocalTheme, userId]);
 
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
     if (!userId) return;
@@ -55,6 +83,7 @@ export function useThemeSync(
     if (dbTheme) {
       isUpdatingFromRemote.current = true;
       lastSyncedTheme.current = dbTheme;
+      clearPendingLocalTheme();
       setTheme(dbTheme);
       setTimeout(() => {
         isUpdatingFromRemote.current = false;
@@ -62,6 +91,7 @@ export function useThemeSync(
     } else {
       isUpdatingFromRemote.current = true;
       lastSyncedTheme.current = 'light';
+      markPendingLocalTheme('light');
       setTheme('light');
       void updateThemeInDatabase('light');
       setTimeout(() => {
@@ -70,26 +100,41 @@ export function useThemeSync(
     }
 
     setIsInitialized(true);
-  }, [isMounted, userId, userProfile, isInitialized, setTheme, updateThemeInDatabase]);
+  }, [clearPendingLocalTheme, isMounted, userId, userProfile, isInitialized, markPendingLocalTheme, setTheme, updateThemeInDatabase]);
 
   useEffect(() => {
     if (!isMounted || !theme || !userId || !isInitialized) return;
 
     if (isUpdatingFromRemote.current) return;
 
+    if (pendingLocalTheme.current === theme) return;
+
     if (lastSyncedTheme.current !== theme) {
       lastSyncedTheme.current = theme;
+      markPendingLocalTheme(theme);
       void updateThemeInDatabase(theme);
     }
-  }, [isMounted, theme, userId, isInitialized, updateThemeInDatabase]);
+  }, [isMounted, markPendingLocalTheme, theme, userId, isInitialized, updateThemeInDatabase]);
 
   useEffect(() => {
     if (!isMounted || !theme || !userProfile?.theme_preference || !isInitialized) return;
 
     const remoteTheme = userProfile.theme_preference;
-    if (remoteTheme && remoteTheme !== lastSyncedTheme.current && remoteTheme !== theme) {
+
+    if (pendingLocalTheme.current) {
+      if (remoteTheme === pendingLocalTheme.current) {
+        lastSyncedTheme.current = remoteTheme;
+        clearPendingLocalTheme();
+      }
+      return;
+    }
+
+    if (remoteTheme === lastSyncedTheme.current) return;
+
+    lastSyncedTheme.current = remoteTheme;
+
+    if (remoteTheme !== theme) {
       isUpdatingFromRemote.current = true;
-      lastSyncedTheme.current = remoteTheme;
       setTheme(remoteTheme);
       toast({
         title: "Theme Updated",
@@ -99,7 +144,7 @@ export function useThemeSync(
         isUpdatingFromRemote.current = false;
       }, 300);
     }
-  }, [isMounted, isInitialized, setTheme, theme, userProfile?.theme_preference]);
+  }, [clearPendingLocalTheme, isMounted, isInitialized, setTheme, theme, userProfile?.theme_preference]);
 
   return {
     currentTheme: theme,
