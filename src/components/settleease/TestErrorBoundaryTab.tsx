@@ -12,11 +12,9 @@ import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ComprehensiveDebug from './dashboard/verification/ComprehensiveDebug';
-import AlgorithmVerification from './dashboard/verification/AlgorithmVerification';
 import PromptEditor from './dashboard/verification/PromptEditor';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import type { ActiveView, Person, Expense, Category, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
-import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 
 interface TestErrorBoundaryTabProps {
   userRole: 'admin' | 'user' | null;
@@ -55,13 +53,9 @@ export default function TestErrorBoundaryTab({
 }: TestErrorBoundaryTabProps) {
   const isMobile = useIsMobile();
   const [crashStates, setCrashStates] = useState(crashTestManager.getAllStates());
-  const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
   const [showComprehensiveDebug, setShowComprehensiveDebug] = useState(false);
   const [isDebugSheetOpen, setIsDebugSheetOpen] = useState(false);
   const [showPromptEditor, setShowPromptEditor] = useState(false);
-
-  const simplifiedTransactions = calculateSimplifiedTransactions(people, expenses, settlementPayments);
-  const pairwiseTransactions = calculatePairwiseTransactions(people, expenses, settlementPayments);
 
   useEffect(() => {
     const unsubscribe = crashTestManager.subscribe(() => {
@@ -73,15 +67,10 @@ export default function TestErrorBoundaryTab({
   const toggleCrash = (componentId: keyof typeof crashStates) => {
     const newState = !crashStates[componentId];
     crashTestManager.setCrashState(componentId, newState);
-    setTestResults(prev => ({
-      ...prev,
-      [componentId]: newState ? 'fail' : 'pass'
-    }));
   };
 
   const resetAll = () => {
     crashTestManager.resetAll();
-    setTestResults({});
   };
 
   const navigateToTab = (tabName: ActiveView) => {
@@ -271,17 +260,6 @@ export default function TestErrorBoundaryTab({
               userRole={userRole}
             />
           )}
-
-          {/* Algorithm Verification */}
-          <AlgorithmVerification
-            people={people}
-            expenses={expenses}
-            settlementPayments={settlementPayments}
-            manualOverrides={manualOverrides}
-            peopleMap={peopleMap}
-            uiSimplifiedTransactions={simplifiedTransactions}
-            uiPairwiseTransactions={pairwiseTransactions}
-          />
 
           {/* Testing Instructions */}
           <Alert>

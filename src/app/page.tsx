@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Settings2, AlertTriangle, HandCoins, BarChartBig, Activity } from 'lucide-react';
+import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
@@ -20,7 +20,6 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
-import StatusTab from '@/components/settleease/StatusTab';
 import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
@@ -40,6 +39,23 @@ import type { UserRole } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 import MobileBottomNav from '@/components/settleease/MobileBottomNav';
 
+const VALID_ACTIVE_VIEWS: ActiveView[] = [
+  'dashboard',
+  'analytics',
+  'addExpense',
+  'editExpenses',
+  'managePeople',
+  'manageCategories',
+  'manageSettlements',
+  'testErrorBoundary',
+  'exportExpense',
+  'scanReceipt',
+  'settings',
+];
+
+function isValidActiveView(view: string | null | undefined): view is ActiveView {
+  return !!view && VALID_ACTIVE_VIEWS.includes(view as ActiveView);
+}
 
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
@@ -47,8 +63,8 @@ function SettleEasePageContent() {
 
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
-    const viewParam = searchParams.get('view') as ActiveView | null;
-    if (viewParam && ['dashboard', 'analytics', 'addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'].includes(viewParam)) {
+    const viewParam = searchParams.get('view');
+    if (isValidActiveView(viewParam)) {
       return viewParam;
     }
     return 'dashboard';
@@ -238,9 +254,13 @@ function SettleEasePageContent() {
     if (hasLoadedInitialView || !currentUser || !userProfile || !userRole) return;
 
     const hasUrlView = searchParams.get('view') !== null;
+    const lastActiveView = userProfile.last_active_view as string | undefined;
+    const restorableView = isValidActiveView(lastActiveView) && lastActiveView !== 'dashboard'
+      ? lastActiveView
+      : null;
 
-    if (!hasUrlView && userProfile.last_active_view && userProfile.last_active_view !== 'dashboard') {
-      setActiveView(userProfile.last_active_view as ActiveView);
+    if (!hasUrlView && restorableView) {
+      setActiveView(restorableView);
     }
 
     const shouldShowToast = userProfile.should_show_welcome_toast === true;
@@ -268,11 +288,10 @@ function SettleEasePageContent() {
             duration: 5000
           });
         } else if (isReturningUser) {
-          if (userProfile.last_active_view && userProfile.last_active_view !== 'dashboard') {
+          if (restorableView) {
             const viewNames: Record<ActiveView, string> = {
               dashboard: 'Dashboard',
               analytics: 'Analytics',
-              status: 'Status',
               addExpense: 'Add Expense',
               editExpenses: 'Edit Expenses',
               managePeople: 'Manage People',
@@ -284,7 +303,7 @@ function SettleEasePageContent() {
               settings: 'Settings'
             };
 
-            const viewName = viewNames[userProfile.last_active_view as ActiveView] || 'your last view';
+            const viewName = viewNames[restorableView] || 'your last view';
 
             toast({
               title: "Welcome back!",
@@ -538,25 +557,6 @@ function SettleEasePageContent() {
                       isLoadingPeople={isLoadingPeople}
                       isLoadingExpenses={isLoadingExpenses}
                       isLoadingCategories={isLoadingCategories}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
-                    />
-                  </SettleEaseErrorBoundary>
-                )}
-                {activeView === 'status' && (
-                  <SettleEaseErrorBoundary
-                    componentName="Status"
-                    size="large"
-                    onNavigateHome={() => setActiveView('dashboard')}
-                  >
-                    <StatusTab
-                      people={people}
-                      expenses={expenses}
-                      settlementPayments={settlementPayments}
-                      manualOverrides={manualOverrides}
-                      peopleMap={peopleMap}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
                       isLoadingSettlements={isLoadingSettlements}
                       isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                     />

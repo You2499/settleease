@@ -240,7 +240,10 @@ export default function AISummaryDialog({
     if (!summary) return;
 
     try {
-      await navigator.clipboard.writeText(structuredSummaryToMarkdown(summary));
+      await navigator.clipboard.writeText(structuredSummaryToMarkdown({
+        ...summary,
+        dataQuality: dataQualityMessages,
+      }));
       toast({
         title: "Copied",
         description: "Summary copied as Markdown.",
@@ -256,25 +259,28 @@ export default function AISummaryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] w-[96vw] max-w-6xl overflow-hidden p-0" hideCloseButton={false}>
-        <div className="flex max-h-[92vh] flex-col">
-          <DialogHeader className="border-b px-4 py-4 pr-14 sm:px-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <DialogContent
+        className="max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-6xl overflow-hidden p-0 sm:max-h-[92vh] sm:w-[96vw]"
+        hideCloseButton={false}
+      >
+        <div className="flex max-h-[calc(100dvh-1rem)] flex-col sm:max-h-[92vh]">
+          <DialogHeader className="border-b px-4 py-4 pr-12 sm:px-6 sm:pr-14">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0 space-y-1">
-                <DialogTitle className="flex items-center gap-2 text-xl">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  AI Settlement Summary
+                <DialogTitle className="flex items-center gap-2 text-lg leading-tight sm:text-xl">
+                  <Sparkles className="h-5 w-5 shrink-0 text-primary" />
+                  <span className="min-w-0">AI Settlement Summary</span>
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="break-words text-xs sm:text-sm">
                   {activeModelDisplayName}
                 </DialogDescription>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                 <Badge variant={source === "cached" ? "outline" : "secondary"}>
                   {source === "loading" ? "Loading" : source === "cached" ? "Cached" : "Generated"}
                 </Badge>
                 {summary && (
-                  <Button variant="outline" size="sm" onClick={handleCopyMarkdown} className="gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopyMarkdown} className="h-10 w-full gap-2 sm:h-9 sm:w-auto">
                     <Copy className="h-4 w-4" />
                     Copy Markdown
                   </Button>
@@ -283,7 +289,7 @@ export default function AISummaryDialog({
             </div>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+          <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6">
             {error && !summary ? (
               <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                 {error}
@@ -292,26 +298,26 @@ export default function AISummaryDialog({
               <LoadingState />
             ) : (
               <div className="space-y-5">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
                   {metricCards.map((metric) => (
-                    <div key={metric.label} className="rounded-lg border bg-background p-3">
-                      <div className="text-xs font-medium text-muted-foreground">{metric.label}</div>
-                      <div className="mt-1 text-xl font-semibold text-foreground">{metric.value}</div>
+                    <div key={metric.label} className="min-w-0 rounded-lg border bg-background p-3">
+                      <div className="text-xs font-medium leading-snug text-muted-foreground">{metric.label}</div>
+                      <div className="mt-1 break-words text-lg font-semibold leading-tight text-foreground sm:text-xl">{metric.value}</div>
                     </div>
                   ))}
                 </div>
 
                 <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
                   <div className="space-y-4">
-                    <section className="rounded-lg border bg-background p-4">
-                      <div className="mb-3 flex items-center justify-between gap-3">
+                    <section className="rounded-lg border bg-background p-3 sm:p-4">
+                      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <h3 className="text-sm font-semibold">Settlement Progress</h3>
                           <p className="text-xs text-muted-foreground">
                             {formatCurrency(progress.alreadySettled)} settled of {formatCurrency(progress.totalSettlement)}
                           </p>
                         </div>
-                        <Badge variant="outline">{progress.percentSettled}% settled</Badge>
+                        <Badge variant="outline" className="w-fit">{progress.percentSettled}% settled</Badge>
                       </div>
                       <Progress value={progress.percentSettled} className="h-2" />
                       <div className="mt-3 text-xs text-muted-foreground">
@@ -319,7 +325,7 @@ export default function AISummaryDialog({
                       </div>
                     </section>
 
-                    <section className="rounded-lg border bg-background p-4">
+                    <section className="rounded-lg border bg-background p-3 sm:p-4">
                       <h3 className="mb-3 text-sm font-semibold">Balance Pressure</h3>
                       <div className="space-y-3">
                         {balanceBars.length === 0 ? (
@@ -329,7 +335,7 @@ export default function AISummaryDialog({
                             <div key={`${row.direction}-${row.name}`} className="space-y-1">
                               <div className="flex items-center justify-between gap-3 text-xs">
                                 <span className="truncate font-medium">{row.name}</span>
-                                <span className="shrink-0 text-muted-foreground">
+                                <span className="shrink-0 text-right text-muted-foreground">
                                   {row.direction} {formatCurrency(row.amount)}
                                 </span>
                               </div>
@@ -349,7 +355,7 @@ export default function AISummaryDialog({
                       </div>
                     </section>
 
-                    <section className="rounded-lg border bg-background p-4">
+                    <section className="rounded-lg border bg-background p-3 sm:p-4">
                       <h3 className="mb-3 text-sm font-semibold">Spending Mix</h3>
                       <div className="space-y-3">
                         {categoryBars.length === 0 ? (
@@ -359,7 +365,7 @@ export default function AISummaryDialog({
                             <div key={category.name} className="space-y-1">
                               <div className="flex items-center justify-between gap-3 text-xs">
                                 <span className="truncate font-medium">{category.name}</span>
-                                <span className="shrink-0 text-muted-foreground">
+                                <span className="shrink-0 text-right text-muted-foreground">
                                   {formatCurrency(category.amount)} ({category.share}%)
                                 </span>
                               </div>
@@ -377,7 +383,7 @@ export default function AISummaryDialog({
                   </div>
 
                   <div className="space-y-4">
-                    <section className="rounded-lg border bg-background p-4">
+                    <section className="rounded-lg border bg-background p-3 sm:p-4">
                       <div className="mb-3 flex items-center gap-2">
                         <ReceiptText className="h-4 w-4 text-primary" />
                         <h3 className="text-sm font-semibold">Payment Actions</h3>
@@ -385,38 +391,56 @@ export default function AISummaryDialog({
                       {paymentRows.length === 0 ? (
                         <p className="text-sm text-muted-foreground">No outstanding payments.</p>
                       ) : (
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Payer</TableHead>
-                              <TableHead>Receiver</TableHead>
-                              <TableHead className="text-right">Amount</TableHead>
-                              <TableHead>Status</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
+                        <>
+                          <div className="space-y-2 sm:hidden">
                             {paymentRows.map((payment, index) => (
-                              <TableRow key={`${payment.from}-${payment.to}-${index}`}>
-                                <TableCell className="font-medium">{payment.from}</TableCell>
-                                <TableCell>{payment.to}</TableCell>
-                                <TableCell className="text-right font-semibold">
-                                  {formatCurrency(payment.amount)}
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{payment.status}</Badge>
-                                </TableCell>
-                              </TableRow>
+                              <div key={`${payment.from}-${payment.to}-${index}`} className="rounded-lg border bg-muted/20 p-3">
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <p className="truncate text-sm font-semibold">{payment.from} to {payment.to}</p>
+                                    <p className="text-xs text-muted-foreground">Payment action</p>
+                                  </div>
+                                  <Badge variant="outline" className="shrink-0">{payment.status}</Badge>
+                                </div>
+                                <div className="mt-3 text-lg font-semibold">{formatCurrency(payment.amount)}</div>
+                              </div>
                             ))}
-                          </TableBody>
-                        </Table>
+                          </div>
+                          <div className="hidden overflow-x-auto sm:block">
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Payer</TableHead>
+                                  <TableHead>Receiver</TableHead>
+                                  <TableHead className="text-right">Amount</TableHead>
+                                  <TableHead>Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {paymentRows.map((payment, index) => (
+                                  <TableRow key={`${payment.from}-${payment.to}-${index}`}>
+                                    <TableCell className="font-medium">{payment.from}</TableCell>
+                                    <TableCell>{payment.to}</TableCell>
+                                    <TableCell className="text-right font-semibold">
+                                      {formatCurrency(payment.amount)}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="outline">{payment.status}</Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </>
                       )}
                     </section>
 
                     <section
                       className={
                         hasDataQualityWarnings
-                          ? "rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
-                          : "rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100"
+                          ? "rounded-lg border border-amber-300 bg-amber-50 p-3 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100 sm:p-4"
+                          : "rounded-lg border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100 sm:p-4"
                       }
                     >
                       <div className="mb-2 flex items-center gap-2">

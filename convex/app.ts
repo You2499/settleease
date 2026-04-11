@@ -35,7 +35,6 @@ const activeView = v.union(
   v.literal("manageCategories"),
   v.literal("manageSettlements"),
   v.literal("analytics"),
-  v.literal("status"),
   v.literal("testErrorBoundary"),
   v.literal("exportExpense"),
   v.literal("scanReceipt"),
