@@ -294,8 +294,8 @@ function MetricStrip({ metrics }: { metrics: ExportReportMetric[] }) {
           <Text
             style={[
               styles.metricValue,
-              metric.tone === "positive" && styles.metricPositive,
-              metric.tone === "warning" && styles.metricWarning,
+              metric.tone === "positive" ? styles.metricPositive : {},
+              metric.tone === "warning" ? styles.metricWarning : {},
             ]}
           >
             {metric.value}
@@ -385,7 +385,7 @@ function PaymentActionsTable({ actions }: { actions: ExportPaymentAction[] }) {
         <Text style={[styles.cell, styles.headCell, { flex: 0.9 }]}>Status</Text>
       </View>
       {actions.map((action, index) => (
-        <View key={`${action.from}-${action.to}-${index}`} style={[styles.tableRow, index === actions.length - 1 && styles.tableRowLast]} wrap={false}>
+        <View key={`${action.from}-${action.to}-${index}`} style={[styles.tableRow, index === actions.length - 1 ? styles.tableRowLast : {}]} wrap={false}>
           <Text style={[styles.cell, { flex: 1.1 }]}>{action.from}</Text>
           <Text style={[styles.cell, { flex: 1.1 }]}>{action.to}</Text>
           <Text style={[styles.cell, styles.amountCell, { flex: 0.9 }]}>{formatCurrency(action.amount)}</Text>
@@ -410,7 +410,7 @@ function BalanceBars({ rows }: { rows: ExportBalanceRow[] }) {
             </Text>
           </View>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, row.direction === "Pays" && styles.barFillWarning, { width: `${Math.max(row.share, 4)}%` }]} />
+            <View style={[styles.barFill, row.direction === "Pays" ? styles.barFillWarning : {}, { width: `${Math.max(row.share, 4)}%` }]} />
           </View>
         </View>
       ))}
@@ -462,7 +462,7 @@ function SimpleRows({
   return (
     <View style={styles.table}>
       {rows.map((row, index) => (
-        <View key={`${row.label}-${index}`} style={[styles.tableRow, index === rows.length - 1 && styles.tableRowLast]} wrap={false}>
+        <View key={`${row.label}-${index}`} style={[styles.tableRow, index === rows.length - 1 ? styles.tableRowLast : {}]} wrap={false}>
           <Text style={[styles.cell, { flex: 1.4 }]}>{row.label}</Text>
           <Text style={[styles.cell, styles.amountCell, { flex: 0.8 }]}>{row.value}</Text>
           {row.note ? <Text style={[styles.cell, styles.muted, { flex: 1 }]}>{row.note}</Text> : null}
@@ -484,7 +484,7 @@ function SettlementsTable({ settlements }: { settlements: ExportSettlementLedger
         <Text style={[styles.cell, styles.headCell, { flex: 0.8 }]}>Date</Text>
       </View>
       {settlements.map((settlement, index) => (
-        <View key={`${settlement.debtor}-${settlement.creditor}-${index}`} style={[styles.tableRow, index === settlements.length - 1 && styles.tableRowLast]} wrap={false}>
+        <View key={`${settlement.debtor}-${settlement.creditor}-${index}`} style={[styles.tableRow, index === settlements.length - 1 ? styles.tableRowLast : {}]} wrap={false}>
           <Text style={[styles.cell, { flex: 1 }]}>{settlement.debtor}</Text>
           <Text style={[styles.cell, { flex: 1 }]}>{settlement.creditor}</Text>
           <Text style={[styles.cell, styles.amountCell, { flex: 0.75 }]}>{formatCurrency(settlement.amount)}</Text>

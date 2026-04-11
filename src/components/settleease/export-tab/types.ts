@@ -17,18 +17,6 @@ export interface ExportExpenseTabProps {
     getCategoryIconFromName?: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
 }
 
-export type ActivityItem = {
-    type: 'expense';
-    id: string;
-    date: string;
-    data: Expense;
-} | {
-    type: 'settlement';
-    id: string;
-    date: string;
-    data: SettlementPayment;
-};
-
 export type DatePreset = 'last7days' | 'last30days' | 'last3months' | 'thisYear' | 'allTime' | 'custom';
 
 export type ExportMode = 'group' | 'personal';
@@ -38,13 +26,6 @@ export interface DatePresetConfig {
     label: string;
     icon: React.FC<React.SVGProps<SVGSVGElement>>;
     getRange: () => { start: Date | undefined; end: Date | undefined };
-}
-
-export interface ExpenseStats {
-    expenseCount: number;
-    totalExpenseAmount: number;
-    settlementCount: number;
-    totalSettlementAmount: number;
 }
 
 export interface ExportDateRange {

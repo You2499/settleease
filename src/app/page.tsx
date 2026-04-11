@@ -802,6 +802,7 @@ function SettleEasePageContent() {
                         settlementPayments={settlementPayments}
                         people={people}
                         categories={categories}
+                        manualOverrides={manualOverrides}
                         peopleMap={peopleMap}
                         getCategoryIconFromName={getCategoryIconFromName}
                       />
