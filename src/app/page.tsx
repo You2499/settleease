@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import {
@@ -84,6 +85,93 @@ function isValidActiveView(view: string | null | undefined): view is ActiveView 
 
 function canAccessView(view: ActiveView, userRole: UserRole) {
   return !ADMIN_ONLY_VIEWS.has(view) || userRole === 'admin';
+}
+
+function ExportExpenseSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-8 w-full max-w-[220px] sm:w-72" />
+        <Skeleton className="h-4 w-full max-w-xl" />
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <Card key={item} className="rounded-lg">
+            <CardHeader className="pb-2">
+              <Skeleton className="h-5 w-32" />
+              <Skeleton className="h-4 w-full max-w-[180px]" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-full" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-10 w-full" />
+            <div className="grid grid-cols-2 gap-3">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+            <Skeleton className="h-10 w-full" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-lg">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-full max-w-md" />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {[0, 1, 2, 3].map((item) => (
+              <div key={item} className="rounded-lg border p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <Skeleton className="h-5 w-44" />
+                  <Skeleton className="h-8 w-24" />
+                </div>
+                <Skeleton className="mt-3 h-4 w-full max-w-lg" />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+function SettingsTabSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div>
+        <Skeleton className="mb-2 h-8 w-40" />
+        <Skeleton className="h-4 w-full max-w-md" />
+      </div>
+      <div className="grid gap-4 md:grid-cols-2">
+        {[0, 1].map((item) => (
+          <Card key={item} className="rounded-lg">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-full max-w-[220px]" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="mb-4 h-4 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function SettleEasePageContent() {
@@ -472,6 +560,13 @@ function SettleEasePageContent() {
   // Memoized callback for action complete to prevent unnecessary re-renders
   const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
+  const shouldShowPageSkeleton =
+    isLoadingAuth ||
+    (hasSession && !currentUser) ||
+    (isOAuthCallback && !hasResolvedInitialView) ||
+    (!!currentUser && (!isAppIdentityReady || !hasResolvedInitialView));
+  const forcedDataFetchedAtLeastOnce = shouldShowPageSkeleton ? false : isDataFetchedAtLeastOnce;
+
   // Show error screen for Supabase initialization errors
   if (supabaseInitializationError && !supabaseClient) {
     return (
@@ -490,18 +585,6 @@ function SettleEasePageContent() {
     );
   }
 
-  // Keep the shell hidden until auth, profile, and the initial view are resolved.
-  // Rendering before that point can briefly expose the wrong role/navigation.
-  if (isLoadingAuth || (hasSession && !currentUser)) {
-    return <div className="fixed inset-0 bg-background" />;
-  }
-
-  // Show transparent loading screen during OAuth callback until initial view is loaded
-  // This prevents showing wrong skeleton (dashboard) before correct view is determined
-  if (isOAuthCallback && !hasResolvedInitialView) {
-    return <div className="fixed inset-0 bg-background" />;
-  }
-
   // Show auth form when auth is complete and there's no user
   if (!currentUser && !isLoadingAuth) {
     return (
@@ -511,11 +594,7 @@ function SettleEasePageContent() {
     );
   }
 
-  if (currentUser && (!isAppIdentityReady || !hasResolvedInitialView)) {
-    return <div className="fixed inset-0 bg-background" />;
-  }
-
-  // Show the app only after identity-dependent routing has settled.
+  // Show the app shell during identity loading, with the active page's own skeleton.
   return (
     <>
       {currentUser && (
@@ -538,7 +617,7 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
-          isProfileLoading={!isAppIdentityReady}
+          isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady}
         />
         <SidebarInset>
           <div className="flex flex-col h-full">
@@ -550,7 +629,7 @@ function SettleEasePageContent() {
             </header>
             <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0 pb-24 md:pb-6">
               <div className="min-h-full bg-background">
-                {isLoadingData && isDataFetchedAtLeastOnce && (
+                {isLoadingData && isDataFetchedAtLeastOnce && !shouldShowPageSkeleton && (
                   <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
                 )}
                 {activeView === 'dashboard' && (
@@ -570,12 +649,12 @@ function SettleEasePageContent() {
                       currentUserId={currentUser?.id || ''}
                       onActionComplete={handleActionComplete}
                       userRole={userRole}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingCategories={isLoadingCategories}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isLoadingOverrides={isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
+                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
@@ -592,15 +671,15 @@ function SettleEasePageContent() {
                       dynamicCategories={categories}
                       getCategoryIconFromName={getCategoryIconFromName}
                       settlementPayments={settlementPayments}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingCategories={isLoadingCategories}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'addExpense' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'addExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Add Expense"
                     size="large"
@@ -610,13 +689,13 @@ function SettleEasePageContent() {
                       people={people}
                       onExpenseAdded={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingCategories={isLoadingCategories}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'editExpenses' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'editExpenses' && (
                   <SettleEaseErrorBoundary
                     componentName="Edit Expenses"
                     size="large"
@@ -627,14 +706,14 @@ function SettleEasePageContent() {
                       expenses={expenses}
                       onActionComplete={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingCategories={isLoadingCategories}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'managePeople' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'managePeople' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage People"
                     size="large"
@@ -642,12 +721,12 @@ function SettleEasePageContent() {
                   >
                     <ManagePeopleTab
                       people={people}
-                      isLoadingPeople={isLoadingPeople}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'manageCategories' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'manageCategories' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Categories"
                     size="large"
@@ -656,12 +735,12 @@ function SettleEasePageContent() {
                     <ManageCategoriesTab
                       categories={categories}
                       onCategoriesUpdate={handleActionComplete}
-                      isLoadingCategories={isLoadingCategories}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'manageSettlements' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'manageSettlements' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Settlements"
                     size="large"
@@ -675,16 +754,16 @@ function SettleEasePageContent() {
                       manualOverrides={manualOverrides}
                       currentUserId={currentUser?.id || ''}
                       onActionComplete={handleActionComplete}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isLoadingOverrides={isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
+                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                       userRole={userRole}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'testErrorBoundary' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'testErrorBoundary' && (
                   <SettleEaseErrorBoundary
                     componentName="Test Error Boundary"
                     size="large"
@@ -700,32 +779,36 @@ function SettleEasePageContent() {
                       peopleMap={peopleMap}
                       categories={categories}
                       currentUserId={currentUser?.id}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingExpenses={isLoadingExpenses}
-                      isLoadingCategories={isLoadingCategories}
-                      isLoadingSettlements={isLoadingSettlements}
-                      isLoadingOverrides={isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
+                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'exportExpense' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'exportExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Export Expense"
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <ExportExpenseTab
-                      expenses={expenses}
-                      settlementPayments={settlementPayments}
-                      people={people}
-                      categories={categories}
-                      peopleMap={peopleMap}
-                      getCategoryIconFromName={getCategoryIconFromName}
-                    />
+                    {shouldShowPageSkeleton ? (
+                      <ExportExpenseSkeleton />
+                    ) : (
+                      <ExportExpenseTab
+                        expenses={expenses}
+                        settlementPayments={settlementPayments}
+                        people={people}
+                        categories={categories}
+                        peopleMap={peopleMap}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                      />
+                    )}
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'scanReceipt' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'scanReceipt' && (
                   <SettleEaseErrorBoundary
                     componentName="Smart Scan"
                     size="large"
@@ -735,24 +818,28 @@ function SettleEasePageContent() {
                       people={people}
                       onExpenseAdded={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
-                      isLoadingPeople={isLoadingPeople}
-                      isLoadingCategories={isLoadingCategories}
-                      isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}
-                {userRole === 'admin' && activeView === 'settings' && (
+                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'settings' && (
                   <SettleEaseErrorBoundary
                     componentName="Settings"
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <SettingsTab onNavigate={handleSetActiveView} />
+                    {shouldShowPageSkeleton ? (
+                      <SettingsTabSkeleton />
+                    ) : (
+                      <SettingsTab onNavigate={handleSetActiveView} />
+                    )}
                   </SettleEaseErrorBoundary>
                 )}
               </div>
             </main>
-            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} isProfileLoading={!isAppIdentityReady} />
+            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady} />
           </div>
         </SidebarInset>
       </SidebarProvider >
