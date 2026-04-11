@@ -109,11 +109,11 @@ export interface AIPrompt {
 }
 
 export interface AIConfig {
-  id: string; // Convex document ID mapped to the legacy DTO shape
+  id: string | null; // Convex document ID mapped to the legacy DTO shape
   key: string;
   modelCode: string;
   fallbackModelCodes: string[];
-  updatedAt: string;
+  updatedAt: string | null;
   updatedByUserId?: string | null;
 }
 

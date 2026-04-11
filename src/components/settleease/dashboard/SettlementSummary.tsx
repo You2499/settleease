@@ -43,7 +43,7 @@ import {
 } from "@/lib/settleease/summaryPayload";
 import { SETTLEMENT_SUMMARY_PROMPT_NAME } from "@/lib/settleease/aiSummarization";
 import AISummaryDialog from "./AISummaryDialog";
-import { AI_CONFIG_KEY, resolveAiModelConfig } from "@/lib/settleease/aiModels";
+import { resolveAiModelConfig } from "@/lib/settleease/aiModels";
 import {
   Dialog,
   DialogContent,
@@ -113,11 +113,10 @@ export default function SettlementSummary({
   const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
   const [summaryHash, setSummaryHash] = useState<string>("");
   const [summaryPromptVersion, setSummaryPromptVersion] = useState<number | undefined>(undefined);
+  const [summaryModelCode, setSummaryModelCode] = useState<string | undefined>(undefined);
   const [isComputingHash, setIsComputingHash] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
   const activePrompt = useQuery(api.app.getActiveAiPrompt, { name: SETTLEMENT_SUMMARY_PROMPT_NAME }) as any;
-  const activeAiConfig = useQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }) as any;
-  const resolvedAiConfig = useMemo(() => resolveAiModelConfig(activeAiConfig), [activeAiConfig]);
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -264,6 +263,16 @@ export default function SettlementSummary({
       const promptVersion = activePrompt?.version || 0;
       console.log("✅ Using prompt version:", promptVersion);
 
+      let resolvedAiConfig = resolveAiModelConfig(null);
+      try {
+        const response = await fetch("/api/ai-config", { cache: "no-store" });
+        if (response.ok) {
+          resolvedAiConfig = resolveAiModelConfig(await response.json());
+        }
+      } catch (configError) {
+        console.warn("Using default AI model config for summary hash:", configError);
+      }
+
       // Include prompt version in the data for hashing
       const dataWithPromptVersion = {
         ...summaryData,
@@ -278,6 +287,7 @@ export default function SettlementSummary({
       setSummaryJsonData(summaryData);
       setSummaryHash(hash);
       setSummaryPromptVersion(promptVersion);
+      setSummaryModelCode(resolvedAiConfig.modelCode);
       setIsSummaryDialogOpen(true);
     } catch (error: any) {
       console.error("❌ Error computing hash:", error);
@@ -607,7 +617,7 @@ export default function SettlementSummary({
           jsonData={summaryJsonData}
           hash={summaryHash}
           promptVersion={summaryPromptVersion}
-          modelCode={resolvedAiConfig.modelCode}
+          modelCode={summaryModelCode}
           currentUserId={currentUserId || ""}
         />
       )}

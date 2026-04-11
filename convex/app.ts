@@ -27,6 +27,10 @@ const aiModelCode = v.union(
   v.literal("gemini-2.5-flash"),
 );
 
+const DEFAULT_AI_CONFIG_KEY = "global-ai-config";
+const DEFAULT_AI_MODEL_CODE = "gemini-3.1-flash-lite-preview";
+const DEFAULT_AI_FALLBACK_MODEL_CODES = ["gemini-3-flash-preview", "gemini-2.5-flash"];
+
 const activeView = v.union(
   v.literal("dashboard"),
   v.literal("addExpense"),
@@ -137,14 +141,27 @@ function aiPromptDto(prompt: any) {
   };
 }
 
-function aiConfigDto(config: any) {
-  if (!config) return null;
+function defaultAiConfigDto(key = DEFAULT_AI_CONFIG_KEY) {
+  return {
+    id: null,
+    key,
+    modelCode: DEFAULT_AI_MODEL_CODE,
+    fallbackModelCodes: DEFAULT_AI_FALLBACK_MODEL_CODES,
+    updatedAt: null,
+    updatedByUserId: null,
+  };
+}
+
+function aiConfigDto(config: any, key = DEFAULT_AI_CONFIG_KEY) {
+  if (!config) return defaultAiConfigDto(key);
   return {
     id: config._id,
-    key: config.key,
-    modelCode: config.modelCode,
-    fallbackModelCodes: config.fallbackModelCodes ?? [],
-    updatedAt: config.updatedAt,
+    key: config.key ?? key,
+    modelCode: config.modelCode ?? DEFAULT_AI_MODEL_CODE,
+    fallbackModelCodes: Array.isArray(config.fallbackModelCodes)
+      ? config.fallbackModelCodes
+      : DEFAULT_AI_FALLBACK_MODEL_CODES,
+    updatedAt: config.updatedAt ?? null,
     updatedByUserId: config.updatedByUserId ?? null,
   };
 }
@@ -700,12 +717,18 @@ export const getActiveAiPrompt = query({
 export const getActiveAiConfig = query({
   args: { key: v.optional(v.string()) },
   handler: async (ctx, args) => {
-    const configKey = args.key ?? "global-ai-config";
-    const config = await ctx.db
-      .query("aiConfigs")
-      .withIndex("by_key", (q) => q.eq("key", configKey))
-      .first();
-    return aiConfigDto(config);
+    const configKey = args.key ?? DEFAULT_AI_CONFIG_KEY;
+
+    try {
+      const config = await ctx.db
+        .query("aiConfigs")
+        .withIndex("by_key", (q) => q.eq("key", configKey))
+        .first();
+      return aiConfigDto(config, configKey);
+    } catch (error) {
+      console.warn("Falling back to default AI config after read failure:", error);
+      return defaultAiConfigDto(configKey);
+    }
   },
 });
 
@@ -719,7 +742,7 @@ export const saveAiConfig = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
-    const configKey = args.key ?? "global-ai-config";
+    const configKey = args.key ?? DEFAULT_AI_CONFIG_KEY;
     const timestamp = nowIso();
     const uniqueFallbacks = [...new Set(args.fallbackModelCodes)].filter(
       (modelCode) => modelCode !== args.modelCode,

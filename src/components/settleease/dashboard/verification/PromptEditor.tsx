@@ -41,6 +41,7 @@ import {
   getDefaultFallbackModelCodes,
   isSupportedAiModelCode,
   resolveAiModelConfig,
+  type AiModelConfig,
   type AiModelCode,
 } from '@/lib/settleease/aiModels';
 
@@ -59,10 +60,10 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedModelCode, setSelectedModelCode] = useState<AiModelCode>(DEFAULT_AI_MODEL_CODE);
+  const [aiConfigData, setAiConfigData] = useState<AiModelConfig | null>(null);
   const promptData = useQuery(api.app.getAiPromptEditorData, { name: SETTLEMENT_SUMMARY_PROMPT_NAME }) as
     | { activePrompt: AIPrompt | null; promptHistory: AIPrompt[] }
     | undefined;
-  const aiConfigData = useQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }) as any;
   const saveAiPrompt = useMutation(api.app.saveAiPrompt);
   const saveAiConfig = useMutation(api.app.saveAiConfig);
   const clearAiSummaries = useMutation(api.app.clearAiSummaries);
@@ -96,9 +97,34 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
   }, [promptData]);
 
   useEffect(() => {
-    if (aiConfigData === undefined) return;
-    setSelectedModelCode(resolveAiModelConfig(aiConfigData).modelCode);
-  }, [aiConfigData]);
+    let isCancelled = false;
+
+    async function loadAiConfig() {
+      try {
+        const response = await fetch("/api/ai-config", { cache: "no-store" });
+        const config = response.ok ? await response.json() : null;
+
+        if (!isCancelled) {
+          const resolved = resolveAiModelConfig(config);
+          setAiConfigData(resolved);
+          setSelectedModelCode(resolved.modelCode);
+        }
+      } catch (error) {
+        console.warn("Using default AI model config in editor:", error);
+        if (!isCancelled) {
+          const resolved = resolveAiModelConfig(null);
+          setAiConfigData(resolved);
+          setSelectedModelCode(resolved.modelCode);
+        }
+      }
+    }
+
+    loadAiConfig();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
 
   // Track unsaved changes
   useEffect(() => {
@@ -210,6 +236,13 @@ export default function PromptEditor({ currentUserId }: PromptEditorProps) {
         modelCode: selectedModelCode,
         fallbackModelCodes: getDefaultFallbackModelCodes(selectedModelCode),
         currentUserId,
+      });
+
+      setAiConfigData({
+        modelCode: selectedModelCode,
+        fallbackModelCodes: getDefaultFallbackModelCodes(selectedModelCode),
+        updatedAt: new Date().toISOString(),
+        updatedByUserId: currentUserId,
       });
 
       toast({
