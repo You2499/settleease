@@ -9,6 +9,7 @@
  */
 
 import type * as app from "../app.js";
+import type * as jwtConfig from "../jwtConfig.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +19,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   app: typeof app;
+  jwtConfig: typeof jwtConfig;
 }>;
 
 /**

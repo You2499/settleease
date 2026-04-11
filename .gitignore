@@ -47,3 +47,4 @@ Thumbs.db
 # Lucide Icons (downloaded during build)
 /lucide-icons/
 /src/lib/lucide-icons-metadata.json
+.vercel

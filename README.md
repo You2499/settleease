@@ -75,6 +75,7 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 NEXT_PUBLIC_CONVEX_URL=your_convex_url
 CONVEX_DEPLOYMENT=your_convex_deployment
+CONVEX_JWT_PRIVATE_KEY=your_convex_jwt_private_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
@@ -287,6 +288,8 @@ npx convex deploy --cmd "npm run build" --cmd-url-env-var-name NEXT_PUBLIC_CONVE
 ```
 
 Add a production `CONVEX_DEPLOY_KEY` in Vercel so the build can deploy to the production Convex deployment non-interactively.
+
+Set `CONVEX_JWT_PRIVATE_KEY` in Vercel for the Supabase-to-Convex auth bridge. Supabase still owns login/session/email/OAuth; this key signs short-lived Convex-compatible JWTs only after `/api/convex-token` verifies the Supabase session with Supabase Auth.
 
 ---
 

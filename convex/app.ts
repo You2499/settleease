@@ -140,20 +140,28 @@ async function getProfileBySupabaseUserId(ctx: any, supabaseUserId: string) {
 }
 
 async function requireAuthenticatedSupabaseUserId(ctx: any) {
-  // Supabase access tokens for this project are signed symmetrically and the
-  // Supabase JWKS endpoint is empty, so Convex cannot validate them via its
-  // built-in OIDC/custom JWT providers. The Next.js app still gates access via
-  // Supabase auth before calling Convex; keep this shim until Supabase is moved
-  // to asymmetric JWT signing or a first-party Convex token minting route exists.
-  return null;
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity?.subject) {
+    throw new ConvexError("Authentication required.");
+  }
+  return identity.subject;
 }
 
 async function requireSelf(ctx: any, supabaseUserId: string) {
-  return supabaseUserId;
+  const authenticatedUserId = await requireAuthenticatedSupabaseUserId(ctx);
+  if (authenticatedUserId !== supabaseUserId) {
+    throw new ConvexError("Cannot access another user's profile.");
+  }
+  return authenticatedUserId;
 }
 
 async function requireAdmin(ctx: any) {
-  return null;
+  const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+  const profile = await getProfileBySupabaseUserId(ctx, supabaseUserId);
+  if (profile?.role !== "admin") {
+    throw new ConvexError("Admin access required.");
+  }
+  return supabaseUserId;
 }
 
 async function ensureUserProfile(
@@ -760,7 +768,10 @@ export const storeAiSummary = mutation({
     modelName: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    await requireAuthenticatedSupabaseUserId(ctx);
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    if (args.userId !== supabaseUserId) {
+      throw new ConvexError("Cannot store summaries for another user.");
+    }
     const existing = await ctx.db
       .query("aiSummaries")
       .withIndex("by_data_hash", (q) => q.eq("dataHash", args.dataHash))
