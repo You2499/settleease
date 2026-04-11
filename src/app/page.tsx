@@ -10,7 +10,6 @@ import { ToastAction } from "@/components/ui/toast";
 import {
   SidebarProvider,
   SidebarInset,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 
 import AuthForm from '@/components/settleease/AuthForm';
@@ -53,8 +52,38 @@ const VALID_ACTIVE_VIEWS: ActiveView[] = [
   'settings',
 ];
 
+const ADMIN_ONLY_VIEWS = new Set<ActiveView>([
+  'addExpense',
+  'editExpenses',
+  'managePeople',
+  'manageCategories',
+  'manageSettlements',
+  'testErrorBoundary',
+  'exportExpense',
+  'scanReceipt',
+  'settings',
+]);
+
+const VIEW_NAMES: Record<ActiveView, string> = {
+  dashboard: 'Dashboard',
+  analytics: 'Analytics',
+  addExpense: 'Add Expense',
+  editExpenses: 'Edit Expenses',
+  managePeople: 'Manage People',
+  manageCategories: 'Manage Categories',
+  manageSettlements: 'Manage Settlements',
+  testErrorBoundary: 'Test Error Boundary',
+  exportExpense: 'Export Expense',
+  scanReceipt: 'Smart Scan',
+  settings: 'Settings',
+};
+
 function isValidActiveView(view: string | null | undefined): view is ActiveView {
   return !!view && VALID_ACTIVE_VIEWS.includes(view as ActiveView);
+}
+
+function canAccessView(view: ActiveView, userRole: UserRole) {
+  return !ADMIN_ONLY_VIEWS.has(view) || userRole === 'admin';
 }
 
 function SettleEasePageContent() {
@@ -73,7 +102,10 @@ function SettleEasePageContent() {
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
-  const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
+  const [hasResolvedInitialView, setHasResolvedInitialView] = useState(false);
+  const [hasHandledWelcomeToast, setHasHandledWelcomeToast] = useState(false);
+  const [restoredInitialView, setRestoredInitialView] = useState<ActiveView | null>(null);
+  const lastAccessDeniedViewRef = React.useRef<ActiveView | null>(null);
 
   // Supabase owns auth; Convex owns data and realtime.
   const {
@@ -87,13 +119,10 @@ function SettleEasePageContent() {
   // Check for existing session on mount to prevent flashing
   // Start with false to avoid hydration mismatch, then check on client
   const [hasSession, setHasSession] = useState(false);
-  const [isClient, setIsClient] = useState(false);
   const [isOAuthCallback, setIsOAuthCallback] = useState(false);
 
   // Run session check only on client after mount
   useEffect(() => {
-    setIsClient(true);
-
     // Check if this is an OAuth redirect (has hash fragment with access_token)
     const isOAuthRedirect = window.location.hash.includes('access_token');
     setIsOAuthCallback(isOAuthRedirect);
@@ -130,11 +159,11 @@ function SettleEasePageContent() {
       setHasSession(!!currentUser);
       // Clear OAuth callback state ONLY after initial view is loaded
       // This prevents showing dashboard skeleton during OAuth
-      if (currentUser && hasLoadedInitialView) {
+      if (currentUser && hasResolvedInitialView) {
         setIsOAuthCallback(false);
       }
     }
-  }, [currentUser, isLoadingAuth, hasLoadedInitialView]);
+  }, [currentUser, isLoadingAuth, hasResolvedInitialView]);
 
   // Use user profile hook
   const {
@@ -146,8 +175,9 @@ function SettleEasePageContent() {
     updateUserProfile,
   } = useUserProfile(currentUser);
 
-  const userRole = (currentUser ? (userProfile?.role || 'user') : null) as UserRole;
-  const isLoadingRole = !!currentUser && isLoadingProfile;
+  const userRole = (currentUser && userProfile?.role ? userProfile.role : null) as UserRole;
+  const isLoadingRole = !!currentUser && (isLoadingProfile || !userProfile || !userRole);
+  const isAppIdentityReady = !!currentUser && !isLoadingAuth && !!userProfile && !!userRole;
 
   // Sync theme through the live Convex profile.
   useThemeSync(currentUser?.id, userProfile);
@@ -193,9 +223,15 @@ function SettleEasePageContent() {
     fetchAllData,
   } = useConvexData(currentUser, userRole, isLoadingAuth, isLoadingRole);
 
+  const showAccessDeniedToast = useCallback((view: ActiveView, description = "You do not have permission to access this page.") => {
+    if (lastAccessDeniedViewRef.current === view) return;
+    lastAccessDeniedViewRef.current = view;
+    toast({ title: "Access Denied", description, variant: "destructive" });
+  }, []);
+
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
-    if (currentUser && !isLoadingProfile) {
+    if (isAppIdentityReady && currentUser) {
       // Check if we've already shown the modal for this user (using localStorage)
       const modalShownKey = `nameModal_shown_${currentUser.id}`;
       const hasShownModal = localStorage.getItem(modalShownKey);
@@ -205,7 +241,7 @@ function SettleEasePageContent() {
       // Show modal if:
       // 1. Modal hasn't been shown before for this user AND
       // 2. (User is a Google OAuth user OR user doesn't have complete names)
-      if (!hasShownModal && (googleInfo?.isGoogle || !userProfile || !hasCompleteName())) {
+      if (!hasShownModal && (googleInfo?.isGoogle || !hasCompleteName())) {
         // Add a small delay to ensure the UI is ready, especially for Google OAuth redirects
         const timer = setTimeout(() => {
           setIsNameModalEditMode(false); // This is initial setup, not edit mode
@@ -215,7 +251,7 @@ function SettleEasePageContent() {
         return () => clearTimeout(timer);
       }
     }
-  }, [currentUser, userProfile, isLoadingProfile, hasCompleteName, getGoogleUserInfo]);
+  }, [currentUser, isAppIdentityReady, hasCompleteName, getGoogleUserInfo]);
 
   const handleNameModalClose = useCallback(async (success: boolean) => {
     if (success && currentUser) {
@@ -241,17 +277,17 @@ function SettleEasePageContent() {
     setShowNameModal(true);
   }, []);
 
-  // Reset hasLoadedInitialView when user changes (to allow toast to show on sign-in)
+  // Reset identity-dependent one-shot work when user changes.
   useEffect(() => {
-    if (currentUser) {
-      setHasLoadedInitialView(false);
-    }
+    setHasResolvedInitialView(false);
+    setHasHandledWelcomeToast(false);
+    setRestoredInitialView(null);
+    lastAccessDeniedViewRef.current = null;
   }, [currentUser?.id]);
 
-  // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts
-  // Split into two parts: view loading (fast) and toast showing (waits for role)
+  // Resolve the initial view only after the real profile role is known.
   useEffect(() => {
-    if (hasLoadedInitialView || !currentUser || !userProfile || !userRole) return;
+    if (hasResolvedInitialView || !isAppIdentityReady || !userProfile || !userRole) return;
 
     const hasUrlView = searchParams.get('view') !== null;
     const lastActiveView = userProfile.last_active_view as string | undefined;
@@ -259,95 +295,102 @@ function SettleEasePageContent() {
       ? lastActiveView
       : null;
 
-    if (!hasUrlView && restorableView) {
-      setActiveView(restorableView);
+    let resolvedView = activeView;
+    let restoredView: ActiveView | null = null;
+
+    if (!hasUrlView && restorableView && canAccessView(restorableView, userRole)) {
+      resolvedView = restorableView;
+      restoredView = restorableView;
     }
 
+    if (!canAccessView(resolvedView, userRole)) {
+      showAccessDeniedToast(resolvedView);
+      resolvedView = 'dashboard';
+      restoredView = null;
+    }
+
+    if (resolvedView !== activeView) {
+      setActiveView(resolvedView);
+    }
+    setRestoredInitialView(restoredView);
+    setHasResolvedInitialView(true);
+  }, [activeView, hasResolvedInitialView, isAppIdentityReady, searchParams, showAccessDeniedToast, userProfile, userRole]);
+
+  // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts.
+  useEffect(() => {
+    if (hasHandledWelcomeToast || !hasResolvedInitialView || !isAppIdentityReady || !currentUser || !userProfile || !userRole) return;
+
     const shouldShowToast = userProfile.should_show_welcome_toast === true;
+    if (!shouldShowToast) return;
+
     const isNewUser = !userProfile.has_seen_welcome_toast;
     const isReturningUser = userProfile.has_seen_welcome_toast === true;
 
-    if (shouldShowToast) {
-      const dbFirstName = userProfile.first_name || '';
-      const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-      const metadataFirstName = metadataFullName ? String(metadataFullName).split(' ')[0] : '';
-      const emailUsername = currentUser.email?.split('@')[0] || 'there';
-      const userName = dbFirstName || metadataFirstName || emailUsername;
+    const dbFirstName = userProfile.first_name || '';
+    const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+    const metadataFirstName = metadataFullName ? String(metadataFullName).split(' ')[0] : '';
+    const emailUsername = currentUser.email?.split('@')[0] || 'there';
+    const userName = dbFirstName || metadataFirstName || emailUsername;
 
-      void updateUserProfile({
-        should_show_welcome_toast: false,
-        has_seen_welcome_toast: isNewUser ? true : userProfile.has_seen_welcome_toast,
-      });
+    setHasHandledWelcomeToast(true);
 
-      setTimeout(() => {
-        if (isNewUser) {
+    void updateUserProfile({
+      should_show_welcome_toast: false,
+      has_seen_welcome_toast: isNewUser ? true : userProfile.has_seen_welcome_toast,
+    });
+
+    setTimeout(() => {
+      if (isNewUser) {
+        toast({
+          title: "Welcome to SettleEase!",
+          description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+          variant: "default",
+          duration: 5000
+        });
+      } else if (isReturningUser) {
+        if (restoredInitialView) {
+          const viewName = VIEW_NAMES[restoredInitialView] || 'your last view';
+
           toast({
-            title: "Welcome to SettleEase!",
-            description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-            variant: "default",
+            title: "Welcome back!",
+            description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+            duration: 5000,
+            action: (
+              <ToastAction
+                altText="Go to Dashboard"
+                onClick={() => setActiveView('dashboard')}
+              >
+                Dashboard
+              </ToastAction>
+            )
+          });
+        } else {
+          toast({
+            title: "Welcome back!",
+            description: "You've successfully signed in to SettleEase.",
             duration: 5000
           });
-        } else if (isReturningUser) {
-          if (restorableView) {
-            const viewNames: Record<ActiveView, string> = {
-              dashboard: 'Dashboard',
-              analytics: 'Analytics',
-              addExpense: 'Add Expense',
-              editExpenses: 'Edit Expenses',
-              managePeople: 'Manage People',
-              manageCategories: 'Manage Categories',
-              manageSettlements: 'Manage Settlements',
-              testErrorBoundary: 'Test Error Boundary',
-              exportExpense: 'Export Expense',
-              scanReceipt: 'Smart Scan',
-              settings: 'Settings'
-            };
-
-            const viewName = viewNames[restorableView] || 'your last view';
-
-            toast({
-              title: "Welcome back!",
-              description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
-              duration: 5000,
-              action: (
-                <ToastAction
-                  altText="Go to Dashboard"
-                  onClick={() => setActiveView('dashboard')}
-                >
-                  Dashboard
-                </ToastAction>
-              )
-            });
-          } else {
-            toast({
-              title: "Welcome back!",
-              description: "You've successfully signed in to SettleEase.",
-              duration: 5000
-            });
-          }
         }
-      }, 0);
-    }
-
-    setHasLoadedInitialView(true);
-  }, [currentUser, searchParams, hasLoadedInitialView, userRole, userProfile, updateUserProfile]);
+      }
+    }, 0);
+  }, [currentUser, hasHandledWelcomeToast, hasResolvedInitialView, isAppIdentityReady, restoredInitialView, updateUserProfile, userProfile, userRole]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'];
+    if (!hasResolvedInitialView || !isAppIdentityReady || !userRole) return;
 
-    // Check role-based restrictions
-    if (userRole === 'user' && restrictedViewsForUserRole.includes(activeView)) {
+    if (!canAccessView(activeView, userRole)) {
       console.log(`Role-View Sync Effect: User role is 'user' and current view ('${activeView}') is restricted. Resetting to dashboard.`);
       setActiveView('dashboard');
-      toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
+      showAccessDeniedToast(activeView);
       return;
     }
-  }, [userRole, activeView]);
+  }, [activeView, hasResolvedInitialView, isAppIdentityReady, showAccessDeniedToast, userRole]);
 
   // Effect to persist activeView to the URL and Convex profile.
   useEffect(() => {
-    if (!hasLoadedInitialView || !currentUser) return;
+    if (!hasResolvedInitialView || !isAppIdentityReady || !currentUser || !userRole) return;
+    if (!canAccessView(activeView, userRole)) return;
 
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
@@ -364,7 +407,7 @@ function SettleEasePageContent() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [activeView, currentUser, hasLoadedInitialView, router, searchParams, updateUserProfile]);
+  }, [activeView, currentUser, hasResolvedInitialView, isAppIdentityReady, router, searchParams, updateUserProfile, userRole]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -374,8 +417,8 @@ function SettleEasePageContent() {
         e.preventDefault();
         if (userRole === 'admin') {
           setActiveView('addExpense');
-        } else {
-          toast({ title: "Access Denied", description: "You need admin permissions to add expenses.", variant: "destructive" });
+        } else if (userRole === 'user') {
+          showAccessDeniedToast('addExpense', "You need admin permissions to add expenses.");
         }
       }
 
@@ -399,22 +442,22 @@ function SettleEasePageContent() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [userRole, activeView, setActiveView]);
+  }, [userRole, activeView, setActiveView, showAccessDeniedToast]);
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const handleSetActiveView = useCallback((view: ActiveView) => {
-    let restrictedViewsForUserRole: ActiveView[] = ['addExpense', 'editExpenses', 'managePeople', 'manageCategories', 'manageSettlements', 'testErrorBoundary', 'exportExpense', 'scanReceipt', 'settings'];
+    if (!isAppIdentityReady || !userRole) return;
 
-    // Check role-based restrictions
-    if (userRole === 'user' && restrictedViewsForUserRole.includes(view)) {
-      toast({ title: "Access Denied", description: "You do not have permission to access this page.", variant: "destructive" });
+    if (!canAccessView(view, userRole)) {
+      showAccessDeniedToast(view);
       setActiveView('dashboard');
       return;
     }
 
+    lastAccessDeniedViewRef.current = null;
     setActiveView(view);
-  }, [userRole]);
+  }, [isAppIdentityReady, showAccessDeniedToast, userRole]);
 
   const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
     return (LucideIcons as any)[iconName] || Settings2;
@@ -447,16 +490,15 @@ function SettleEasePageContent() {
     );
   }
 
-  // Show transparent loading screen during:
-  // 1. OAuth callback - show until data is loaded (prevents skeleton flash)
-  // 2. Initial auth check when no session detected (prevents auth form flash)
-  if (isLoadingAuth && !currentUser && !hasSession) {
+  // Keep the shell hidden until auth, profile, and the initial view are resolved.
+  // Rendering before that point can briefly expose the wrong role/navigation.
+  if (isLoadingAuth || (hasSession && !currentUser)) {
     return <div className="fixed inset-0 bg-background" />;
   }
 
   // Show transparent loading screen during OAuth callback until initial view is loaded
   // This prevents showing wrong skeleton (dashboard) before correct view is determined
-  if (isOAuthCallback && !hasLoadedInitialView) {
+  if (isOAuthCallback && !hasResolvedInitialView) {
     return <div className="fixed inset-0 bg-background" />;
   }
 
@@ -469,16 +511,11 @@ function SettleEasePageContent() {
     );
   }
 
-  // Show dashboard when:
-  // - We have a user, OR
-  // - Auth is loading and we have a session (prevents auth form flash)
-  // (dashboard will show skeleton loaders while data loads)
+  if (currentUser && (!isAppIdentityReady || !hasResolvedInitialView)) {
+    return <div className="fixed inset-0 bg-background" />;
+  }
 
-  // Show dashboard (with skeleton loaders) when:
-  // - User is authenticated, OR
-  // - Auth is loading and we likely have a session (prevents auth form flash on refresh)
-
-  // Show the app with skeleton loaders (works for both auth loading and data loading)
+  // Show the app only after identity-dependent routing has settled.
   return (
     <>
       {currentUser && (
@@ -501,6 +538,7 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
+          isProfileLoading={!isAppIdentityReady}
         />
         <SidebarInset>
           <div className="flex flex-col h-full">
@@ -714,7 +752,7 @@ function SettleEasePageContent() {
                 )}
               </div>
             </main>
-            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} />
+            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} isProfileLoading={!isAppIdentityReady} />
           </div>
         </SidebarInset>
       </SidebarProvider >

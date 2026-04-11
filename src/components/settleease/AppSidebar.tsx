@@ -8,6 +8,7 @@ import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
 
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,9 +43,10 @@ interface AppSidebarProps {
   currentUserName?: string;
   userRole: UserRole;
   onEditName?: () => void;
+  isProfileLoading?: boolean;
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isProfileLoading = false }: AppSidebarProps) {
   const { isMobile, setOpenMobile, state } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -57,6 +59,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const [dataOpen, setDataOpen] = useState(true);
 
   const isCollapsed = state === 'collapsed';
+  const shouldShowAdminNav = userRole === 'admin' && !isProfileLoading;
 
   const handleLogoutClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -65,6 +68,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   };
 
   const handleNavigation = (view: ActiveView) => {
+    if (isProfileLoading) return;
     setActiveView(view);
     if (isMobile) {
       setOpenMobile(false);
@@ -114,7 +118,23 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             </SidebarMenuItem>
 
             {/* Admin Only Sections */}
-            {userRole === 'admin' && (
+            {isProfileLoading && (
+              <>
+                <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+                  <Skeleton className="h-3 w-20" />
+                </div>
+                {[0, 1, 2, 3].map((item) => (
+                  <SidebarMenuItem key={item}>
+                    <div className="flex h-8 items-center gap-2 px-2">
+                      <Skeleton className="h-4 w-4 rounded" />
+                      <Skeleton className="h-4 w-28 group-data-[state=collapsed]:hidden" />
+                    </div>
+                  </SidebarMenuItem>
+                ))}
+              </>
+            )}
+
+            {shouldShowAdminNav && (
               <>
                 {/* Expenses Section - Collapsible */}
                 {!isCollapsed ? (
@@ -295,7 +315,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
         </SidebarContent>
         <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
           <div className="p-2">
-            {(currentUserName || currentUserEmail) && (
+            {isProfileLoading ? (
+              <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
+                <Skeleton className="h-4 w-36 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+            ) : (currentUserName || currentUserEmail) && (
               <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
                 <div className="flex items-center justify-between">
                   <div className="flex-grow overflow-hidden">

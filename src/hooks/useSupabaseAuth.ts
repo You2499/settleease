@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
@@ -10,7 +10,12 @@ import { supabaseClient, supabaseInitializationError } from '@/lib/settleease/su
 export function useSupabaseAuth() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
+  const currentUserRef = useRef<SupabaseUser | null>(null);
   const markSignIn = useMutation(api.app.markSignIn);
+
+  useEffect(() => {
+    currentUserRef.current = currentUser;
+  }, [currentUser]);
 
   const handleLogout = async () => {
     if (!supabaseClient) return;
@@ -78,12 +83,40 @@ export function useSupabaseAuth() {
 
     let isMounted = true;
 
+    const markSignInWithRetry = async (newAuthUser: SupabaseUser) => {
+      const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
+      const firstName = fullName ? String(fullName).split(' ')[0] : undefined;
+      const lastName = fullName ? String(fullName).split(' ').slice(1).join(' ') || undefined : undefined;
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          await markSignIn({
+            supabaseUserId: newAuthUser.id,
+            email: newAuthUser.email || undefined,
+            firstName,
+            lastName,
+          });
+          return true;
+        } catch (err) {
+          if (attempt === 2) {
+            console.error('Error updating Convex sign-in flags:', err);
+            return false;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+        }
+      }
+
+      return false;
+    };
+
     console.log("Auth effect: Setting up onAuthStateChange listener.");
     const { data: authListener } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       setTimeout(async () => {
         console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
         if (isMounted) {
           const newAuthUser = session?.user ?? null;
+          const hasOAuthHash = !!newAuthUser && typeof window !== 'undefined' && window.location.hash.includes('access_token');
           
           // Clean up URL hash fragments after successful authentication
           if (newAuthUser && typeof window !== 'undefined' && window.location.hash) {
@@ -92,15 +125,15 @@ export function useSupabaseAuth() {
           }
           
           // Track sign-in event in Convex (NO toasts here - page.tsx handles all toasts)
-          const prevLocalUser = currentUser;
+          const prevLocalUser = currentUserRef.current;
           
           // Check if this is a fresh sign-in or just a page refresh
           // Use sessionStorage to track if we've already processed this session
           // Safari-safe: wrap in try-catch for private browsing mode
           let hasProcessedThisSession = false;
-          const sessionKey = `auth_processed_${newAuthUser?.id}`;
+          const sessionKey = newAuthUser ? `auth_processed_${newAuthUser.id}` : null;
           
-          if (typeof window !== 'undefined' && newAuthUser) {
+          if (typeof window !== 'undefined' && sessionKey) {
             try {
               hasProcessedThisSession = sessionStorage.getItem(sessionKey) === 'true';
             } catch (e) {
@@ -111,38 +144,28 @@ export function useSupabaseAuth() {
             }
           }
           
-          // Only set flag on actual NEW sign-ins (not page refreshes)
-          // Conditions:
-          // 1. New user exists
-          // 2. No previous user in state (transition from logged out to logged in)
-          // 3. Haven't processed this session yet (prevents flag being set on refresh)
-          if (newAuthUser && !prevLocalUser && !hasProcessedThisSession) {
-            // Mark this session as processed (Safari-safe)
-            if (typeof window !== 'undefined') {
+          // Only set welcome flags for a genuine local transition into a signed-in state.
+          // Unknown/refresh sessions should not be treated as fresh sign-ins.
+          if (
+            newAuthUser &&
+            sessionKey &&
+            !prevLocalUser &&
+            !hasProcessedThisSession &&
+            (_event === 'SIGNED_IN' || hasOAuthHash)
+          ) {
+            void markSignInWithRetry(newAuthUser).then((success) => {
+              if (!success || typeof window === 'undefined') return;
+
               try {
                 sessionStorage.setItem(sessionKey, 'true');
               } catch (e) {
                 console.warn('Could not set sessionStorage:', e);
               }
-            }
-            
-            try {
-              const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
-              const firstName = fullName ? String(fullName).split(' ')[0] : undefined;
-              const lastName = fullName ? String(fullName).split(' ').slice(1).join(' ') || undefined : undefined;
-
-              await markSignIn({
-                supabaseUserId: newAuthUser.id,
-                email: newAuthUser.email || undefined,
-                firstName,
-                lastName,
-              });
-            } catch (err) {
-              console.error('Error updating Convex sign-in flags:', err);
-            }
+            });
           }
           
           setCurrentUser(prevUser => { 
+            currentUserRef.current = newAuthUser;
             if ((newAuthUser?.id !== prevUser?.id) || (newAuthUser === null && prevUser !== null) || (newAuthUser !== null && prevUser === null) ) {
                 console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
                 
@@ -180,7 +203,7 @@ export function useSupabaseAuth() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, []);
+  }, [markSignIn]);
 
   return {
     supabaseClient,

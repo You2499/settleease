@@ -28,15 +28,37 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
   useEffect(() => {
     if (!currentUser) return;
 
+    let isCancelled = false;
     const { firstName, lastName } = getMetadataNames(currentUser);
-    void upsertProfile({
-      supabaseUserId: currentUser.id,
-      email: currentUser.email || undefined,
-      firstName,
-      lastName,
-    }).catch((error) => {
-      console.error('Error ensuring Convex user profile:', error);
-    });
+
+    const ensureProfile = async () => {
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        if (isCancelled) return;
+
+        try {
+          await upsertProfile({
+            supabaseUserId: currentUser.id,
+            email: currentUser.email || undefined,
+            firstName,
+            lastName,
+          });
+          return;
+        } catch (error) {
+          if (attempt === 3 || isCancelled) {
+            console.error('Error ensuring Convex user profile:', error);
+            return;
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+        }
+      }
+    };
+
+    void ensureProfile();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [currentUser, upsertProfile]);
 
   const refreshUserProfile = useCallback(async (_showLoading?: boolean) => {
@@ -72,15 +94,20 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
   }, [profile]);
 
   const getDisplayName = useCallback(() => {
-    if (profile?.first_name && profile?.last_name) {
-      return `${profile.first_name} ${profile.last_name}`;
+    const profileName = [profile?.first_name, profile?.last_name]
+      .filter(Boolean)
+      .join(' ');
+
+    if (profileName) {
+      return profileName;
     }
+
     return currentUser?.email || 'User';
   }, [profile, currentUser]);
 
   return {
     userProfile: profile ?? null,
-    isLoadingProfile: !!currentUser && profile === undefined,
+    isLoadingProfile: !!currentUser && (profile === undefined || profile === null),
     updateUserProfile,
     hasCompleteName,
     getDisplayName,

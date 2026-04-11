@@ -10,9 +10,10 @@ interface MobileBottomNavProps {
     activeView: ActiveView;
     setActiveView: (view: ActiveView) => void;
     userRole: UserRole;
+    isProfileLoading?: boolean;
 }
 
-export default function MobileBottomNav({ activeView, setActiveView, userRole }: MobileBottomNavProps) {
+export default function MobileBottomNav({ activeView, setActiveView, userRole, isProfileLoading = false }: MobileBottomNavProps) {
     const { toggleSidebar } = useSidebar();
 
     const navItems = [
@@ -26,7 +27,20 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole }:
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
             <div className="flex justify-around items-center h-16 px-2">
                 {navItems.map((item) => {
-                    if (item.adminOnly && userRole !== 'admin') return null;
+                    if (item.adminOnly && userRole !== 'admin') {
+                        if (!isProfileLoading) return null;
+
+                        return (
+                            <div
+                                key={item.view}
+                                className="flex flex-col items-center justify-center w-full h-full space-y-1 text-muted-foreground"
+                                aria-hidden="true"
+                            >
+                                <div className="h-5 w-5 rounded bg-muted animate-pulse" />
+                                <div className="h-2.5 w-10 rounded bg-muted animate-pulse" />
+                            </div>
+                        );
+                    }
 
                     const isActive = activeView === item.view;
                     return (
