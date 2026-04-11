@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { FileText, Sparkles } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,6 @@ const ExpenseDetailModal = dynamic(() => import('./ExpenseDetailModal'), {
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
 
-import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease/constants';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
@@ -31,7 +31,6 @@ interface BetaDashboardViewProps {
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   settlementPayments: SettlementPayment[];
   manualOverrides: ManualSettlementOverride[];
-  db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
   userRole: UserRole;
@@ -51,7 +50,6 @@ export default function BetaDashboardView({
   getCategoryIconFromName,
   settlementPayments,
   manualOverrides,
-  db,
   currentUserId,
   onActionComplete,
   userRole,
@@ -70,6 +68,8 @@ export default function BetaDashboardView({
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
+  const addSettlementPayment = useMutation(api.app.addSettlementPayment);
+  const deleteSettlementPayment = useMutation(api.app.deleteSettlementPayment);
 
   const { simplifiedTransactions, pairwiseTransactions } = useMemo(() => {
     if (people.length === 0) return { simplifiedTransactions: [], pairwiseTransactions: [] };
@@ -86,21 +86,17 @@ export default function BetaDashboardView({
   }, [expenses, people, settlementPayments, manualOverrides, peopleMap]);
 
   const handleMarkAsPaid = async (transaction: CalculatedTransaction) => {
-    if (!db || !currentUserId) {
-      toast({ title: "Error", description: "Cannot mark as paid. DB or User missing.", variant: "destructive" });
+    if (!currentUserId) {
+      toast({ title: "Error", description: "Cannot mark as paid. User is missing.", variant: "destructive" });
       return;
     }
     try {
-      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
-        {
-          debtor_id: transaction.from,
-          creditor_id: transaction.to,
-          amount_settled: transaction.amount,
-          marked_by_user_id: currentUserId,
-          settled_at: new Date().toISOString(),
-        },
-      ]);
-      if (error) throw error;
+      await addSettlementPayment({
+        debtorId: transaction.from,
+        creditorId: transaction.to,
+        amountSettled: transaction.amount,
+        markedByUserId: currentUserId,
+      });
       toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[transaction.from]} to ${peopleMap[transaction.to]} marked as complete.` });
       onActionComplete();
     } catch (error: any) {
@@ -110,13 +106,12 @@ export default function BetaDashboardView({
   };
 
   const handleUnmarkSettlementPayment = async (payment: SettlementPayment) => {
-    if (!db) {
-      toast({ title: "Error", description: "Cannot unmark payment. DB missing.", variant: "destructive" });
+    if (!payment) {
+      toast({ title: "Error", description: "Cannot unmark payment. Payment is missing.", variant: "destructive" });
       return;
     }
     try {
-      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).delete().eq('id', payment.id);
-      if (error) throw error;
+      await deleteSettlementPayment({ id: payment.id });
       toast({ title: "Payment Unmarked", description: `Payment record from ${peopleMap[payment.debtor_id]} to ${peopleMap[payment.creditor_id]} has been removed.` });
       onActionComplete();
     } catch (error: any) {
@@ -256,7 +251,6 @@ export default function BetaDashboardView({
       <ManualOverrideAlert
         overrides={manualOverrides}
         peopleMap={peopleMap}
-        db={db}
         onActionComplete={onActionComplete}
         userRole={userRole}
       />
@@ -276,7 +270,6 @@ export default function BetaDashboardView({
         getCategoryIconFromName={getCategoryIconFromName}
         categories={dynamicCategories}
         userRole={userRole}
-        db={db}
         currentUserId={currentUserId}
         isLoadingPeople={isLoadingPeople}
         isLoadingExpenses={isLoadingExpenses}

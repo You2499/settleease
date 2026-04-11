@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,16 +20,14 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "@/hooks/use-toast";
 import { Save, RotateCcw, History, Sparkles, CircleAlert, Check, Clock, Trash2, AlertTriangle } from 'lucide-react';
-import { AI_PROMPTS_TABLE } from '@/lib/settleease/constants';
 import type { AIPrompt } from '@/lib/settleease/types';
 import { DEFAULT_PRODUCTION_SUMMARY_PROMPT } from '@/lib/settleease/aiSummarization';
 
 interface PromptEditorProps {
-  db?: SupabaseClient;
   currentUserId: string;
 }
 
-export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
+export default function PromptEditor({ currentUserId }: PromptEditorProps) {
   const [activePrompt, setActivePrompt] = useState<AIPrompt | null>(null);
   const [editedPromptText, setEditedPromptText] = useState('');
   const [versionDescription, setVersionDescription] = useState('');
@@ -37,51 +36,36 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const promptData = useQuery(api.app.getAiPromptEditorData, { name: 'trump-summarizer' }) as
+    | { activePrompt: AIPrompt | null; promptHistory: AIPrompt[] }
+    | undefined;
+  const saveAiPrompt = useMutation(api.app.saveAiPrompt);
+  const clearAiSummaries = useMutation(api.app.clearAiSummaries);
 
   // Load active prompt and history
   useEffect(() => {
-    if (!db) return;
-    loadPrompts();
-  }, [db]);
-
-  const loadPrompts = async () => {
-    if (!db) return;
-
-    setIsLoading(true);
-    try {
-      // Load active prompt
-      const { data: activeData, error: activeError } = await db
-        .from(AI_PROMPTS_TABLE)
-        .select('*')
-        .eq('name', 'trump-summarizer')
-        .eq('is_active', true)
-        .single();
-
-      if (activeError) throw activeError;
-
-      setActivePrompt(activeData);
-      setEditedPromptText(activeData.prompt_text);
-
-      // Load all versions for history
-      const { data: historyData, error: historyError } = await db
-        .from(AI_PROMPTS_TABLE)
-        .select('*')
-        .eq('name', 'trump-summarizer')
-        .order('version', { ascending: false });
-
-      if (historyError) throw historyError;
-      setPromptHistory(historyData || []);
-    } catch (error: any) {
-      console.error('Error loading prompts:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load AI prompts",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    if (promptData === undefined) {
+      setIsLoading(true);
+      return;
     }
-  };
+
+    const active = promptData.activePrompt || {
+      id: 'default-trump-summarizer',
+      name: 'trump-summarizer',
+      prompt_text: DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+      is_active: true,
+      created_by_user_id: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 0,
+      description: 'Default built-in prompt',
+    };
+
+    setActivePrompt(active);
+    setEditedPromptText(active.prompt_text);
+    setPromptHistory(promptData.promptHistory || []);
+    setIsLoading(false);
+  }, [promptData]);
 
   // Track unsaved changes
   useEffect(() => {
@@ -91,7 +75,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
   }, [editedPromptText, activePrompt]);
 
   const handleSave = async () => {
-    if (!db || !activePrompt) return;
+    if (!activePrompt) return;
 
     if (!versionDescription.trim()) {
       toast({
@@ -106,27 +90,17 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
     try {
       const newVersion = activePrompt.version + 1;
 
-      // Update current prompt to new version
-      const { error: updateError } = await db
-        .from(AI_PROMPTS_TABLE)
-        .update({
-          prompt_text: editedPromptText,
-          version: newVersion,
-          description: versionDescription,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('name', 'trump-summarizer')
-        .eq('is_active', true);
-
-      if (updateError) throw updateError;
+      await saveAiPrompt({
+        name: 'trump-summarizer',
+        promptText: editedPromptText,
+        description: versionDescription,
+        currentUserId,
+      });
 
       toast({
         title: "Success",
         description: `Prompt updated to version ${newVersion}`,
       });
-
-      // Reload prompts
-      await loadPrompts();
       setVersionDescription('');
       setHasUnsavedChanges(false);
     } catch (error: any) {
@@ -150,7 +124,7 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
   };
 
   const handleRestoreVersion = async (version: AIPrompt) => {
-    if (!db || !activePrompt) return;
+    if (!activePrompt) return;
 
     const confirmed = window.confirm(
       `Restore version ${version.version}? This will create a new version based on the selected one.`
@@ -161,25 +135,17 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
     try {
       const newVersion = activePrompt.version + 1;
 
-      const { error } = await db
-        .from(AI_PROMPTS_TABLE)
-        .update({
-          prompt_text: version.prompt_text,
-          version: newVersion,
-          description: `Restored from version ${version.version}`,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('name', 'trump-summarizer')
-        .eq('is_active', true);
-
-      if (error) throw error;
+      await saveAiPrompt({
+        name: 'trump-summarizer',
+        promptText: version.prompt_text,
+        description: `Restored from version ${version.version}`,
+        currentUserId,
+      });
 
       toast({
         title: "Success",
         description: `Restored to version ${version.version} as v${newVersion}`,
       });
-
-      await loadPrompts();
     } catch (error: any) {
       console.error('Error restoring version:', error);
       toast({
@@ -204,16 +170,9 @@ export default function PromptEditor({ db, currentUserId }: PromptEditorProps) {
   };
 
   const executeDeleteSummaries = async () => {
-    if (!db) return;
-
     setIsSaving(true);
     try {
-      const { error } = await db
-        .from('ai_summaries')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all rows
-
-      if (error) throw error;
+      await clearAiSummaries();
 
       toast({
         title: "Success",

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +30,6 @@ import { compressImage, formatFileSize, isSupportedImageType } from '@/lib/settl
 
 interface ScanReceiptTabProps {
   people: Person[];
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
   onExpenseAdded: () => void;
   dynamicCategories: DynamicCategory[];
   isLoadingPeople?: boolean;
@@ -84,8 +81,6 @@ function fuzzyMatchCategory(hint: string, categories: DynamicCategory[]): string
 
 export default function ScanReceiptTab({
   people,
-  db,
-  supabaseInitializationError,
   onExpenseAdded,
   dynamicCategories,
   isLoadingPeople = false,
@@ -137,11 +132,7 @@ export default function ScanReceiptTab({
 
   const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
 
-  const { handleSubmitExpense } = useExpenseFormLogic({
-    db,
-    supabaseInitializationError,
-    onExpenseAdded,
-  });
+  const { handleSubmitExpense } = useExpenseFormLogic({ onExpenseAdded });
 
   // Animated analyzing messages
   useEffect(() => {
@@ -484,22 +475,6 @@ export default function ScanReceiptTab({
           <Skeleton className="h-48 w-48 rounded-xl" />
           <Skeleton className="h-4 w-64" />
           <Skeleton className="h-10 w-40" />
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (supabaseInitializationError && !db) {
-    return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6 pt-0">
-          <p className="text-sm sm:text-base">Could not connect to the database.</p>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
         </CardContent>
       </Card>
     );

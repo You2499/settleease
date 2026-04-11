@@ -1,32 +1,8 @@
 /**
- * Authentication utility functions for SettleEase
+ * Authentication utility functions for SettleEase.
+ *
+ * Supabase is intentionally used for auth only; application data lives in Convex.
  */
-
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-/**
- * Check if a user exists with the given email address
- * Note: This is a utility function for future enhancements
- * Currently not used due to Supabase security restrictions
- */
-export async function checkUserExists(db: SupabaseClient, email: string): Promise<boolean> {
-  try {
-    // Note: This approach won't work due to RLS policies
-    // Keeping for reference and future server-side implementation
-    const { data, error } = await db
-      .from('auth.users')
-      .select('id')
-      .eq('email', email)
-      .single();
-
-    return !error && !!data;
-  } catch (error) {
-    console.warn('Unable to check user existence:', error);
-    return false;
-  }
-}
-
-
 
 /**
  * Get appropriate Google OAuth button text based on context

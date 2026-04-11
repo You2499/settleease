@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { toast } from "@/hooks/use-toast";
-import { USER_PROFILES_TABLE, supabaseUrl, supabaseAnonKey } from '@/lib/settleease';
-import type { UserRole } from '@/lib/settleease';
+import { supabaseUrl, supabaseAnonKey } from '@/lib/settleease';
 
-let db: SupabaseClient | undefined;
+let supabaseClient: SupabaseClient | undefined;
 let supabaseInitializationError: string | null = null;
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -14,7 +15,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error(supabaseInitializationError);
 } else {
   try {
-    db = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
   } catch (error: any) {
     console.error("Error initializing Supabase client:", error);
     supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase credentials are correct and the service is reachable.`;
@@ -23,61 +24,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export function useSupabaseAuth() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-  const [userRole, setUserRole] = useState<UserRole>(null);
   const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [isLoadingRole, setIsLoadingRole] = useState(false);
-
-  const fetchUserRole = useCallback(async (userId: string): Promise<UserRole> => {
-    if (!db || !userId) return 'user';
-    
-    try {
-      const { data, error } = await db
-        .from(USER_PROFILES_TABLE)
-        .select('role, first_name, last_name')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.warn(
-            `User profile or role not found for ${userId} (PGRST116). Defaulting to 'user' role. This is normal and often temporary for new users as their profile (with role) is being created by a database trigger. If persistent, ensure the trigger 'on_auth_user_created' is correctly populating '${USER_PROFILES_TABLE}'.`
-          );
-          return 'user';
-        }
-        let errorDetails = '';
-        try {
-          errorDetails = JSON.stringify(error);
-        } catch (e) {
-          errorDetails = 'Error object could not be stringified.';
-        }
-        console.error(
-          `Error fetching user role (userId: ${userId}): Details: ${errorDetails}. Raw error object:`, error,
-          `Defaulting to 'user' role. This strongly suggests an RLS misconfiguration on the '${USER_PROFILES_TABLE}' table. ` +
-          `Ensure a RLS policy exists and is enabled, like: "CREATE POLICY \\"Users can view their own profile\\" ON public.user_profiles FOR SELECT TO authenticated USING (auth.uid() = user_id);"`
-        );
-        return 'user';
-      }
-      return data?.role as UserRole || 'user';
-    } catch (e: any) {
-      let exceptionDetails = '';
-      try {
-        exceptionDetails = JSON.stringify(e);
-      } catch (stringifyError) {
-        exceptionDetails = 'Exception object could not be stringified.';
-      }
-      console.error(
-        `Catch: Unhandled exception while fetching user role (userId: ${userId}): Details: ${exceptionDetails}. Raw exception:`, e,
-        "Defaulting to 'user' role."
-      );
-      return 'user';
-    }
-  }, []);
+  const markSignIn = useMutation(api.app.markSignIn);
 
   const handleLogout = async () => {
-    if (!db) return;
+    if (!supabaseClient) return;
     
     try {
-      const { error } = await db.auth.signOut();
+      const { error } = await supabaseClient.auth.signOut();
       
       if (error) {
         if (error.message === "Auth session missing!") {
@@ -90,7 +44,6 @@ export function useSupabaseAuth() {
       
       // Always clear local state regardless of error to ensure logout on mobile
       setCurrentUser(null);
-      setUserRole(null);
       
       // Clear any stored session data (Safari-safe)
       if (typeof window !== 'undefined') {
@@ -127,14 +80,13 @@ export function useSupabaseAuth() {
       console.error("Unexpected error during logout:", err);
       // Force logout even if there's an error
       setCurrentUser(null);
-      setUserRole(null);
     }
   };
 
   useEffect(() => {
-    console.log("Auth effect: Starts. Supabase Client:", !!db, "Supabase Init Error:", !!supabaseInitializationError);
-    if (supabaseInitializationError || !db) {
-      console.log("Auth effect: Supabase init error or no DB. Setting isLoadingAuth=false.");
+    console.log("Auth effect: Starts. Supabase Client:", !!supabaseClient, "Supabase Init Error:", !!supabaseInitializationError);
+    if (supabaseInitializationError || !supabaseClient) {
+      console.log("Auth effect: Supabase init error or no auth client. Setting isLoadingAuth=false.");
       setIsLoadingAuth(false);
       return;
     }
@@ -142,7 +94,7 @@ export function useSupabaseAuth() {
     let isMounted = true;
 
     console.log("Auth effect: Setting up onAuthStateChange listener.");
-    const { data: authListener } = db.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = supabaseClient.auth.onAuthStateChange((_event, session) => {
       setTimeout(async () => {
         console.log("Auth effect: onAuthStateChange triggered. Event:", _event, "Session:", !!session, "Mounted:", isMounted);
         if (isMounted) {
@@ -154,7 +106,7 @@ export function useSupabaseAuth() {
             window.history.replaceState(null, '', window.location.pathname + window.location.search);
           }
           
-          // Track sign-in event in database (NO toasts here - page.tsx handles all toasts)
+          // Track sign-in event in Convex (NO toasts here - page.tsx handles all toasts)
           const prevLocalUser = currentUser;
           
           // Check if this is a fresh sign-in or just a page refresh
@@ -190,16 +142,18 @@ export function useSupabaseAuth() {
             }
             
             try {
-              // Set flag to show welcome toast - page.tsx will check this flag
-              await db
-                .from('user_profiles')
-                .update({ 
-                  last_sign_in_at: new Date().toISOString(),
-                  should_show_welcome_toast: true
-                })
-                .eq('user_id', newAuthUser.id);
+              const fullName = newAuthUser.user_metadata?.full_name || newAuthUser.user_metadata?.name || '';
+              const firstName = fullName ? String(fullName).split(' ')[0] : undefined;
+              const lastName = fullName ? String(fullName).split(' ').slice(1).join(' ') || undefined : undefined;
+
+              await markSignIn({
+                supabaseUserId: newAuthUser.id,
+                email: newAuthUser.email || undefined,
+                firstName,
+                lastName,
+              });
             } catch (err) {
-              console.error('Error updating sign-in flags:', err);
+              console.error('Error updating Convex sign-in flags:', err);
             }
           }
           
@@ -207,9 +161,6 @@ export function useSupabaseAuth() {
             if ((newAuthUser?.id !== prevUser?.id) || (newAuthUser === null && prevUser !== null) || (newAuthUser !== null && prevUser === null) ) {
                 console.log("Auth effect: onAuthStateChange - User state changed via functional update. Updating currentUser.");
                 
-                if (!newAuthUser) {
-                  setUserRole(null);
-                }
                 return newAuthUser;
             }
             return prevUser; 
@@ -231,7 +182,7 @@ export function useSupabaseAuth() {
     });
     
     console.log("Auth effect: Attempting to get session as a secondary check/optimization.");
-    db.auth.getSession().then(({ data: { session } }) => {
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
       console.log("Auth effect: getSession returned. Session:", !!session, "Mounted:", isMounted);
     }).catch(err => {
         if(isMounted) {
@@ -246,50 +197,11 @@ export function useSupabaseAuth() {
     };
   }, []);
 
-  // Effect for fetching user role
-  useEffect(() => {
-    let isMounted = true;
-    console.log("User Role Effect: Starts. isLoadingAuth:", isLoadingAuth, "currentUser:", !!currentUser, "userRole:", userRole);
-  
-    if (isLoadingAuth) {
-      console.log("User Role Effect: Still loading auth, skipping.");
-      return;
-    }
-  
-    if (currentUser) {
-      if (!userRole) {
-        console.log("User Role Effect: currentUser exists, userRole not set. Fetching role.");
-        setIsLoadingRole(true);
-        fetchUserRole(currentUser.id).then(fetchedRole => {
-          if (!isMounted) {
-            console.log("User Role Effect: fetchUserRole - Component unmounted.");
-            setIsLoadingRole(false);
-            return;
-          }
-          console.log("User Role Effect: fetchUserRole - Role fetched:", fetchedRole);
-          setUserRole(fetchedRole);
-          setIsLoadingRole(false);
-        });
-      }
-    } else { 
-      console.log("User Role Effect: No currentUser. Resetting role.");
-      setUserRole(null);
-      setIsLoadingRole(false);
-    }
-    
-    return () => {
-      console.log("User Role Effect: Cleanup. isMounted=false.");
-      isMounted = false;
-    };
-  }, [currentUser, isLoadingAuth, userRole, fetchUserRole]);
-
   return {
-    db,
+    supabaseClient,
     supabaseInitializationError,
     currentUser,
-    userRole,
     isLoadingAuth,
-    isLoadingRole,
     handleLogout,
   };
 }

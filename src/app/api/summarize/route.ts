@@ -1,11 +1,14 @@
 import { NextRequest } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { createClient } from '@supabase/supabase-js';
-import { injectSummaryJsonIntoPrompt } from '@/lib/settleease/aiSummarization';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@convex/_generated/api';
+import {
+  DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+  injectSummaryJsonIntoPrompt,
+} from '@/lib/settleease/aiSummarization';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://shocking-panda-595.convex.cloud';
 
 // Gemma 4 open-source model served via Google AI Studio (same API key)
 const MODEL_FALLBACK_ORDER = [
@@ -17,8 +20,7 @@ export async function POST(request: NextRequest) {
     console.log('📥 Summarize API called');
     console.log('🔍 Environment check:', {
       hasGeminiKey: !!GEMINI_API_KEY,
-      hasSupabaseUrl: !!SUPABASE_URL,
-      hasServiceKey: !!SUPABASE_SERVICE_KEY,
+      hasConvexUrl: !!CONVEX_URL,
     });
     const { jsonData, hash, promptVersion } = await request.json();
 
@@ -44,35 +46,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('✅ API key found, fetching prompt from database...');
+    console.log('✅ API key found, fetching prompt from Convex...');
 
-    // Fetch active prompt from database
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { data: promptData, error: promptError } = await supabase
-      .from('ai_prompts')
-      .select('*')
-      .eq('name', 'trump-summarizer')
-      .eq('is_active', true)
-      .single();
+    const promptData = await fetchQuery(api.app.getActiveAiPrompt, {
+      name: 'trump-summarizer',
+    }, { url: CONVEX_URL });
 
-    if (promptError || !promptData) {
-      console.error('❌ Error fetching prompt:', promptError);
-      return new Response(
-        JSON.stringify({ error: 'AI prompt not configured. Please contact administrator.' }),
-        {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    console.log(`✅ Using prompt version ${promptData.version}`);
+    console.log(`✅ Using prompt version ${promptData?.version || 2}`);
 
     // Initialize Gemini
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
     // Replace placeholder with actual data and fail fast for invalid prompt templates.
-    const prompt = injectSummaryJsonIntoPrompt(promptData.prompt_text, jsonData);
+    const prompt = injectSummaryJsonIntoPrompt(
+      promptData?.prompt_text || DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+      jsonData,
+    );
 
     // Try models in fallback order until one succeeds
     let result;

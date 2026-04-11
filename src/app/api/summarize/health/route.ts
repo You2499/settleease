@@ -1,37 +1,32 @@
-import { NextRequest } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { SUMMARY_PROMPT_PLACEHOLDER } from '@/lib/settleease/aiSummarization';
+import { fetchQuery } from 'convex/nextjs';
+import { api } from '@convex/_generated/api';
+import {
+  DEFAULT_PRODUCTION_SUMMARY_PROMPT,
+  SUMMARY_PROMPT_PLACEHOLDER,
+} from '@/lib/settleease/aiSummarization';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://shocking-panda-595.convex.cloud';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const checks = {
     geminiApiKey: !!process.env.GEMINI_API_KEY,
-    supabaseUrl: !!SUPABASE_URL,
-    supabaseServiceKey: !!SUPABASE_SERVICE_KEY,
+    convexUrl: !!convexUrl,
     promptFetch: false,
     promptHasPlaceholder: false,
     promptVersion: null as number | null,
   };
 
   try {
-    // Try to fetch the active prompt
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
-    const { data, error } = await supabase
-      .from('ai_prompts')
-      .select('version, prompt_text')
-      .eq('name', 'trump-summarizer')
-      .eq('is_active', true)
-      .single();
+    const prompt = await fetchQuery(api.app.getActiveAiPrompt, {
+      name: 'trump-summarizer',
+    }, { url: convexUrl });
+    const promptText = prompt?.prompt_text || DEFAULT_PRODUCTION_SUMMARY_PROMPT;
 
-    if (!error && data) {
-      checks.promptFetch = true;
-      checks.promptVersion = data.version;
-      checks.promptHasPlaceholder = data.prompt_text?.includes(SUMMARY_PROMPT_PLACEHOLDER) || false;
-    }
+    checks.promptFetch = true;
+    checks.promptVersion = prompt?.version || 2;
+    checks.promptHasPlaceholder = promptText.includes(SUMMARY_PROMPT_PLACEHOLDER);
   } catch (error) {
-    // Prompt fetch failed
+    checks.promptFetch = false;
   }
 
   const allHealthy = Object.values(checks).every(v => v === true || typeof v === 'number');

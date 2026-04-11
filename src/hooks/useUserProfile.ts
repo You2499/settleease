@@ -1,123 +1,90 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
-import { USER_PROFILES_TABLE, type UserProfile } from '@/lib/settleease';
+import { useCallback, useEffect } from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '@convex/_generated/api';
+import type { UserProfile } from '@/lib/settleease';
 
-export function useUserProfile(db: SupabaseClient | undefined, currentUser: SupabaseUser | null) {
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+function getMetadataNames(user: SupabaseUser | null) {
+  const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
+  if (!fullName) return { firstName: undefined, lastName: undefined };
 
-  const fetchUserProfile = useCallback(async (userId: string): Promise<UserProfile | null> => {
-    if (!db || !userId) return null;
-    
-    try {
-      const { data, error } = await db
-        .from(USER_PROFILES_TABLE)
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+  const parts = String(fullName).trim().split(/\s+/);
+  return {
+    firstName: parts[0] || undefined,
+    lastName: parts.slice(1).join(' ') || undefined,
+  };
+}
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          console.warn(`User profile not found for ${userId}. This is normal for new users.`);
-          return null;
-        }
-        console.error('Error fetching user profile:', error);
-        return null;
-      }
-      
-      return data as UserProfile;
-    } catch (e: any) {
-      console.error('Exception while fetching user profile:', e);
-      return null;
-    }
-  }, [db]);
+export function useUserProfile(currentUser: SupabaseUser | null) {
+  const profile = useQuery(
+    api.app.getUserProfile,
+    currentUser ? { supabaseUserId: currentUser.id } : 'skip',
+  ) as UserProfile | null | undefined;
+  const upsertProfile = useMutation(api.app.upsertUserProfile);
+  const updateProfile = useMutation(api.app.updateUserProfile);
 
-  // Add a refresh function that updates the state without showing loading
-  const refreshUserProfile = useCallback(async (showLoading: boolean = false): Promise<void> => {
+  useEffect(() => {
     if (!currentUser) return;
-    
-    if (showLoading) {
-      setIsLoadingProfile(true);
-    }
-    try {
-      const profile = await fetchUserProfile(currentUser.id);
-      setUserProfile(profile);
-    } catch (error) {
-      console.error('Error refreshing user profile:', error);
-    } finally {
-      if (showLoading) {
-        setIsLoadingProfile(false);
+
+    const { firstName, lastName } = getMetadataNames(currentUser);
+    void upsertProfile({
+      supabaseUserId: currentUser.id,
+      email: currentUser.email || undefined,
+      firstName,
+      lastName,
+    }).catch((error) => {
+      console.error('Error ensuring Convex user profile:', error);
+    });
+  }, [currentUser, upsertProfile]);
+
+  const refreshUserProfile = useCallback(async (_showLoading?: boolean) => {
+    // Convex live queries refresh automatically.
+  }, []);
+
+  const updateUserProfile = useCallback(
+    async (updates: Partial<UserProfile>): Promise<boolean> => {
+      if (!currentUser) return false;
+
+      try {
+        await updateProfile({
+          supabaseUserId: currentUser.id,
+          firstName: updates.first_name,
+          lastName: updates.last_name,
+          fontPreference: updates.font_preference,
+          themePreference: updates.theme_preference,
+          lastActiveView: updates.last_active_view as any,
+          hasSeenWelcomeToast: updates.has_seen_welcome_toast,
+          shouldShowWelcomeToast: updates.should_show_welcome_toast,
+        });
+        return true;
+      } catch (error) {
+        console.error('Error updating Convex user profile:', error);
+        return false;
       }
-    }
-  }, [currentUser, fetchUserProfile]);
-
-  const updateUserProfile = useCallback(async (updates: Partial<UserProfile>): Promise<boolean> => {
-    if (!db || !currentUser) return false;
-    
-    try {
-      const { error } = await db
-        .from(USER_PROFILES_TABLE)
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', currentUser.id);
-
-      if (error) throw error;
-      
-      // Refresh the profile data silently
-      const updatedProfile = await fetchUserProfile(currentUser.id);
-      setUserProfile(updatedProfile);
-      
-      return true;
-    } catch (error: any) {
-      console.error('Error updating user profile:', error);
-      return false;
-    }
-  }, [db, currentUser, fetchUserProfile]);
+    },
+    [currentUser, updateProfile],
+  );
 
   const hasCompleteName = useCallback(() => {
-    return userProfile?.first_name && userProfile?.last_name;
-  }, [userProfile]);
+    return !!(profile?.first_name && profile?.last_name);
+  }, [profile]);
 
   const getDisplayName = useCallback(() => {
-    if (userProfile?.first_name && userProfile?.last_name) {
-      return `${userProfile.first_name} ${userProfile.last_name}`;
+    if (profile?.first_name && profile?.last_name) {
+      return `${profile.first_name} ${profile.last_name}`;
     }
     return currentUser?.email || 'User';
-  }, [userProfile, currentUser]);
-
-  // Effect to fetch user profile when user changes
-  useEffect(() => {
-    let isMounted = true;
-    
-    if (currentUser) {
-      setIsLoadingProfile(true);
-      fetchUserProfile(currentUser.id).then(profile => {
-        if (isMounted) {
-          setUserProfile(profile);
-          setIsLoadingProfile(false);
-        }
-      });
-    } else {
-      setUserProfile(null);
-      setIsLoadingProfile(false);
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [currentUser, fetchUserProfile]);
+  }, [profile, currentUser]);
 
   return {
-    userProfile,
-    isLoadingProfile,
+    userProfile: profile ?? null,
+    isLoadingProfile: !!currentUser && profile === undefined,
     updateUserProfile,
     hasCompleteName,
     getDisplayName,
-    fetchUserProfile,
+    fetchUserProfile: async () => profile ?? null,
     refreshUserProfile,
   };
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,8 +22,6 @@ import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as Dyn
 
 interface AddExpenseTabProps {
   people: Person[];
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
   onExpenseAdded: () => void;
   dynamicCategories: DynamicCategory[];
   expenseToEdit?: Expense | null;
@@ -52,8 +49,6 @@ const SplitMethodSelectorWrapper = ({ children }: { children: React.ReactNode })
 
 export default function AddExpenseTab({
   people,
-  db,
-  supabaseInitializationError,
   onExpenseAdded,
   dynamicCategories,
   expenseToEdit,
@@ -116,11 +111,7 @@ export default function AddExpenseTab({
 
   const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
 
-  const { handleSubmitExpense } = useExpenseFormLogic({
-    db,
-    supabaseInitializationError,
-    onExpenseAdded,
-  });
+  const { handleSubmitExpense } = useExpenseFormLogic({ onExpenseAdded });
 
   const onSubmit = () => {
     handleSubmitExpense(
@@ -503,23 +494,6 @@ export default function AddExpenseTab({
       </Card>
     );
   }
-  
-  if (supabaseInitializationError && !db) {
-    return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <CardTitle className="text-lg sm:text-xl text-destructive flex items-center">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6 pt-0">
-          <p className="text-sm sm:text-base">Could not connect to the database. Adding or editing expenses is currently unavailable.</p>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Show empty state only when NOT loading and no people exist
   if (!isLoadingData && people.length === 0 && !expenseToEdit) {
     return (

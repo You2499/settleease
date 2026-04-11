@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { User, HandCoins, Edit3, AlertTriangle, CheckCircle } from 'lucide-react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 
 // Google Icon SVG as a React component (detailed version from AuthForm)
 const GoogleIcon = () => (
@@ -125,7 +126,6 @@ const GoogleIcon = () => (
 interface UserNameModalProps {
     isOpen: boolean;
     onClose: (success: boolean) => void;
-    db: SupabaseClient | undefined;
     userId: string;
     initialFirstName?: string;
     initialLastName?: string;
@@ -136,7 +136,6 @@ interface UserNameModalProps {
 const UserNameModal = React.memo(function UserNameModal({
     isOpen,
     onClose,
-    db,
     userId,
     initialFirstName = '',
     initialLastName = '',
@@ -146,6 +145,7 @@ const UserNameModal = React.memo(function UserNameModal({
     const [firstName, setFirstName] = useState(initialFirstName);
     const [lastName, setLastName] = useState(initialLastName);
     const [isLoading, setIsLoading] = useState(false);
+    const updateUserProfile = useMutation(api.app.updateUserProfile);
 
     // Helper function to properly capitalize names (first letter uppercase, rest lowercase)
     const capitalizeName = useCallback((name: string) => {
@@ -191,28 +191,14 @@ const UserNameModal = React.memo(function UserNameModal({
             return;
         }
 
-        if (!db) {
-            toast({
-                title: "Error",
-                description: "Database connection not available. Please try again.",
-                variant: "destructive"
-            });
-            return;
-        }
-
         setIsLoading(true);
 
         try {
-            const { error } = await db
-                .from('user_profiles')
-                .update({
-                    first_name: firstName.trim(),
-                    last_name: lastName.trim(),
-                    updated_at: new Date().toISOString()
-                })
-                .eq('user_id', userId);
-
-            if (error) throw error;
+            await updateUserProfile({
+                supabaseUserId: userId,
+                firstName: firstName.trim(),
+                lastName: lastName.trim(),
+            });
 
             toast({
                 title: "Profile Updated",

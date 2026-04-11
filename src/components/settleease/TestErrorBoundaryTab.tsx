@@ -16,7 +16,6 @@ import AlgorithmVerification from './dashboard/verification/AlgorithmVerificatio
 import PromptEditor from './dashboard/verification/PromptEditor';
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import type { ActiveView, Person, Expense, Category, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease/types';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 
 interface TestErrorBoundaryTabProps {
@@ -28,7 +27,6 @@ interface TestErrorBoundaryTabProps {
   manualOverrides: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
   categories: Category[];
-  db?: SupabaseClient;
   currentUserId?: string;
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
@@ -47,7 +45,6 @@ export default function TestErrorBoundaryTab({
   manualOverrides,
   peopleMap,
   categories,
-  db,
   currentUserId,
   isLoadingPeople = false,
   isLoadingExpenses = false,
@@ -230,7 +227,7 @@ export default function TestErrorBoundaryTab({
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar">
-                  {db && <PromptEditor db={db} currentUserId={currentUserId || 'admin'} />}
+                  <PromptEditor currentUserId={currentUserId || 'admin'} />
                 </DialogContent>
               </Dialog>
             </div>
@@ -284,8 +281,6 @@ export default function TestErrorBoundaryTab({
             peopleMap={peopleMap}
             uiSimplifiedTransactions={simplifiedTransactions}
             uiPairwiseTransactions={pairwiseTransactions}
-            db={db}
-            currentUserId={currentUserId}
           />
 
           {/* Testing Instructions */}

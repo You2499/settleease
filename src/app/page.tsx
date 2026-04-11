@@ -31,12 +31,12 @@ import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { useSupabaseRealtime } from '@/hooks/useSupabaseRealtime';
+import { useConvexData } from '@/hooks/useConvexData';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
 
 import type { ActiveView } from '@/lib/settleease';
+import type { UserRole } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 import MobileBottomNav from '@/components/settleease/MobileBottomNav';
 
@@ -59,14 +59,12 @@ function SettleEasePageContent() {
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [hasLoadedInitialView, setHasLoadedInitialView] = useState(false);
 
-  // Use custom hooks for auth, data, and realtime
+  // Supabase owns auth; Convex owns data and realtime.
   const {
-    db,
+    supabaseClient,
     supabaseInitializationError,
     currentUser,
-    userRole,
     isLoadingAuth,
-    isLoadingRole,
     handleLogout,
   } = useSupabaseAuth();
 
@@ -129,10 +127,14 @@ function SettleEasePageContent() {
     hasCompleteName,
     getDisplayName,
     refreshUserProfile,
-  } = useUserProfile(db, currentUser);
+    updateUserProfile,
+  } = useUserProfile(currentUser);
 
-  // Sync theme with database and enable real-time updates
-  useThemeSync(db, currentUser?.id, userProfile);
+  const userRole = (currentUser ? (userProfile?.role || 'user') : null) as UserRole;
+  const isLoadingRole = !!currentUser && isLoadingProfile;
+
+  // Sync theme through the live Convex profile.
+  useThemeSync(currentUser?.id, userProfile);
 
   // Helper function to detect Google OAuth users and parse their names
   const getGoogleUserInfo = useCallback(() => {
@@ -173,10 +175,7 @@ function SettleEasePageContent() {
     isLoadingSettlements,
     isLoadingOverrides,
     fetchAllData,
-  } = useSupabaseData(db, supabaseInitializationError, currentUser, userRole, isLoadingAuth, isLoadingRole);
-
-  // Set up realtime subscriptions
-  useSupabaseRealtime(db, supabaseInitializationError, currentUser, userRole, isDataFetchedAtLeastOnce, fetchAllData);
+  } = useConvexData(currentUser, userRole, isLoadingAuth, isLoadingRole);
 
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
@@ -236,161 +235,83 @@ function SettleEasePageContent() {
   // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts
   // Split into two parts: view loading (fast) and toast showing (waits for role)
   useEffect(() => {
-    if (hasLoadedInitialView || !currentUser || !db) return;
+    if (hasLoadedInitialView || !currentUser || !userProfile || !userRole) return;
 
-    const loadInitialViewAndShowToast = async () => {
-      // Check if URL has a view param - if so, don't restore from database
-      const hasUrlView = searchParams.get('view') !== null;
+    const hasUrlView = searchParams.get('view') !== null;
 
-      // Race condition fix: Retry logic to wait for auth hook to set the flag
-      // Sometimes the page effect runs before auth hook completes the database write
-      let data: any = null;
-      let retries = 0;
-      const maxRetries = 3;
+    if (!hasUrlView && userProfile.last_active_view && userProfile.last_active_view !== 'dashboard') {
+      setActiveView(userProfile.last_active_view as ActiveView);
+    }
 
-      while (retries < maxRetries) {
-        try {
-          const result = await db
-            .from('user_profiles')
-            .select('last_active_view, has_seen_welcome_toast, should_show_welcome_toast, first_name, last_name')
-            .eq('user_id', currentUser.id)
-            .single();
+    const shouldShowToast = userProfile.should_show_welcome_toast === true;
+    const isNewUser = !userProfile.has_seen_welcome_toast;
+    const isReturningUser = userProfile.has_seen_welcome_toast === true;
 
-          if (result.error) {
-            console.error('Error loading user profile:', result.error);
-            setHasLoadedInitialView(true);
-            return;
+    if (shouldShowToast) {
+      const dbFirstName = userProfile.first_name || '';
+      const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
+      const metadataFirstName = metadataFullName ? String(metadataFullName).split(' ')[0] : '';
+      const emailUsername = currentUser.email?.split('@')[0] || 'there';
+      const userName = dbFirstName || metadataFirstName || emailUsername;
+
+      void updateUserProfile({
+        should_show_welcome_toast: false,
+        has_seen_welcome_toast: isNewUser ? true : userProfile.has_seen_welcome_toast,
+      });
+
+      setTimeout(() => {
+        if (isNewUser) {
+          toast({
+            title: "Welcome to SettleEase!",
+            description: `Hi ${userName}! Your account has been created and you're now signed in.`,
+            variant: "default",
+            duration: 5000
+          });
+        } else if (isReturningUser) {
+          if (userProfile.last_active_view && userProfile.last_active_view !== 'dashboard') {
+            const viewNames: Record<ActiveView, string> = {
+              dashboard: 'Dashboard',
+              analytics: 'Analytics',
+              status: 'Status',
+              addExpense: 'Add Expense',
+              editExpenses: 'Edit Expenses',
+              managePeople: 'Manage People',
+              manageCategories: 'Manage Categories',
+              manageSettlements: 'Manage Settlements',
+              testErrorBoundary: 'Test Error Boundary',
+              exportExpense: 'Export Expense',
+              scanReceipt: 'Smart Scan',
+              settings: 'Settings'
+            };
+
+            const viewName = viewNames[userProfile.last_active_view as ActiveView] || 'your last view';
+
+            toast({
+              title: "Welcome back!",
+              description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+              duration: 5000,
+              action: (
+                <ToastAction
+                  altText="Go to Dashboard"
+                  onClick={() => setActiveView('dashboard')}
+                >
+                  Dashboard
+                </ToastAction>
+              )
+            });
+          } else {
+            toast({
+              title: "Welcome back!",
+              description: "You've successfully signed in to SettleEase.",
+              duration: 5000
+            });
           }
-
-          data = result.data;
-
-          // If we're expecting a toast (fresh sign-in) but flag isn't set yet, retry
-          // Check if this might be a fresh sign-in by looking at sessionStorage
-          let mightBeFreshSignIn = false;
-          try {
-            const sessionKey = `auth_processed_${currentUser.id}`;
-            mightBeFreshSignIn = sessionStorage.getItem(sessionKey) === 'true';
-          } catch (e) {
-            // Ignore storage errors
-          }
-
-          // If flag should be set but isn't, wait and retry
-          if (mightBeFreshSignIn && !data?.should_show_welcome_toast && retries < maxRetries - 1) {
-            await new Promise(resolve => setTimeout(resolve, 100 * (retries + 1))); // 100ms, 200ms, 300ms
-            retries++;
-            continue;
-          }
-
-          break; // Success, exit retry loop
-        } catch (err) {
-          console.error('Error in retry loop:', err);
-          break;
         }
-      }
+      }, 0);
+    }
 
-      if (!data) {
-        setHasLoadedInitialView(true);
-        return;
-      }
-
-      // Process the fetched data
-      try {
-        // Simple flag-based logic - no time windows!
-        const shouldShowToast = data?.should_show_welcome_toast === true;
-        const isNewUser = !data?.has_seen_welcome_toast;
-        const isReturningUser = data?.has_seen_welcome_toast === true;
-
-        // Restore last active view from database ONLY if no URL param exists
-        // (URL takes precedence over database)
-        if (!hasUrlView && data?.last_active_view && data.last_active_view !== 'dashboard') {
-          setActiveView(data.last_active_view as ActiveView);
-        }
-
-        // Show toast if flag is set AND role is loaded (no time-based logic!)
-        // Wait for role to ensure any role-based redirects happen first
-        if (shouldShowToast && userRole) {
-          // Get user's name for personalization - prioritize database first_name, then metadata, then email
-          const dbFirstName = data?.first_name || '';
-          const metadataFullName = currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '';
-          const metadataFirstName = metadataFullName ? metadataFullName.split(' ')[0] : '';
-          const emailUsername = currentUser.email?.split('@')[0] || 'there';
-
-          const userName = dbFirstName || metadataFirstName || emailUsername;
-
-          // Clear the flag IMMEDIATELY to prevent duplicate toasts on refresh
-          const updates: any = { should_show_welcome_toast: false };
-          if (isNewUser) {
-            updates.has_seen_welcome_toast = true;
-          }
-
-          await db
-            .from('user_profiles')
-            .update(updates)
-            .eq('user_id', currentUser.id);
-
-          // Use setTimeout to ensure toast is queued after component is fully mounted and role checks complete
-          setTimeout(() => {
-            if (isNewUser) {
-              // NEW USER - Show welcome toast
-              toast({
-                title: "Welcome to SettleEase!",
-                description: `Hi ${userName}! Your account has been created and you're now signed in.`,
-                variant: "default",
-                duration: 5000
-              });
-            } else if (isReturningUser) {
-              // RETURNING USER
-              if (data?.last_active_view && data.last_active_view !== 'dashboard') {
-                // Returning to non-dashboard view - show restoration toast with button
-                const viewNames: Record<ActiveView, string> = {
-                  dashboard: 'Dashboard',
-                  analytics: 'Analytics',
-                  status: 'Status',
-                  addExpense: 'Add Expense',
-                  editExpenses: 'Edit Expenses',
-                  managePeople: 'Manage People',
-                  manageCategories: 'Manage Categories',
-                  manageSettlements: 'Manage Settlements',
-                  testErrorBoundary: 'Test Error Boundary',
-                  exportExpense: 'Export Expense',
-                  scanReceipt: 'Smart Scan'
-                };
-
-                const viewName = viewNames[data.last_active_view as ActiveView] || 'your last view';
-
-                toast({
-                  title: "Welcome back!",
-                  description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
-                  duration: 5000,
-                  action: (
-                    <ToastAction
-                      altText="Go to Dashboard"
-                      onClick={() => setActiveView('dashboard')}
-                    >
-                      Dashboard
-                    </ToastAction>
-                  )
-                });
-              } else {
-                // Returning to dashboard - show simple welcome back
-                toast({
-                  title: "Welcome back!",
-                  description: "You've successfully signed in to SettleEase.",
-                  duration: 5000
-                });
-              }
-            }
-          }, 0);
-        }
-      } catch (err) {
-        console.error('Error in centralized toast logic:', err);
-      }
-
-      setHasLoadedInitialView(true);
-    };
-
-    loadInitialViewAndShowToast();
-  }, [currentUser, db, searchParams, hasLoadedInitialView, userRole, setActiveView]);
+    setHasLoadedInitialView(true);
+  }, [currentUser, searchParams, hasLoadedInitialView, userRole, userProfile, updateUserProfile]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
@@ -405,29 +326,26 @@ function SettleEasePageContent() {
     }
   }, [userRole, activeView]);
 
-  // Effect to persist activeView to URL and database
+  // Effect to persist activeView to the URL and Convex profile.
   useEffect(() => {
-    if (!hasLoadedInitialView || !currentUser || !db) return;
+    if (!hasLoadedInitialView || !currentUser) return;
 
     // Update URL
     const params = new URLSearchParams(searchParams.toString());
     params.set('view', activeView);
     router.replace(`?${params.toString()}`, { scroll: false });
 
-    // Save to database (debounced)
+    // Save to Convex (debounced)
     const timeoutId = setTimeout(async () => {
       try {
-        await db
-          .from('user_profiles')
-          .update({ last_active_view: activeView })
-          .eq('user_id', currentUser.id);
+        await updateUserProfile({ last_active_view: activeView });
       } catch (err) {
         console.error('Error saving last active view:', err);
       }
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [activeView, currentUser, db, hasLoadedInitialView, router, searchParams]);
+  }, [activeView, currentUser, hasLoadedInitialView, router, searchParams, updateUserProfile]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -493,7 +411,7 @@ function SettleEasePageContent() {
   const handleActionComplete = useCallback(() => fetchAllData(false), [fetchAllData]);
 
   // Show error screen for Supabase initialization errors
-  if (supabaseInitializationError && !db) {
+  if (supabaseInitializationError && !supabaseClient) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background text-foreground p-4">
         <Card className="w-full max-w-md shadow-xl">
@@ -527,7 +445,7 @@ function SettleEasePageContent() {
   if (!currentUser && !isLoadingAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
-        <AuthForm db={db} />
+        <AuthForm supabase={supabaseClient} />
       </div>
     );
   }
@@ -548,7 +466,6 @@ function SettleEasePageContent() {
         <UserNameModal
           isOpen={showNameModal}
           onClose={handleNameModalClose}
-          db={db}
           userId={currentUser.id}
           initialFirstName={isNameModalEditMode ? (userProfile?.first_name || '') : (getGoogleUserInfo()?.firstName || userProfile?.first_name || '')}
           initialLastName={isNameModalEditMode ? (userProfile?.last_name || '') : (getGoogleUserInfo()?.lastName || userProfile?.last_name || '')}
@@ -593,7 +510,6 @@ function SettleEasePageContent() {
                       getCategoryIconFromName={getCategoryIconFromName}
                       settlementPayments={settlementPayments}
                       manualOverrides={manualOverrides}
-                      db={db}
                       currentUserId={currentUser?.id || ''}
                       onActionComplete={handleActionComplete}
                       userRole={userRole}
@@ -634,7 +550,6 @@ function SettleEasePageContent() {
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
                     <StatusTab
-                      db={db}
                       people={people}
                       expenses={expenses}
                       settlementPayments={settlementPayments}
@@ -655,8 +570,6 @@ function SettleEasePageContent() {
                   >
                     <AddExpenseTab
                       people={people}
-                      db={db}
-                      supabaseInitializationError={supabaseInitializationError}
                       onExpenseAdded={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
                       isLoadingPeople={isLoadingPeople}
@@ -674,8 +587,6 @@ function SettleEasePageContent() {
                     <EditExpensesTab
                       people={people}
                       expenses={expenses}
-                      db={db}
-                      supabaseInitializationError={supabaseInitializationError}
                       onActionComplete={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
                       isLoadingPeople={isLoadingPeople}
@@ -693,8 +604,6 @@ function SettleEasePageContent() {
                   >
                     <ManagePeopleTab
                       people={people}
-                      db={db}
-                      supabaseInitializationError={supabaseInitializationError}
                       isLoadingPeople={isLoadingPeople}
                       isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
                     />
@@ -708,8 +617,6 @@ function SettleEasePageContent() {
                   >
                     <ManageCategoriesTab
                       categories={categories}
-                      db={db}
-                      supabaseInitializationError={supabaseInitializationError}
                       onCategoriesUpdate={handleActionComplete}
                       isLoadingCategories={isLoadingCategories}
                       isDataFetchedAtLeastOnce={isDataFetchedAtLeastOnce}
@@ -728,7 +635,6 @@ function SettleEasePageContent() {
                       peopleMap={peopleMap}
                       settlementPayments={settlementPayments}
                       manualOverrides={manualOverrides}
-                      db={db}
                       currentUserId={currentUser?.id || ''}
                       onActionComplete={handleActionComplete}
                       isLoadingPeople={isLoadingPeople}
@@ -755,7 +661,6 @@ function SettleEasePageContent() {
                       manualOverrides={manualOverrides}
                       peopleMap={peopleMap}
                       categories={categories}
-                      db={db}
                       currentUserId={currentUser?.id}
                       isLoadingPeople={isLoadingPeople}
                       isLoadingExpenses={isLoadingExpenses}
@@ -790,8 +695,6 @@ function SettleEasePageContent() {
                   >
                     <ScanReceiptTab
                       people={people}
-                      db={db}
-                      supabaseInitializationError={supabaseInitializationError}
                       onExpenseAdded={handleExpenseAddedAndRedirect}
                       dynamicCategories={categories}
                       isLoadingPeople={isLoadingPeople}

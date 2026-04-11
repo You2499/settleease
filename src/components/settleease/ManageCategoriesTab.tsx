@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,15 +24,12 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, ListChecks, AlertTriangle, Settings2, ArrowUp, ArrowDown, Check, X, ArrowUpDown, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
-import { CATEGORIES_TABLE, EXPENSES_TABLE } from '@/lib/settleease/constants';
 import IconPickerModal from './IconPickerModal';
 import * as LucideIcons from 'lucide-react';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
-  onCategoriesUpdate: () => void;
+  onCategoriesUpdate?: () => void;
   isAdmin?: boolean;
   isLoadingCategories?: boolean;
   isDataFetchedAtLeastOnce?: boolean;
@@ -39,9 +37,7 @@ interface ManageCategoriesTabProps {
 
 export default function ManageCategoriesTab({ 
   categories, 
-  db, 
-  supabaseInitializationError, 
-  onCategoriesUpdate, 
+  onCategoriesUpdate = () => {}, 
   isAdmin,
   isLoadingCategories = false,
   isDataFetchedAtLeastOnce = true,
@@ -64,6 +60,10 @@ export default function ManageCategoriesTab({
 
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const addCategory = useMutation(api.app.addCategory);
+  const updateCategory = useMutation(api.app.updateCategory);
+  const deleteCategory = useMutation(api.app.deleteCategory);
+  const reorderCategories = useMutation(api.app.reorderCategories);
 
   const [rankingMode, setRankingMode] = useState(false);
   const [orderedCategories, setOrderedCategories] = useState<Category[]>([...categories].sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0)));
@@ -95,17 +95,9 @@ export default function ManageCategoriesTab({
       toast({ title: "Duplicate Category", description: `A category named "${newCategoryName.trim()}" already exists.`, variant: "destructive" });
       return;
     }
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Database Error", description: `Supabase client not available. ${supabaseInitializationError || ''}`, variant: "destructive" });
-      return;
-    }
     setIsLoading(true);
     try {
-      const maxRank = categories.length > 0 ? Math.max(...categories.map(c => c.rank ?? 0)) : 0;
-      const { data, error } = await db.from(CATEGORIES_TABLE).insert([
-        { name: newCategoryName.trim(), icon_name: newCategoryIconKey, created_at: new Date().toISOString(), rank: maxRank + 1 }
-      ]).select();
-      if (error) throw error;
+      await addCategory({ name: newCategoryName.trim(), iconName: newCategoryIconKey });
       toast({ title: "Category Added", description: `${newCategoryName.trim()} has been added.` });
       setNewCategoryName('');
       setNewCategoryIconKey('Utensils');
@@ -138,14 +130,9 @@ export default function ManageCategoriesTab({
       toast({ title: "Validation Error", description: "Please select an icon for the category.", variant: "destructive" });
       return;
     }
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Database Error", description: `Supabase client not available. ${supabaseInitializationError || ''}`, variant: "destructive" });
-      return;
-    }
     setIsLoading(true);
     try {
-      const { error } = await db.from(CATEGORIES_TABLE).update({ name: editingName.trim(), icon_name: editingIconKey }).eq('id', editingCategory.id);
-      if (error) throw error;
+      await updateCategory({ id: editingCategory.id, name: editingName.trim(), iconName: editingIconKey });
       toast({ title: "Category Updated", description: "Category updated successfully." });
       handleCancelEdit();
       onCategoriesUpdate();
@@ -161,7 +148,7 @@ export default function ManageCategoriesTab({
   };
 
   const executeDeleteCategory = async () => {
-    if (!categoryToDelete || !db || supabaseInitializationError) {
+    if (!categoryToDelete) {
       toast({ title: "Error", description: "Cannot delete category due to system error.", variant: "destructive" });
       if (categoryToDelete) setCategoryToDelete(null);
       return;
@@ -169,29 +156,7 @@ export default function ManageCategoriesTab({
 
     setIsLoading(true);
     try {
-      const { count, error: countError } = await db
-        .from(EXPENSES_TABLE)
-        .select('id', { count: 'exact', head: true })
-        .eq('category', categoryToDelete.name);
-
-      if (countError) {
-        throw new Error(`Failed to check expense usage: ${countError.message}`);
-      }
-
-      if (count !== null && count > 0) {
-        toast({
-          title: "Deletion Blocked",
-          description: `Category "${categoryToDelete.name}" is used by ${count} expense(s). Please re-categorize or delete those expenses first.`,
-          variant: "destructive",
-          duration: 7000,
-        });
-        setCategoryToDelete(null);
-        setIsLoading(false);
-        return;
-      }
-
-      const { error: deleteError } = await db.from(CATEGORIES_TABLE).delete().eq('id', categoryToDelete.id);
-      if (deleteError) throw deleteError;
+      await deleteCategory({ id: categoryToDelete.id });
 
       toast({ title: "Category Deleted", description: `${categoryToDelete.name} has been deleted.` });
       if (editingCategory?.id === categoryToDelete.id) handleCancelEdit();
@@ -216,15 +181,9 @@ export default function ManageCategoriesTab({
   };
 
   const saveCategoryOrder = async () => {
-    if (!db) return;
     setIsLoading(true);
     try {
-      for (let i = 0; i < orderedCategories.length; i++) {
-        const cat = orderedCategories[i];
-        if (cat.rank !== i + 1) {
-          await db.from(CATEGORIES_TABLE).update({ rank: i + 1 }).eq('id', cat.id);
-        }
-      }
+      await reorderCategories({ ids: orderedCategories.map((cat) => cat.id) });
       toast({ title: 'Category Order Saved', description: 'The new category order has been saved.' });
       setRankingMode(false);
       onCategoriesUpdate();
@@ -311,24 +270,6 @@ export default function ManageCategoriesTab({
       </Card>
     );
   }
-  
-  if (supabaseInitializationError && !db) {
-    return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6">
-          <p className="text-sm sm:text-base">Could not connect to the database. Managing categories is currently unavailable.</p>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-
   return (
     <>
       <Card className="shadow-lg rounded-lg h-full flex flex-col">

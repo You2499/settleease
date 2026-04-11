@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback } from "react";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { toast } from "@/hooks/use-toast";
-import { EXPENSES_TABLE } from "@/lib/settleease/constants";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type {
   Expense,
@@ -13,16 +13,13 @@ import type {
 } from "@/lib/settleease/types";
 
 interface UseExpenseFormLogicProps {
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
   onExpenseAdded: () => void;
 }
 
 export function useExpenseFormLogic({
-  db,
-  supabaseInitializationError,
   onExpenseAdded,
 }: UseExpenseFormLogicProps) {
+  const saveExpense = useMutation(api.app.saveExpense);
   const validateForm = useCallback(
     (
       description: string,
@@ -266,15 +263,6 @@ export function useExpenseFormLogic({
       )
         return;
 
-      if (!db || supabaseInitializationError) {
-        toast({
-          title: "Database Error",
-          description: `Supabase client not available. ${supabaseInitializationError || ""}`,
-          variant: "destructive",
-        });
-        return;
-      }
-
       setIsLoading(true);
 
       const originalTotalAmountNum = parseFloat(totalAmount);
@@ -363,38 +351,46 @@ export function useExpenseFormLogic({
           items: splitMethod === "itemwise" ? expenseItemsPayload : null,
           celebration_contribution: celebrationContributionPayload,
         };
+        const convexItems = commonPayload.items?.map((item) => ({
+          ...item,
+          price: Number(item.price),
+        })) ?? null;
 
-        let errorPayload: any = null;
         if (expenseToEdit && expenseToEdit.id) {
-          const { error } = await db
-            .from(EXPENSES_TABLE)
-            .update({
-              ...commonPayload,
-              created_at: expenseDate?.toISOString(),
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", expenseToEdit.id)
-            .select();
-          errorPayload = error;
-          if (!error)
-            toast({
-              title: "Expense Updated",
-              description: `${description} has been updated successfully.`,
-            });
+          await saveExpense({
+            id: expenseToEdit.id,
+            description: commonPayload.description,
+            totalAmount: commonPayload.total_amount,
+            category: commonPayload.category,
+            paidBy: commonPayload.paid_by,
+            splitMethod: commonPayload.split_method,
+            shares: commonPayload.shares,
+            items: convexItems,
+            celebrationContribution: commonPayload.celebration_contribution,
+            excludeFromSettlement: expenseToEdit.exclude_from_settlement ?? false,
+            createdAt: expenseDate?.toISOString(),
+          });
+          toast({
+            title: "Expense Updated",
+            description: `${description} has been updated successfully.`,
+          });
         } else {
-          const { error } = await db
-            .from(EXPENSES_TABLE)
-            .insert([{ ...commonPayload, created_at: expenseDate?.toISOString() }])
-            .select();
-          errorPayload = error;
-          if (!error)
-            toast({
-              title: "Expense Added",
-              description: `${description} has been added successfully.`,
-            });
+          await saveExpense({
+            description: commonPayload.description,
+            totalAmount: commonPayload.total_amount,
+            category: commonPayload.category,
+            paidBy: commonPayload.paid_by,
+            splitMethod: commonPayload.split_method,
+            shares: commonPayload.shares,
+            items: convexItems,
+            celebrationContribution: commonPayload.celebration_contribution,
+            createdAt: expenseDate?.toISOString(),
+          });
+          toast({
+            title: "Expense Added",
+            description: `${description} has been added successfully.`,
+          });
         }
-
-        if (errorPayload) throw errorPayload;
 
         onExpenseAdded();
       } catch (error: any) {
@@ -415,7 +411,7 @@ export function useExpenseFormLogic({
         setIsLoading(false);
       }
     },
-    [db, supabaseInitializationError, onExpenseAdded, validateForm]
+    [onExpenseAdded, saveExpense, validateForm]
   );
 
   return { handleSubmitExpense };

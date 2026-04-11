@@ -145,7 +145,7 @@ export const generateFailureAnalysis = (results: TestResult[]) => {
 
   if (failures.some(f => f.id === "expense-integrity")) {
     potentialCauses.push("Expense data inconsistency - paid amounts don't match totals");
-    recommendedActions.push("Verify expense creation logic and database constraints");
+    recommendedActions.push("Verify expense creation logic and Convex constraints");
   }
 
   if (failures.some(f => f.id === "itemwise-accuracy")) {

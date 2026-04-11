@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,14 +18,12 @@ import {
 } from "@/components/ui/dialog";
 import { Route, X, AlertTriangle, Trash2, Eye, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import { MANUAL_SETTLEMENT_OVERRIDES_TABLE } from '@/lib/settleease';
 import type { ManualSettlementOverride } from '@/lib/settleease';
 import { formatCurrency } from '@/lib/settleease/utils';
 
 interface ManualOverrideAlertProps {
     overrides: ManualSettlementOverride[];
     peopleMap: Record<string, string>;
-    db: SupabaseClient | undefined;
     onActionComplete: () => void;
     userRole: 'admin' | 'user' | null;
 }
@@ -32,13 +31,15 @@ interface ManualOverrideAlertProps {
 export default function ManualOverrideAlert({
     overrides,
     peopleMap,
-    db,
     onActionComplete,
     userRole,
 }: ManualOverrideAlertProps) {
     const [isLoading, setIsLoading] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [overrideToDelete, setOverrideToDelete] = useState<ManualSettlementOverride | null>(null);
+    const deactivateManualSettlementOverride = useMutation(api.app.deactivateManualSettlementOverride);
+    const deleteManualSettlementOverride = useMutation(api.app.deleteManualSettlementOverride);
+    const clearActiveManualSettlementOverrides = useMutation(api.app.clearActiveManualSettlementOverrides);
 
     const activeOverrides = overrides.filter(o => o.is_active);
 
@@ -47,23 +48,9 @@ export default function ManualOverrideAlert({
     }
 
     const handleDeactivate = async (override: ManualSettlementOverride) => {
-        if (!db) {
-            toast({
-                title: "Error",
-                description: "Database connection not available.",
-                variant: "destructive"
-            });
-            return;
-        }
-
         setIsLoading(true);
         try {
-            const { error } = await db
-                .from(MANUAL_SETTLEMENT_OVERRIDES_TABLE)
-                .update({ is_active: false })
-                .eq('id', override.id);
-
-            if (error) throw error;
+            await deactivateManualSettlementOverride({ id: override.id });
 
             toast({
                 title: "Override Deactivated",
@@ -84,18 +71,13 @@ export default function ManualOverrideAlert({
     };
 
     const handleDelete = async () => {
-        if (!overrideToDelete || !db) {
+        if (!overrideToDelete) {
             return;
         }
 
         setIsLoading(true);
         try {
-            const { error } = await db
-                .from(MANUAL_SETTLEMENT_OVERRIDES_TABLE)
-                .delete()
-                .eq('id', overrideToDelete.id);
-
-            if (error) throw error;
+            await deleteManualSettlementOverride({ id: overrideToDelete.id });
 
             toast({
                 title: "Override Deleted",
@@ -148,15 +130,9 @@ export default function ManualOverrideAlert({
                                 size="sm"
                                 variant="destructive"
                                 onClick={async () => {
-                                    if (!db) return;
                                     setIsLoading(true);
                                     try {
-                                        const { error} = await db
-                                            .from(MANUAL_SETTLEMENT_OVERRIDES_TABLE)
-                                            .update({ is_active: false })
-                                            .in('id', activeOverrides.map(o => o.id));
-
-                                        if (error) throw error;
+                                        await clearActiveManualSettlementOverrides();
 
                                         toast({
                                             title: "All Overrides Cleared",

@@ -17,7 +17,7 @@ export interface CelebrationContribution {
 }
 
 export interface Expense {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   description: string;
   total_amount: number;
   category: string; // This will eventually link to Category.id or use Category.name
@@ -32,13 +32,13 @@ export interface Expense {
 }
 
 export interface Person {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   name: string;
   created_at?: string; // ISO date string
 }
 
 export interface Category {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   name: string;
   icon_name: string; // e.g., "Utensils", "Car"
   created_at?: string; // ISO date string
@@ -66,12 +66,16 @@ export interface UserProfile {
   last_name?: string | null;
   font_preference?: FontPreference;
   theme_preference?: string;
+  last_active_view?: ActiveView;
+  has_seen_welcome_toast?: boolean;
+  should_show_welcome_toast?: boolean;
+  last_sign_in_at?: string;
   created_at?: string;
   updated_at?: string;
 }
 
 export interface SettlementPayment {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   debtor_id: string; // FK to people.id
   creditor_id: string; // FK to people.id
   amount_settled: number;
@@ -81,7 +85,7 @@ export interface SettlementPayment {
 }
 
 export interface ManualSettlementOverride {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   debtor_id: string; // FK to people.id - who owes
   creditor_id: string; // FK to people.id - who is owed
   amount: number; // Amount to be paid in this manual path
@@ -93,7 +97,7 @@ export interface ManualSettlementOverride {
 }
 
 export interface AIPrompt {
-  id: string; // Supabase ID
+  id: string; // Convex document ID mapped to the legacy DTO shape
   name: string; // Unique name for the prompt (e.g., "trump-summarizer")
   prompt_text: string; // The actual prompt text
   is_active: boolean; // Only one prompt can be active per name
@@ -222,4 +226,3 @@ export interface PersonAggregatedItemShares {
     totalShareOfAdjustedItems: number;
   };
 }
-

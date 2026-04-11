@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Sparkles, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildSummarizeRequestPayload } from "@/lib/settleease/aiSummarization";
 
 // Gemini Sparkle Icon Component
@@ -123,7 +124,6 @@ interface AISummaryTooltipProps {
   jsonData: any;
   hash: string;
   promptVersion?: number;
-  db?: SupabaseClient;
   currentUserId: string;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
 }
@@ -435,7 +435,6 @@ export default function AISummaryTooltip({
   jsonData,
   hash,
   promptVersion,
-  db,
   currentUserId,
   triggerRef,
 }: AISummaryTooltipProps) {
@@ -443,6 +442,11 @@ export default function AISummaryTooltip({
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [modelName, setModelName] = useState<string>("");
+  const cachedSummary = useQuery(
+    api.app.getAiSummaryByHash,
+    open && hash ? { dataHash: hash } : "skip",
+  ) as { summary: string; model_name?: string | null } | null | undefined;
+  const storeAiSummary = useMutation(api.app.storeAiSummary);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const tooltipRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
@@ -565,13 +569,12 @@ export default function AISummaryTooltip({
 
   // Check for existing summary when dialog opens
   useEffect(() => {
-    if (open && hash && db) {
+    if (open && hash) {
       checkExistingSummary();
     } else if (open && jsonData) {
-      // If no db but we have jsonData, fetch new summary
       fetchSummary();
     }
-  }, [open, hash, db, jsonData]);
+  }, [open, hash, cachedSummary, jsonData]);
 
   const checkExistingSummary = async () => {
     if (!hash) {
@@ -584,42 +587,20 @@ export default function AISummaryTooltip({
 
     console.log("🔍 Checking for existing summary with hash:", hash);
 
-    // Check database for existing summary (regardless of user to save API calls)
-    if (db) {
-      try {
-        const { data, error } = await db
-          .from("ai_summaries")
-          .select("summary, model_name")
-          .eq("data_hash", hash)
-          .maybeSingle(); // Use maybeSingle instead of single to avoid 406 error
+    if (cachedSummary === undefined) {
+      return;
+    }
 
-        if (error) {
-          console.error("❌ Error checking summary:", error);
-          // Still try to fetch new summary
-          if (jsonData) {
-            fetchSummary();
-          }
-          return;
-        }
-
-        if (data && data.summary) {
-          console.log("✅ Found cached summary for this data hash (shared across all users), using existing data");
-          console.log("📊 Cache hit! No API call needed - serving from database");
-          setSummary(data.summary);
-          if (data.model_name) {
-            setModelName(data.model_name);
-          }
-          setIsLoading(false);
-          setIsStreaming(false);
-          return;
-        } else {
-          console.log("❌ No cached summary found for this hash - will generate new one");
-        }
-      } catch (error: any) {
-        console.error("❌ Error checking summary:", error);
+    if (cachedSummary?.summary) {
+      console.log("✅ Found cached summary for this data hash (shared across all users), using existing data");
+      console.log("📊 Cache hit! No API call needed - serving from Convex");
+      setSummary(cachedSummary.summary);
+      if (cachedSummary.model_name) {
+        setModelName(cachedSummary.model_name);
       }
-    } else {
-      console.log("❌ No database connection");
+      setIsLoading(false);
+      setIsStreaming(false);
+      return;
     }
 
     // No existing summary found, fetch new one
@@ -683,7 +664,7 @@ export default function AISummaryTooltip({
                 throw new Error(data.error);
               }
               if (data.done) {
-                // Store summary in database with model name
+                // Store summary in Convex with model name
                 const modelName = data.model || '';
                 await storeSummary(fullSummary, hash, modelName);
                 setIsStreaming(false);
@@ -734,46 +715,26 @@ export default function AISummaryTooltip({
   };
 
   const storeSummary = async (summaryText: string, dataHash: string, modelName: string = '') => {
-    if (!summaryText || !dataHash || !db || !currentUserId) {
+    if (!summaryText || !dataHash || !currentUserId) {
       console.log("❌ Cannot store summary - missing required data");
       return;
     }
 
-    console.log("💾 Storing summary in database with hash:", dataHash);
+    console.log("💾 Storing summary in Convex with hash:", dataHash);
     if (modelName) {
       console.log("🤖 Model used:", modelName);
     }
 
     try {
-      // First check if a summary with this hash already exists
-      const { data: existing } = await db
-        .from("ai_summaries")
-        .select("id")
-        .eq("data_hash", dataHash)
-        .maybeSingle();
-
-      if (existing) {
-        console.log("✅ Summary already exists for this hash, skipping storage");
-        return;
-      }
-
-      // Insert new summary (data_hash is now globally unique)
-      await db.from("ai_summaries").insert({
-        user_id: currentUserId,
-        data_hash: dataHash,
+      await storeAiSummary({
+        userId: currentUserId,
+        dataHash,
         summary: summaryText,
-        model_name: modelName || null,
-        updated_at: new Date().toISOString(),
+        modelName: modelName || null,
       });
       console.log("✅ Summary stored successfully - now available to ALL users with this data hash");
     } catch (error: any) {
-      // If we get a unique constraint violation, it means another user just stored it
-      // This is fine, we can ignore it
-      if (error.code === '23505') {
-        console.log("✅ Summary was already stored by another user, no action needed");
-      } else {
-        console.error("❌ Error storing summary in database:", error);
-      }
+      console.error("❌ Error storing summary in Convex:", error);
     }
   };
 

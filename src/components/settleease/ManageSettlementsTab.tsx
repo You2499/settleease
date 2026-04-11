@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +29,7 @@ import {
 } from "@/components/ui/dialog";
 import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import { SETTLEMENT_PAYMENTS_TABLE, formatCurrency } from '@/lib/settleease';
+import { formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, SettlementPayment, ManualSettlementOverride } from '@/lib/settleease';
 import { Separator } from '@/components/ui/separator';
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
@@ -45,7 +46,6 @@ interface ManageSettlementsTabProps {
   peopleMap: Record<string, string>;
   settlementPayments: SettlementPayment[];
   manualOverrides: ManualSettlementOverride[];
-  db: SupabaseClient | undefined;
   currentUserId: string;
   onActionComplete: () => void;
   isLoadingPeople?: boolean;
@@ -68,7 +68,6 @@ export default function ManageSettlementsTab({
   peopleMap,
   settlementPayments,
   manualOverrides,
-  db,
   currentUserId,
   onActionComplete,
   isLoadingPeople = false,
@@ -93,6 +92,9 @@ export default function ManageSettlementsTab({
   const [editDate, setEditDate] = useState<Date | undefined>(undefined);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const addSettlementPayment = useMutation(api.app.addSettlementPayment);
+  const deleteSettlementPayment = useMutation(api.app.deleteSettlementPayment);
+  const updateSettlementPayment = useMutation(api.app.updateSettlementPayment);
 
   const netBalances = useMemo(() => {
     return calculateNetBalances(people, expenses, settlementPayments);
@@ -146,22 +148,18 @@ export default function ManageSettlementsTab({
   }, [expenses, people, settlementPayments]);
 
   const handleMarkAsPaid = async () => {
-    if (!settlementToConfirm || !db || !currentUserId) {
-      toast({ title: "Error", description: "Cannot mark as paid. Missing information or database connection.", variant: "destructive" });
+    if (!settlementToConfirm || !currentUserId) {
+      toast({ title: "Error", description: "Cannot mark as paid. Missing settlement or user information.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
-        {
-          debtor_id: settlementToConfirm.from,
-          creditor_id: settlementToConfirm.to,
-          amount_settled: settlementToConfirm.amount,
-          marked_by_user_id: currentUserId,
-          settled_at: new Date().toISOString(),
-        },
-      ]);
-      if (error) throw error;
+      await addSettlementPayment({
+        debtorId: settlementToConfirm.from,
+        creditorId: settlementToConfirm.to,
+        amountSettled: settlementToConfirm.amount,
+        markedByUserId: currentUserId,
+      });
       toast({ title: "Settlement Recorded", description: `Payment from ${peopleMap[settlementToConfirm.from]} to ${peopleMap[settlementToConfirm.to]} marked as complete.` });
       setSettlementToConfirm(null);
       onActionComplete();
@@ -174,14 +172,13 @@ export default function ManageSettlementsTab({
   };
 
   const handleUnmarkAsPaid = async () => {
-    if (!paymentToUnmark || !db) {
-      toast({ title: "Error", description: "Cannot unmark payment. Missing information or database connection.", variant: "destructive" });
+    if (!paymentToUnmark) {
+      toast({ title: "Error", description: "Cannot unmark payment. Missing payment information.", variant: "destructive" });
       return;
     }
     setIsLoading(true);
     try {
-      const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).delete().eq('id', paymentToUnmark.id);
-      if (error) throw error;
+      await deleteSettlementPayment({ id: paymentToUnmark.id });
       toast({ title: "Payment Unmarked", description: `Payment record from ${peopleMap[paymentToUnmark.debtor_id]} to ${peopleMap[paymentToUnmark.creditor_id]} has been removed.` });
       setPaymentToUnmark(null);
       onActionComplete();
@@ -201,8 +198,8 @@ export default function ManageSettlementsTab({
   };
 
   const handleUpdatePayment = async () => {
-    if (!paymentToEdit || !db) {
-      toast({ title: "Error", description: "Cannot update payment. Missing information or database connection.", variant: "destructive" });
+    if (!paymentToEdit) {
+      toast({ title: "Error", description: "Cannot update payment. Missing payment information.", variant: "destructive" });
       return;
     }
     
@@ -219,16 +216,12 @@ export default function ManageSettlementsTab({
 
     setIsLoading(true);
     try {
-      const { error } = await db
-        .from(SETTLEMENT_PAYMENTS_TABLE)
-        .update({
-          amount_settled: amount,
-          notes: editNotes.trim() || null,
-          settled_at: editDate.toISOString(),
-        })
-        .eq('id', paymentToEdit.id);
-
-      if (error) throw error;
+      await updateSettlementPayment({
+        id: paymentToEdit.id,
+        amountSettled: amount,
+        notes: editNotes.trim() || null,
+        settledAt: editDate.toISOString(),
+      });
       
       toast({ 
         title: "Payment Updated", 
@@ -247,22 +240,6 @@ export default function ManageSettlementsTab({
     }
   };
 
-
-  if (!db) {
-    return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6 pb-4 border-b">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6">
-          <p className="text-sm sm:text-base">Could not connect to the database. Managing settlements is currently unavailable.</p>
-        </CardContent>
-      </Card>
-    );
-  }
-  
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
@@ -339,7 +316,6 @@ export default function ManageSettlementsTab({
               <ManualSettlementOverrideForm
                 people={people}
                 peopleMap={peopleMap}
-                db={db}
                 currentUserId={currentUserId}
                 onActionComplete={onActionComplete}
                 netBalances={netBalances}
@@ -347,7 +323,6 @@ export default function ManageSettlementsTab({
               <CustomSettlementForm
                 people={people}
                 peopleMap={peopleMap}
-                db={db}
                 currentUserId={currentUserId}
                 onActionComplete={onActionComplete}
               />

@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -124,11 +126,11 @@ const GoogleIcon = () => (
 
 
 interface AuthFormProps {
-  db: SupabaseClient | undefined;
+  supabase: SupabaseClient | undefined;
   onAuthSuccess?: (user: SupabaseUser) => void;
 }
 
-export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
+export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -142,6 +144,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   const [resendEmail, setResendEmail] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const upsertUserProfile = useMutation(api.app.upsertUserProfile);
+  const markSignIn = useMutation(api.app.markSignIn);
   // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -209,12 +213,12 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
   // Handle resending confirmation email (only for verified accounts)
   const handleResendConfirmation = async () => {
-    if (!db || !resendEmail || !password) return;
+    if (!supabase || !resendEmail || !password) return;
 
     setIsLoading(true);
     try {
       // Use the original password that was verified to trigger email resend
-      const { error } = await db.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: resendEmail,
         password: password, // Use the actual password that was verified
       });
@@ -246,196 +250,10 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
     }
   };
 
-  // Function to verify password for existing accounts (security check)
-  // Note: This function is kept for unconfirmed accounts only to prevent hijacking
-  const verifyExistingAccountPassword = async (email: string, password: string): Promise<boolean> => {
-    try {
-      // Try to sign in with the provided credentials
-      const { error } = await db!.auth.signInWithPassword({ email, password });
-
-      if (!error) {
-        // Password is correct - sign out immediately and return true
-        await db!.auth.signOut();
-        return true;
-      }
-
-      // Check specific error types
-      const errorMsg = error.message.toLowerCase();
-      const errorCode = error.code;
-
-      // If email is not confirmed, but credentials are correct, return true
-      if (errorCode === 'email_not_confirmed' || errorMsg.includes('email not confirmed')) {
-        return true;
-      }
-
-      // Check if error indicates wrong credentials
-      if (errorMsg.includes('invalid') && errorMsg.includes('credentials')) {
-        // This could mean either wrong password OR email doesn't exist
-        // We can't distinguish, so return false for security
-        return false;
-      }
-
-      return false;
-    } catch (err) {
-      console.warn('Password verification failed:', err);
-      return false;
-    }
-  };
-
-  // Function to check if email is associated with a Google account (for Sign In error handling)
-  const checkIfGoogleAccount = async (email: string): Promise<boolean> => {
-    try {
-      const { data, error } = await db!.rpc('check_email_status', {
-        email_to_check: email
-      });
-
-      if (error) {
-        console.warn('Email status check RPC error:', error);
-        return false;
-      }
-
-      return data?.is_google_account === true;
-    } catch (err) {
-      console.warn('Google account check failed:', err);
-      return false;
-    }
-  };
-
-  // Function to check email status with password verification for security
-  const checkEmailStatusSecure = async (email: string, password: string): Promise<{ shouldProceed: boolean; toastConfig?: any; showResendOption?: boolean }> => {
-    try {
-      // First, use the database function to get email status
-      const { data, error } = await db!.rpc('check_email_status', {
-        email_to_check: email
-      });
-
-      if (error) {
-        console.warn('Email status check RPC error:', error);
-        return { shouldProceed: true }; // If we can't check, allow signup to proceed
-      }
-
-      const status = data?.status;
-      const isGoogleAccount = data?.is_google_account === true;
-      console.log('Email status check result:', data);
-
-      switch (status) {
-        case 'new':
-          // Email doesn't exist - proceed with signup
-          return { shouldProceed: true };
-
-        case 'confirmed':
-          // Check if this is a Google OAuth account
-          if (isGoogleAccount) {
-            // This is a Google OAuth account - don't allow email/password signup
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Email Already in Use",
-                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
-                variant: "destructive"
-              },
-              showResendOption: false
-            };
-          }
-
-          // For confirmed regular email accounts, we know they exist from the database
-          // No need to verify password as it would cause auth state changes
-          // Just show the account exists message
-          return {
-            shouldProceed: false,
-            toastConfig: {
-              title: "Account Already Exists",
-              description: "An account with this email already exists. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need to reset your password.",
-              variant: "destructive"
-            },
-            showResendOption: false
-          };
-
-        case 'unconfirmed':
-          // Check if this is a Google OAuth account
-          if (isGoogleAccount) {
-            // This shouldn't happen (Google accounts are auto-confirmed), but handle it
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Email Already in Use",
-                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
-                variant: "destructive"
-              },
-              showResendOption: false
-            };
-          }
-
-          // Regular email account - verify password before revealing this
-          const isUnconfirmedPasswordCorrect = await verifyExistingAccountPassword(email, password);
-
-          if (isUnconfirmedPasswordCorrect) {
-            // Password is correct - safe to show unconfirmed status and resend option
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Account Exists - Confirmation Needed",
-                description: "Your account exists but hasn't been verified yet. Please check your email (including spam folder) for the confirmation link.",
-                variant: "destructive"
-              },
-              showResendOption: true
-            };
-          } else {
-            // SECURITY FIX: Password is wrong - BLOCK signup to prevent account hijacking
-            // Even with wrong password, we cannot allow signup as it would let attackers
-            // hijack unconfirmed accounts by getting the confirmation email
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Email Already in Use",
-                description: "This email address is already associated with an account. If this is your email, please check your inbox for a confirmation link, or try signing in if you've already confirmed your account.",
-                variant: "destructive"
-              },
-              showResendOption: false
-            };
-          }
-
-        case 'pending':
-          // Check if this is a Google OAuth account
-          if (isGoogleAccount) {
-            return {
-              shouldProceed: false,
-              toastConfig: {
-                title: "Email Already in Use",
-                description: "This email is already associated with a Google account. Please use 'Continue with Google' to sign in, or use a different email address.",
-                variant: "destructive"
-              },
-              showResendOption: false
-            };
-          }
-
-          // Edge case - treat same as confirmed for security
-          // No need to verify password as it would cause auth state changes
-          return {
-            shouldProceed: false,
-            toastConfig: {
-              title: "Account Already Exists",
-              description: "An account with this email already exists. Please use the 'Sign In' page instead, or use 'Forgot Password' if you need help.",
-              variant: "destructive"
-            },
-            showResendOption: false
-          };
-
-        default:
-          // Unknown status - allow signup to proceed
-          return { shouldProceed: true };
-      }
-
-    } catch (err) {
-      console.warn('Secure email status check failed:', err);
-      return { shouldProceed: true }; // If we can't check, allow signup to proceed
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!db) {
-      toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
+    if (!supabase) {
+      toast({ title: "Authentication Error", description: "Supabase auth is not available. Please try again later.", variant: "destructive" });
       return;
     }
     if (!email || !password) {
@@ -456,30 +274,13 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
       return;
     }
 
-    // For signup, check email status with password verification for security
-    if (!isLoginView) {
-      setIsLoading(true);
-      const { shouldProceed, toastConfig, showResendOption } = await checkEmailStatusSecure(email, password);
-
-      if (!shouldProceed && toastConfig) {
-        toast(toastConfig);
-        setHasAuthError(true);
-        if (showResendOption) {
-          setShowResendConfirmation(true);
-          setResendEmail(email);
-        }
-        setIsLoading(false);
-        return;
-      }
-    }
-
     setIsLoading(true);
 
     const productionSiteUrl = "https://settleease-navy.vercel.app/";
 
     try {
       if (isLoginView) {
-        const { data, error: signInError } = await db.auth.signInWithPassword({ email, password });
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
         if (signInError) {
           // Check if this is an unconfirmed email error
@@ -500,26 +301,6 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
             return;
           }
 
-          // Check if this is an invalid credentials error and if the email is associated with a Google account
-          if (signInError.code === 'invalid_login_credentials' ||
-            (signInError.message && signInError.message.toLowerCase().includes('invalid') && signInError.message.toLowerCase().includes('credentials'))) {
-
-            // Check if this email is associated with a Google account
-            const isGoogleAccount = await checkIfGoogleAccount(email);
-
-            if (isGoogleAccount) {
-              toast({
-                title: "Google Account Detected",
-                description: "This email is associated with a Google account. Please use 'Continue with Google' to sign in instead of entering a password.",
-                variant: "destructive"
-              });
-              setHasAuthError(true);
-              setAuthErrorType('google_account_detected');
-              setIsLoading(false);
-              return;
-            }
-          }
-
           throw signInError;
         }
 
@@ -530,7 +311,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       } else {
-        const { data, error: signUpError } = await db.auth.signUp({
+        const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -594,20 +375,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
         // If signup successful and we have a user, update their profile with names
         if (data.user && data.session) {
           try {
-            const { error: profileError } = await db
-              .from('user_profiles')
-              .update({
-                first_name: firstName.trim(),
-                last_name: lastName.trim(),
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', data.user.id);
-
-            if (profileError) {
-              console.warn('Profile update error during signup:', profileError);
-            }
+            await upsertUserProfile({
+              supabaseUserId: data.user.id,
+              email: data.user.email || undefined,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+            });
           } catch (profileErr) {
-            console.warn('Failed to update profile during signup:', profileErr);
+            console.warn('Failed to update Convex profile during signup:', profileErr);
           }
         }
 
@@ -616,15 +391,14 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
           // NO toast here - page.tsx handles all welcome toasts centrally
           // Set flag to show welcome toast
           try {
-            await db
-              .from('user_profiles')
-              .update({
-                last_sign_in_at: new Date().toISOString(),
-                should_show_welcome_toast: true
-              })
-              .eq('user_id', data.user.id);
+            await markSignIn({
+              supabaseUserId: data.user.id,
+              email: data.user.email || undefined,
+              firstName: firstName.trim(),
+              lastName: lastName.trim(),
+            });
           } catch (err) {
-            console.error('Error updating sign-in flags:', err);
+            console.error('Error updating Convex sign-in flags:', err);
           }
 
           setHasAuthError(false);
@@ -654,8 +428,8 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
   };
 
   const handleGoogleSignIn = () => {
-    if (!db) {
-      toast({ title: "Authentication Error", description: "Database client is not available. Please try again later.", variant: "destructive" });
+    if (!supabase) {
+      toast({ title: "Authentication Error", description: "Supabase auth is not available. Please try again later.", variant: "destructive" });
       return;
     }
 
@@ -675,7 +449,7 @@ export default function AuthForm({ db, onAuthSuccess }: AuthFormProps) {
 
     try {
       console.log("Google OAuth: Calling signInWithOAuth");
-      const { error: googleError } = await db!.auth.signInWithOAuth({
+      const { error: googleError } = await supabase!.auth.signInWithOAuth({
         provider: 'google',
         options: {
           redirectTo: productionSiteUrl,

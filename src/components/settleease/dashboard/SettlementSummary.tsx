@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useRef } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 import {
   Card,
   CardContent,
@@ -33,7 +35,6 @@ import {
   Eye,
   Sparkles,
 } from "lucide-react";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { computeJsonHash } from "@/lib/settleease/hashUtils";
 import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
 import {
@@ -77,7 +78,6 @@ interface SettlementSummaryProps {
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   categories: any[];
   userRole: UserRole;
-  db?: SupabaseClient;
   currentUserId?: string;
   isLoadingPeople?: boolean;
   isLoadingExpenses?: boolean;
@@ -99,7 +99,6 @@ export default function SettlementSummary({
   getCategoryIconFromName,
   categories,
   userRole,
-  db,
   currentUserId,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<"overview" | "person">("overview");
@@ -114,6 +113,7 @@ export default function SettlementSummary({
   const [summaryPromptVersion, setSummaryPromptVersion] = useState<number | undefined>(undefined);
   const [isComputingHash, setIsComputingHash] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
+  const activePrompt = useQuery(api.app.getActiveAiPrompt, { name: "trump-summarizer" }) as any;
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -249,7 +249,7 @@ export default function SettlementSummary({
     });
 
   const handleSummarise = async () => {
-    if (isComputingHash || !db) return;
+    if (isComputingHash) return;
 
     try {
       setIsComputingHash(true);
@@ -257,21 +257,7 @@ export default function SettlementSummary({
       // Generate the summary data on demand
       const summaryData = generateSummaryData();
 
-      console.log("🔄 Fetching active prompt version...");
-
-      // Fetch active prompt version from database
-      const { data: promptData, error: promptError } = await db
-        .from('ai_prompts')
-        .select('version')
-        .eq('name', 'trump-summarizer')
-        .eq('is_active', true)
-        .single();
-
-      if (promptError || !promptData) {
-        console.warn("⚠️ Could not fetch prompt version, using default");
-      }
-
-      const promptVersion = promptData?.version || 2;
+      const promptVersion = activePrompt?.version || 2;
       console.log("✅ Using prompt version:", promptVersion);
 
       // Include prompt version in the data for hashing
@@ -616,7 +602,6 @@ export default function SettlementSummary({
           jsonData={summaryJsonData}
           hash={summaryHash}
           promptVersion={summaryPromptVersion}
-          db={db}
           currentUserId={currentUserId || ""}
           triggerRef={summaryButtonRef}
         />

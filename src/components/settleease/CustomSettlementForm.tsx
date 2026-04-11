@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,13 +24,11 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, DollarSign, ArrowRight, Users, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import { SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease';
 import type { Person } from '@/lib/settleease';
 
 interface CustomSettlementFormProps {
     people: Person[];
     peopleMap: Record<string, string>;
-    db: SupabaseClient | undefined;
     currentUserId: string;
     onActionComplete: () => void;
 }
@@ -37,7 +36,6 @@ interface CustomSettlementFormProps {
 export default function CustomSettlementForm({
     people,
     peopleMap,
-    db,
     currentUserId,
     onActionComplete,
 }: CustomSettlementFormProps) {
@@ -49,6 +47,7 @@ export default function CustomSettlementForm({
         amount: '',
         notes: '',
     });
+    const addSettlementPayment = useMutation(api.app.addSettlementPayment);
 
     const resetForm = () => {
         setFormData({
@@ -62,10 +61,10 @@ export default function CustomSettlementForm({
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
-        if (!db || !currentUserId) {
+        if (!currentUserId) {
             toast({
                 title: "Error",
-                description: "Database connection not available. Please try again.",
+                description: "User information is not available. Please try again.",
                 variant: "destructive"
             });
             return;
@@ -103,18 +102,13 @@ export default function CustomSettlementForm({
         setIsLoading(true);
 
         try {
-            const { error } = await db.from(SETTLEMENT_PAYMENTS_TABLE).insert([
-                {
-                    debtor_id: formData.debtorId,
-                    creditor_id: formData.creditorId,
-                    amount_settled: amount,
-                    marked_by_user_id: currentUserId,
-                    settled_at: new Date().toISOString(),
-                    notes: formData.notes.trim() || null,
-                },
-            ]);
-
-            if (error) throw error;
+            await addSettlementPayment({
+                debtorId: formData.debtorId,
+                creditorId: formData.creditorId,
+                amountSettled: amount,
+                markedByUserId: currentUserId,
+                notes: formData.notes.trim() || null,
+            });
 
             toast({
                 title: "Payment Recorded",

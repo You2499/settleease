@@ -1,8 +1,8 @@
 # SettleEase
 
-A modern expense management and settlement application for groups. Built with Next.js 15, TypeScript, and Supabase.
+A modern expense management and settlement application for groups. Built with Next.js, TypeScript, Convex, and Supabase Auth.
 
-**Version:** 7.2.0
+**Version:** 7.7.1
 
 ---
 
@@ -24,7 +24,7 @@ SettleEase helps groups track shared expenses, calculate settlements, and manage
 ## Tech Stack
 
 **Frontend**
-- Next.js 15.3.3 (App Router)
+- Next.js 16.2.2 (App Router)
 - TypeScript 5
 - Tailwind CSS 3.4.1
 - Radix UI (accessible components)
@@ -32,9 +32,9 @@ SettleEase helps groups track shared expenses, calculate settlements, and manage
 - Recharts 2.15.1 (charts)
 
 **Backend**
-- Supabase (PostgreSQL + Auth + Realtime)
+- Convex (database + live queries/realtime)
+- Supabase Auth (email/password and Google OAuth only)
 - Google Gemini AI (expense summaries)
-- Row Level Security (RLS) policies
 
 ---
 
@@ -43,7 +43,8 @@ SettleEase helps groups track shared expenses, calculate settlements, and manage
 ### Prerequisites
 
 - Node.js 18+
-- Supabase account
+- Supabase project for Auth
+- Convex project for app data and realtime
 - Google Gemini API key (optional, for AI summaries)
 
 ### Installation
@@ -56,7 +57,7 @@ npm install
 
 # Set up environment variables
 cp .env.example .env.local
-# Add your Supabase credentials to .env.local
+# Add Supabase Auth and Convex credentials to .env.local
 
 # Download Lucide icons (required)
 npm run prebuild
@@ -72,12 +73,14 @@ Visit `http://localhost:3000`
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_CONVEX_URL=your_convex_url
+CONVEX_DEPLOYMENT=your_convex_deployment
 GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ---
 
-## Database Schema
+## Convex Schema
 
 ### Tables
 
@@ -94,26 +97,28 @@ GEMINI_API_KEY=your_gemini_api_key
 - Customizable expense categories
 - Fields: `id`, `name`, `icon_name`, `rank`, `created_at`
 
-**settlement_payments**
+**settlementPayments**
 - Tracks payments between people
 - Fields: `id`, `debtor_id`, `creditor_id`, `amount_settled`, `marked_by_user_id`, `notes`, `settled_at`
 
-**manual_settlement_overrides**
+**manualSettlementOverrides**
 - Stores manual settlement path preferences
 - Fields: `id`, `debtor_id`, `creditor_id`, `amount`, `notes`, `created_by_user_id`, `is_active`, `created_at`, `updated_at`
 - Allows overriding optimized settlement calculations with preferred payment paths
 
-**user_profiles**
+**userProfiles**
 - User information and roles
-- Fields: `id`, `user_id`, `role`, `first_name`, `last_name`, `theme_preference`, `created_at`, `updated_at`
+- Fields: `id`, `user_id`, `email`, `role`, `first_name`, `last_name`, `theme_preference`, `font_preference`, `last_active_view`, `has_seen_welcome_toast`, `should_show_welcome_toast`, `last_sign_in_at`, `created_at`, `updated_at`
 - Roles: `admin` (full access) or `user` (read-only)
 
-**ai_summaries**
+**aiPrompts**
+- Stores editable AI prompt versions
+- Fields: `id`, `name`, `prompt_text`, `is_active`, `version`, `description`, `created_by_user_id`, `created_at`, `updated_at`
+
+**aiSummaries**
 - Cached AI-generated summaries
 - Fields: `id`, `user_id`, `data_hash`, `summary`, `model_name`, `created_at`, `updated_at`
 - Global cache by `data_hash` to minimize API calls
-
-All tables have Row Level Security (RLS) enabled.
 
 ---
 
@@ -136,7 +141,7 @@ All tables have Row Level Security (RLS) enabled.
 **Additional Features:**
 - Multiple payers per expense
 - Celebration contributions (treats that don't affect regular splits)
-- Real-time validation
+- Convex-backed validation and live updates
 - Comprehensive expense details modal
 
 ### Analytics
@@ -161,14 +166,14 @@ All tables have Row Level Security (RLS) enabled.
 - Manual settlement path overrides (admin only)
 - Manual payment recording
 - Complete audit trail
-- Real-time balance updates
+- Convex live balance updates
 - Prominent alerts in Dashboard for active manual overrides
 
 ### AI Summaries
 
 - Powered by Google Gemini
 - Streaming responses with real-time updates
-- Global caching by data hash
+- Global Convex caching by data hash
 - Markdown formatting with rich text
 
 ---
@@ -226,9 +231,8 @@ src/
 ### Custom Hooks
 
 - `useSupabaseAuth` - Authentication state
-- `useSupabaseData` - Data fetching and caching
-- `useSupabaseRealtime` - Real-time subscriptions
-- `useUserProfile` - User profile management
+- `useConvexData` - Live Convex queries for app data
+- `useUserProfile` - Convex profile management
 - `useThemeSync` - Theme synchronization
 
 ---
@@ -256,21 +260,21 @@ Ensure all environment variables are set in your hosting platform.
 
 ### User Roles
 
-Assign roles in the `user_profiles` table:
+Assign roles in the Convex `userProfiles` table after the user's first login. New profiles default to `user`; promote trusted users by setting `role` to `admin` for their `supabaseUserId`.
 
-```sql
--- Promote user to admin
-UPDATE user_profiles 
-SET role = 'admin' 
-WHERE user_id = 'user-uuid';
-```
-
-### Supabase Setup
+### Supabase Auth Setup
 
 1. Create Supabase project
-2. Apply database migrations
+2. Configure email/password auth
 3. Configure Google OAuth in Auth settings
-4. Enable Realtime for all tables
+4. Add the public Supabase URL and anon key to your environment
+
+### Convex Setup
+
+1. Create Convex project
+2. Add `NEXT_PUBLIC_CONVEX_URL` and `CONVEX_DEPLOYMENT`
+3. Run `npx convex codegen`
+4. Use the Convex dashboard to inspect data and promote admins
 
 ---
 
@@ -282,9 +286,9 @@ npm run prebuild
 ```
 
 **Real-time not working**
-- Check Supabase connection in console
-- Verify RLS policies
-- Ensure Realtime is enabled
+- Check Convex connection and deployment URL
+- Verify the app is wrapped in `ConvexClientProvider`
+- Confirm live queries are returning in the Convex dashboard
 
 **OAuth issues**
 - Verify OAuth config in Supabase
@@ -292,8 +296,7 @@ npm run prebuild
 - Ensure production URL is set
 
 **Permission errors**
-- Check user role in `user_profiles`
-- Verify RLS policies
+- Check user role in Convex `userProfiles`
 - Confirm user is authenticated
 
 ---
@@ -306,4 +309,4 @@ MIT License - see LICENSE file for details.
 
 ## Credits
 
-Built with Next.js, Supabase, Radix UI, Lucide, Recharts, and Google Gemini.
+Built with Next.js, Convex, Supabase Auth, Radix UI, Lucide, Recharts, and Google Gemini.

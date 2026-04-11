@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,20 +23,15 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, Users, AlertTriangle, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Person } from '@/lib/settleease';
-import { PEOPLE_TABLE, EXPENSES_TABLE, SETTLEMENT_PAYMENTS_TABLE } from '@/lib/settleease';
 
 interface ManagePeopleTabProps {
   people: Person[];
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
   isLoadingPeople?: boolean;
   isDataFetchedAtLeastOnce?: boolean;
 }
 
 export default function ManagePeopleTab({ 
   people, 
-  db, 
-  supabaseInitializationError,
   isLoadingPeople = false,
   isDataFetchedAtLeastOnce = true,
 }: ManagePeopleTabProps) {
@@ -51,20 +47,18 @@ export default function ManagePeopleTab({
   const [editingPersonNewName, setEditingPersonNewName] = useState('');
   const [personToDelete, setPersonToDelete] = useState<Person | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const addPerson = useMutation(api.app.addPerson);
+  const updatePerson = useMutation(api.app.updatePerson);
+  const removePerson = useMutation(api.app.removePerson);
 
   const handleAddPerson = async () => {
     if (!newPersonName.trim()) {
       toast({ title: "Validation Error", description: "Person's name cannot be empty.", variant: "destructive" });
       return;
     }
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Database Error", description: `Cannot add person: ${supabaseInitializationError || 'Supabase client not available.'}`, variant: "destructive" });
-      return;
-    }
     setIsLoading(true);
     try {
-      const { error } = await db.from(PEOPLE_TABLE).insert([{ name: newPersonName.trim(), created_at: new Date().toISOString() }]).select();
-      if (error) throw error;
+      await addPerson({ name: newPersonName.trim() });
       toast({ title: "Person Added", description: `${newPersonName.trim()} has been added.` });
       setNewPersonName('');
     } catch (error: any) {
@@ -89,14 +83,9 @@ export default function ManagePeopleTab({
       toast({ title: "Validation Error", description: "Person's name cannot be empty for update.", variant: "destructive" });
       return;
     }
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Database Error", description: `Cannot update person: ${supabaseInitializationError || 'Supabase client not available.'}`, variant: "destructive" });
-      return;
-    }
     setIsLoading(true);
     try {
-      const { error } = await db.from(PEOPLE_TABLE).update({ name: editingPersonNewName.trim() }).eq('id', editingPersonId);
-      if (error) throw error;
+      await updatePerson({ id: editingPersonId, name: editingPersonNewName.trim() });
       toast({ title: "Person Updated", description: "Name updated successfully." });
       handleCancelEditPerson();
     } catch (error: any) {
@@ -111,76 +100,14 @@ export default function ManagePeopleTab({
   };
 
   const handleExecuteRemovePerson = async () => {
-    if (!personToDelete || !db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot remove person: ${supabaseInitializationError || 'System error.'}`, variant: "destructive" });
+    if (!personToDelete) {
+      toast({ title: "Error", description: "Cannot remove person: system error.", variant: "destructive" });
       if (personToDelete) setPersonToDelete(null);
       return;
     }
     setIsLoading(true);
     try {
-      let involvedInTransactions = false;
-      let involvementReason = "";
-
-      const { count: settlementDebtorCount, error: settlementDebtorError } = await db
-        .from(SETTLEMENT_PAYMENTS_TABLE)
-        .select('id', { count: 'exact', head: true })
-        .eq('debtor_id', personToDelete.id);
-
-      if (settlementDebtorError) throw new Error(`Checking debtor settlements: ${settlementDebtorError.message}`);
-      if (settlementDebtorCount && settlementDebtorCount > 0) {
-        involvedInTransactions = true;
-        involvementReason = `${personToDelete.name} is a debtor in ${settlementDebtorCount} recorded settlement(s).`;
-      }
-
-      if (!involvedInTransactions) {
-        const { count: settlementCreditorCount, error: settlementCreditorError } = await db
-          .from(SETTLEMENT_PAYMENTS_TABLE)
-          .select('id', { count: 'exact', head: true })
-          .eq('creditor_id', personToDelete.id);
-
-        if (settlementCreditorError) throw new Error(`Checking creditor settlements: ${settlementCreditorError.message}`);
-        if (settlementCreditorCount && settlementCreditorCount > 0) {
-          involvedInTransactions = true;
-          involvementReason = `${personToDelete.name} is a creditor in ${settlementCreditorCount} recorded settlement(s).`;
-        }
-      }
-
-      if (!involvedInTransactions) {
-        const { data: allExpenses, error: fetchExpensesError } = await db
-          .from(EXPENSES_TABLE)
-          .select('paid_by, shares');
-
-        if (fetchExpensesError) {
-          throw new Error(`Fetching expenses for check: ${fetchExpensesError.message}`);
-        }
-
-        if (allExpenses) {
-          for (const expense of allExpenses) {
-            const isPayer = Array.isArray(expense.paid_by) && expense.paid_by.some(p => p.personId === personToDelete.id);
-            const isSharer = Array.isArray(expense.shares) && expense.shares.some(s => s.personId === personToDelete.id);
-
-            if (isPayer || isSharer) {
-              involvedInTransactions = true;
-              involvementReason = `${personToDelete.name} is involved in one or more expenses.`;
-              break;
-            }
-          }
-        }
-      }
-
-      if (involvedInTransactions) {
-        toast({
-          title: "Deletion Blocked",
-          description: `${involvementReason} This person cannot be removed while involved in transactions. Please resolve or reassign these transactions first, or delete them.`,
-          variant: "destructive",
-          duration: 9000,
-        });
-        setPersonToDelete(null);
-        return;
-      }
-
-      const { error: deleteError } = await db.from(PEOPLE_TABLE).delete().eq('id', personToDelete.id);
-      if (deleteError) throw deleteError;
+      await removePerson({ id: personToDelete.id });
 
       toast({ title: "Person Removed", description: `${personToDelete.name} has been removed.` });
       if (editingPersonId === personToDelete.id) handleCancelEditPerson();
@@ -236,22 +163,6 @@ export default function ManagePeopleTab({
     );
   }
   
-  if (supabaseInitializationError && !db) {
-    return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6">
-          <p className="text-sm sm:text-base">Could not connect to the database. Managing people is currently unavailable.</p>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <>
       <Card className="shadow-lg rounded-lg h-full flex flex-col">

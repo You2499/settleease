@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useQuery } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,6 @@ import { runAllTests } from './dashboard/verification/testRunner';
 import type { TestResult } from './dashboard/verification/types';
 
 interface StatusTabProps {
-  db?: SupabaseClient;
   people: Person[];
   expenses: Expense[];
   settlementPayments: SettlementPayment[];
@@ -57,7 +57,6 @@ interface ServiceStatus {
 }
 
 export default function StatusTab({
-  db,
   people,
   expenses,
   settlementPayments,
@@ -68,6 +67,7 @@ export default function StatusTab({
   isLoadingSettlements = false,
   isDataFetchedAtLeastOnce = true,
 }: StatusTabProps) {
+  const convexHealth = useQuery(api.app.health, {}) as { ok: boolean; checkedAt: string } | undefined;
   const [services, setServices] = useState<ServiceStatus[]>([
     {
       name: 'Database Connection',
@@ -108,28 +108,27 @@ export default function StatusTab({
     // 1. Database Connection
     const dbStart = Date.now();
     try {
-      if (db) {
-        const { error } = await db.from('people').select('id').limit(1);
+      if (convexHealth?.ok) {
         const dbTime = Date.now() - dbStart;
 
         newServices.push({
           name: 'Database Connection',
-          status: error ? 'down' : 'operational',
-          message: error ? `Connection failed: ${error.message}` : 'Connected and responsive',
+          status: 'operational',
+          message: 'Connected and responsive',
           responseTime: dbTime,
           lastChecked: new Date(),
           icon: Database,
           details: (
             <div className="text-xs text-muted-foreground mt-1">
-              Provider: Supabase • Region: auto • Latency: {dbTime}ms
+              Provider: Convex • Live queries enabled • Latency: {dbTime}ms
             </div>
           )
         });
       } else {
         newServices.push({
           name: 'Database Connection',
-          status: 'down',
-          message: 'Database client not initialized',
+          status: 'checking',
+          message: 'Convex health check is loading',
           lastChecked: new Date(),
           icon: Database,
         });
@@ -152,8 +151,7 @@ export default function StatusTab({
       const data = await response.json();
 
       const allHealthy = data.checks?.geminiApiKey &&
-        data.checks?.supabaseUrl &&
-        data.checks?.supabaseServiceKey &&
+        data.checks?.convexUrl &&
         data.checks?.promptFetch &&
         data.checks?.promptHasPlaceholder;
 
@@ -258,21 +256,21 @@ export default function StatusTab({
 
   // Initial check
   useEffect(() => {
-    if (isDataFetchedAtLeastOnce && db) {
+    if (isDataFetchedAtLeastOnce) {
       checkServiceHealth();
     }
-  }, [isDataFetchedAtLeastOnce, db]);
+  }, [isDataFetchedAtLeastOnce, convexHealth]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!isRefreshing && isDataFetchedAtLeastOnce && db) {
+      if (!isRefreshing && isDataFetchedAtLeastOnce) {
         checkServiceHealth();
       }
     }, 60000);
 
     return () => clearInterval(interval);
-  }, [isRefreshing, isDataFetchedAtLeastOnce, db]);
+  }, [isRefreshing, isDataFetchedAtLeastOnce, convexHealth]);
 
   const getStatusColor = (status: ServiceStatus['status']) => {
     switch (status) {

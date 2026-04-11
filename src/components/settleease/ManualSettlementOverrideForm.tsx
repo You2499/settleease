@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,14 +23,12 @@ import {
 } from "@/components/ui/dialog";
 import { ArrowRight, Route, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
-import { MANUAL_SETTLEMENT_OVERRIDES_TABLE } from '@/lib/settleease';
-import type { Person, ManualSettlementOverride } from '@/lib/settleease';
+import type { Person } from '@/lib/settleease';
 import { formatCurrency } from '@/lib/settleease/utils';
 
 interface ManualSettlementOverrideFormProps {
     people: Person[];
     peopleMap: Record<string, string>;
-    db: SupabaseClient | undefined;
     currentUserId: string;
     onActionComplete: () => void;
     netBalances: Record<string, number>;
@@ -38,7 +37,6 @@ interface ManualSettlementOverrideFormProps {
 export default function ManualSettlementOverrideForm({
     people,
     peopleMap,
-    db,
     currentUserId,
     onActionComplete,
     netBalances,
@@ -51,6 +49,7 @@ export default function ManualSettlementOverrideForm({
         amount: '',
         notes: '',
     });
+    const addManualSettlementOverride = useMutation(api.app.addManualSettlementOverride);
 
     const resetForm = () => {
         setFormData({
@@ -64,10 +63,10 @@ export default function ManualSettlementOverrideForm({
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
-        if (!db || !currentUserId) {
+        if (!currentUserId) {
             toast({
                 title: "Error",
-                description: "Database connection not available. Please try again.",
+                description: "User information is not available. Please try again.",
                 variant: "destructive"
             });
             return;
@@ -127,18 +126,13 @@ export default function ManualSettlementOverrideForm({
         setIsLoading(true);
 
         try {
-            const { error } = await db.from(MANUAL_SETTLEMENT_OVERRIDES_TABLE).insert([
-                {
-                    debtor_id: formData.debtorId,
-                    creditor_id: formData.creditorId,
-                    amount: amount,
-                    created_by_user_id: currentUserId,
-                    notes: formData.notes.trim() || null,
-                    is_active: true,
-                },
-            ]);
-
-            if (error) throw error;
+            await addManualSettlementOverride({
+                debtorId: formData.debtorId,
+                creditorId: formData.creditorId,
+                amount,
+                createdByUserId: currentUserId,
+                notes: formData.notes.trim() || null,
+            });
 
             toast({
                 title: "Manual Override Created",

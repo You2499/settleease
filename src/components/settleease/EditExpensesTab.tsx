@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useMemo, useEffect } from 'react';
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +20,7 @@ import {
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil, HandCoins, Ban, CheckCircle2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab';
-import { EXPENSES_TABLE, formatCurrency } from '@/lib/settleease';
+import { formatCurrency } from '@/lib/settleease';
 import type { Expense, Person, Category as DynamicCategory } from '@/lib/settleease';
 import { Separator } from '../ui/separator';
 import ExpenseListItem from './ExpenseListItem';
@@ -28,8 +29,6 @@ import * as LucideIcons from 'lucide-react';
 interface EditExpensesTabProps {
   people: Person[];
   expenses: Expense[];
-  db: SupabaseClient | undefined;
-  supabaseInitializationError: string | null;
   onActionComplete: () => void;
   dynamicCategories: DynamicCategory[];
   isLoadingPeople?: boolean;
@@ -41,8 +40,6 @@ interface EditExpensesTabProps {
 export default function EditExpensesTab({
   people,
   expenses,
-  db,
-  supabaseInitializationError,
   onActionComplete,
   dynamicCategories,
   isLoadingPeople = false,
@@ -59,6 +56,8 @@ export default function EditExpensesTab({
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const updateExpenseExcludeFromSettlement = useMutation(api.app.updateExpenseExcludeFromSettlement);
+  const deleteExpense = useMutation(api.app.deleteExpense);
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => {
     acc[person.id] = person.name;
@@ -108,20 +107,13 @@ export default function EditExpensesTab({
   };
 
   const handleToggleExcludeFromSettlement = async (expense: Expense) => {
-    if (!db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot update expense: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
-      return;
-    }
-
     const newExcludeStatus = !expense.exclude_from_settlement;
 
     try {
-      const { error } = await db
-        .from(EXPENSES_TABLE)
-        .update({ exclude_from_settlement: newExcludeStatus })
-        .eq('id', expense.id);
-
-      if (error) throw error;
+      await updateExpenseExcludeFromSettlement({
+        id: expense.id,
+        excludeFromSettlement: newExcludeStatus,
+      });
 
       toast({
         title: newExcludeStatus ? "Excluded from Settlements" : "Included in Settlements",
@@ -136,14 +128,13 @@ export default function EditExpensesTab({
   };
 
   const handleDeleteExpense = async () => {
-    if (!expenseToDelete || !db || supabaseInitializationError) {
-      toast({ title: "Error", description: `Cannot delete expense: Supabase issue. ${supabaseInitializationError || ''}`, variant: "destructive" });
+    if (!expenseToDelete) {
+      toast({ title: "Error", description: "Cannot delete expense: system error.", variant: "destructive" });
       setExpenseToDelete(null);
       return;
     }
     try {
-      const { error } = await db.from(EXPENSES_TABLE).delete().eq('id', expenseToDelete.id);
-      if (error) throw error;
+      await deleteExpense({ id: expenseToDelete.id });
       toast({ title: "Expense Deleted", description: `${expenseToDelete.description} has been deleted.` });
       onActionComplete();
     } catch (error: any) {
@@ -204,28 +195,10 @@ export default function EditExpensesTab({
     );
   }
 
-  if (supabaseInitializationError && !db) {
-    return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="p-4 sm:p-6">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold text-destructive">
-            <AlertTriangle className="mr-2 h-5 w-5" /> Error
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="flex-1 p-4 sm:p-6">
-          <p className="text-sm sm:text-base">Could not connect to the database. Editing expenses is currently unavailable.</p>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-1">{supabaseInitializationError}</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (editingExpense) {
     return (
       <AddExpenseTab
         people={people}
-        db={db}
-        supabaseInitializationError={supabaseInitializationError}
         onExpenseAdded={handleActionComplete}
         expenseToEdit={editingExpense}
         onCancelEdit={() => setEditingExpense(null)}

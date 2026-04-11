@@ -39,8 +39,6 @@ import { runAllTests } from "./testRunner";
 import VerificationOverview from "./VerificationOverview";
 import VerificationResults from "./VerificationResults";
 import VerificationDebug from "./VerificationDebug";
-import PromptEditor from "./PromptEditor";
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 export default function AlgorithmVerification({
   people,
@@ -50,8 +48,6 @@ export default function AlgorithmVerification({
   peopleMap,
   uiSimplifiedTransactions,
   uiPairwiseTransactions,
-  db,
-  currentUserId,
 }: AlgorithmVerificationProps) {
   const [testResults, setTestResults] = useState<TestResult[]>([]);
   const [isRunning, setIsRunning] = useState(false);
