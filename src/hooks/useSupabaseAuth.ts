@@ -1,26 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient, type SupabaseClient, type User as SupabaseUser } from '@supabase/supabase-js';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { toast } from "@/hooks/use-toast";
-import { supabaseUrl, supabaseAnonKey } from '@/lib/settleease';
-
-let supabaseClient: SupabaseClient | undefined;
-let supabaseInitializationError: string | null = null;
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  supabaseInitializationError = "Supabase URL or Anon Key is missing. Check environment variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.";
-  console.error(supabaseInitializationError);
-} else {
-  try {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
-  } catch (error: any) {
-    console.error("Error initializing Supabase client:", error);
-    supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase credentials are correct and the service is reachable.`;
-  }
-}
+import { supabaseClient, supabaseInitializationError } from '@/lib/settleease/supabaseClient';
 
 export function useSupabaseAuth() {
   const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);

@@ -4,8 +4,9 @@ import {
   DEFAULT_PRODUCTION_SUMMARY_PROMPT,
   SUMMARY_PROMPT_PLACEHOLDER,
 } from '@/lib/settleease/aiSummarization';
+import { getConvexUrl } from '@/lib/settleease/convexUrl';
 
-const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://shocking-panda-595.convex.cloud';
+const convexUrl = getConvexUrl();
 
 export async function GET() {
   const checks = {

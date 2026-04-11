@@ -1,16 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { createClient, type Session } from "@supabase/supabase-js";
+import type { Session } from "@supabase/supabase-js";
 import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
-import { supabaseAnonKey, supabaseUrl } from "@/lib/settleease/constants";
+import { getConvexUrl } from "@/lib/settleease/convexUrl";
+import { supabaseClient as supabase } from "@/lib/settleease/supabaseClient";
 
-const convexUrl =
-  process.env.NEXT_PUBLIC_CONVEX_URL || "https://shocking-panda-595.convex.cloud";
-
-const convex = convexUrl ? new ConvexReactClient(convexUrl) : null;
-const supabase =
-  supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey) : null;
+const convex = new ConvexReactClient(getConvexUrl());
 
 function useSupabaseConvexAuth() {
   const [session, setSession] = React.useState<Session | null>(null);
@@ -74,10 +70,6 @@ function useSupabaseConvexAuth() {
 }
 
 export function ConvexClientProvider({ children }: { children: React.ReactNode }) {
-  if (!convex) {
-    return <>{children}</>;
-  }
-
   return (
     <ConvexProviderWithAuth client={convex} useAuth={useSupabaseConvexAuth}>
       {children}

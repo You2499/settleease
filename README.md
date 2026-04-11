@@ -276,6 +276,18 @@ Assign roles in the Convex `userProfiles` table after the user's first login. Ne
 3. Run `npx convex codegen`
 4. Use the Convex dashboard to inspect data and promote admins
 
+### Vercel + Convex Production Deploys
+
+Vercel does not seed Convex data during a build. Production data starts empty unless users enter data, an admin inserts data in the Convex dashboard, or a seed function is run intentionally.
+
+To deploy Convex functions/schema with the frontend, set the Vercel Build Command to:
+
+```bash
+npx convex deploy --cmd "npm run build" --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
+```
+
+Add a production `CONVEX_DEPLOY_KEY` in Vercel so the build can deploy to the production Convex deployment non-interactively.
+
 ---
 
 ## Troubleshooting

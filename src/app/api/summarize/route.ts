@@ -6,9 +6,10 @@ import {
   DEFAULT_PRODUCTION_SUMMARY_PROMPT,
   injectSummaryJsonIntoPrompt,
 } from '@/lib/settleease/aiSummarization';
+import { getConvexUrl } from '@/lib/settleease/convexUrl';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || 'https://shocking-panda-595.convex.cloud';
+const CONVEX_URL = getConvexUrl();
 
 // Gemma 4 open-source model served via Google AI Studio (same API key)
 const MODEL_FALLBACK_ORDER = [
