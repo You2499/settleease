@@ -22,17 +22,17 @@ export default function SplitMethodSelector({ splitMethod, setSplitMethod }: Spl
   return (
     <div className="space-y-2 sm:space-y-3">
       <Label className="text-md sm:text-lg font-medium">Split Method</Label>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
         {options.map(({ value, label, Icon }) => (
           <Button
             key={value}
             variant={splitMethod === value ? 'default' : 'outline'}
-            size="default" 
+            size="default"
             onClick={() => setSplitMethod(value)}
-            className="w-full justify-center text-xs sm:text-sm py-2.5 sm:py-2 h-auto sm:h-11"
+            className="h-11 min-w-0 justify-center overflow-hidden rounded-lg px-3 text-sm sm:min-w-[7.75rem] sm:flex-1"
           >
-            <Icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-            {label}
+            <Icon className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">{label}</span>
           </Button>
         ))}
       </div>

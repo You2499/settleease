@@ -619,9 +619,9 @@ export default function ScanReceiptTab({
               {people.length} participants
             </Badge>
             {step !== 'upload' && step !== 'analyzing' && (
-              <Button variant="outline" size="sm" onClick={handleReset} className="h-9">
-                <RotateCcw className="mr-2 h-4 w-4" />
-                Start Over
+              <Button variant="outline" size="sm" onClick={handleReset} className="h-9 min-w-0 max-w-full overflow-hidden rounded-lg px-3">
+                <RotateCcw className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">Start Over</span>
               </Button>
             )}
           </div>
@@ -653,18 +653,18 @@ export default function ScanReceiptTab({
                   <div className="mt-6 grid w-full max-w-sm gap-3 sm:grid-cols-2">
                     <Button
                       variant="outline"
-                      className="h-12"
+                      className="h-12 min-w-0 overflow-hidden rounded-lg px-3"
                       onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
                     >
-                      <Upload className="mr-2 h-4 w-4" />
-                      Browse
+                      <Upload className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 truncate">Browse</span>
                     </Button>
                     <Button
-                      className="h-12"
+                      className="h-12 min-w-0 overflow-hidden rounded-lg px-3"
                       onClick={(e) => { e.stopPropagation(); cameraInputRef.current?.click(); }}
                     >
-                      <Camera className="mr-2 h-4 w-4" />
-                      Camera
+                      <Camera className="h-4 w-4 shrink-0" />
+                      <span className="min-w-0 truncate">Camera</span>
                     </Button>
                   </div>
                 </div>
@@ -747,9 +747,9 @@ export default function ScanReceiptTab({
               )}
 
               {canRetry && imageBase64 && (
-                <Button onClick={handleScan} variant="outline" className="h-11 w-full" disabled={isCompressing}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Retry Scan
+                <Button onClick={handleScan} variant="outline" className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3" disabled={isCompressing}>
+                  <RotateCcw className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 truncate">Retry Scan</span>
                 </Button>
               )}
             </aside>
@@ -826,9 +826,9 @@ export default function ScanReceiptTab({
                   </div>
                 ))}
               </div>
-              <Button onClick={handleCancelScan} variant="outline" size="sm" className="mt-6 h-10">
-                <X className="mr-2 h-4 w-4" />
-                Cancel Scan
+              <Button onClick={handleCancelScan} variant="outline" size="sm" className="mt-6 h-10 min-w-0 overflow-hidden rounded-lg px-3">
+                <X className="h-4 w-4 shrink-0" />
+                <span className="min-w-0 truncate">Cancel Scan</span>
               </Button>
             </section>
           </div>
@@ -1023,17 +1023,17 @@ export default function ScanReceiptTab({
             <Button
               onClick={handleScan}
               disabled={!imageBase64 || isCompressing}
-              className="h-12 w-full sm:h-11 sm:w-auto"
+              className="h-12 w-full min-w-0 overflow-hidden rounded-lg px-3 sm:h-11 sm:w-auto sm:px-4"
             >
               {isCompressing ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  <span className="min-w-0 truncate">Processing...</span>
                 </>
               ) : (
                 <>
-                  <ScanLine className="mr-2 h-4 w-4" />
-                  Scan Receipt
+                  <ScanLine className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 truncate">Scan Receipt</span>
                 </>
               )}
             </Button>
@@ -1042,30 +1042,30 @@ export default function ScanReceiptTab({
 
         {step === 'split' && (
           <>
-            <Button variant="outline" onClick={() => setStep('upload')} className="h-11 w-full sm:w-auto">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+            <Button variant="outline" onClick={() => setStep('upload')} className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3 sm:w-auto sm:px-4">
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Back</span>
             </Button>
-            <Button onClick={handleSplitMethodConfirm} className="h-11 w-full sm:w-auto">
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
+            <Button onClick={handleSplitMethodConfirm} className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3 sm:w-auto sm:px-4">
+              <span className="min-w-0 truncate">Continue</span>
+              <ArrowRight className="h-4 w-4 shrink-0" />
             </Button>
           </>
         )}
 
         {step === 'form' && (
           <>
-            <Button variant="outline" onClick={() => setStep('split')} className="h-11 w-full sm:w-auto">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
+            <Button variant="outline" onClick={() => setStep('split')} className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3 sm:w-auto sm:px-4">
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">Back</span>
             </Button>
-            <Button onClick={onSubmit} disabled={isLoading || people.length === 0} className="h-11 w-full sm:w-auto">
+            <Button onClick={onSubmit} disabled={isLoading || people.length === 0} className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3 sm:w-auto sm:px-4">
               {isLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
               ) : (
-                <Check className="mr-2 h-4 w-4" />
+                <Check className="h-4 w-4 shrink-0" />
               )}
-              {isLoading ? 'Adding...' : 'Add Expense'}
+              <span className="min-w-0 truncate">{isLoading ? 'Adding...' : 'Add Expense'}</span>
             </Button>
           </>
         )}
