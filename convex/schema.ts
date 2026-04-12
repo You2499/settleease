@@ -116,4 +116,39 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
   }).index("by_data_hash", ["dataHash"]),
+
+  aiRedactions: defineTable({
+    userId: v.string(),
+    dataHash: v.string(),
+    redactions: v.string(),
+    modelName: v.optional(v.union(v.string(), v.null())),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_data_hash", ["dataHash"]),
+
+  reportGenerationEvents: defineTable({
+    userId: v.string(),
+    eventType: v.union(
+      v.literal("preview_generated"),
+      v.literal("print_clicked"),
+      v.literal("download_clicked"),
+      v.literal("redaction_cache_hit"),
+      v.literal("redaction_generated"),
+      v.literal("redaction_fallback"),
+    ),
+    reportMode: v.union(v.literal("group"), v.literal("personal")),
+    datePreset: v.string(),
+    dateRangeLabel: v.string(),
+    redacted: v.boolean(),
+    usedCache: v.optional(v.union(v.boolean(), v.null())),
+    aiModelName: v.optional(v.union(v.string(), v.null())),
+    expenseCount: v.number(),
+    settlementCount: v.number(),
+    participantCount: v.number(),
+    manualOverrideCount: v.number(),
+    createdAt: v.string(),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_user_created_at", ["userId", "createdAt"])
+    .index("by_event_type", ["eventType"]),
 });

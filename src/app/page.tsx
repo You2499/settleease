@@ -804,6 +804,7 @@ function SettleEasePageContent() {
                         categories={categories}
                         manualOverrides={manualOverrides}
                         peopleMap={peopleMap}
+                        currentUserId={currentUser?.id}
                         getCategoryIconFromName={getCategoryIconFromName}
                       />
                     )}

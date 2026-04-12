@@ -282,13 +282,13 @@ Assign roles in the Convex `userProfiles` table after the user's first login. Ne
 
 Vercel does not seed Convex data during a build. Production data starts empty unless users enter data, an admin inserts data in the Convex dashboard, or a seed function is run intentionally.
 
-To deploy Convex functions/schema with the frontend, set the Vercel Build Command to:
+This repo includes `vercel.json`, which sets the Vercel Build Command to:
 
 ```bash
-npx convex deploy --cmd "npm run build" --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL
+npm run build:vercel
 ```
 
-Add a production `CONVEX_DEPLOY_KEY` in Vercel so the build can deploy to the production Convex deployment non-interactively.
+`npm run build:vercel` runs `convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`, so Convex functions/schema deploy before Next builds. Add a production `CONVEX_DEPLOY_KEY` in Vercel so the build can deploy to the production Convex deployment non-interactively.
 
 Set `CONVEX_JWT_PRIVATE_KEY` in Vercel for the Supabase-to-Convex auth bridge. Supabase still owns login/session/email/OAuth; this key signs short-lived Convex-compatible JWTs only after `/api/convex-token` verifies the Supabase session with Supabase Auth.
 

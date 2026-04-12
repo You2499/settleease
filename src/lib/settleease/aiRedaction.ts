@@ -40,6 +40,27 @@ export interface ReportRedactionValue {
 
 export type ReportRedactionMap = Record<string, ReportRedactionValue>;
 
+export const REDACTION_PROMPT_VERSION = 1;
+
+export function buildRedactionCachePayload({
+  entries,
+  modelCode,
+  context = {},
+}: {
+  entries: RedactionEntryInput[];
+  modelCode: string;
+  context?: Record<string, unknown>;
+}) {
+  return {
+    feature: "report-label-redaction",
+    schemaVersion: 1,
+    promptVersion: REDACTION_PROMPT_VERSION,
+    modelCode,
+    context,
+    entries,
+  };
+}
+
 const textFieldSchema = {
   type: "string",
 };

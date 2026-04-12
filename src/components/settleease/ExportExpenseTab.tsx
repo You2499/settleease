@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
   ChevronRight,
@@ -10,10 +10,11 @@ import {
   FileText,
   Loader2,
   Printer,
-  ShieldCheck,
   Users,
 } from "lucide-react";
 import { format } from "date-fns";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "@convex/_generated/api";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,10 +23,16 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settleease/utils";
+import { computeJsonHash } from "@/lib/settleease/hashUtils";
+import { DEFAULT_AI_MODEL_CODE, getAiModelOption } from "@/lib/settleease/aiModels";
 import type {
   RedactionEntryInput,
   RedactionResponse,
   ReportRedactionMap,
+} from "@/lib/settleease/aiRedaction";
+import {
+  buildRedactionCachePayload,
+  parseRedactionResponseText,
 } from "@/lib/settleease/aiRedaction";
 
 import {
@@ -61,6 +68,19 @@ interface RedactionSource {
   entry: RedactionEntryInput;
   itemIdsByKey: Record<string, string>;
 }
+
+type ReportGenerationEventType =
+  | "preview_generated"
+  | "print_clicked"
+  | "download_clicked"
+  | "redaction_cache_hit"
+  | "redaction_generated"
+  | "redaction_fallback";
+
+type CachedAiRedaction = {
+  redactions: string;
+  model_name?: string | null;
+} | null | undefined;
 
 function safeDate(value: string | undefined): Date | null {
   if (!value) return null;
@@ -169,11 +189,20 @@ function MetricPreview({ label, value }: { label: string; value: string }) {
   );
 }
 
-function ReportPreview({ model, html }: { model: ExportReportModel; html: string }) {
+function ReportPreview({
+  model,
+  html,
+  onReportAction,
+}: {
+  model: ExportReportModel;
+  html: string;
+  onReportAction?: (eventType: "print_clicked" | "download_clicked") => void;
+}) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileName = getReportFileName(model);
 
-  const handlePrint = () => {
+  const handlePrint = (eventType: "print_clicked" | "download_clicked") => {
+    onReportAction?.(eventType);
     const frameWindow = iframeRef.current?.contentWindow;
     const frameDocument = iframeRef.current?.contentDocument || frameWindow?.document;
     if (!frameWindow || !frameDocument) return;
@@ -195,14 +224,14 @@ function ReportPreview({ model, html }: { model: ExportReportModel; html: string
           <Button
             variant="outline"
             className="h-11 min-w-0 overflow-hidden rounded-lg px-3"
-            onClick={handlePrint}
+            onClick={() => handlePrint("print_clicked")}
           >
             <Printer className="h-4 w-4 shrink-0" />
             <span className="min-w-0 truncate">Print PDF</span>
           </Button>
           <Button
             className="h-11 min-w-0 overflow-hidden rounded-lg px-3"
-            onClick={handlePrint}
+            onClick={() => handlePrint("download_clicked")}
           >
             <Download className="h-4 w-4 shrink-0" />
             <span className="min-w-0 truncate">Download PDF</span>
@@ -229,6 +258,7 @@ export default function ExportExpenseTab({
   categories,
   manualOverrides,
   peopleMap,
+  currentUserId,
 }: ExportExpenseTabProps) {
   const [exportMode, setExportMode] = useState<ExportMode>("group");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(people[0]?.id || null);
@@ -242,12 +272,41 @@ export default function ExportExpenseTab({
   const [redactions, setRedactions] = useState<ReportRedactionMap>({});
   const [redactionState, setRedactionState] = useState<"idle" | "loading" | "ready" | "fallback">("idle");
   const [redactionModelName, setRedactionModelName] = useState("");
+  const [activeRedactionModelCode, setActiveRedactionModelCode] = useState<string>(DEFAULT_AI_MODEL_CODE);
+  const [redactionHash, setRedactionHash] = useState("");
+  const [loadedRedactionHash, setLoadedRedactionHash] = useState("");
+  const trackedPreviewKeyRef = useRef("");
+  const trackedRedactionKeyRef = useRef("");
+  const storeAiRedaction = useMutation(api.app.storeAiRedaction);
+  const trackReportGenerationEvent = useMutation(api.app.trackReportGenerationEvent);
 
   useEffect(() => {
     if (!selectedPersonId && people.length > 0) {
       setSelectedPersonId(people[0].id);
     }
   }, [people, selectedPersonId]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadActiveModel() {
+      try {
+        const response = await fetch("/api/ai-config", { cache: "no-store" });
+        if (!response.ok) return;
+        const config = await response.json();
+        if (!cancelled) {
+          setActiveRedactionModelCode(getAiModelOption(config?.modelCode).code);
+        }
+      } catch (error) {
+        console.warn("Using default AI model for report redaction cache:", error);
+      }
+    }
+
+    loadActiveModel();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const handlePresetSelect = (preset: DatePreset) => {
     setSelectedPreset(preset);
@@ -302,11 +361,109 @@ export default function ExportExpenseTab({
     [redactionSources]
   );
 
+  const redactionCachePayload = useMemo(
+    () => buildRedactionCachePayload({
+      entries: redactionSources.map((source) => source.entry),
+      modelCode: activeRedactionModelCode,
+      context: {
+        reportMode: exportMode,
+        selectedPersonId: exportMode === "personal" ? selectedPersonId : null,
+        datePreset: selectedPreset,
+        dateRangeLabel: dateRange.label,
+        startDate: dateRange.startDate?.toISOString() ?? null,
+        endDate: dateRange.endDate?.toISOString() ?? null,
+      },
+    }),
+    [activeRedactionModelCode, dateRange, exportMode, redactionSources, selectedPersonId, selectedPreset]
+  );
+
+  useEffect(() => {
+    if (!isRedacted || !isRangeReady || redactionSources.length === 0) {
+      setRedactionHash("");
+      setLoadedRedactionHash("");
+      return;
+    }
+
+    let cancelled = false;
+
+    async function computeRedactionHash() {
+      try {
+        const hash = await computeJsonHash(redactionCachePayload);
+        if (!cancelled) {
+          setRedactionHash(hash);
+        }
+      } catch (error) {
+        console.warn("Unable to compute report redaction cache hash:", error);
+        if (!cancelled) {
+          setRedactionHash("");
+        }
+      }
+    }
+
+    computeRedactionHash();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isRangeReady, isRedacted, redactionCachePayload, redactionSources.length]);
+
+  const cachedRedaction = useQuery(
+    api.app.getAiRedactionByHash,
+    isRedacted && redactionHash ? { dataHash: redactionHash } : "skip",
+  ) as CachedAiRedaction;
+
+  const activeManualOverrideCount = useMemo(
+    () => manualOverrides.filter((override) => override.is_active).length,
+    [manualOverrides]
+  );
+
+  const trackReportEvent = useCallback(
+    async (
+      eventType: ReportGenerationEventType,
+      details: { usedCache?: boolean | null; aiModelName?: string | null } = {},
+    ) => {
+      if (!currentUserId) return;
+
+      try {
+        await trackReportGenerationEvent({
+          userId: currentUserId,
+          eventType,
+          reportMode: exportMode,
+          datePreset: selectedPreset,
+          dateRangeLabel: dateRange.label,
+          redacted: isRedacted,
+          usedCache: details.usedCache ?? null,
+          aiModelName: details.aiModelName ?? null,
+          expenseCount: redactionSources.length || expenses.length,
+          settlementCount: settlementPayments.length,
+          participantCount: people.length,
+          manualOverrideCount: activeManualOverrideCount,
+        });
+      } catch (error) {
+        console.warn("Report generation analytics event was not recorded:", error);
+      }
+    },
+    [
+      activeManualOverrideCount,
+      currentUserId,
+      dateRange.label,
+      exportMode,
+      expenses.length,
+      isRedacted,
+      people.length,
+      redactionSources.length,
+      selectedPreset,
+      settlementPayments.length,
+      trackReportGenerationEvent,
+    ],
+  );
+
   useEffect(() => {
     if (!isRedacted) {
       setRedactions({});
       setRedactionState("idle");
       setRedactionModelName("");
+      setLoadedRedactionHash("");
       return;
     }
 
@@ -314,6 +471,32 @@ export default function ExportExpenseTab({
       setRedactions({});
       setRedactionState("ready");
       setRedactionModelName("");
+      setLoadedRedactionHash(redactionHash);
+      return;
+    }
+
+    if (!redactionHash || cachedRedaction === undefined) {
+      setRedactionState("loading");
+      setRedactionModelName("");
+      return;
+    }
+
+    if (loadedRedactionHash === redactionHash) return;
+
+    const cached = cachedRedaction?.redactions ? parseRedactionResponseText(cachedRedaction.redactions) : null;
+    if (cached) {
+      setRedactions(buildRedactionMapFromResponse(cached, redactionSources));
+      setRedactionModelName(cachedRedaction?.model_name ? getAiModelOption(cachedRedaction.model_name).displayName : "");
+      setRedactionState("ready");
+      setLoadedRedactionHash(redactionHash);
+      const trackKey = `${redactionHash}:cache`;
+      if (trackedRedactionKeyRef.current !== trackKey) {
+        trackedRedactionKeyRef.current = trackKey;
+        void trackReportEvent("redaction_cache_hit", {
+          usedCache: true,
+          aiModelName: cachedRedaction?.model_name ? getAiModelOption(cachedRedaction.model_name).displayName : null,
+        });
+      }
       return;
     }
 
@@ -341,11 +524,35 @@ export default function ExportExpenseTab({
         setRedactions(buildRedactionMapFromResponse(data.redactions, redactionSources));
         setRedactionModelName(data.modelDisplayName || "");
         setRedactionState("ready");
+        setLoadedRedactionHash(redactionHash);
+
+        if (currentUserId) {
+          try {
+            await storeAiRedaction({
+              userId: currentUserId,
+              dataHash: redactionHash,
+              redactions: JSON.stringify(data.redactions),
+              modelName: data.model || null,
+            });
+          } catch (storeError) {
+            console.warn("Report redaction cache was not stored:", storeError);
+          }
+        }
+
+        void trackReportEvent("redaction_generated", {
+          usedCache: false,
+          aiModelName: data.modelDisplayName || data.model || null,
+        });
       } catch (error: any) {
         if (cancelled || error?.name === "AbortError") return;
         console.warn("AI report redaction failed; using local fallback.", error);
         setRedactions({});
         setRedactionState("fallback");
+        setLoadedRedactionHash(redactionHash);
+        void trackReportEvent("redaction_fallback", {
+          usedCache: false,
+          aiModelName: null,
+        });
       }
     }
 
@@ -355,7 +562,17 @@ export default function ExportExpenseTab({
       cancelled = true;
       controller.abort();
     };
-  }, [isRedacted, redactionRequestSignature, redactionSources]);
+  }, [
+    cachedRedaction,
+    currentUserId,
+    isRedacted,
+    loadedRedactionHash,
+    redactionHash,
+    redactionRequestSignature,
+    redactionSources,
+    storeAiRedaction,
+    trackReportEvent,
+  ]);
 
   const reportModel = useMemo(() => {
     if (!isRangeReady) return null;
@@ -418,6 +635,51 @@ export default function ExportExpenseTab({
     ? reportModel.metrics.find((metric) => metric.label === "Remaining")?.value || formatCurrency(0)
     : reportModel?.metrics.find((metric) => metric.label === "Net Position")?.value || formatCurrency(0);
 
+  const handleReportAction = useCallback(
+    (eventType: "print_clicked" | "download_clicked") => {
+      void trackReportEvent(eventType, {
+        usedCache: isRedacted ? redactionState === "ready" && Boolean(cachedRedaction) : null,
+        aiModelName: redactionModelName || null,
+      });
+    },
+    [cachedRedaction, isRedacted, redactionModelName, redactionState, trackReportEvent],
+  );
+
+  useEffect(() => {
+    if (!reportModel || !reportHtml || !isRangeReady) return;
+
+    const previewKey = [
+      reportModel.kind,
+      selectedPreset,
+      dateRange.label,
+      reportExpenseCount,
+      reportSettlementCount,
+      isRedacted ? redactionState : "plain",
+      redactionHash || "no-redaction-hash",
+    ].join(":");
+
+    if (trackedPreviewKeyRef.current === previewKey) return;
+    trackedPreviewKeyRef.current = previewKey;
+    void trackReportEvent("preview_generated", {
+      usedCache: isRedacted ? redactionState === "ready" && Boolean(cachedRedaction) : null,
+      aiModelName: redactionModelName || null,
+    });
+  }, [
+    cachedRedaction,
+    dateRange.label,
+    isRangeReady,
+    isRedacted,
+    redactionHash,
+    redactionModelName,
+    redactionState,
+    reportExpenseCount,
+    reportHtml,
+    reportModel,
+    reportSettlementCount,
+    selectedPreset,
+    trackReportEvent,
+  ]);
+
   return (
     <Card className="flex h-full flex-col overflow-hidden rounded-lg border shadow-xl">
       <CardHeader className="border-b p-4 sm:p-6">
@@ -432,10 +694,6 @@ export default function ExportExpenseTab({
             <CardDescription className="mt-2 text-sm">
               Generate enterprise-grade PDF statements from settlement, expense, and payment data.
             </CardDescription>
-          </div>
-          <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-primary" />
-            Audit-grade HTML print
           </div>
         </div>
       </CardHeader>
@@ -618,7 +876,7 @@ export default function ExportExpenseTab({
                 </p>
               </div>
             ) : reportModel ? (
-              <ReportPreview model={reportModel} html={reportHtml} />
+              <ReportPreview model={reportModel} html={reportHtml} onReportAction={handleReportAction} />
             ) : (
               <div className="flex min-h-[420px] items-center justify-center rounded-lg border bg-muted/20 p-6 text-sm text-muted-foreground">
                 Preparing report model...

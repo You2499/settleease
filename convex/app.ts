@@ -45,6 +45,17 @@ const activeView = v.union(
   v.literal("settings"),
 );
 
+const reportGenerationEventType = v.union(
+  v.literal("preview_generated"),
+  v.literal("print_clicked"),
+  v.literal("download_clicked"),
+  v.literal("redaction_cache_hit"),
+  v.literal("redaction_generated"),
+  v.literal("redaction_fallback"),
+);
+
+const exportReportMode = v.union(v.literal("group"), v.literal("personal"));
+
 function profileDto(profile: any) {
   if (!profile) return null;
   return {
@@ -878,5 +889,151 @@ export const storeAiSummary = mutation({
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+  },
+});
+
+export const getAiRedactionByHash = query({
+  args: { dataHash: v.string() },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+    const redaction = await ctx.db
+      .query("aiRedactions")
+      .withIndex("by_data_hash", (q) => q.eq("dataHash", args.dataHash))
+      .first();
+    if (!redaction) return null;
+    return {
+      id: redaction._id,
+      user_id: redaction.userId,
+      data_hash: redaction.dataHash,
+      redactions: redaction.redactions,
+      model_name: redaction.modelName ?? null,
+      created_at: redaction.createdAt,
+      updated_at: redaction.updatedAt,
+    };
+  },
+});
+
+export const storeAiRedaction = mutation({
+  args: {
+    userId: v.string(),
+    dataHash: v.string(),
+    redactions: v.string(),
+    modelName: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    if (args.userId !== supabaseUserId) {
+      throw new ConvexError("Cannot store redactions for another user.");
+    }
+    const existing = await ctx.db
+      .query("aiRedactions")
+      .withIndex("by_data_hash", (q) => q.eq("dataHash", args.dataHash))
+      .first();
+    if (existing) return existing._id;
+    const timestamp = nowIso();
+    return await ctx.db.insert("aiRedactions", {
+      userId: args.userId,
+      dataHash: args.dataHash,
+      redactions: args.redactions,
+      modelName: args.modelName ?? null,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    });
+  },
+});
+
+export const trackReportGenerationEvent = mutation({
+  args: {
+    userId: v.string(),
+    eventType: reportGenerationEventType,
+    reportMode: exportReportMode,
+    datePreset: v.string(),
+    dateRangeLabel: v.string(),
+    redacted: v.boolean(),
+    usedCache: v.optional(v.union(v.boolean(), v.null())),
+    aiModelName: v.optional(v.union(v.string(), v.null())),
+    expenseCount: v.number(),
+    settlementCount: v.number(),
+    participantCount: v.number(),
+    manualOverrideCount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    if (args.userId !== supabaseUserId) {
+      throw new ConvexError("Cannot track report events for another user.");
+    }
+
+    return await ctx.db.insert("reportGenerationEvents", {
+      ...args,
+      usedCache: args.usedCache ?? null,
+      aiModelName: args.aiModelName ?? null,
+      createdAt: nowIso(),
+    });
+  },
+});
+
+export const getReportGenerationAnalytics = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const limit = Math.min(Math.max(Math.floor(args.limit ?? 500), 1), 1000);
+    const events = await ctx.db
+      .query("reportGenerationEvents")
+      .withIndex("by_created_at")
+      .order("desc")
+      .take(limit);
+
+    const byEventType: Record<string, number> = {};
+    const byReportMode = { group: 0, personal: 0 };
+    const byDatePreset: Record<string, number> = {};
+    let redactedEvents = 0;
+    let cacheHits = 0;
+    let fallbackEvents = 0;
+    let generatedRedactions = 0;
+
+    for (const event of events) {
+      byEventType[event.eventType] = (byEventType[event.eventType] ?? 0) + 1;
+      byDatePreset[event.datePreset] = (byDatePreset[event.datePreset] ?? 0) + 1;
+      if (event.reportMode === "group") byReportMode.group += 1;
+      if (event.reportMode === "personal") byReportMode.personal += 1;
+      if (event.redacted) redactedEvents += 1;
+      if (event.eventType === "redaction_cache_hit" || event.usedCache === true) cacheHits += 1;
+      if (event.eventType === "redaction_fallback") fallbackEvents += 1;
+      if (event.eventType === "redaction_generated") generatedRedactions += 1;
+    }
+
+    return {
+      sampledEventCount: events.length,
+      actions: {
+        previews: byEventType.preview_generated ?? 0,
+        prints: byEventType.print_clicked ?? 0,
+        downloads: byEventType.download_clicked ?? 0,
+      },
+      redaction: {
+        enabledEvents: redactedEvents,
+        cacheHits,
+        generated: generatedRedactions,
+        fallbacks: fallbackEvents,
+      },
+      byEventType,
+      byReportMode,
+      byDatePreset,
+      recentEvents: events.slice(0, 50).map((event: any) => ({
+        eventType: event.eventType,
+        reportMode: event.reportMode,
+        datePreset: event.datePreset,
+        dateRangeLabel: event.dateRangeLabel,
+        redacted: event.redacted,
+        usedCache: event.usedCache ?? null,
+        aiModelName: event.aiModelName ?? null,
+        expenseCount: event.expenseCount,
+        settlementCount: event.settlementCount,
+        participantCount: event.participantCount,
+        manualOverrideCount: event.manualOverrideCount,
+        createdAt: event.createdAt,
+      })),
+    };
   },
 });

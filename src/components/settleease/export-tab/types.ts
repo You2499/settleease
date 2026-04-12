@@ -14,6 +14,7 @@ export interface ExportExpenseTabProps {
   categories: Category[];
   manualOverrides: ManualSettlementOverride[];
   peopleMap: Record<string, string>;
+  currentUserId?: string | null;
   getCategoryIconFromName?: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
 }
 

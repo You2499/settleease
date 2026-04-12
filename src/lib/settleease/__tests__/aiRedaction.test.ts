@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildRedactionCachePayload,
   buildRedactionPrompt,
   normalizeRedactionResponse,
   parseRedactionResponseText,
+  REDACTION_PROMPT_VERSION,
 } from "../aiRedaction";
+import { computeJsonHash } from "../hashUtils";
 
 describe("AI report redaction helpers", () => {
   it("builds a prompt with provided labels and no JSON placeholder left behind", () => {
@@ -45,5 +48,32 @@ describe("AI report redaction helpers", () => {
     `);
 
     expect(parsed?.entries[0].description).toBe("Dinner");
+  });
+
+  it("builds cache payloads that include prompt version and selected model", async () => {
+    const entries = [
+      {
+        key: "expense-0",
+        description: "Beer and wine",
+        category: "Alcohol",
+        items: [{ key: "item-0", name: "Craft beer", category: "Alcohol" }],
+      },
+    ];
+    const basePayload = buildRedactionCachePayload({
+      entries,
+      modelCode: "gemini-3.1-flash-lite-preview",
+      context: { reportMode: "group" },
+    });
+    const otherModelPayload = buildRedactionCachePayload({
+      entries,
+      modelCode: "gemini-3-flash-preview",
+      context: { reportMode: "group" },
+    });
+
+    expect(basePayload.promptVersion).toBe(REDACTION_PROMPT_VERSION);
+    expect(basePayload.modelCode).toBe("gemini-3.1-flash-lite-preview");
+    const baseHash = await computeJsonHash(basePayload);
+    const otherModelHash = await computeJsonHash(otherModelPayload);
+    expect(baseHash).not.toBe(otherModelHash);
   });
 });
