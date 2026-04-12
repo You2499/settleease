@@ -12,6 +12,7 @@
 
 # Production
 /build
+ios/SettleEase/.build/
 
 # Environment variables
 .env.local
