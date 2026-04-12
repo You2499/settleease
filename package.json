@@ -7,7 +7,7 @@
     "dev": "next dev -p 3000",
     "prebuild": "node scripts/download-lucide-icons.js && node scripts/generate-lucide-metadata.js",
     "build": "next build",
-    "build:vercel": "convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL",
+    "build:vercel": "node scripts/vercel-build.js",
     "convex:dev": "convex dev --once",
     "convex:deploy": "convex deploy",
     "start": "next start",

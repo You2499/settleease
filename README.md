@@ -288,7 +288,9 @@ This repo includes `vercel.json`, which sets the Vercel Build Command to:
 npm run build:vercel
 ```
 
-`npm run build:vercel` runs `convex deploy --cmd 'npm run build' --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL`, so Convex functions/schema deploy before Next builds. Add a production `CONVEX_DEPLOY_KEY` in Vercel so the build can deploy to the production Convex deployment non-interactively.
+`npm run build:vercel` deploys Convex only when `VERCEL_ENV=production`, then runs the Next build against the deployed Convex URL. Preview and Development builds skip Convex deployment and only run `npm run build`, so they do not need a deploy key and cannot push schema/function changes to production.
+
+Add `CONVEX_DEPLOY_KEY` only to the Vercel Production environment so production builds can deploy to the production Convex deployment non-interactively.
 
 Set `CONVEX_JWT_PRIVATE_KEY` in Vercel for the Supabase-to-Convex auth bridge. Supabase still owns login/session/email/OAuth; this key signs short-lived Convex-compatible JWTs only after `/api/convex-token` verifies the Supabase session with Supabase Auth.
 
