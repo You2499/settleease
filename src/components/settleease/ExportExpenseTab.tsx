@@ -8,6 +8,7 @@ import {
   EyeOff,
   FileDown,
   FileText,
+  Loader2,
   Printer,
   ShieldCheck,
   Users,
@@ -21,6 +22,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settleease/utils";
+import type {
+  RedactionEntryInput,
+  RedactionResponse,
+  ReportRedactionMap,
+} from "@/lib/settleease/aiRedaction";
 
 import {
   DATE_PRESETS,
@@ -47,6 +53,71 @@ function getRuntimeInterFontCss(): string {
     .map((style) => style.textContent || "")
     .filter((css) => css.includes("--font-inter") || css.includes("__Inter") || css.includes("Inter"))
     .join("\n");
+}
+
+interface RedactionSource {
+  key: string;
+  expenseId: string;
+  entry: RedactionEntryInput;
+  itemIdsByKey: Record<string, string>;
+}
+
+function safeDate(value: string | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function isExpenseInDateRange(expenseDate: string | undefined, dateRange: ReturnType<typeof buildExportDateRange>): boolean {
+  if (dateRange.isAllTime) return true;
+  const date = safeDate(expenseDate);
+  if (!date || !dateRange.startDate || !dateRange.endDate) return false;
+
+  const start = new Date(dateRange.startDate);
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(dateRange.endDate);
+  end.setHours(23, 59, 59, 999);
+
+  return date >= start && date <= end;
+}
+
+function isPersonInExpenseForRedaction(expense: ExportExpenseTabProps["expenses"][number], personId: string | null): boolean {
+  if (!personId) return true;
+  return (
+    (expense.paid_by || []).some((payment) => payment.personId === personId) ||
+    (expense.shares || []).some((share) => share.personId === personId) ||
+    expense.celebration_contribution?.personId === personId
+  );
+}
+
+function buildRedactionMapFromResponse(
+  response: RedactionResponse,
+  sources: RedactionSource[]
+): ReportRedactionMap {
+  const sourceByKey = new Map(sources.map((source) => [source.key, source]));
+  const map: ReportRedactionMap = {};
+
+  response.entries.forEach((entry) => {
+    const source = sourceByKey.get(entry.key);
+    if (!source) return;
+
+    map[source.expenseId] = {
+      description: entry.description,
+      category: entry.category,
+      items: Object.fromEntries(
+        entry.items
+          .map((item) => {
+            const itemId = source.itemIdsByKey[item.key];
+            if (!itemId) return null;
+            return [itemId, { name: item.name, category: item.category }] as const;
+          })
+          .filter((item): item is readonly [string, { name: string; category: string }] => Boolean(item))
+      ),
+    };
+  });
+
+  return map;
 }
 
 function ModeButton({
@@ -168,6 +239,9 @@ export default function ExportExpenseTab({
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [endCalendarOpen, setEndCalendarOpen] = useState(false);
+  const [redactions, setRedactions] = useState<ReportRedactionMap>({});
+  const [redactionState, setRedactionState] = useState<"idle" | "loading" | "ready" | "fallback">("idle");
+  const [redactionModelName, setRedactionModelName] = useState("");
 
   useEffect(() => {
     if (!selectedPersonId && people.length > 0) {
@@ -190,6 +264,99 @@ export default function ExportExpenseTab({
 
   const isRangeReady = dateRange.isAllTime || Boolean(dateRange.startDate && dateRange.endDate);
 
+  const redactionSources = useMemo<RedactionSource[]>(() => {
+    if (!isRangeReady) return [];
+
+    return expenses
+      .filter((expense) => isExpenseInDateRange(expense.created_at, dateRange))
+      .filter((expense) => exportMode === "group" || isPersonInExpenseForRedaction(expense, selectedPersonId))
+      .map((expense, expenseIndex) => {
+        const key = `expense-${expenseIndex}`;
+        const itemIdsByKey: Record<string, string> = {};
+        const items = (expense.items || []).map((item, itemIndex) => {
+          const itemKey = `item-${itemIndex}`;
+          itemIdsByKey[itemKey] = item.id;
+          return {
+            key: itemKey,
+            name: item.name || `Item ${itemIndex + 1}`,
+            category: item.categoryName || expense.category || "Uncategorized",
+          };
+        });
+
+        return {
+          key,
+          expenseId: expense.id,
+          itemIdsByKey,
+          entry: {
+            key,
+            description: expense.description || "Untitled expense",
+            category: expense.category || "Uncategorized",
+            items,
+          },
+        };
+      });
+  }, [dateRange, exportMode, expenses, isRangeReady, selectedPersonId]);
+
+  const redactionRequestSignature = useMemo(
+    () => JSON.stringify(redactionSources.map((source) => source.entry)),
+    [redactionSources]
+  );
+
+  useEffect(() => {
+    if (!isRedacted) {
+      setRedactions({});
+      setRedactionState("idle");
+      setRedactionModelName("");
+      return;
+    }
+
+    if (!redactionSources.length) {
+      setRedactions({});
+      setRedactionState("ready");
+      setRedactionModelName("");
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    async function fetchRedactions() {
+      setRedactionState("loading");
+      setRedactionModelName("");
+
+      try {
+        const response = await fetch("/api/redact-report-labels", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entries: redactionSources.map((source) => source.entry) }),
+          signal: controller.signal,
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+          throw new Error(data?.error || "AI redaction failed");
+        }
+
+        if (cancelled) return;
+        setRedactions(buildRedactionMapFromResponse(data.redactions, redactionSources));
+        setRedactionModelName(data.modelDisplayName || "");
+        setRedactionState("ready");
+      } catch (error: any) {
+        if (cancelled || error?.name === "AbortError") return;
+        console.warn("AI report redaction failed; using local fallback.", error);
+        setRedactions({});
+        setRedactionState("fallback");
+      }
+    }
+
+    fetchRedactions();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [isRedacted, redactionRequestSignature, redactionSources]);
+
   const reportModel = useMemo(() => {
     if (!isRangeReady) return null;
 
@@ -205,6 +372,7 @@ export default function ExportExpenseTab({
         reportName,
         selectedPersonId,
         redacted: isRedacted,
+        redactions,
       });
     }
 
@@ -217,6 +385,8 @@ export default function ExportExpenseTab({
       categories,
       dateRange,
       reportName,
+      redacted: isRedacted,
+      redactions,
     });
   }, [
     categories,
@@ -228,6 +398,7 @@ export default function ExportExpenseTab({
     manualOverrides,
     people,
     peopleMap,
+    redactions,
     reportName,
     selectedPersonId,
     settlementPayments,
@@ -380,6 +551,31 @@ export default function ExportExpenseTab({
                   className="h-11"
                 />
 
+                <Button
+                  variant={isRedacted ? "default" : "outline"}
+                  onClick={() => setIsRedacted((value) => !value)}
+                  className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3"
+                >
+                  {redactionState === "loading" ? (
+                    <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 shrink-0" />
+                  )}
+                  <span className="min-w-0 truncate">{isRedacted ? "Redaction On" : "Redaction Off"}</span>
+                </Button>
+
+                {isRedacted && (
+                  <p className="rounded-lg bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                    {redactionState === "loading"
+                      ? "AI is preparing privacy-safe labels..."
+                      : redactionState === "ready"
+                        ? `Smart AI redaction active${redactionModelName ? ` via ${redactionModelName}` : ""}.`
+                        : redactionState === "fallback"
+                          ? "AI redaction is unavailable. Local privacy fallback is active."
+                          : "Redaction is active."}
+                  </p>
+                )}
+
                 {exportMode === "personal" && (
                   <>
                     <div className="grid gap-2">
@@ -398,14 +594,6 @@ export default function ExportExpenseTab({
                         ))}
                       </div>
                     </div>
-                    <Button
-                      variant={isRedacted ? "default" : "outline"}
-                      onClick={() => setIsRedacted((value) => !value)}
-                      className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3"
-                    >
-                      <EyeOff className="h-4 w-4 shrink-0" />
-                      <span className="min-w-0 truncate">{isRedacted ? "Redaction On" : "Redaction Off"}</span>
-                    </Button>
                   </>
                 )}
               </div>

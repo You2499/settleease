@@ -6,6 +6,7 @@ import type {
   Person,
   SettlementPayment,
 } from "@/lib/settleease/types";
+import type { ReportRedactionMap, ReportRedactionValue } from "@/lib/settleease/aiRedaction";
 import { DATE_PRESETS } from "../constants";
 import type {
   AuditActivityGroup,
@@ -43,6 +44,8 @@ interface BuildBaseReportModelParams {
   dateRange: ExportDateRange;
   reportName?: string;
   generatedAt?: Date;
+  redacted?: boolean;
+  redactions?: ReportRedactionMap;
 }
 
 interface BuildGroupSummaryReportModelParams extends BuildBaseReportModelParams {
@@ -51,7 +54,6 @@ interface BuildGroupSummaryReportModelParams extends BuildBaseReportModelParams 
 
 interface BuildPersonalStatementReportModelParams extends BuildBaseReportModelParams {
   selectedPersonId: string | null;
-  redacted?: boolean;
   categories?: { name: string; icon_name?: string | null }[];
 }
 
@@ -174,7 +176,7 @@ export function sanitizeReportFileName(value: string): string {
 }
 
 function isSensitiveText(value: string): boolean {
-  return /alcohol|cigarettes?|beer|wine|liquor|drink|drinks|vape|tobacco|smoke/i.test(value);
+  return /alcohol|cigarettes?|beer|wine|liquor|cocktail|drink|drinks|vape|tobacco|smoke|cannabis|weed|gambl|casino|betting|adult|condom|contraceptive|pharmacy|medicine|medical|doctor|clinic|hospital|therapy|personal hygiene|sanitary|private gift|dating|nightlife|strip/i.test(value);
 }
 
 function getCategoryIconName(
@@ -241,16 +243,26 @@ function getItemRows(
   expense: Expense,
   people: Person[],
   peopleMap: Record<string, string>,
-  redacted = false
+  redacted = false,
+  redaction?: ReportRedactionValue
 ): AuditExpenseItemProof[] {
   if (expense.split_method !== "itemwise" || !Array.isArray(expense.items)) return [];
 
   return expense.items
     .map((item, index) => {
       const shouldRedact = redacted && isSensitiveText(`${item.name} ${item.categoryName || ""}`);
+      const itemRedaction = redaction?.items?.[item.id];
       return {
-        name: shouldRedact ? `Item ${index + 1}` : item.name || `Item ${index + 1}`,
-        category: shouldRedact ? "General" : item.categoryName || expense.category || UNCATEGORIZED,
+        name: redacted && itemRedaction?.name
+          ? itemRedaction.name
+          : shouldRedact
+            ? `Item ${index + 1}`
+            : item.name || `Item ${index + 1}`,
+        category: redacted && itemRedaction?.category
+          ? itemRedaction.category
+          : shouldRedact
+            ? "General"
+            : item.categoryName || expense.category || UNCATEGORIZED,
         sharedBy: [...(item.sharedBy || [])].map((id) => idToName(people, peopleMap, id)).sort(compareReportText),
         amount: roundReportAmount(toReportAmount(item.price)),
       };
@@ -291,14 +303,24 @@ function buildExpenseProof(
   people: Person[],
   peopleMap: Record<string, string>,
   categories: { name: string; icon_name?: string | null }[] = [],
-  redacted = false
+  redacted = false,
+  redactions: ReportRedactionMap = {}
 ): AuditExpenseProof {
+  const redaction = redactions[expense.id];
   const isSensitive = redacted && isSensitiveText(`${expense.description} ${expense.category}`);
-  const category = isSensitive ? "General" : expense.category || UNCATEGORIZED;
+  const category = redacted && redaction?.category
+    ? redaction.category
+    : isSensitive
+      ? "General"
+      : expense.category || UNCATEGORIZED;
   const date = safeReportDate(expense.created_at);
 
   return {
-    description: isSensitive ? "Misc expense" : expense.description || "Untitled expense",
+    description: redacted && redaction?.description
+      ? redaction.description
+      : isSensitive
+        ? "Misc expense"
+        : expense.description || "Untitled expense",
     category,
     categoryIconName: getCategoryIconName(category, categories),
     date: formatReportDate(expense.created_at),
@@ -308,7 +330,7 @@ function buildExpenseProof(
     excluded: Boolean(expense.exclude_from_settlement),
     paidBy: getPaidByRows(expense, people, peopleMap),
     shares: getShareRows(expense, people, peopleMap),
-    items: getItemRows(expense, people, peopleMap, redacted),
+    items: getItemRows(expense, people, peopleMap, redacted, redaction),
     celebrationContribution: expense.celebration_contribution
       ? {
           person: idToName(people, peopleMap, expense.celebration_contribution.personId),
@@ -735,9 +757,10 @@ function buildPersonalExpenseProof(
   people: Person[],
   peopleMap: Record<string, string>,
   categories: { name: string; icon_name?: string | null }[],
-  redacted: boolean
+  redacted: boolean,
+  redactions: ReportRedactionMap
 ): AuditPersonalExpenseProof {
-  const proof = buildExpenseProof(expense, people, peopleMap, categories, redacted);
+  const proof = buildExpenseProof(expense, people, peopleMap, categories, redacted, redactions);
   const paidByPerson = roundReportAmount(getTotalPaid(expense, selectedPersonId));
   const shareForPerson = roundReportAmount(getTotalObligation(expense, selectedPersonId));
 
@@ -760,6 +783,8 @@ export function buildGroupSummaryReportModel({
   dateRange,
   reportName,
   generatedAt = new Date(),
+  redacted = false,
+  redactions = {},
 }: BuildGroupSummaryReportModelParams): AuditGroupReportModel {
   const filteredExpenses = expenses.filter((expense) => isInDateRange(expense.created_at, dateRange));
   const includedExpenses = filteredExpenses.filter((expense) => !expense.exclude_from_settlement);
@@ -783,10 +808,10 @@ export function buildGroupSummaryReportModel({
   const alreadySettled = currentSettlements.reduce((sum, settlement) => sum + toReportAmount(settlement.amount_settled), 0);
   const remaining = transactionProofs.reduce((sum, proof) => sum + proof.amount, 0);
   const expenseProofs = includedExpenses
-    .map((expense) => buildExpenseProof(expense, people, peopleMap, categories))
+    .map((expense) => buildExpenseProof(expense, people, peopleMap, categories, redacted, redactions))
     .sort((a, b) => b.sortTime - a.sortTime || b.amount - a.amount);
   const excludedProofs = excludedExpenses
-    .map((expense) => buildExpenseProof(expense, people, peopleMap, categories))
+    .map((expense) => buildExpenseProof(expense, people, peopleMap, categories, redacted, redactions))
     .sort((a, b) => b.sortTime - a.sortTime || b.amount - a.amount);
   const settlementRows = currentSettlements
     .map((settlement) => buildSettlementLedgerRow(settlement, people, peopleMap))
@@ -798,6 +823,7 @@ export function buildGroupSummaryReportModel({
     title: reportTitle,
     generatedAt: formatReportDateTime(generatedAt),
     dateRangeLabel: dateRange.label,
+    redacted,
     participantCount: people.length,
     metrics: [
       { label: "Included Spend", value: formatCurrency(roundReportAmount(includedSpend)), tone: "neutral" },
@@ -831,6 +857,7 @@ export function buildPersonalStatementReportModel({
   selectedPersonId,
   redacted = false,
   generatedAt = new Date(),
+  redactions = {},
 }: BuildPersonalStatementReportModelParams): AuditPersonalReportModel {
   const selectedPerson = selectedPersonId
     ? people.find((person) => person.id === selectedPersonId)
@@ -858,10 +885,10 @@ export function buildPersonalStatementReportModel({
   const netPosition = totalPaid - totalShare + settlementsSent - settlementsReceived;
 
   const personalExpenseProofs = includedPersonalExpenses
-    .map((expense) => buildPersonalExpenseProof(expense, personId, people, peopleMap, categories, redacted))
+    .map((expense) => buildPersonalExpenseProof(expense, personId, people, peopleMap, categories, redacted, redactions))
     .sort((a, b) => b.sortTime - a.sortTime || b.amount - a.amount);
   const excludedProofs = excludedPersonalExpenses
-    .map((expense) => buildPersonalExpenseProof(expense, personId, people, peopleMap, categories, redacted))
+    .map((expense) => buildPersonalExpenseProof(expense, personId, people, peopleMap, categories, redacted, redactions))
     .sort((a, b) => b.sortTime - a.sortTime || b.amount - a.amount);
   const settlementRows = personalSettlements
     .map((settlement) => buildSettlementLedgerRow(settlement, people, peopleMap))

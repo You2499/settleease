@@ -180,6 +180,7 @@ export interface AuditBaseReportModel {
   title: string;
   generatedAt: string;
   dateRangeLabel: string;
+  redacted: boolean;
   metrics: AuditReportMetric[];
   dataQuality: AuditDataQuality;
 }

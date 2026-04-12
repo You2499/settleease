@@ -851,7 +851,7 @@ function renderDocumentShell(model: ExportReportModel, body: string, options: Re
       <div class="meta-grid">
         <div class="meta-cell"><span>Date Range</span><strong>${h(model.dateRangeLabel)}</strong></div>
         <div class="meta-cell"><span>Generated</span><strong>${h(model.generatedAt)}</strong></div>
-        <div class="meta-cell"><span>Report Mode</span><strong>${h(reportType)}</strong></div>
+        <div class="meta-cell"><span>Report Mode</span><strong>${h(reportType)} • Redaction ${model.redacted ? "On" : "Off"}</strong></div>
       </div>
     </header>
 

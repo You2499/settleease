@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Expense, ManualSettlementOverride, Person, SettlementPayment } from "@/lib/settleease/types";
+import type { ReportRedactionMap } from "@/lib/settleease/aiRedaction";
 import { calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
 import {
   buildExportDateRange,
@@ -225,6 +226,61 @@ describe("export report models", () => {
     expect(model.expenses[0].description).toBe("Misc expense");
     expect(model.expenses[0].category).toBe("General");
     expect(model.expenses[0].amount).toBe(1200);
+  });
+
+  it("applies AI redaction labels to group reports without changing calculations", () => {
+    const sensitiveExpense: Expense = {
+      ...expenses[0],
+      id: "expense-ai-redact",
+      description: "Beer and private medicine",
+      category: "Alcohol",
+      total_amount: 1200,
+      paid_by: [{ personId: "person-a", amount: 1200 }],
+      shares: [
+        { personId: "person-a", amount: 600 },
+        { personId: "person-b", amount: 600 },
+      ],
+      items: [
+        {
+          id: "item-ai-redact",
+          name: "Craft beer",
+          price: 1200,
+          sharedBy: ["person-a", "person-b"],
+          categoryName: "Alcohol",
+        },
+      ],
+      split_method: "itemwise",
+    };
+    const redactions: ReportRedactionMap = {
+      "expense-ai-redact": {
+        description: "Private shared expense",
+        category: "General",
+        items: {
+          "item-ai-redact": {
+            name: "Private item",
+            category: "General",
+          },
+        },
+      },
+    };
+
+    const model = buildGroupSummaryReportModel({
+      people,
+      expenses: [sensitiveExpense],
+      settlementPayments: [],
+      manualOverrides: [],
+      peopleMap,
+      categories: [],
+      dateRange: buildExportDateRange("allTime", undefined, undefined),
+      redacted: true,
+      redactions,
+    });
+
+    expect(model.redacted).toBe(true);
+    expect(model.includedExpenses[0].description).toBe("Private shared expense");
+    expect(model.includedExpenses[0].category).toBe("General");
+    expect(model.includedExpenses[0].items[0].name).toBe("Private item");
+    expect(model.metrics.find((metric) => metric.label === "Included Spend")?.value).toBe("₹1200.00");
   });
 
   it("reports deterministic data-quality warnings for inconsistent expenses", () => {
