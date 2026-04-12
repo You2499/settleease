@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
-import { BlobProvider, type DocumentProps } from "@react-pdf/renderer";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar,
   ChevronRight,
@@ -9,7 +8,6 @@ import {
   EyeOff,
   FileDown,
   FileText,
-  Loader2,
   Printer,
   ShieldCheck,
   Users,
@@ -35,11 +33,20 @@ import {
   type ExportMode,
   type ExportReportModel,
 } from "./export-tab";
-import ExportPdfDocument from "./export-tab/components/ExportPdfDocument";
+import { renderExportReportHtml } from "./export-tab/utils/htmlReport";
 
 function getReportFileName(model: ExportReportModel): string {
   const suffix = model.kind === "group" ? "Group_Summary" : "Personal_Statement";
   return `${sanitizeReportFileName(model.title)}_${suffix}.pdf`;
+}
+
+function getRuntimeInterFontCss(): string {
+  if (typeof document === "undefined") return "";
+
+  return Array.from(document.querySelectorAll("style"))
+    .map((style) => style.textContent || "")
+    .filter((css) => css.includes("--font-inter") || css.includes("__Inter") || css.includes("Inter"))
+    .join("\n");
 }
 
 function ModeButton({
@@ -91,76 +98,56 @@ function MetricPreview({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PdfPreview({
-  model,
-  documentNode,
-}: {
-  model: ExportReportModel;
-  documentNode: React.ReactElement<DocumentProps>;
-}) {
+function ReportPreview({ model, html }: { model: ExportReportModel; html: string }) {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const fileName = getReportFileName(model);
 
-  const handlePrint = (url: string | null) => {
-    if (!url) return;
-    const printWindow = window.open(url, "_blank", "noopener,noreferrer");
-    if (!printWindow) return;
-    printWindow.addEventListener("load", () => {
-      printWindow.focus();
-      printWindow.print();
-    });
+  const handlePrint = () => {
+    const frameWindow = iframeRef.current?.contentWindow;
+    const frameDocument = iframeRef.current?.contentDocument || frameWindow?.document;
+    if (!frameWindow || !frameDocument) return;
+
+    frameDocument.title = fileName;
+    frameWindow.focus();
+    frameWindow.print();
   };
 
   return (
-    <BlobProvider document={documentNode}>
-      {({ url, loading, error }) => (
-        <div className="space-y-4">
-          <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold">PDF output</p>
-              <p className="mt-1 truncate text-xs text-muted-foreground">{fileName}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
-              <Button
-                variant="outline"
-                className="h-11 min-w-0 overflow-hidden rounded-lg px-3"
-                disabled={loading || !url}
-                onClick={() => handlePrint(url)}
-              >
-                {loading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Printer className="h-4 w-4 shrink-0" />}
-                <span className="min-w-0 truncate">Print</span>
-              </Button>
-              <Button asChild className={cn("h-11 min-w-0 overflow-hidden rounded-lg px-3", (loading || !url) && "pointer-events-none opacity-50")}>
-                <a href={url || "#"} download={fileName}>
-                  {loading ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Download className="h-4 w-4 shrink-0" />}
-                  <span className="min-w-0 truncate">Download PDF</span>
-                </a>
-              </Button>
-            </div>
-          </div>
-
-          {error ? (
-            <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-sm text-destructive">
-              PDF generation failed. Please adjust the report filters and try again.
-            </div>
-          ) : (
-            <div className="overflow-hidden rounded-lg border bg-white">
-              {loading || !url ? (
-                <div className="flex h-[420px] items-center justify-center gap-3 text-sm text-muted-foreground sm:h-[700px]">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Preparing PDF preview...
-                </div>
-              ) : (
-                <iframe
-                  src={url}
-                  title="PDF Preview"
-                  className="h-[420px] w-full border-0 sm:h-[700px]"
-                />
-              )}
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Audit report output</p>
+          <p className="mt-1 truncate text-xs text-muted-foreground">{fileName}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Use the browser print dialog to print or save as PDF.</p>
         </div>
-      )}
-    </BlobProvider>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+          <Button
+            variant="outline"
+            className="h-11 min-w-0 overflow-hidden rounded-lg px-3"
+            onClick={handlePrint}
+          >
+            <Printer className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">Print PDF</span>
+          </Button>
+          <Button
+            className="h-11 min-w-0 overflow-hidden rounded-lg px-3"
+            onClick={handlePrint}
+          >
+            <Download className="h-4 w-4 shrink-0" />
+            <span className="min-w-0 truncate">Download PDF</span>
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-lg border bg-white">
+        <iframe
+          ref={iframeRef}
+          srcDoc={html}
+          title="PDF Preview"
+          className="h-[520px] w-full border-0 sm:h-[760px]"
+        />
+      </div>
+    </div>
   );
 }
 
@@ -213,6 +200,7 @@ export default function ExportExpenseTab({
         settlementPayments,
         manualOverrides,
         peopleMap,
+        categories,
         dateRange,
         reportName,
         selectedPersonId,
@@ -245,13 +233,14 @@ export default function ExportExpenseTab({
     settlementPayments,
   ]);
 
-  const pdfDocument = useMemo(
-    () => reportModel ? <ExportPdfDocument model={reportModel} /> : null,
-    [reportModel]
-  ) as React.ReactElement<DocumentProps> | null;
+  const interFontCss = useMemo(() => getRuntimeInterFontCss(), []);
+  const reportHtml = useMemo(
+    () => reportModel ? renderExportReportHtml(reportModel, { interFontCss }) : "",
+    [interFontCss, reportModel]
+  );
 
   const reportExpenseCount = reportModel?.kind === "group"
-    ? reportModel.expenses.length
+    ? reportModel.includedExpenses.length + reportModel.excludedExpenses.length
     : reportModel?.expenses.length || 0;
   const reportSettlementCount = reportModel?.settlements.length || 0;
   const remainingMetric = reportModel?.kind === "group"
@@ -275,7 +264,7 @@ export default function ExportExpenseTab({
           </div>
           <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" />
-            Real PDF output
+            Audit-grade HTML print
           </div>
         </div>
       </CardHeader>
@@ -440,8 +429,8 @@ export default function ExportExpenseTab({
                   Choose All Time or provide both custom dates before generating the PDF.
                 </p>
               </div>
-            ) : reportModel && pdfDocument ? (
-              <PdfPreview model={reportModel} documentNode={pdfDocument} />
+            ) : reportModel ? (
+              <ReportPreview model={reportModel} html={reportHtml} />
             ) : (
               <div className="flex min-h-[420px] items-center justify-center rounded-lg border bg-muted/20 p-6 text-sm text-muted-foreground">
                 Preparing report model...

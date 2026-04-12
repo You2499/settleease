@@ -10,3 +10,5 @@ export {
   buildPersonalStatementReportModel,
   sanitizeReportFileName,
 } from './utils/reportModels';
+
+export { renderExportReportHtml, renderLucideSvg } from './utils/htmlReport';

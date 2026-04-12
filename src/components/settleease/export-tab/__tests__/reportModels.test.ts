@@ -102,7 +102,7 @@ describe("export report models", () => {
       generatedAt: new Date("2026-01-15T10:00:00.000Z"),
     });
 
-    expect(model.expenses.map((expense) => expense.description)).toEqual(["Hotel Sagar", "Old taxi"]);
+    expect(model.includedExpenses.map((expense) => expense.description)).toEqual(["Hotel Sagar", "Old taxi"]);
     expect(model.settlements).toHaveLength(2);
     expect(model.metrics.find((metric) => metric.label === "Excluded Spend")?.value).toBe("₹500.00");
   });
@@ -122,7 +122,7 @@ describe("export report models", () => {
       ),
     });
 
-    expect(model.expenses.map((expense) => expense.description)).toEqual(["Hotel Sagar"]);
+    expect(model.includedExpenses.map((expense) => expense.description)).toEqual(["Hotel Sagar"]);
     expect(model.settlements).toHaveLength(1);
   });
 
@@ -146,9 +146,43 @@ describe("export report models", () => {
       dateRange,
     });
 
-    const actionTotal = model.paymentActions.reduce((sum, action) => sum + action.amount, 0);
+    const actionTotal = model.transactionProofs.reduce((sum, action) => sum + action.amount, 0);
     expect(actionTotal).toBeCloseTo(expectedTotal, 2);
     expect(model.manualOverrides).toHaveLength(1);
+  });
+
+  it("builds audit proof rows with contributing expenses and prior carried balances", () => {
+    const priorExpense: Expense = {
+      id: "expense-prior",
+      description: "Prior lodging",
+      total_amount: 100,
+      category: "Hotel",
+      paid_by: [{ personId: "person-a", amount: 100 }],
+      split_method: "unequal",
+      shares: [
+        { personId: "person-a", amount: 20 },
+        { personId: "person-b", amount: 80 },
+      ],
+      created_at: "2025-12-20T10:00:00.000Z",
+    };
+
+    const model = buildGroupSummaryReportModel({
+      people,
+      expenses: [...expenses, priorExpense],
+      settlementPayments,
+      manualOverrides: [],
+      peopleMap,
+      categories: [],
+      dateRange: buildExportDateRange(
+        "custom",
+        new Date("2026-01-01T00:00:00.000Z"),
+        new Date("2026-01-31T00:00:00.000Z")
+      ),
+    });
+
+    const amitProof = model.transactionProofs.find((proof) => proof.creditor === "Amit");
+    expect(amitProof?.contributingExpenses.map((expense) => expense.description)).toContain("Hotel Sagar");
+    expect(amitProof?.priorBalance).toBe(80);
   });
 
   it("builds a personal statement only from the selected participant's activity", () => {
