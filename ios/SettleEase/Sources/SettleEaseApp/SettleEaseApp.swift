@@ -3,67 +3,21 @@ import SwiftUI
 import SettleEaseServices
 
 public struct SettleEaseRoot: View {
-    @State private var model = AppModel.sample()
-    @State private var isShowingStartupSurface = true
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var store = DashboardStore.live()
 
     public init() {}
 
     public var body: some View {
-        ZStack {
-            RootView()
-                .environment(model)
-
-            if isShowingStartupSurface {
-                StartupSurface()
-                    .transition(.opacity)
+        DashboardRootView()
+            .environment(store)
+            .background(SettleTheme.page.ignoresSafeArea())
+            .tint(SettleTheme.primary)
+            .task {
+                store.start()
             }
-        }
-        .background(SettleTheme.page.ignoresSafeArea())
-        .task {
-            await dismissStartupSurface()
-        }
-    }
-
-    private func dismissStartupSurface() async {
-        guard isShowingStartupSurface else { return }
-
-        await Task.yield()
-        try? await Task.sleep(nanoseconds: 420_000_000)
-
-        withAnimation(reduceMotion ? .easeOut(duration: 0.12) : .settleEaseState) {
-            isShowingStartupSurface = false
-        }
-    }
-}
-
-private struct StartupSurface: View {
-    var body: some View {
-        VStack(spacing: 14) {
-            Image("SettleEaseBrandMark")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 54, height: 54)
-
-            VStack(spacing: 5) {
-                Text("SettleEase")
-                    .font(.title3.weight(.semibold))
-                    .foregroundStyle(SettleTheme.primary)
-
-                Text("Getting balances ready")
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(SettleTheme.warmAccent)
+            .onOpenURL { url in
+                store.handleOpenURL(url)
             }
-
-            ProgressView()
-                .controlSize(.small)
-                .tint(SettleTheme.positive)
-                .padding(.top, 4)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(SettleTheme.page.ignoresSafeArea())
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("SettleEase is getting balances ready")
     }
 }
 #endif

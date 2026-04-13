@@ -19,6 +19,7 @@ ios/SettleEase/.build/
 .env.development.local
 .env.test.local
 .env.production.local
+ios/SettleEase/XcodeApp/Secrets.xcconfig
 
 # Log files
 npm-debug.log*

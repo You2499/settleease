@@ -14,10 +14,31 @@
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.settleease.personal.auth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>settleease</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleShortVersionString</key>
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>SETTLEEASE_CONVEX_URL</key>
+	<string>$(SETTLEEASE_CONVEX_URL)</string>
+	<key>SETTLEEASE_OAUTH_REDIRECT_URL</key>
+	<string>$(SETTLEEASE_OAUTH_REDIRECT_URL)</string>
+	<key>SETTLEEASE_SUPABASE_ANON_KEY</key>
+	<string>$(SETTLEEASE_SUPABASE_URL)</string>
+	<key>SETTLEEASE_SUPABASE_URL</key>
+	<string>https://rtvppztfzkfspzuhgjwe.supabase.co</string>
+	<key>SETTLEEASE_WEB_BASE_URL</key>
+	<string>$(SETTLEEASE_WEB_BASE_URL)</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UISupportedInterfaceOrientations</key>

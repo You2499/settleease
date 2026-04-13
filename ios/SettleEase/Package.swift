@@ -14,11 +14,20 @@ let package = Package(
         .library(name: "SettleEaseAppSource", targets: ["SettleEaseApp"]),
         .executable(name: "SettleEaseCoreChecks", targets: ["SettleEaseCoreChecks"])
     ],
+    dependencies: [
+        .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.43.1"),
+        .package(url: "https://github.com/get-convex/convex-swift.git", from: "0.8.1")
+    ],
     targets: [
         .target(name: "SettleEaseCore"),
         .target(
             name: "SettleEaseServices",
-            dependencies: ["SettleEaseCore"]
+            dependencies: [
+                "SettleEaseCore",
+                .product(name: "Auth", package: "supabase-swift"),
+                .product(name: "Supabase", package: "supabase-swift"),
+                .product(name: "ConvexMobile", package: "convex-swift")
+            ]
         ),
         .target(
             name: "SettleEaseApp",

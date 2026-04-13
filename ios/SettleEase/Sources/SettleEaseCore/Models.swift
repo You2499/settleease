@@ -395,25 +395,37 @@ public struct ParsedReceiptData: Codable, Equatable, Sendable {
 }
 
 public struct StructuredSettlementSummary: Codable, Equatable, Sendable {
+    public var schemaVersion: Int
     public var settlementSnapshot: [String]
-    public var paymentActions: [String]
-    public var spendingMix: [String]
-    public var balancePressure: [String]
+    public var keyNumbers: [String]
+    public var whoShouldReceiveMoney: [String]
+    public var whoShouldPay: [String]
+    public var recommendedSettlementActions: [String]
+    public var spendingDrivers: [String]
+    public var manualOverridesAndExceptions: [String]
     public var dataQuality: [String]
     public var nextBestActions: [String]
 
     public init(
+        schemaVersion: Int = 1,
         settlementSnapshot: [String] = [],
-        paymentActions: [String] = [],
-        spendingMix: [String] = [],
-        balancePressure: [String] = [],
+        keyNumbers: [String] = [],
+        whoShouldReceiveMoney: [String] = [],
+        whoShouldPay: [String] = [],
+        recommendedSettlementActions: [String] = [],
+        spendingDrivers: [String] = [],
+        manualOverridesAndExceptions: [String] = [],
         dataQuality: [String] = [],
         nextBestActions: [String] = []
     ) {
+        self.schemaVersion = schemaVersion
         self.settlementSnapshot = settlementSnapshot
-        self.paymentActions = paymentActions
-        self.spendingMix = spendingMix
-        self.balancePressure = balancePressure
+        self.keyNumbers = keyNumbers
+        self.whoShouldReceiveMoney = whoShouldReceiveMoney
+        self.whoShouldPay = whoShouldPay
+        self.recommendedSettlementActions = recommendedSettlementActions
+        self.spendingDrivers = spendingDrivers
+        self.manualOverridesAndExceptions = manualOverridesAndExceptions
         self.dataQuality = dataQuality
         self.nextBestActions = nextBestActions
     }

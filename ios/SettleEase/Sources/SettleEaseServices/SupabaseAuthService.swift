@@ -1,100 +1,121 @@
+import Auth
 import Foundation
+import Supabase
 
 public struct SupabaseSession: Codable, Equatable, Sendable {
     public var accessToken: String
     public var refreshToken: String?
     public var userId: String?
     public var email: String?
+    public var expiresAt: Date?
 
-    public init(accessToken: String, refreshToken: String? = nil, userId: String? = nil, email: String? = nil) {
+    public init(
+        accessToken: String,
+        refreshToken: String? = nil,
+        userId: String? = nil,
+        email: String? = nil,
+        expiresAt: Date? = nil
+    ) {
         self.accessToken = accessToken
         self.refreshToken = refreshToken
         self.userId = userId
         self.email = email
+        self.expiresAt = expiresAt
     }
 }
 
 public protocol SupabaseAuthenticating: Sendable {
     func restoreSession() async throws -> SupabaseSession?
+    func currentValidSession() async throws -> SupabaseSession
     func signIn(email: String, password: String) async throws -> SupabaseSession
+    @MainActor func signInWithGoogle() async throws -> SupabaseSession
+    func handleOAuthCallback(_ url: URL) async throws -> SupabaseSession?
     func signOut() async throws
-    func googleOAuthURL(redirectTo: URL) async throws -> URL
 }
 
-public actor SupabaseAuthService: SupabaseAuthenticating {
+public actor SupabaseSessionManager: SupabaseAuthenticating {
     private let configuration: AppConfiguration
-    private let httpClient: HTTPClient
-    private var cachedSession: SupabaseSession?
+    private let client: SupabaseClient
 
-    public init(configuration: AppConfiguration, httpClient: HTTPClient = URLSessionHTTPClient()) {
+    public init(configuration: AppConfiguration) {
         self.configuration = configuration
-        self.httpClient = httpClient
+        self.client = SupabaseClient(
+            supabaseURL: configuration.supabaseURL,
+            supabaseKey: configuration.supabaseAnonKey,
+            options: SupabaseClientOptions(
+                auth: .init(
+                    redirectToURL: configuration.oauthRedirectURL,
+                    flowType: .pkce,
+                    autoRefreshToken: true,
+                    emitLocalSessionAsInitialSession: true
+                )
+            )
+        )
     }
 
     public func restoreSession() async throws -> SupabaseSession? {
-        cachedSession
+        if let current = client.auth.currentSession {
+            await client.auth.startAutoRefresh()
+            if current.isExpired {
+                let refreshed = try await client.auth.refreshSession()
+                return convert(refreshed)
+            }
+            return convert(current)
+        }
+
+        do {
+            let session = try await client.auth.session
+            await client.auth.startAutoRefresh()
+            return convert(session)
+        } catch {
+            return nil
+        }
+    }
+
+    public func currentValidSession() async throws -> SupabaseSession {
+        let session = try await client.auth.session
+        await client.auth.startAutoRefresh()
+        return convert(session)
     }
 
     public func signIn(email: String, password: String) async throws -> SupabaseSession {
-        let url = configuration.supabaseURL
-            .appending(path: "auth/v1/token")
-            .appending(queryItems: [URLQueryItem(name: "grant_type", value: "password")])
-        let body = try JSONEncoder().encode(PasswordSignInRequest(email: email, password: password))
-        let request = HTTPRequest(
-            url: url,
-            method: "POST",
-            headers: [
-                "Content-Type": "application/json",
-                "apikey": configuration.supabaseAnonKey,
-                "Accept": "application/json"
-            ],
-            body: body
+        let session = try await client.auth.signIn(email: email, password: password)
+        await client.auth.startAutoRefresh()
+        return convert(session)
+    }
+
+    @MainActor
+    public func signInWithGoogle() async throws -> SupabaseSession {
+        let session = try await client.auth.signInWithOAuth(
+            provider: .google,
+            redirectTo: configuration.oauthRedirectURL
         )
-        let (data, _) = try await httpClient.data(for: request)
-        let response = try JSONDecoder().decode(SupabasePasswordResponse.self, from: data)
-        let session = SupabaseSession(
-            accessToken: response.accessToken,
-            refreshToken: response.refreshToken,
-            userId: response.user?.id,
-            email: response.user?.email
-        )
-        cachedSession = session
-        return session
+        await client.auth.startAutoRefresh()
+        return convert(session)
+    }
+
+    public func handleOAuthCallback(_ url: URL) async throws -> SupabaseSession? {
+        guard url.scheme == configuration.oauthRedirectURL.scheme else {
+            return nil
+        }
+        let session = try await client.auth.session(from: url)
+        await client.auth.startAutoRefresh()
+        return convert(session)
     }
 
     public func signOut() async throws {
-        cachedSession = nil
+        try await client.auth.signOut()
+        await client.auth.stopAutoRefresh()
     }
 
-    public func googleOAuthURL(redirectTo: URL) async throws -> URL {
-        configuration.supabaseURL
-            .appending(path: "auth/v1/authorize")
-            .appending(queryItems: [
-                URLQueryItem(name: "provider", value: "google"),
-                URLQueryItem(name: "redirect_to", value: redirectTo.absoluteString)
-            ])
-    }
-}
-
-private struct PasswordSignInRequest: Encodable {
-    var email: String
-    var password: String
-}
-
-private struct SupabasePasswordResponse: Decodable {
-    struct User: Decodable {
-        var id: String?
-        var email: String?
-    }
-
-    var accessToken: String
-    var refreshToken: String?
-    var user: User?
-
-    enum CodingKeys: String, CodingKey {
-        case accessToken = "access_token"
-        case refreshToken = "refresh_token"
-        case user
+    private nonisolated func convert(_ session: Session) -> SupabaseSession {
+        SupabaseSession(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            userId: session.user.id.uuidString,
+            email: session.user.email,
+            expiresAt: Date(timeIntervalSince1970: session.expiresAt)
+        )
     }
 }
 
@@ -112,17 +133,40 @@ public actor SampleAuthService: SupabaseAuthenticating {
         session
     }
 
+    public func currentValidSession() async throws -> SupabaseSession {
+        if let session {
+            return session
+        }
+        throw AuthRuntimeError.noSession
+    }
+
     public func signIn(email: String, password: String) async throws -> SupabaseSession {
         let session = SupabaseSession(accessToken: "sample-access-token", userId: "sample-user", email: email)
         self.session = session
         return session
     }
 
+    @MainActor
+    public func signInWithGoogle() async throws -> SupabaseSession {
+        SupabaseSession(accessToken: "sample-access-token", userId: "sample-user", email: "you@example.com")
+    }
+
+    public func handleOAuthCallback(_ url: URL) async throws -> SupabaseSession? {
+        session
+    }
+
     public func signOut() async throws {
         session = nil
     }
+}
 
-    public func googleOAuthURL(redirectTo: URL) async throws -> URL {
-        redirectTo
+public enum AuthRuntimeError: LocalizedError, Equatable, Sendable {
+    case noSession
+
+    public var errorDescription: String? {
+        switch self {
+        case .noSession:
+            "No active Supabase session."
+        }
     }
 }

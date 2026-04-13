@@ -44,6 +44,20 @@ public enum SettleEaseFormatters {
         return formatter.string(from: date)
     }
 
+    public static func longDate(_ isoString: String?) -> String {
+        guard
+            let isoString,
+            let date = parseISODate(isoString)
+        else {
+            return "Date unavailable"
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_IN")
+        formatter.dateFormat = "MMMM d, yyyy"
+        return formatter.string(from: date)
+    }
+
     public static func parseISODate(_ value: String) -> Date? {
         let fractional = ISO8601DateFormatter()
         fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]

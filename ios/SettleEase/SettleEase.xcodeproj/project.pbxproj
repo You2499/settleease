@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		2BDF3BC9F6092A0BDDE1BB92 /* SettleEaseApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 525672067D7E0017CE684AA8 /* SettleEaseApp.swift */; };
+		43BAC86A2F8D155300A96493 /* Secrets.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 43BAC8692F8D154F00A96493 /* Secrets.xcconfig */; };
 		494C0A25DE810868B0E641A7 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 6EA0239DEAA5972920F482C2 /* Assets.xcassets */; };
 		959E3149D0EF1EBA8BC121DB /* SettleEaseAppSource in Frameworks */ = {isa = PBXBuildFile; productRef = 486B075421D8E70B62A07BCF /* SettleEaseAppSource */; };
 		E9EEEA3CDE4CDFF511F847E4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1236B715DF0A41902B6C5DBF /* LaunchScreen.storyboard */; };
@@ -18,8 +19,10 @@
 		0938C2ED701AE03E30A546D1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		1236B715DF0A41902B6C5DBF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1379456E970F53D3470F2C51 /* SettleEase */ = {isa = PBXFileReference; lastKnownFileType = folder; name = SettleEase; path = .; sourceTree = SOURCE_ROOT; };
+		43BAC8692F8D154F00A96493 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		525672067D7E0017CE684AA8 /* SettleEaseApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettleEaseApp.swift; sourceTree = "<group>"; };
 		6EA0239DEAA5972920F482C2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		C50E48B65ABE52F85549FF57 /* BuildDefaults.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = BuildDefaults.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,7 +49,9 @@
 		62757258509EAA1A0C38C505 /* XcodeApp */ = {
 			isa = PBXGroup;
 			children = (
+				43BAC8692F8D154F00A96493 /* Secrets.xcconfig */,
 				6EA0239DEAA5972920F482C2 /* Assets.xcassets */,
+				C50E48B65ABE52F85549FF57 /* BuildDefaults.xcconfig */,
 				0938C2ED701AE03E30A546D1 /* Info.plist */,
 				1236B715DF0A41902B6C5DBF /* LaunchScreen.storyboard */,
 				525672067D7E0017CE684AA8 /* SettleEaseApp.swift */,
@@ -131,6 +136,7 @@
 			files = (
 				494C0A25DE810868B0E641A7 /* Assets.xcassets in Resources */,
 				E9EEEA3CDE4CDFF511F847E4 /* LaunchScreen.storyboard in Resources */,
+				43BAC86A2F8D155300A96493 /* Secrets.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -150,12 +156,14 @@
 /* Begin XCBuildConfiguration section */
 		13502B1991E5EC735518195A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C50E48B65ABE52F85549FF57 /* BuildDefaults.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2W5L854CFP;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				INFOPLIST_FILE = XcodeApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -174,12 +182,14 @@
 		};
 		A368ED5ECC8B400A03FCBC44 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C50E48B65ABE52F85549FF57 /* BuildDefaults.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 2W5L854CFP;
+				"EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				INFOPLIST_FILE = XcodeApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = (

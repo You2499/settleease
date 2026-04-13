@@ -3,15 +3,18 @@ import SwiftUI
 import SettleEaseCore
 
 enum SettleTheme {
-    static let page = Color(red: 0.985, green: 0.985, blue: 0.975)
+    static let page = Color(red: 0.995, green: 0.993, blue: 0.988)
     static let card = Color(uiColor: .systemBackground)
     static let stone = Color(red: 245.0 / 255.0, green: 242.0 / 255.0, blue: 239.0 / 255.0)
     static let stoneStrong = Color(red: 238.0 / 255.0, green: 234.0 / 255.0, blue: 229.0 / 255.0)
+    static let muted = Color(red: 245.0 / 255.0, green: 245.0 / 255.0, blue: 245.0 / 255.0)
+    static let border = Color(red: 229.0 / 255.0, green: 229.0 / 255.0, blue: 229.0 / 255.0)
     static let primary = Color.primary
-    static let mutedText = Color.secondary
+    static let mutedText = Color(red: 78.0 / 255.0, green: 78.0 / 255.0, blue: 78.0 / 255.0)
     static let warmAccent = Color(red: 119.0 / 255.0, green: 113.0 / 255.0, blue: 105.0 / 255.0)
     static let positive = Color(red: 40.0 / 255.0, green: 117.0 / 255.0, blue: 74.0 / 255.0)
     static let warning = Color(red: 176.0 / 255.0, green: 111.0 / 255.0, blue: 45.0 / 255.0)
+    static let destructive = Color(red: 185.0 / 255.0, green: 28.0 / 255.0, blue: 28.0 / 255.0)
 }
 
 extension View {
@@ -41,6 +44,137 @@ struct ContentCard<Content: View>: View {
         }
         .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
         .shadow(color: Color(red: 78.0 / 255.0, green: 50.0 / 255.0, blue: 23.0 / 255.0).opacity(0.035), radius: 16, x: 0, y: 6)
+    }
+}
+
+struct WebBetaCard<Content: View>: View {
+    var padding: CGFloat = 16
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            content
+        }
+        .padding(padding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(SettleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(SettleTheme.border.opacity(0.95), lineWidth: 0.8)
+        }
+        .shadow(color: Color.black.opacity(0.045), radius: 8, x: 0, y: 3)
+        .shadow(color: Color(red: 78.0 / 255.0, green: 50.0 / 255.0, blue: 23.0 / 255.0).opacity(0.035), radius: 20, x: 0, y: 10)
+    }
+}
+
+struct WebSectionHeader: View {
+    var title: String
+    var subtitle: String?
+    var systemImage: String
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(SettleTheme.primary)
+                .frame(width: 32, height: 32)
+                .background(SettleTheme.stone, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(SettleTheme.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(SettleTheme.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct SettleAmountText: View {
+    var value: Double
+    var font: Font = .headline.weight(.bold)
+    var compact = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        Text(compact ? SettleEaseFormatters.compactCurrency(value) : SettleEaseFormatters.currency(value))
+            .font(font)
+            .monospacedDigit()
+            .contentTransition(reduceMotion ? .opacity : .numericText(value: value))
+            .animation(reduceMotion ? .easeInOut(duration: 0.12) : .settleEaseState, value: value)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+}
+
+enum WebPillButtonKind {
+    case primary
+    case secondary
+    case tertiary
+    case destructive
+}
+
+struct WebPillButtonStyle: ButtonStyle {
+    var kind: WebPillButtonKind = .tertiary
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, kind == .primary ? 16 : 13)
+            .padding(.vertical, 10)
+            .background(background, in: Capsule())
+            .overlay {
+                Capsule().stroke(stroke, lineWidth: 0.7)
+            }
+            .opacity(isEnabled ? 1 : 0.45)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.975 : 1)
+            .animation(reduceMotion ? .easeInOut(duration: 0.1) : .settleEaseFast, value: configuration.isPressed)
+    }
+
+    private var foreground: Color {
+        switch kind {
+        case .primary:
+            return .white
+        case .secondary, .tertiary:
+            return SettleTheme.primary
+        case .destructive:
+            return SettleTheme.destructive
+        }
+    }
+
+    private var background: Color {
+        switch kind {
+        case .primary:
+            return .black
+        case .secondary:
+            return .white
+        case .tertiary, .destructive:
+            return SettleTheme.stone
+        }
+    }
+
+    private var stroke: Color {
+        switch kind {
+        case .primary:
+            return .black.opacity(0.08)
+        case .secondary:
+            return SettleTheme.border
+        case .tertiary:
+            return Color.black.opacity(0.07)
+        case .destructive:
+            return SettleTheme.destructive.opacity(0.22)
+        }
     }
 }
 
@@ -151,6 +285,7 @@ struct SettleGlassToolbarButton: View {
                 .foregroundStyle(tint)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
+                .labelStyle(.titleAndIcon)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
