@@ -21,13 +21,13 @@ struct ReceiptScanView: View {
                 stepRail
 
                 ZStack(alignment: .bottom) {
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .fill(Color(uiColor: .secondarySystemBackground))
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(SettleTheme.stone.opacity(0.86))
                         .frame(height: 280)
                         .overlay {
                             VStack(spacing: 12) {
                                 Image(systemName: "receipt.fill")
-                                    .font(.system(size: 64, weight: .bold))
+                                    .font(.system(size: 52, weight: .semibold))
                                     .foregroundStyle(.secondary)
                                 Text("Receipt preview")
                                     .font(.headline)
@@ -63,8 +63,11 @@ struct ReceiptScanView: View {
                 }
             }
             .padding(16)
+            .padding(.bottom, 96)
         }
         .navigationTitle("Receipt Scan")
+        .navigationBarTitleDisplayMode(.inline)
+        .settleScreenChrome()
     }
 
     private var stepRail: some View {
@@ -72,7 +75,7 @@ struct ReceiptScanView: View {
             ForEach(Step.allCases, id: \.rawValue) { item in
                 VStack(spacing: 6) {
                     Circle()
-                        .fill(stepIndex(item) <= stepIndex(step) ? Color.green : Color.secondary.opacity(0.25))
+                        .fill(stepIndex(item) <= stepIndex(step) ? SettleTheme.primary : Color.secondary.opacity(0.25))
                         .frame(width: 10, height: 10)
                     Text(item.rawValue)
                         .font(.caption.weight(.semibold))
@@ -82,7 +85,11 @@ struct ReceiptScanView: View {
             }
         }
         .padding(12)
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(SettleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.black.opacity(0.08), lineWidth: 0.6)
+        }
     }
 
     private func parsedReceiptView(_ receipt: ParsedReceiptData) -> some View {
@@ -90,7 +97,7 @@ struct ReceiptScanView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(receipt.restaurantName ?? "Parsed receipt")
-                        .font(.title2.bold())
+                        .font(.title3.weight(.semibold))
                     Text("\(receipt.items.count) items · \(receipt.currency)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -117,8 +124,7 @@ struct ReceiptScanView: View {
                 Label("Save as Itemwise Expense", systemImage: "checkmark.circle.fill")
                     .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .clipShape(Capsule())
+            .buttonStyle(SettlePillButtonStyle(prominent: true))
             .disabled(!model.isAdmin)
         }
     }

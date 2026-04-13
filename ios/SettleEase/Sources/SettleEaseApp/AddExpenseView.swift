@@ -15,7 +15,8 @@ struct AddExpenseView: View {
             }
             .pickerStyle(.segmented)
             .padding(.horizontal, 16)
-            .padding(.top, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
 
             if selectedMode == .manual {
                 ManualExpenseForm()
@@ -24,7 +25,8 @@ struct AddExpenseView: View {
             }
         }
         .navigationTitle("Add")
-        .background(.background)
+        .navigationBarTitleDisplayMode(.inline)
+        .settleScreenChrome()
     }
 }
 
@@ -89,13 +91,12 @@ private struct ManualExpenseForm: View {
                     Label("Save Expense", systemImage: "checkmark.circle.fill")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
                 }
-                .buttonStyle(.borderedProminent)
-                .clipShape(Capsule())
+                .buttonStyle(SettlePillButtonStyle(prominent: true))
                 .disabled(!model.isAdmin)
             }
             .padding(16)
+            .padding(.bottom, 96)
         }
         .onAppear {
             category = model.categories.first?.name ?? "Food"

@@ -11,9 +11,9 @@ struct AuthView: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 Text("SettleEase")
-                    .font(.largeTitle.bold())
-                Text("A quiet place for group money to become clear.")
-                    .font(.body)
+                    .font(.title.weight(.semibold))
+                Text("A calm place for group money to become clear.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
 
@@ -31,24 +31,20 @@ struct AuthView: View {
                 Text("Continue")
                     .font(.headline)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
             }
-            .buttonStyle(.borderedProminent)
-            .clipShape(Capsule())
+            .buttonStyle(SettlePillButtonStyle(prominent: true))
 
             Button {
             } label: {
                 Label("Continue with Google", systemImage: "globe")
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
             }
-            .buttonStyle(.bordered)
-            .clipShape(Capsule())
+            .buttonStyle(SettlePillButtonStyle())
 
             Spacer()
         }
         .padding(22)
-        .background(.background)
+        .settleScreenChrome()
     }
 }
 #endif

@@ -10,7 +10,7 @@ struct ManageView: View {
             Section {
                 if model.isAdmin {
                     Label("Admin tools are available on this device.", systemImage: "checkmark.seal.fill")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(SettleTheme.positive)
                 } else {
                     Label("Read-only mode. Admin actions are disabled.", systemImage: "lock.fill")
                         .foregroundStyle(.secondary)
@@ -74,6 +74,10 @@ struct ManageView: View {
             }
         }
         .navigationTitle("Manage")
+        .navigationBarTitleDisplayMode(.inline)
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .settleScreenChrome()
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {

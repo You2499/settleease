@@ -19,38 +19,37 @@ struct AnalyticsView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                header
                 filters
                 spendingChart
                 categoryChart
                 participantTable
             }
             .padding(16)
+            .padding(.bottom, 96)
         }
         .navigationTitle("Analytics")
+        .navigationBarTitleDisplayMode(.inline)
         .searchable(text: .constant(""), placement: .toolbar, prompt: "Find expenses")
-    }
-
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Spend patterns")
-                .font(.largeTitle.bold())
-            Text("Charts stay readable first; glass appears only where controls float above the data.")
-                .foregroundStyle(.secondary)
-        }
+        .settleScreenChrome()
     }
 
     private var filters: some View {
-        SettleGlassActionGroup {
+        HStack {
             Picker("Mode", selection: $mode) {
                 ForEach(Mode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
-            .frame(width: 220)
+            .frame(maxWidth: 260)
+            Spacer()
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(SettleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.black.opacity(0.08), lineWidth: 0.6)
+        }
     }
 
     private var spendingChart: some View {
@@ -61,7 +60,7 @@ struct AnalyticsView: View {
                     x: .value("Month", point.label),
                     y: .value("Spend", point.amount)
                 )
-                .foregroundStyle(.green.gradient)
+            .foregroundStyle(SettleTheme.primary.gradient)
             }
             .chartYAxis {
                 AxisMarks { value in
@@ -93,6 +92,12 @@ struct AnalyticsView: View {
                 )
                 .foregroundStyle(by: .value("Category", point.label))
             }
+            .chartForegroundStyleScale([
+                "Food": SettleTheme.primary,
+                "Travel": SettleTheme.warmAccent,
+                "Stay": SettleTheme.stoneStrong,
+                "Fun": SettleTheme.warning
+            ])
             .frame(height: 240)
             .animation(.settleEaseState, value: categorySpend)
             #else
@@ -105,7 +110,7 @@ struct AnalyticsView: View {
     private var participantTable: some View {
         ContentCard {
             Text("Participants")
-                .font(.title2.bold())
+                .font(.title3.weight(.semibold))
 
             ForEach(model.people) { person in
                 let balance = SettlementCalculator.netBalances(
@@ -120,7 +125,7 @@ struct AnalyticsView: View {
                     Text(SettleEaseFormatters.currency(balance))
                         .font(.headline)
                         .monospacedDigit()
-                        .foregroundStyle(balance >= 0 ? .green : .orange)
+                        .foregroundStyle(balance >= 0 ? SettleTheme.positive : SettleTheme.warning)
                 }
                 .padding(.vertical, 6)
             }
@@ -162,7 +167,7 @@ struct ChartPanel<Content: View>: View {
         ContentCard {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.title2.bold())
+                    .font(.title3.weight(.semibold))
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
