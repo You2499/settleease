@@ -1,3 +1,6 @@
+function normalizeSupabaseUserId(value: string) {
+  return value.trim().toLowerCase();
+}
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
@@ -29,7 +32,10 @@ const aiModelCode = v.union(
 
 const DEFAULT_AI_CONFIG_KEY = "global-ai-config";
 const DEFAULT_AI_MODEL_CODE = "gemini-3.1-flash-lite-preview";
-const DEFAULT_AI_FALLBACK_MODEL_CODES = ["gemini-3-flash-preview", "gemini-2.5-flash"];
+const DEFAULT_AI_FALLBACK_MODEL_CODES = [
+  "gemini-3-flash-preview",
+  "gemini-2.5-flash",
+];
 
 const activeView = v.union(
   v.literal("dashboard"),
@@ -178,9 +184,12 @@ function aiConfigDto(config: any, key = DEFAULT_AI_CONFIG_KEY) {
 }
 
 async function getProfileBySupabaseUserId(ctx: any, supabaseUserId: string) {
+  const normalizedUserId = normalizeSupabaseUserId(supabaseUserId);
   return await ctx.db
     .query("userProfiles")
-    .withIndex("by_supabase_user_id", (q: any) => q.eq("supabaseUserId", supabaseUserId))
+    .withIndex("by_supabase_user_id", (q: any) =>
+      q.eq("supabaseUserId", normalizedUserId),
+    )
     .unique();
 }
 
@@ -193,10 +202,15 @@ async function requireAuthenticatedSupabaseUserId(ctx: any) {
 }
 
 async function requireSelf(ctx: any, supabaseUserId: string) {
-  const authenticatedUserId = await requireAuthenticatedSupabaseUserId(ctx);
-  if (authenticatedUserId !== supabaseUserId) {
+  const authenticatedUserId = normalizeSupabaseUserId(
+    await requireAuthenticatedSupabaseUserId(ctx),
+  );
+  const requestedUserId = normalizeSupabaseUserId(supabaseUserId);
+
+  if (authenticatedUserId !== requestedUserId) {
     throw new ConvexError("Cannot access another user's profile.");
   }
+
   return authenticatedUserId;
 }
 
@@ -218,7 +232,8 @@ async function ensureUserProfile(
     lastName?: string;
   },
 ) {
-  const existing = await getProfileBySupabaseUserId(ctx, args.supabaseUserId);
+  const normalizedUserId = normalizeSupabaseUserId(args.supabaseUserId);
+  const existing = await getProfileBySupabaseUserId(ctx, normalizedUserId);
   const timestamp = nowIso();
 
   if (existing) {
@@ -232,7 +247,7 @@ async function ensureUserProfile(
   }
 
   return await ctx.db.insert("userProfiles", {
-    supabaseUserId: args.supabaseUserId,
+    supabaseUserId: normalizedUserId,
     email: args.email,
     role: "user",
     firstName: args.firstName || undefined,
@@ -259,7 +274,9 @@ export const getUserProfile = query({
   args: { supabaseUserId: v.string() },
   handler: async (ctx, args) => {
     await requireSelf(ctx, args.supabaseUserId);
-    return profileDto(await getProfileBySupabaseUserId(ctx, args.supabaseUserId));
+    return profileDto(
+      await getProfileBySupabaseUserId(ctx, args.supabaseUserId),
+    );
   },
 });
 
@@ -303,7 +320,12 @@ export const updateUserProfile = mutation({
     firstName: v.optional(v.union(v.string(), v.null())),
     lastName: v.optional(v.union(v.string(), v.null())),
     fontPreference: v.optional(
-      v.union(v.literal("geist"), v.literal("system"), v.literal("inter"), v.literal("google-sans")),
+      v.union(
+        v.literal("geist"),
+        v.literal("system"),
+        v.literal("inter"),
+        v.literal("google-sans"),
+      ),
     ),
     themePreference: v.optional(v.string()),
     lastActiveView: v.optional(activeView),
@@ -316,13 +338,20 @@ export const updateUserProfile = mutation({
     if (!profile) throw new ConvexError("User profile not found.");
 
     const updates: Record<string, any> = { updatedAt: nowIso() };
-    if (args.firstName !== undefined) updates.firstName = args.firstName ?? undefined;
-    if (args.lastName !== undefined) updates.lastName = args.lastName ?? undefined;
-    if (args.fontPreference !== undefined) updates.fontPreference = args.fontPreference;
-    if (args.themePreference !== undefined) updates.themePreference = args.themePreference;
-    if (args.lastActiveView !== undefined) updates.lastActiveView = args.lastActiveView;
-    if (args.hasSeenWelcomeToast !== undefined) updates.hasSeenWelcomeToast = args.hasSeenWelcomeToast;
-    if (args.shouldShowWelcomeToast !== undefined) updates.shouldShowWelcomeToast = args.shouldShowWelcomeToast;
+    if (args.firstName !== undefined)
+      updates.firstName = args.firstName ?? undefined;
+    if (args.lastName !== undefined)
+      updates.lastName = args.lastName ?? undefined;
+    if (args.fontPreference !== undefined)
+      updates.fontPreference = args.fontPreference;
+    if (args.themePreference !== undefined)
+      updates.themePreference = args.themePreference;
+    if (args.lastActiveView !== undefined)
+      updates.lastActiveView = args.lastActiveView;
+    if (args.hasSeenWelcomeToast !== undefined)
+      updates.hasSeenWelcomeToast = args.hasSeenWelcomeToast;
+    if (args.shouldShowWelcomeToast !== undefined)
+      updates.shouldShowWelcomeToast = args.shouldShowWelcomeToast;
 
     await ctx.db.patch(profile._id, updates);
     return profileDto(await ctx.db.get(profile._id));
@@ -345,7 +374,12 @@ export const addPerson = mutation({
     const name = args.name.trim();
     if (!name) throw new ConvexError("Person's name cannot be empty.");
     const people = await ctx.db.query("people").collect();
-    if (people.some((person: any) => person.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (
+      people.some(
+        (person: any) =>
+          person.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
       throw new ConvexError(`A person named "${name}" already exists.`);
     }
     await ctx.db.insert("people", { name, createdAt: nowIso() });
@@ -382,23 +416,38 @@ export const removePerson = mutation({
     if (!person) throw new ConvexError("Person not found.");
 
     const payments = await ctx.db.query("settlementPayments").collect();
-    const paymentCount = payments.filter((payment: any) => payment.debtorId === args.id || payment.creditorId === args.id).length;
+    const paymentCount = payments.filter(
+      (payment: any) =>
+        payment.debtorId === args.id || payment.creditorId === args.id,
+    ).length;
     if (paymentCount > 0) {
-      throw new ConvexError(`${person.name} is involved in ${paymentCount} recorded settlement(s).`);
+      throw new ConvexError(
+        `${person.name} is involved in ${paymentCount} recorded settlement(s).`,
+      );
     }
 
     const expenses = await ctx.db.query("expenses").collect();
     const involvedInExpense = expenses.some((expense: any) => {
-      const isPayer = Array.isArray(expense.paidBy) && expense.paidBy.some((p: any) => p.personId === args.id);
-      const isSharer = Array.isArray(expense.shares) && expense.shares.some((s: any) => s.personId === args.id);
+      const isPayer =
+        Array.isArray(expense.paidBy) &&
+        expense.paidBy.some((p: any) => p.personId === args.id);
+      const isSharer =
+        Array.isArray(expense.shares) &&
+        expense.shares.some((s: any) => s.personId === args.id);
       const isItemSharer =
         Array.isArray(expense.items) &&
-        expense.items.some((item: any) => Array.isArray(item.sharedBy) && item.sharedBy.includes(args.id));
-      const isCelebrationContributor = expense.celebrationContribution?.personId === args.id;
+        expense.items.some(
+          (item: any) =>
+            Array.isArray(item.sharedBy) && item.sharedBy.includes(args.id),
+        );
+      const isCelebrationContributor =
+        expense.celebrationContribution?.personId === args.id;
       return isPayer || isSharer || isItemSharer || isCelebrationContributor;
     });
     if (involvedInExpense) {
-      throw new ConvexError(`${person.name} is involved in one or more expenses.`);
+      throw new ConvexError(
+        `${person.name} is involved in one or more expenses.`,
+      );
     }
 
     await ctx.db.delete(person._id);
@@ -411,7 +460,11 @@ export const ensureDefaultPeople = mutation({
     await requireAdmin(ctx);
     const existing = await ctx.db.query("people").take(1);
     if (existing.length > 0) return false;
-    await Promise.all(["Alice", "Bob", "Charlie"].map((name) => ctx.db.insert("people", { name, createdAt: nowIso() })));
+    await Promise.all(
+      ["Alice", "Bob", "Charlie"].map((name) =>
+        ctx.db.insert("people", { name, createdAt: nowIso() }),
+      ),
+    );
     return true;
   },
 });
@@ -423,7 +476,10 @@ export const listCategories = query({
     const categories = await ctx.db.query("categories").collect();
     return categories
       .map(categoryDto)
-      .sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999) || a.name.localeCompare(b.name));
+      .sort(
+        (a, b) =>
+          (a.rank ?? 999) - (b.rank ?? 999) || a.name.localeCompare(b.name),
+      );
   },
 });
 
@@ -434,10 +490,18 @@ export const addCategory = mutation({
     const name = args.name.trim();
     if (!name) throw new ConvexError("Category name cannot be empty.");
     const categories = await ctx.db.query("categories").collect();
-    if (categories.some((category: any) => category.name.trim().toLowerCase() === name.toLowerCase())) {
+    if (
+      categories.some(
+        (category: any) =>
+          category.name.trim().toLowerCase() === name.toLowerCase(),
+      )
+    ) {
       throw new ConvexError(`A category named "${name}" already exists.`);
     }
-    const maxRank = categories.length > 0 ? Math.max(...categories.map((category: any) => category.rank ?? 0)) : 0;
+    const maxRank =
+      categories.length > 0
+        ? Math.max(...categories.map((category: any) => category.rank ?? 0))
+        : 0;
     await ctx.db.insert("categories", {
       name,
       iconName: args.iconName,
@@ -484,7 +548,9 @@ export const deleteCategory = mutation({
       );
     }).length;
     if (count > 0) {
-      throw new ConvexError(`Category "${category.name}" is used by ${count} expense(s).`);
+      throw new ConvexError(
+        `Category "${category.name}" is used by ${count} expense(s).`,
+      );
     }
     await ctx.db.delete(category._id);
   },
@@ -510,7 +576,11 @@ export const listExpenses = query({
     const expenses = await ctx.db.query("expenses").collect();
     return expenses
       .map(expenseDto)
-      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.created_at ?? 0).getTime() -
+          new Date(a.created_at ?? 0).getTime(),
+      );
   },
 });
 
@@ -521,10 +591,16 @@ export const saveExpense = mutation({
     totalAmount: v.number(),
     category: v.string(),
     paidBy: v.array(payerShare),
-    splitMethod: v.union(v.literal("equal"), v.literal("unequal"), v.literal("itemwise")),
+    splitMethod: v.union(
+      v.literal("equal"),
+      v.literal("unequal"),
+      v.literal("itemwise"),
+    ),
     shares: v.array(payerShare),
     items: v.optional(v.union(v.array(expenseItem), v.null())),
-    celebrationContribution: v.optional(v.union(celebrationContribution, v.null())),
+    celebrationContribution: v.optional(
+      v.union(celebrationContribution, v.null()),
+    ),
     excludeFromSettlement: v.optional(v.boolean()),
     createdAt: v.optional(v.string()),
   },
@@ -591,7 +667,10 @@ export const listSettlementPayments = query({
     const payments = await ctx.db.query("settlementPayments").collect();
     return payments
       .map(settlementPaymentDto)
-      .sort((a, b) => new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.settled_at).getTime() - new Date(a.settled_at).getTime(),
+      );
   },
 });
 
@@ -653,7 +732,10 @@ export const listManualSettlementOverrides = query({
     const overrides = await ctx.db.query("manualSettlementOverrides").collect();
     return overrides
       .map(manualOverrideDto)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
   },
 });
 
@@ -709,7 +791,9 @@ export const clearActiveManualSettlementOverrides = mutation({
     await Promise.all(
       overrides
         .filter((override: any) => override.isActive)
-        .map((override: any) => ctx.db.patch(override._id, { isActive: false, updatedAt: nowIso() })),
+        .map((override: any) =>
+          ctx.db.patch(override._id, { isActive: false, updatedAt: nowIso() }),
+        ),
     );
   },
 });
@@ -719,7 +803,9 @@ export const getActiveAiPrompt = query({
   handler: async (ctx, args) => {
     const prompt = await ctx.db
       .query("aiPrompts")
-      .withIndex("by_name_active", (q) => q.eq("name", args.name).eq("isActive", true))
+      .withIndex("by_name_active", (q) =>
+        q.eq("name", args.name).eq("isActive", true),
+      )
       .first();
     return aiPromptDto(prompt);
   },
@@ -737,7 +823,10 @@ export const getActiveAiConfig = query({
         .first();
       return aiConfigDto(config, configKey);
     } catch (error) {
-      console.warn("Falling back to default AI config after read failure:", error);
+      console.warn(
+        "Falling back to default AI config after read failure:",
+        error,
+      );
       return defaultAiConfigDto(configKey);
     }
   },
@@ -790,8 +879,12 @@ export const getAiPromptEditorData = query({
     const prompts = await ctx.db.query("aiPrompts").collect();
     const matching = prompts.filter((prompt: any) => prompt.name === args.name);
     return {
-      activePrompt: aiPromptDto(matching.find((prompt: any) => prompt.isActive)),
-      promptHistory: matching.map(aiPromptDto).sort((a: any, b: any) => b.version - a.version),
+      activePrompt: aiPromptDto(
+        matching.find((prompt: any) => prompt.isActive),
+      ),
+      promptHistory: matching
+        .map(aiPromptDto)
+        .sort((a: any, b: any) => b.version - a.version),
     };
   },
 });
@@ -807,7 +900,9 @@ export const saveAiPrompt = mutation({
     await requireAdmin(ctx);
     const active = await ctx.db
       .query("aiPrompts")
-      .withIndex("by_name_active", (q) => q.eq("name", args.name).eq("isActive", true))
+      .withIndex("by_name_active", (q) =>
+        q.eq("name", args.name).eq("isActive", true),
+      )
       .first();
     const timestamp = nowIso();
     const nextVersion = active ? active.version + 1 : 1;
@@ -838,7 +933,9 @@ export const clearAiSummaries = mutation({
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const summaries = await ctx.db.query("aiSummaries").collect();
-    await Promise.all(summaries.map((summary: any) => ctx.db.delete(summary._id)));
+    await Promise.all(
+      summaries.map((summary: any) => ctx.db.delete(summary._id)),
+    );
   },
 });
 
@@ -995,11 +1092,13 @@ export const getReportGenerationAnalytics = query({
 
     for (const event of events) {
       byEventType[event.eventType] = (byEventType[event.eventType] ?? 0) + 1;
-      byDatePreset[event.datePreset] = (byDatePreset[event.datePreset] ?? 0) + 1;
+      byDatePreset[event.datePreset] =
+        (byDatePreset[event.datePreset] ?? 0) + 1;
       if (event.reportMode === "group") byReportMode.group += 1;
       if (event.reportMode === "personal") byReportMode.personal += 1;
       if (event.redacted) redactedEvents += 1;
-      if (event.eventType === "redaction_cache_hit" || event.usedCache === true) cacheHits += 1;
+      if (event.eventType === "redaction_cache_hit" || event.usedCache === true)
+        cacheHits += 1;
       if (event.eventType === "redaction_fallback") fallbackEvents += 1;
       if (event.eventType === "redaction_generated") generatedRedactions += 1;
     }

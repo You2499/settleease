@@ -112,7 +112,7 @@ public actor SupabaseSessionManager: SupabaseAuthenticating {
         SupabaseSession(
             accessToken: session.accessToken,
             refreshToken: session.refreshToken,
-            userId: session.user.id.uuidString,
+            userId: session.user.id.uuidString.lowercased(),
             email: session.user.email,
             expiresAt: Date(timeIntervalSince1970: session.expiresAt)
         )

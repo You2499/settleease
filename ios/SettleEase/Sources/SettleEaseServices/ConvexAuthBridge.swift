@@ -197,25 +197,35 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
     public func bootstrapProfile(session: SupabaseSession) async throws -> UserProfile {
         try await ensureConvexAuth()
         let supabaseUserId = try requireUserId(session)
-        let _: UserProfile = try await client.mutation(
-            "app:markSignIn",
-            with: [
-                "supabaseUserId": supabaseUserId,
-                "email": optionalConvexString(session.email)
-            ]
-        )
-        return try await client.mutation(
-            "app:upsertUserProfile",
-            with: [
-                "supabaseUserId": supabaseUserId,
-                "email": optionalConvexString(session.email)
-            ]
-        )
+//        let _: UserProfile = try await client.mutation(
+//            "app:markSignIn",
+//            with: [
+//                "supabaseUserId": supabaseUserId,
+//                "email": optionalConvexString(session.email)
+//            ]
+//        )
+        do {
+                return try await client.mutation(
+                    "app:upsertUserProfile",
+                    with: [
+                        "supabaseUserId": supabaseUserId,
+                        "email": optionalConvexString(session.email)
+                    ]
+                )
+            } catch {
+                throw NSError(
+                    domain: "BootstrapProfile",
+                    code: 1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "app:upsertUserProfile failed for supabaseUserId=\(supabaseUserId): \(error.localizedDescription)"
+                    ]
+                )
+            }
     }
 
     public func streamDashboardSnapshot(session: SupabaseSession) async throws -> AsyncThrowingStream<DashboardSnapshot, Error> {
         try await ensureConvexAuth()
-        let supabaseUserId = try requireUserId(session)
         let initialProfile = try await bootstrapProfile(session: session)
 
         return AsyncThrowingStream { continuation in
@@ -226,35 +236,30 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
 
             let tasks = [
                 subscriptionTask(
-                    publisher: client.subscribe(
-                        to: "app:getUserProfile",
-                        with: ["supabaseUserId": supabaseUserId],
-                        yielding: UserProfile?.self
-                    ),
-                    continuation: continuation
-                ) { value in
-                    if let value { await accumulator.updateProfile(value) }
-                },
-                subscriptionTask(
                     publisher: client.subscribe(to: "app:listPeople", yielding: [Person].self),
                     continuation: continuation
                 ) { await accumulator.updatePeople($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(to: "app:listCategories", yielding: [SettleEaseCore.Category].self),
                     continuation: continuation
                 ) { await accumulator.updateCategories($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(to: "app:listExpenses", yielding: [Expense].self),
                     continuation: continuation
                 ) { await accumulator.updateExpenses($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(to: "app:listSettlementPayments", yielding: [SettlementPayment].self),
                     continuation: continuation
                 ) { await accumulator.updatePayments($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(to: "app:listManualSettlementOverrides", yielding: [ManualSettlementOverride].self),
                     continuation: continuation
                 ) { await accumulator.updateOverrides($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(
                         to: "app:getActiveAiPrompt",
@@ -263,6 +268,7 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
                     ),
                     continuation: continuation
                 ) { await accumulator.updatePrompt($0) },
+
                 subscriptionTask(
                     publisher: client.subscribe(
                         to: "app:getActiveAiConfig",
