@@ -21,9 +21,16 @@ enum DashboardMode: String, CaseIterable, Identifiable {
     var id: String { rawValue }
 }
 
+struct RelevantExpenseDrilldown: Identifiable, Equatable {
+    var id: String { title + expenses.map(\.id).joined(separator: "|") }
+    var title: String
+    var expenses: [Expense]
+}
+
 struct DashboardSummarySheet: Identifiable, Equatable {
     var id: String { hash }
     var hash: String
+    var payload: SettleJSONValue?
     var summary: StructuredSettlementSummary?
     var source: String
     var modelDisplayName: String?
@@ -35,19 +42,28 @@ struct DashboardSummarySheet: Identifiable, Equatable {
 @MainActor
 final class DashboardStore {
     var phase: RootPhase = .launching
-    var snapshot: DashboardSnapshot?
+    var snapshot: DashboardSnapshot? {
+        didSet { rebuildDerivedState() }
+    }
     var session: SupabaseSession?
     var email = ""
     var password = ""
     var authError: String?
-    var filters = DashboardFilters()
+    var filters = DashboardFilters() {
+        didSet { rebuildDerivedState() }
+    }
     var dashboardMode: DashboardMode = .overview
-    var useSimplifiedSettlements = true
+    var useSimplifiedSettlements = true {
+        didSet { rebuildDerivedState() }
+    }
     var selectedPersonId: String?
     var showBalancedPeople = false
     var selectedExpense: Expense?
+    var relevantExpenseDrilldown: RelevantExpenseDrilldown?
     var futurePhaseMessage: String?
     var summarySheet: DashboardSummarySheet?
+    var isSummarising = false
+    var derived = DashboardDerivedState.empty
     var hapticsEnabled = true
 
     private let auth: (any SupabaseAuthenticating)?
@@ -56,6 +72,7 @@ final class DashboardStore {
     private let haptics: any HapticsProviding
     private var streamTask: Task<Void, Never>?
     private var startupTask: Task<Void, Never>?
+    private var lastSummarySheet: DashboardSummarySheet?
 
     init(
         auth: (any SupabaseAuthenticating)?,
@@ -120,48 +137,12 @@ final class DashboardStore {
     var manualOverrides: [ManualSettlementOverride] { snapshot?.manualOverrides ?? [] }
     var peopleMap: [String: String] { snapshot?.peopleMap ?? [:] }
 
-    var balances: [String: PersonBalanceSnapshot] {
-        PersonBalanceBuilder.balances(
-            people: people,
-            expenses: expenses,
-            settlementPayments: settlementPayments
-        )
-    }
-
-    var simplifiedTransactions: [CalculatedTransaction] {
-        SettlementCalculator.simplifiedTransactions(
-            people: people,
-            expenses: expenses,
-            settlementPayments: settlementPayments,
-            manualOverrides: manualOverrides
-        )
-    }
-
-    var pairwiseTransactions: [CalculatedTransaction] {
-        SettlementCalculator.pairwiseTransactions(
-            people: people,
-            expenses: expenses,
-            settlementPayments: settlementPayments
-        )
-    }
-
-    var visibleTransactions: [CalculatedTransaction] {
-        useSimplifiedSettlements ? simplifiedTransactions : pairwiseTransactions
-    }
-
-    var activities: [DashboardActivity] {
-        DashboardActivityBuilder.activities(
-            expenses: expenses,
-            settlementPayments: settlementPayments,
-            peopleMap: peopleMap,
-            categories: categories,
-            filters: filters
-        )
-    }
-
-    var groupedActivities: [(date: String, items: [DashboardActivity])] {
-        DashboardActivityBuilder.grouped(activities)
-    }
+    var balances: [String: PersonBalanceSnapshot] { derived.balances }
+    var simplifiedTransactions: [CalculatedTransaction] { derived.simplifiedTransactions }
+    var pairwiseTransactions: [CalculatedTransaction] { derived.pairwiseTransactions }
+    var visibleTransactions: [CalculatedTransaction] { derived.visibleTransactions }
+    var activities: [DashboardActivity] { derived.activities }
+    var groupedActivities: [(date: String, items: [DashboardActivity])] { derived.groupedActivities }
 
     var activeOverrides: [ManualSettlementOverride] {
         manualOverrides.filter(\.isActive)
@@ -170,6 +151,25 @@ final class DashboardStore {
     var selectedPerson: Person? {
         guard let selectedPersonId else { return nil }
         return people.first { $0.id == selectedPersonId }
+    }
+
+    var personPickerPeople: [Person] {
+        guard !showBalancedPeople else { return people }
+        let unbalanced = people.filter { abs(balances[$0.id]?.netBalance ?? 0) > 0.01 }
+        if let selectedPerson, !unbalanced.contains(where: { $0.id == selectedPerson.id }) {
+            return [selectedPerson] + unbalanced
+        }
+        return unbalanced
+    }
+
+    func personPresentation(for person: Person) -> PersonSettlementPresentation? {
+        guard let snapshot else { return nil }
+        return PersonSettlementPresentation.build(
+            person: person,
+            snapshot: snapshot,
+            simplifiedTransactions: simplifiedTransactions,
+            balances: balances
+        )
     }
 
     func start() {
@@ -264,6 +264,9 @@ final class DashboardStore {
         streamTask = nil
         snapshot = nil
         session = nil
+        relevantExpenseDrilldown = nil
+        summarySheet = nil
+        lastSummarySheet = nil
         if let repository {
             do {
                 try await repository.signOut()
@@ -317,6 +320,7 @@ final class DashboardStore {
     }
 
     func summarise() async {
+        guard !isSummarising else { return }
         guard let snapshot, let aiService, let repository else { return }
         let payload = SummaryPayloadBuilder.build(
             people: snapshot.people,
@@ -335,8 +339,17 @@ final class DashboardStore {
 
         do {
             let hash = try SummaryPayloadBuilder.hash(hashInput)
+            if let lastSummarySheet, lastSummarySheet.hash == hash, !lastSummarySheet.isLoading {
+                summarySheet = lastSummarySheet
+                return
+            }
+
+            isSummarising = true
+            defer { isSummarising = false }
+
             summarySheet = DashboardSummarySheet(
                 hash: hash,
+                payload: payload,
                 summary: nil,
                 source: "Loading",
                 modelDisplayName: modelCode,
@@ -346,15 +359,17 @@ final class DashboardStore {
 
             if let cached = try await repository.cachedSummary(hash: hash),
                let data = cached.summary.data(using: .utf8),
-               let parsed = try? JSONDecoder().decode(StructuredSettlementSummary.self, from: data) {
+               let parsed = decodeCachedSummary(data: data, fallbackText: cached.summary) {
                 summarySheet = DashboardSummarySheet(
                     hash: hash,
+                    payload: payload,
                     summary: parsed,
                     source: "Cached",
                     modelDisplayName: cached.modelName ?? modelCode,
                     errorMessage: nil,
                     isLoading: false
                 )
+                lastSummarySheet = summarySheet
                 return
             }
 
@@ -372,15 +387,19 @@ final class DashboardStore {
             )
             summarySheet = DashboardSummarySheet(
                 hash: hash,
+                payload: payload,
                 summary: result.summary,
                 source: "Generated",
                 modelDisplayName: result.modelDisplayName ?? result.model ?? modelCode,
                 errorMessage: nil,
                 isLoading: false
             )
+            lastSummarySheet = summarySheet
         } catch {
+            isSummarising = false
             summarySheet = DashboardSummarySheet(
                 hash: UUID().uuidString,
+                payload: payload,
                 summary: nil,
                 source: "Error",
                 modelDisplayName: modelCode,
@@ -421,6 +440,30 @@ final class DashboardStore {
     private func play(_ event: SettleHapticEvent) {
         guard hapticsEnabled else { return }
         haptics.play(event)
+    }
+
+    private func rebuildDerivedState() {
+        derived = DashboardDerivedState.build(
+            snapshot: snapshot,
+            filters: filters,
+            useSimplifiedSettlements: useSimplifiedSettlements
+        )
+    }
+
+    private func decodeCachedSummary(data: Data, fallbackText: String) -> StructuredSettlementSummary? {
+        if let parsed = try? JSONDecoder().decode(StructuredSettlementSummary.self, from: data) {
+            return parsed
+        }
+        guard
+            let start = fallbackText.firstIndex(of: "{"),
+            let end = fallbackText.lastIndex(of: "}"),
+            start < end
+        else {
+            return nil
+        }
+        let jsonSubstring = String(fallbackText[start...end])
+        guard let jsonData = jsonSubstring.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode(StructuredSettlementSummary.self, from: jsonData)
     }
 }
 

@@ -3,18 +3,97 @@ import SwiftUI
 import SettleEaseCore
 
 enum SettleTheme {
-    static let page = Color(red: 0.995, green: 0.993, blue: 0.988)
-    static let card = Color(uiColor: .systemBackground)
-    static let stone = Color(red: 245.0 / 255.0, green: 242.0 / 255.0, blue: 239.0 / 255.0)
-    static let stoneStrong = Color(red: 238.0 / 255.0, green: 234.0 / 255.0, blue: 229.0 / 255.0)
-    static let muted = Color(red: 245.0 / 255.0, green: 245.0 / 255.0, blue: 245.0 / 255.0)
-    static let border = Color(red: 229.0 / 255.0, green: 229.0 / 255.0, blue: 229.0 / 255.0)
-    static let primary = Color.primary
-    static let mutedText = Color(red: 78.0 / 255.0, green: 78.0 / 255.0, blue: 78.0 / 255.0)
-    static let warmAccent = Color(red: 119.0 / 255.0, green: 113.0 / 255.0, blue: 105.0 / 255.0)
-    static let positive = Color(red: 40.0 / 255.0, green: 117.0 / 255.0, blue: 74.0 / 255.0)
-    static let warning = Color(red: 176.0 / 255.0, green: 111.0 / 255.0, blue: 45.0 / 255.0)
-    static let destructive = Color(red: 185.0 / 255.0, green: 28.0 / 255.0, blue: 28.0 / 255.0)
+    static let page = adaptive(
+        light: UIColor(red: 0.995, green: 0.993, blue: 0.988, alpha: 1),
+        dark: UIColor(red: 0.055, green: 0.058, blue: 0.055, alpha: 1)
+    )
+    static let card = Color(uiColor: .secondarySystemBackground)
+    static let elevated = Color(uiColor: .systemBackground)
+    static let stone = adaptive(
+        light: UIColor(red: 245.0 / 255.0, green: 242.0 / 255.0, blue: 239.0 / 255.0, alpha: 1),
+        dark: UIColor(red: 0.145, green: 0.137, blue: 0.125, alpha: 1)
+    )
+    static let stoneStrong = adaptive(
+        light: UIColor(red: 238.0 / 255.0, green: 234.0 / 255.0, blue: 229.0 / 255.0, alpha: 1),
+        dark: UIColor(red: 0.205, green: 0.193, blue: 0.172, alpha: 1)
+    )
+    static let muted = Color(uiColor: .tertiarySystemBackground)
+    static let border = Color(uiColor: .separator)
+    static let hairline = Color(uiColor: .opaqueSeparator)
+    static let primary = Color(uiColor: .label)
+    static let inverseSurface = Color(uiColor: .label)
+    static let inverseText = Color(uiColor: .systemBackground)
+    static let mutedText = Color(uiColor: .secondaryLabel)
+    static let tertiaryText = Color(uiColor: .tertiaryLabel)
+    static let warmAccent = adaptive(
+        light: UIColor(red: 119.0 / 255.0, green: 113.0 / 255.0, blue: 105.0 / 255.0, alpha: 1),
+        dark: UIColor(red: 0.74, green: 0.70, blue: 0.64, alpha: 1)
+    )
+    static let positive = adaptive(
+        light: UIColor(red: 24.0 / 255.0, green: 125.0 / 255.0, blue: 82.0 / 255.0, alpha: 1),
+        dark: UIColor(red: 0.36, green: 0.86, blue: 0.58, alpha: 1)
+    )
+    static let positiveSurface = adaptive(
+        light: UIColor(red: 0.91, green: 0.98, blue: 0.94, alpha: 1),
+        dark: UIColor(red: 0.05, green: 0.20, blue: 0.12, alpha: 1)
+    )
+    static let warning = adaptive(
+        light: UIColor(red: 176.0 / 255.0, green: 111.0 / 255.0, blue: 45.0 / 255.0, alpha: 1),
+        dark: UIColor(red: 0.98, green: 0.67, blue: 0.35, alpha: 1)
+    )
+    static let warningSurface = adaptive(
+        light: UIColor(red: 1.0, green: 0.96, blue: 0.88, alpha: 1),
+        dark: UIColor(red: 0.25, green: 0.14, blue: 0.04, alpha: 1)
+    )
+    static let destructive = Color(uiColor: .systemRed)
+    static let destructiveSurface = adaptive(
+        light: UIColor(red: 1.0, green: 0.93, blue: 0.92, alpha: 1),
+        dark: UIColor(red: 0.25, green: 0.06, blue: 0.05, alpha: 1)
+    )
+    static let rowHighlight = adaptive(
+        light: UIColor(red: 1, green: 1, blue: 1, alpha: 0.88),
+        dark: UIColor(red: 0.16, green: 0.16, blue: 0.15, alpha: 0.92)
+    )
+    static let glassControlFill = adaptive(
+        light: UIColor(white: 1.0, alpha: 0.72),
+        dark: UIColor(white: 0.08, alpha: 0.74)
+    )
+    static let glassControlPressedFill = adaptive(
+        light: UIColor(white: 0.94, alpha: 0.82),
+        dark: UIColor(white: 0.18, alpha: 0.82)
+    )
+    static let glassControlStroke = adaptive(
+        light: UIColor(white: 0.0, alpha: 0.09),
+        dark: UIColor(white: 1.0, alpha: 0.16)
+    )
+    static let glassControlText = Color(uiColor: .label)
+    static let glassControlMutedText = Color(uiColor: .secondaryLabel)
+    static let glassPrimaryFill = adaptive(
+        light: UIColor(red: 0.08, green: 0.08, blue: 0.075, alpha: 0.90),
+        dark: UIColor(red: 0.88, green: 0.98, blue: 0.91, alpha: 0.92)
+    )
+    static let glassPrimaryPressedFill = adaptive(
+        light: UIColor(red: 0.16, green: 0.16, blue: 0.14, alpha: 0.94),
+        dark: UIColor(red: 0.74, green: 0.94, blue: 0.80, alpha: 0.96)
+    )
+    static let glassPrimaryText = adaptive(
+        light: UIColor.white,
+        dark: UIColor(red: 0.03, green: 0.13, blue: 0.08, alpha: 1)
+    )
+    static let glassPrimaryStroke = adaptive(
+        light: UIColor(white: 1.0, alpha: 0.18),
+        dark: UIColor(white: 0.0, alpha: 0.16)
+    )
+    static let shadow = adaptive(
+        light: UIColor.black.withAlphaComponent(0.08),
+        dark: UIColor.black.withAlphaComponent(0.34)
+    )
+
+    private static func adaptive(light: UIColor, dark: UIColor) -> Color {
+        Color(uiColor: UIColor { trait in
+            trait.userInterfaceStyle == .dark ? dark : light
+        })
+    }
 }
 
 extension View {
@@ -40,9 +119,9 @@ struct ContentCard<Content: View>: View {
         .background(SettleTheme.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .stroke(Color.black.opacity(0.08), lineWidth: 0.6)
+                .stroke(SettleTheme.border.opacity(0.72), lineWidth: 0.6)
         }
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .shadow(color: SettleTheme.shadow.opacity(0.45), radius: 4, x: 0, y: 2)
         .shadow(color: Color(red: 78.0 / 255.0, green: 50.0 / 255.0, blue: 23.0 / 255.0).opacity(0.035), radius: 16, x: 0, y: 6)
     }
 }
@@ -62,7 +141,7 @@ struct WebBetaCard<Content: View>: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .stroke(SettleTheme.border.opacity(0.95), lineWidth: 0.8)
         }
-        .shadow(color: Color.black.opacity(0.045), radius: 8, x: 0, y: 3)
+        .shadow(color: SettleTheme.shadow.opacity(0.45), radius: 8, x: 0, y: 3)
         .shadow(color: Color(red: 78.0 / 255.0, green: 50.0 / 255.0, blue: 23.0 / 255.0).opacity(0.035), radius: 20, x: 0, y: 10)
     }
 }
@@ -74,7 +153,7 @@ struct WebSectionHeader: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
-            Image(systemName: systemImage)
+            Image(systemName: SettleIcon.symbol(for: systemImage))
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(SettleTheme.primary)
                 .frame(width: 32, height: 32)
@@ -145,7 +224,7 @@ struct WebPillButtonStyle: ButtonStyle {
     private var foreground: Color {
         switch kind {
         case .primary:
-            return .white
+            return SettleTheme.inverseText
         case .secondary, .tertiary:
             return SettleTheme.primary
         case .destructive:
@@ -156,9 +235,9 @@ struct WebPillButtonStyle: ButtonStyle {
     private var background: Color {
         switch kind {
         case .primary:
-            return .black
+            return SettleTheme.inverseSurface
         case .secondary:
-            return .white
+            return SettleTheme.elevated
         case .tertiary, .destructive:
             return SettleTheme.stone
         }
@@ -167,11 +246,11 @@ struct WebPillButtonStyle: ButtonStyle {
     private var stroke: Color {
         switch kind {
         case .primary:
-            return .black.opacity(0.08)
+            return SettleTheme.hairline.opacity(0.35)
         case .secondary:
             return SettleTheme.border
         case .tertiary:
-            return Color.black.opacity(0.07)
+            return SettleTheme.hairline.opacity(0.28)
         case .destructive:
             return SettleTheme.destructive.opacity(0.22)
         }
@@ -204,7 +283,7 @@ struct MetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
-                Image(systemName: symbol)
+                Image(systemName: SettleIcon.symbol(for: symbol))
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(tint)
                     .frame(width: 24, height: 24)
@@ -239,16 +318,16 @@ struct SettlePillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(prominent ? Color.white : Color.primary)
+            .foregroundStyle(prominent ? SettleTheme.inverseText : SettleTheme.primary)
             .padding(.horizontal, prominent ? 16 : 14)
             .padding(.vertical, 10)
-            .background(prominent ? Color.black : SettleTheme.stone, in: Capsule())
+            .background(prominent ? SettleTheme.inverseSurface : SettleTheme.stone, in: Capsule())
             .overlay {
                 if !prominent {
-                    Capsule().stroke(Color.black.opacity(0.08), lineWidth: 0.6)
+                    Capsule().stroke(SettleTheme.border.opacity(0.65), lineWidth: 0.6)
                 }
             }
-            .shadow(color: Color.black.opacity(prominent ? 0.12 : 0.04), radius: prominent ? 8 : 4, x: 0, y: 2)
+            .shadow(color: SettleTheme.shadow.opacity(prominent ? 0.75 : 0.35), radius: prominent ? 8 : 4, x: 0, y: 2)
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
             .animation(.settleEaseFast, value: configuration.isPressed)
     }
@@ -272,27 +351,66 @@ struct SettleGlassActionGroup<Content: View>: View {
     }
 }
 
+enum SettleGlassToolbarButtonKind {
+    case primary
+    case secondary
+}
+
 struct SettleGlassToolbarButton: View {
     var title: String
     var systemImage: String
-    var tint: Color = .primary
+    var kind: SettleGlassToolbarButtonKind = .secondary
+    var tint: Color?
     var action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(tint)
+        Button {
+            action()
+        } label: {
+            Label(title, systemImage: SettleIcon.symbol(for: systemImage))
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(foreground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.86)
+                .frame(minHeight: 44)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 10)
                 .labelStyle(.titleAndIcon)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
-        .background {
-            SettleGlass {
-                Color.clear
+        .background(background)
+        .overlay {
+            Capsule()
+                .stroke(stroke, lineWidth: 0.8)
+        }
+        .contentShape(Capsule())
+        .fixedSize(horizontal: true, vertical: false)
+        .scaleEffect(reduceMotion ? 1 : 1)
+    }
+
+    private var foreground: Color {
+        tint ?? (kind == .primary ? SettleTheme.glassPrimaryText : SettleTheme.glassControlText)
+    }
+
+    @ViewBuilder
+    private var background: some View {
+        SettleGlass {
+            switch kind {
+            case .primary:
+                SettleTheme.glassPrimaryFill
+            case .secondary:
+                SettleTheme.glassControlFill
             }
+        }
+    }
+
+    private var stroke: Color {
+        switch kind {
+        case .primary:
+            SettleTheme.glassPrimaryStroke
+        case .secondary:
+            SettleTheme.glassControlStroke
         }
     }
 }
@@ -304,7 +422,7 @@ struct EmptyState: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Image(systemName: symbol)
+            Image(systemName: SettleIcon.symbol(for: symbol))
                 .font(.largeTitle.weight(.bold))
                 .foregroundStyle(.secondary)
 

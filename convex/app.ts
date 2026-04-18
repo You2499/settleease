@@ -974,17 +974,26 @@ export const storeAiSummary = mutation({
   },
   handler: async (ctx, args) => {
     const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
-    if (args.userId !== supabaseUserId) {
+    const requestedUserId = normalizeSupabaseUserId(args.userId);
+    if (requestedUserId !== supabaseUserId) {
       throw new ConvexError("Cannot store summaries for another user.");
     }
     const existing = await ctx.db
       .query("aiSummaries")
       .withIndex("by_data_hash", (q) => q.eq("dataHash", args.dataHash))
       .first();
-    if (existing) return existing._id;
     const timestamp = nowIso();
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        userId: supabaseUserId,
+        summary: args.summary,
+        modelName: args.modelName ?? null,
+        updatedAt: timestamp,
+      });
+      return existing._id;
+    }
     return await ctx.db.insert("aiSummaries", {
-      userId: args.userId,
+      userId: supabaseUserId,
       dataHash: args.dataHash,
       summary: args.summary,
       modelName: args.modelName ?? null,

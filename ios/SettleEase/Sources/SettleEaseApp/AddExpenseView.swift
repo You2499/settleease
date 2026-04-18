@@ -55,7 +55,8 @@ private struct ManualExpenseForm: View {
                         .keyboardType(.decimalPad)
                     Picker("Category", selection: $category) {
                         ForEach(model.categories) { category in
-                            Label(category.name, systemImage: category.iconName).tag(category.name)
+                            Label(category.name, systemImage: SettleIcon.symbol(for: category.iconName))
+                                .tag(category.name)
                         }
                     }
                     DatePicker("Date", selection: $expenseDate, displayedComponents: .date)

@@ -29,7 +29,7 @@ struct ManageView: View {
 
             Section("Categories") {
                 ForEach(model.categories) { category in
-                    Label(category.name, systemImage: category.iconName)
+                    Label(category.name, systemImage: SettleIcon.symbol(for: category.iconName))
                         .contextMenu {
                             Button("Edit") {}
                             Button("Delete", role: .destructive) {}

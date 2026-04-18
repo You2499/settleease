@@ -568,7 +568,10 @@ public enum SummaryPayloadBuilder {
             ])
         }
         .sorted {
-            ($0.objectValue?["total_spent"]?.doubleValue ?? 0) > ($1.objectValue?["total_spent"]?.doubleValue ?? 0)
+            let leftTotal = $0.objectValue?["total_spent"]?.doubleValue ?? 0
+            let rightTotal = $1.objectValue?["total_spent"]?.doubleValue ?? 0
+            if abs(leftTotal - rightTotal) > epsilon { return leftTotal > rightTotal }
+            return ($0.objectValue?["name"]?.stringValue ?? "") < ($1.objectValue?["name"]?.stringValue ?? "")
         }
     }
 
@@ -581,7 +584,14 @@ public enum SummaryPayloadBuilder {
                     "amount": .number(round($0.amount))
                 ])
             }
-            .sorted { ($0.objectValue?["amount"]?.doubleValue ?? 0) > ($1.objectValue?["amount"]?.doubleValue ?? 0) }
+            .sorted { lhs, rhs in
+                let leftAmount = lhs.objectValue?["amount"]?.doubleValue ?? 0
+                let rightAmount = rhs.objectValue?["amount"]?.doubleValue ?? 0
+                if abs(leftAmount - rightAmount) > epsilon { return leftAmount > rightAmount }
+                let leftPair = "\(lhs.objectValue?["from"]?.stringValue ?? "")::\(lhs.objectValue?["to"]?.stringValue ?? "")"
+                let rightPair = "\(rhs.objectValue?["from"]?.stringValue ?? "")::\(rhs.objectValue?["to"]?.stringValue ?? "")"
+                return leftPair < rightPair
+            }
     }
 
     private static func recommendedPayments(
@@ -607,7 +617,14 @@ public enum SummaryPayloadBuilder {
                 ]
             }
             .filter { ($0["outstanding_amount"]?.doubleValue ?? 0) > epsilon }
-            .sorted { ($0["outstanding_amount"]?.doubleValue ?? 0) > ($1["outstanding_amount"]?.doubleValue ?? 0) }
+            .sorted { lhs, rhs in
+                let leftAmount = lhs["outstanding_amount"]?.doubleValue ?? 0
+                let rightAmount = rhs["outstanding_amount"]?.doubleValue ?? 0
+                if abs(leftAmount - rightAmount) > epsilon { return leftAmount > rightAmount }
+                let leftPair = "\(lhs["from"]?.stringValue ?? "")::\(lhs["to"]?.stringValue ?? "")"
+                let rightPair = "\(rhs["from"]?.stringValue ?? "")::\(rhs["to"]?.stringValue ?? "")"
+                return leftPair < rightPair
+            }
     }
 
     private static func personBalancesByName(people: [Person], peopleMap: [String: String], balances: [String: PersonBalanceSnapshot]) -> [String: SettleJSONValue] {
@@ -643,6 +660,15 @@ public enum SummaryPayloadBuilder {
                 "notes": payment.notes.map(SettleJSONValue.string) ?? .null
             ])
         }
+        .sorted { lhs, rhs in
+            let leftDate = lhs.objectValue?["settled_at"]?.stringValue ?? ""
+            let rightDate = rhs.objectValue?["settled_at"]?.stringValue ?? ""
+            if leftDate != rightDate { return leftDate > rightDate }
+            let leftPair = "\(lhs.objectValue?["debtor"]?.stringValue ?? "")::\(lhs.objectValue?["creditor"]?.stringValue ?? "")"
+            let rightPair = "\(rhs.objectValue?["debtor"]?.stringValue ?? "")::\(rhs.objectValue?["creditor"]?.stringValue ?? "")"
+            if leftPair != rightPair { return leftPair < rightPair }
+            return (lhs.objectValue?["amount_settled"]?.doubleValue ?? 0) > (rhs.objectValue?["amount_settled"]?.doubleValue ?? 0)
+        }
     }
 
     private static func namedOverrides(_ overrides: [ManualSettlementOverride], people: [Person], peopleMap: [String: String]) -> [SettleJSONValue] {
@@ -654,6 +680,12 @@ public enum SummaryPayloadBuilder {
                 "notes": override.notes.map(SettleJSONValue.string) ?? .null,
                 "is_active": .bool(override.isActive)
             ])
+        }
+        .sorted { lhs, rhs in
+            let leftPair = "\(lhs.objectValue?["debtor"]?.stringValue ?? "")::\(lhs.objectValue?["creditor"]?.stringValue ?? "")"
+            let rightPair = "\(rhs.objectValue?["debtor"]?.stringValue ?? "")::\(rhs.objectValue?["creditor"]?.stringValue ?? "")"
+            if leftPair != rightPair { return leftPair < rightPair }
+            return (lhs.objectValue?["amount"]?.doubleValue ?? 0) > (rhs.objectValue?["amount"]?.doubleValue ?? 0)
         }
     }
 
@@ -668,11 +700,11 @@ public enum SummaryPayloadBuilder {
                 "paid_by": .array(expense.paidBy.map { .object([
                     "person": .string(idToName($0.personId, people: people, peopleMap: peopleMap)),
                     "amount": .number(round($0.amount))
-                ]) }),
+                ]) }.sorted(by: namedAmountSort(personKey: "person", amountKey: "amount"))),
                 "shares": .array(expense.shares.map { .object([
                     "person": .string(idToName($0.personId, people: people, peopleMap: peopleMap)),
                     "amount": .number(round($0.amount))
-                ]) }),
+                ]) }.sorted(by: namedAmountSort(personKey: "person", amountKey: "amount"))),
                 "celebration_contribution": expense.celebrationContribution.map { contribution in
                     .object([
                         "person": .string(idToName(contribution.personId, people: people, peopleMap: peopleMap)),
@@ -684,12 +716,12 @@ public enum SummaryPayloadBuilder {
                         "name": .string(item.name),
                         "price": .number(round(item.price)),
                         "category_name": .string(item.categoryName ?? expense.category),
-                        "shared_by": .array(item.sharedBy.map { .string(idToName($0, people: people, peopleMap: peopleMap)) })
+                        "shared_by": .array(item.sharedBy.map { .string(idToName($0, people: people, peopleMap: peopleMap)) }.sorted(by: stringValueSort))
                     ])
-                })
+                }.sorted(by: itemSort))
             ])
         }
-        .sorted { ($0.objectValue?["created_at"]?.stringValue ?? "") > ($1.objectValue?["created_at"]?.stringValue ?? "") }
+        .sorted(by: expenseSort)
     }
 
     private static func rankedBalances(_ balances: [String: Double], people: [Person], peopleMap: [String: String], positive: Bool) -> [SettleJSONValue] {
@@ -701,7 +733,12 @@ public enum SummaryPayloadBuilder {
                     "amount": .number(round(positive ? balance : abs(balance)))
                 ])
             }
-            .sorted { ($0.objectValue?["amount"]?.doubleValue ?? 0) > ($1.objectValue?["amount"]?.doubleValue ?? 0) }
+            .sorted { lhs, rhs in
+                let leftAmount = lhs.objectValue?["amount"]?.doubleValue ?? 0
+                let rightAmount = rhs.objectValue?["amount"]?.doubleValue ?? 0
+                if abs(leftAmount - rightAmount) > epsilon { return leftAmount > rightAmount }
+                return (lhs.objectValue?["name"]?.stringValue ?? "") < (rhs.objectValue?["name"]?.stringValue ?? "")
+            }
     }
 
     private static func topCategories(_ categories: [SettleJSONValue], includedSpend: Double) -> [SettleJSONValue] {
@@ -761,6 +798,49 @@ public enum SummaryPayloadBuilder {
             if !known.contains(payment.creditorId) { warnings.insert("Settlement payment references an unknown creditor.") }
         }
         return warnings.sorted()
+    }
+
+    private static func namedAmountSort(personKey: String, amountKey: String) -> (SettleJSONValue, SettleJSONValue) -> Bool {
+        { lhs, rhs in
+            let leftName = lhs.objectValue?[personKey]?.stringValue ?? ""
+            let rightName = rhs.objectValue?[personKey]?.stringValue ?? ""
+            if leftName != rightName { return leftName < rightName }
+            return (lhs.objectValue?[amountKey]?.doubleValue ?? 0) > (rhs.objectValue?[amountKey]?.doubleValue ?? 0)
+        }
+    }
+
+    private static func stringValueSort(_ lhs: SettleJSONValue, _ rhs: SettleJSONValue) -> Bool {
+        (lhs.stringValue ?? "") < (rhs.stringValue ?? "")
+    }
+
+    private static func itemSort(_ lhs: SettleJSONValue, _ rhs: SettleJSONValue) -> Bool {
+        let leftCategory = lhs.objectValue?["category_name"]?.stringValue ?? ""
+        let rightCategory = rhs.objectValue?["category_name"]?.stringValue ?? ""
+        if leftCategory != rightCategory { return leftCategory < rightCategory }
+        let leftName = lhs.objectValue?["name"]?.stringValue ?? ""
+        let rightName = rhs.objectValue?["name"]?.stringValue ?? ""
+        if leftName != rightName { return leftName < rightName }
+        return (lhs.objectValue?["price"]?.doubleValue ?? 0) > (rhs.objectValue?["price"]?.doubleValue ?? 0)
+    }
+
+    private static func expenseSort(_ lhs: SettleJSONValue, _ rhs: SettleJSONValue) -> Bool {
+        let leftObject = lhs.objectValue ?? [:]
+        let rightObject = rhs.objectValue ?? [:]
+        let leftDate = leftObject["created_at"]?.stringValue ?? ""
+        let rightDate = rightObject["created_at"]?.stringValue ?? ""
+        if leftDate != rightDate { return leftDate > rightDate }
+
+        let leftDescription = leftObject["description"]?.stringValue ?? ""
+        let rightDescription = rightObject["description"]?.stringValue ?? ""
+        if leftDescription != rightDescription { return leftDescription < rightDescription }
+
+        let leftTotal = leftObject["total_amount"]?.doubleValue ?? 0
+        let rightTotal = rightObject["total_amount"]?.doubleValue ?? 0
+        if abs(leftTotal - rightTotal) > epsilon { return leftTotal > rightTotal }
+
+        let leftCategory = leftObject["category"]?.stringValue ?? ""
+        let rightCategory = rightObject["category"]?.stringValue ?? ""
+        return leftCategory < rightCategory
     }
 }
 
