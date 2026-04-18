@@ -37,6 +37,103 @@ export interface SummaryPayloadInput {
   personBalances: Record<string, PersonBalanceSnapshot>;
 }
 
+export function buildPersonBalanceSnapshots(
+  people: Person[],
+  allExpenses: Expense[],
+  settlementPayments: SettlementPayment[]
+): Record<string, PersonBalanceSnapshot> {
+  const balances: Record<string, PersonBalanceSnapshot> = {};
+  people.forEach((person) => {
+    balances[person.id] = {
+      totalPaid: 0,
+      totalOwed: 0,
+      settledAsDebtor: 0,
+      settledAsCreditor: 0,
+      netBalance: 0,
+    };
+  });
+
+  allExpenses.forEach((expense) => {
+    if (expense.exclude_from_settlement) return;
+
+    (Array.isArray(expense.paid_by) ? expense.paid_by : []).forEach((payment) => {
+      balances[payment.personId] ||= {
+        totalPaid: 0,
+        totalOwed: 0,
+        settledAsDebtor: 0,
+        settledAsCreditor: 0,
+        netBalance: 0,
+      };
+      balances[payment.personId].totalPaid += toAmount(payment.amount);
+    });
+
+    (Array.isArray(expense.shares) ? expense.shares : []).forEach((share) => {
+      balances[share.personId] ||= {
+        totalPaid: 0,
+        totalOwed: 0,
+        settledAsDebtor: 0,
+        settledAsCreditor: 0,
+        netBalance: 0,
+      };
+      balances[share.personId].totalOwed += toAmount(share.amount);
+    });
+
+    if (expense.celebration_contribution && toAmount(expense.celebration_contribution.amount) > 0) {
+      const contributorId = expense.celebration_contribution.personId;
+      balances[contributorId] ||= {
+        totalPaid: 0,
+        totalOwed: 0,
+        settledAsDebtor: 0,
+        settledAsCreditor: 0,
+        netBalance: 0,
+      };
+      balances[contributorId].totalOwed += toAmount(expense.celebration_contribution.amount);
+    }
+  });
+
+  settlementPayments.forEach((payment) => {
+    balances[payment.debtor_id] ||= {
+      totalPaid: 0,
+      totalOwed: 0,
+      settledAsDebtor: 0,
+      settledAsCreditor: 0,
+      netBalance: 0,
+    };
+    balances[payment.creditor_id] ||= {
+      totalPaid: 0,
+      totalOwed: 0,
+      settledAsDebtor: 0,
+      settledAsCreditor: 0,
+      netBalance: 0,
+    };
+    balances[payment.debtor_id].settledAsDebtor += toAmount(payment.amount_settled);
+    balances[payment.creditor_id].settledAsCreditor += toAmount(payment.amount_settled);
+  });
+
+  const netBalances = calculateNetBalances(people, allExpenses, settlementPayments);
+  people.forEach((person) => {
+    balances[person.id] ||= {
+      totalPaid: 0,
+      totalOwed: 0,
+      settledAsDebtor: 0,
+      settledAsCreditor: 0,
+      netBalance: 0,
+    };
+    balances[person.id].netBalance = toAmount(netBalances[person.id]);
+  });
+
+  Object.keys(balances).forEach((personId) => {
+    const balance = balances[personId];
+    balance.totalPaid = roundAmount(balance.totalPaid);
+    balance.totalOwed = roundAmount(balance.totalOwed);
+    balance.settledAsDebtor = roundAmount(balance.settledAsDebtor);
+    balance.settledAsCreditor = roundAmount(balance.settledAsCreditor);
+    balance.netBalance = roundAmount(balance.netBalance);
+  });
+
+  return balances;
+}
+
 type PersonAmount = {
   name: string;
   amount: number;

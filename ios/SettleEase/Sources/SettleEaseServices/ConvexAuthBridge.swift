@@ -56,8 +56,7 @@ public protocol DashboardRepository: Sendable {
     func signOut() async throws
     func markSettlementPaid(_ transaction: CalculatedTransaction, markedByUserId: String) async throws
     func deleteSettlementPayment(id: String) async throws
-    func cachedSummary(hash: String) async throws -> AISummaryCacheRecord?
-    func storeSummary(hash: String, summary: StructuredSettlementSummary, modelName: String?, userId: String) async throws
+    func settlementSummary() async throws -> SettlementSummaryResponse
 }
 
 public struct SettleEaseSnapshot: Sendable {
@@ -314,6 +313,11 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
     public func deleteSettlementPayment(id: String) async throws {
         try await ensureConvexAuth()
         try await client.mutation("app:deleteSettlementPayment", with: ["id": id])
+    }
+
+    public func settlementSummary() async throws -> SettlementSummaryResponse {
+        try await ensureConvexAuth()
+        return try await client.action("aiSummaryActions:getOrGenerateSettlementSummary")
     }
 
     public func cachedSummary(hash: String) async throws -> AISummaryCacheRecord? {

@@ -28,7 +28,7 @@ struct RelevantExpenseDrilldown: Identifiable, Equatable {
 }
 
 struct DashboardSummarySheet: Identifiable, Equatable {
-    var id: String { hash }
+    var id: String { "dashboard-summary" }
     var hash: String
     var payload: SettleJSONValue?
     var summary: StructuredSettlementSummary?
@@ -321,88 +321,48 @@ final class DashboardStore {
 
     func summarise() async {
         guard !isSummarising else { return }
-        guard let snapshot, let aiService, let repository else { return }
-        let payload = SummaryPayloadBuilder.build(
-            people: snapshot.people,
-            peopleMap: snapshot.peopleMap,
-            allExpenses: snapshot.expenses,
-            categories: snapshot.categories,
-            pairwiseTransactions: pairwiseTransactions,
-            simplifiedTransactions: simplifiedTransactions,
-            settlementPayments: snapshot.settlementPayments,
-            manualOverrides: snapshot.manualOverrides,
-            personBalances: balances
-        )
-        let promptVersion = snapshot.activeAiPrompt?.version ?? 0
-        let modelCode = snapshot.activeAiConfig?.modelCode
-        let hashInput = payload.mergingForHash(promptVersion: promptVersion, modelCode: modelCode)
+        guard let repository else { return }
 
         do {
-            let hash = try SummaryPayloadBuilder.hash(hashInput)
-            if let lastSummarySheet, lastSummarySheet.hash == hash, !lastSummarySheet.isLoading {
-                summarySheet = lastSummarySheet
-                return
-            }
-
             isSummarising = true
             defer { isSummarising = false }
 
             summarySheet = DashboardSummarySheet(
-                hash: hash,
-                payload: payload,
+                hash: lastSummarySheet?.hash ?? "summary-loading",
+                payload: lastSummarySheet?.payload,
                 summary: nil,
                 source: "Loading",
-                modelDisplayName: modelCode,
+                modelDisplayName: lastSummarySheet?.modelDisplayName,
                 errorMessage: nil,
                 isLoading: true
             )
 
-            if let cached = try await repository.cachedSummary(hash: hash),
-               let data = cached.summary.data(using: .utf8),
-               let parsed = decodeCachedSummary(data: data, fallbackText: cached.summary) {
-                summarySheet = DashboardSummarySheet(
-                    hash: hash,
-                    payload: payload,
-                    summary: parsed,
-                    source: "Cached",
-                    modelDisplayName: cached.modelName ?? modelCode,
-                    errorMessage: nil,
-                    isLoading: false
-                )
-                lastSummarySheet = summarySheet
+            let result = try await repository.settlementSummary()
+            if let lastSummarySheet, lastSummarySheet.hash == result.hash, !lastSummarySheet.isLoading {
+                summarySheet = lastSummarySheet
                 return
             }
 
-            let result = try await aiService.summarize(
-                jsonData: payload,
-                hash: hash,
-                promptVersion: promptVersion,
-                modelCode: modelCode
-            )
-            try await repository.storeSummary(
-                hash: hash,
+            let nextSource = result.source.lowercased() == "cached" ? "Cached" : "Generated"
+            let nextSheet = DashboardSummarySheet(
+                hash: result.hash,
+                payload: result.payload,
                 summary: result.summary,
-                modelName: result.model,
-                userId: snapshot.profile.userId
-            )
-            summarySheet = DashboardSummarySheet(
-                hash: hash,
-                payload: payload,
-                summary: result.summary,
-                source: "Generated",
-                modelDisplayName: result.modelDisplayName ?? result.model ?? modelCode,
+                source: nextSource,
+                modelDisplayName: result.modelDisplayName ?? result.modelName ?? result.modelCode,
                 errorMessage: nil,
                 isLoading: false
             )
-            lastSummarySheet = summarySheet
+            summarySheet = nextSheet
+            lastSummarySheet = nextSheet
         } catch {
             isSummarising = false
             summarySheet = DashboardSummarySheet(
-                hash: UUID().uuidString,
-                payload: payload,
+                hash: lastSummarySheet?.hash ?? UUID().uuidString,
+                payload: lastSummarySheet?.payload,
                 summary: nil,
                 source: "Error",
-                modelDisplayName: modelCode,
+                modelDisplayName: lastSummarySheet?.modelDisplayName,
                 errorMessage: error.localizedDescription,
                 isLoading: false
             )
@@ -448,31 +408,6 @@ final class DashboardStore {
             filters: filters,
             useSimplifiedSettlements: useSimplifiedSettlements
         )
-    }
-
-    private func decodeCachedSummary(data: Data, fallbackText: String) -> StructuredSettlementSummary? {
-        if let parsed = try? JSONDecoder().decode(StructuredSettlementSummary.self, from: data) {
-            return parsed
-        }
-        guard
-            let start = fallbackText.firstIndex(of: "{"),
-            let end = fallbackText.lastIndex(of: "}"),
-            start < end
-        else {
-            return nil
-        }
-        let jsonSubstring = String(fallbackText[start...end])
-        guard let jsonData = jsonSubstring.data(using: .utf8) else { return nil }
-        return try? JSONDecoder().decode(StructuredSettlementSummary.self, from: jsonData)
-    }
-}
-
-private extension SettleJSONValue {
-    func mergingForHash(promptVersion: Int, modelCode: String?) -> SettleJSONValue {
-        guard case .object(var object) = self else { return self }
-        object["promptVersion"] = .int(promptVersion)
-        object["modelCode"] = modelCode.map(SettleJSONValue.string) ?? .null
-        return .object(object)
     }
 }
 #endif

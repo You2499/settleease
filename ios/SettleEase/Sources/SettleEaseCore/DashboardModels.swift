@@ -159,6 +159,49 @@ public struct AISummaryCacheRecord: Codable, Equatable, Sendable, Identifiable {
     }
 }
 
+public struct SettlementSummaryResponse: Codable, Equatable, Sendable {
+    public var source: String
+    public var hash: String
+    public var cacheKeyVersion: Int
+    public var promptVersion: Int
+    public var modelCode: String
+    public var modelName: String?
+    public var modelDisplayName: String?
+    public var modelConfigFingerprint: String?
+    public var payload: SettleJSONValue
+    public var summary: StructuredSettlementSummary
+    public var createdAt: String?
+    public var updatedAt: String?
+
+    public init(
+        source: String,
+        hash: String,
+        cacheKeyVersion: Int,
+        promptVersion: Int,
+        modelCode: String,
+        modelName: String? = nil,
+        modelDisplayName: String? = nil,
+        modelConfigFingerprint: String? = nil,
+        payload: SettleJSONValue,
+        summary: StructuredSettlementSummary,
+        createdAt: String? = nil,
+        updatedAt: String? = nil
+    ) {
+        self.source = source
+        self.hash = hash
+        self.cacheKeyVersion = cacheKeyVersion
+        self.promptVersion = promptVersion
+        self.modelCode = modelCode
+        self.modelName = modelName
+        self.modelDisplayName = modelDisplayName
+        self.modelConfigFingerprint = modelConfigFingerprint
+        self.payload = payload
+        self.summary = summary
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+}
+
 public struct PersonBalanceSnapshot: Codable, Equatable, Sendable {
     public var totalPaid: Double
     public var totalOwed: Double

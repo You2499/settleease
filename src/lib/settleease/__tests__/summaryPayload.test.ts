@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { computeJsonHash } from "../hashUtils";
 import {
+  SETTLEMENT_SUMMARY_CACHE_KEY_PREFIX,
+  SETTLEMENT_SUMMARY_CACHE_KEY_VERSION,
+  buildSettlementSummaryCacheHashInput,
+  buildSettlementSummaryModelConfigFingerprint,
+  versionedSettlementSummaryCacheKey,
+} from "../summaryCacheKey";
+import {
+  buildPersonBalanceSnapshots,
   buildSettlementSummaryPayload,
   type PersonBalanceSnapshot,
 } from "../summaryPayload";
@@ -142,7 +150,7 @@ const personBalances: Record<string, PersonBalanceSnapshot> = {
     netBalance: 55,
   },
   p2: {
-    totalPaid: 150,
+    totalPaid: 90,
     totalOwed: 70,
     settledAsDebtor: 0,
     settledAsCreditor: 0,
@@ -232,7 +240,7 @@ describe("buildSettlementSummaryPayload", () => {
     expect(payload.analysis.integrity.warningList).toEqual([]);
   });
 
-  it("changes hash when only promptVersion changes", async () => {
+  it("builds a stable versioned cache key from canonical inputs", async () => {
     const payload = buildSettlementSummaryPayload({
       people,
       peopleMap,
@@ -245,12 +253,115 @@ describe("buildSettlementSummaryPayload", () => {
       personBalances,
     });
 
-    const hashV1 = await computeJsonHash({ ...payload, promptVersion: 1 });
-    const hashV1Repeat = await computeJsonHash({ ...payload, promptVersion: 1 });
-    const hashV2 = await computeJsonHash({ ...payload, promptVersion: 2 });
+    const modelConfigFingerprint = buildSettlementSummaryModelConfigFingerprint({
+      modelCode: "gemini-3.1-flash-lite-preview",
+      fallbackModelCodes: ["gemini-3-flash-preview", "gemini-2.5-flash"],
+    });
+    const input = buildSettlementSummaryCacheHashInput({
+      promptName: "settlement-summary",
+      promptVersion: 1,
+      modelCode: "gemini-3.1-flash-lite-preview",
+      modelConfigFingerprint,
+      payloadSchemaVersion: payload.schemaVersion,
+      payload,
+    });
 
-    expect(hashV1).toBe(hashV1Repeat);
-    expect(hashV2).not.toBe(hashV1);
+    const digest = await computeJsonHash(input);
+    const repeatDigest = await computeJsonHash({ ...input, payload: { ...payload } });
+    const cacheKey = versionedSettlementSummaryCacheKey(digest);
+
+    expect(input.cacheKeyVersion).toBe(SETTLEMENT_SUMMARY_CACHE_KEY_VERSION);
+    expect(digest).toBe(repeatDigest);
+    expect(cacheKey).toMatch(new RegExp(`^${SETTLEMENT_SUMMARY_CACHE_KEY_PREFIX}[a-f0-9]{64}$`));
+  });
+
+  it("changes v3 cache key when prompt, model config, or settlement data changes", async () => {
+    const payload = buildSettlementSummaryPayload({
+      people,
+      peopleMap,
+      allExpenses: expenses,
+      categories,
+      pairwiseTransactions,
+      simplifiedTransactions,
+      settlementPayments,
+      manualOverrides,
+      personBalances,
+    });
+    const baseFingerprint = buildSettlementSummaryModelConfigFingerprint({
+      modelCode: "gemini-3.1-flash-lite-preview",
+      fallbackModelCodes: ["gemini-3-flash-preview", "gemini-2.5-flash"],
+    });
+    const baseInput = buildSettlementSummaryCacheHashInput({
+      promptName: "settlement-summary",
+      promptVersion: 1,
+      modelCode: "gemini-3.1-flash-lite-preview",
+      modelConfigFingerprint: baseFingerprint,
+      payloadSchemaVersion: payload.schemaVersion,
+      payload,
+    });
+
+    const promptChanged = { ...baseInput, promptVersion: 2 };
+    const modelChanged = {
+      ...baseInput,
+      modelCode: "gemini-3-flash-preview",
+      modelConfigFingerprint: buildSettlementSummaryModelConfigFingerprint({
+        modelCode: "gemini-3-flash-preview",
+        fallbackModelCodes: ["gemini-3.1-flash-lite-preview", "gemini-2.5-flash"],
+      }),
+    };
+    const changedPayload = {
+      ...payload,
+      analysis: {
+        ...payload.analysis,
+        totals: {
+          ...payload.analysis.totals,
+          includedSpend: payload.analysis.totals.includedSpend + 1,
+        },
+      },
+    };
+    const dataChanged = { ...baseInput, payload: changedPayload };
+
+    const baseHash = await computeJsonHash(baseInput);
+
+    expect(await computeJsonHash(promptChanged)).not.toBe(baseHash);
+    expect(await computeJsonHash(modelChanged)).not.toBe(baseHash);
+    expect(await computeJsonHash(dataChanged)).not.toBe(baseHash);
+  });
+
+  it("does not collide legacy and v3 cache key formats", async () => {
+    const payload = buildSettlementSummaryPayload({
+      people,
+      peopleMap,
+      allExpenses: expenses,
+      categories,
+      pairwiseTransactions,
+      simplifiedTransactions,
+      settlementPayments,
+      manualOverrides,
+      personBalances,
+    });
+    const legacyHash = await computeJsonHash({ ...payload, promptVersion: 1 });
+    const v3Digest = await computeJsonHash(buildSettlementSummaryCacheHashInput({
+      promptName: "settlement-summary",
+      promptVersion: 1,
+      modelCode: "gemini-3.1-flash-lite-preview",
+      modelConfigFingerprint: buildSettlementSummaryModelConfigFingerprint({
+        modelCode: "gemini-3.1-flash-lite-preview",
+        fallbackModelCodes: ["gemini-3-flash-preview", "gemini-2.5-flash"],
+      }),
+      payloadSchemaVersion: payload.schemaVersion,
+      payload,
+    }));
+
+    expect(versionedSettlementSummaryCacheKey(v3Digest)).not.toBe(legacyHash);
+  });
+
+  it("builds person balance snapshots for canonical server payloads", () => {
+    const built = buildPersonBalanceSnapshots(people, expenses, settlementPayments);
+
+    expect(built.p1).toEqual(personBalances.p1);
+    expect(built.p2.totalPaid).toBe(90);
+    expect(built.p3.settledAsDebtor).toBe(10);
   });
 
   it("does not expose raw unknown person identifiers in integrity warnings", () => {

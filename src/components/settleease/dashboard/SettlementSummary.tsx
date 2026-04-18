@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef } from "react";
-import { useQuery } from "convex/react";
+import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   Card,
@@ -35,15 +35,9 @@ import {
   Eye,
   Sparkles,
 } from "lucide-react";
-import { computeJsonHash } from "@/lib/settleease/hashUtils";
 import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
-import {
-  buildSettlementSummaryPayload,
-  type PersonBalanceSnapshot,
-} from "@/lib/settleease/summaryPayload";
-import { SETTLEMENT_SUMMARY_PROMPT_NAME } from "@/lib/settleease/aiSummarization";
-import AISummaryDialog from "./AISummaryDialog";
-import { resolveAiModelConfig } from "@/lib/settleease/aiModels";
+import type { PersonBalanceSnapshot } from "@/lib/settleease/summaryPayload";
+import AISummaryDialog, { type AISummaryActionResult } from "./AISummaryDialog";
 import {
   Dialog,
   DialogContent,
@@ -101,7 +95,6 @@ export default function SettlementSummary({
   getCategoryIconFromName,
   categories,
   userRole,
-  currentUserId,
 }: SettlementSummaryProps) {
   const [viewMode, setViewMode] = useState<"overview" | "person">("overview");
   const [simplifySettlement, setSimplifySettlement] = useState(true);
@@ -110,13 +103,11 @@ export default function SettlementSummary({
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [showBalancedPeople, setShowBalancedPeople] = useState(false);
   const [isSummaryDialogOpen, setIsSummaryDialogOpen] = useState(false);
-  const [summaryJsonData, setSummaryJsonData] = useState<any>(null);
-  const [summaryHash, setSummaryHash] = useState<string>("");
-  const [summaryPromptVersion, setSummaryPromptVersion] = useState<number | undefined>(undefined);
-  const [summaryModelCode, setSummaryModelCode] = useState<string | undefined>(undefined);
-  const [isComputingHash, setIsComputingHash] = useState(false);
+  const [summaryResult, setSummaryResult] = useState<AISummaryActionResult | null>(null);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
-  const activePrompt = useQuery(api.app.getActiveAiPrompt, { name: SETTLEMENT_SUMMARY_PROMPT_NAME }) as any;
+  const getOrGenerateSettlementSummary = useAction(api.aiSummaryActions.getOrGenerateSettlementSummary);
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -238,61 +229,20 @@ export default function SettlementSummary({
     return filtered;
   }, [personBalances, filteredPeople, showBalancedPeople]);
 
-  const generateSummaryData = () =>
-    buildSettlementSummaryPayload({
-      people,
-      peopleMap,
-      allExpenses,
-      categories,
-      pairwiseTransactions,
-      simplifiedTransactions,
-      settlementPayments,
-      manualOverrides,
-      personBalances,
-    });
-
   const handleSummarise = async () => {
-    if (isComputingHash) return;
+    if (isSummaryLoading) return;
 
+    setIsSummaryDialogOpen(true);
+    setSummaryResult(null);
+    setSummaryError(null);
+    setIsSummaryLoading(true);
     try {
-      setIsComputingHash(true);
-
-      // Generate the summary data on demand
-      const summaryData = generateSummaryData();
-
-      const promptVersion = activePrompt?.version || 0;
-      console.log("✅ Using prompt version:", promptVersion);
-
-      let resolvedAiConfig = resolveAiModelConfig(null);
-      try {
-        const response = await fetch("/api/ai-config", { cache: "no-store" });
-        if (response.ok) {
-          resolvedAiConfig = resolveAiModelConfig(await response.json());
-        }
-      } catch (configError) {
-        console.warn("Using default AI model config for summary hash:", configError);
-      }
-
-      // Include prompt version in the data for hashing
-      const dataWithPromptVersion = {
-        ...summaryData,
-        promptVersion,
-        modelCode: resolvedAiConfig.modelCode,
-      };
-
-      console.log("🔄 Computing hash for current data...");
-      const hash = await computeJsonHash(dataWithPromptVersion);
-      console.log("🔑 Generated hash:", hash);
-
-      setSummaryJsonData(summaryData);
-      setSummaryHash(hash);
-      setSummaryPromptVersion(promptVersion);
-      setSummaryModelCode(resolvedAiConfig.modelCode);
-      setIsSummaryDialogOpen(true);
+      const result = await getOrGenerateSettlementSummary({});
+      setSummaryResult(result as AISummaryActionResult);
     } catch (error: any) {
-      console.error("❌ Error computing hash:", error);
+      setSummaryError(error?.message || "Failed to generate summary");
     } finally {
-      setIsComputingHash(false);
+      setIsSummaryLoading(false);
     }
   };
 
@@ -368,11 +318,11 @@ export default function SettlementSummary({
                 size="sm"
                 variant="outline"
                 onClick={handleSummarise}
-                disabled={isComputingHash}
+                disabled={isSummaryLoading}
                 className="gap-2"
               >
                 <Sparkles className="h-4 w-4" />
-                {isComputingHash ? "Summarising..." : "Summarise"}
+                {isSummaryLoading ? "Summarising..." : "Summarise"}
               </Button>
               {/* <Button
                 size="sm"
@@ -610,17 +560,13 @@ export default function SettlementSummary({
       </Dialog>
 
       {/* AI Summary Dialog */}
-      {summaryJsonData && (
-        <AISummaryDialog
-          open={isSummaryDialogOpen}
-          onOpenChange={setIsSummaryDialogOpen}
-          jsonData={summaryJsonData}
-          hash={summaryHash}
-          promptVersion={summaryPromptVersion}
-          modelCode={summaryModelCode}
-          currentUserId={currentUserId || ""}
-        />
-      )}
+      <AISummaryDialog
+        open={isSummaryDialogOpen}
+        onOpenChange={setIsSummaryDialogOpen}
+        result={summaryResult}
+        isLoading={isSummaryLoading}
+        error={summaryError}
+      />
     </Card>
   );
 }

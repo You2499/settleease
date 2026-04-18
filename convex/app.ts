@@ -952,13 +952,21 @@ export const getAiSummaryByHash = query({
       .query("aiSummaries")
       .withIndex("by_data_hash", (q) => q.eq("dataHash", args.dataHash))
       .first();
-    if (!summary) return null;
+    if (!summary || summary.cacheKeyVersion !== 3 || summary.status !== "ready") return null;
     return {
       id: summary._id,
       user_id: summary.userId,
       data_hash: summary.dataHash,
       summary: summary.summary,
       model_name: summary.modelName ?? null,
+      cache_key_version: summary.cacheKeyVersion ?? null,
+      payload_schema_version: summary.payloadSchemaVersion ?? null,
+      prompt_version: summary.promptVersion ?? null,
+      model_code: summary.modelCode ?? null,
+      model_config_fingerprint: summary.modelConfigFingerprint ?? null,
+      status: summary.status ?? null,
+      generation_id: summary.generationId ?? null,
+      last_error: summary.lastError ?? null,
       created_at: summary.createdAt,
       updated_at: summary.updatedAt,
     };
@@ -988,6 +996,9 @@ export const storeAiSummary = mutation({
         userId: supabaseUserId,
         summary: args.summary,
         modelName: args.modelName ?? null,
+        status: "ready",
+        generationId: null,
+        lastError: null,
         updatedAt: timestamp,
       });
       return existing._id;
@@ -997,6 +1008,9 @@ export const storeAiSummary = mutation({
       dataHash: args.dataHash,
       summary: args.summary,
       modelName: args.modelName ?? null,
+      status: "ready",
+      generationId: null,
+      lastError: null,
       createdAt: timestamp,
       updatedAt: timestamp,
     });

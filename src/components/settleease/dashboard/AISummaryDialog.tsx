@@ -1,8 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { api } from "@convex/_generated/api";
+import React, { useMemo } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -24,11 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
-import { getAiModelOption } from "@/lib/settleease/aiModels";
 import {
-  buildSummarizeRequestPayload,
-  normalizeStructuredSummary,
-  parseStructuredSummaryText,
   type StructuredSettlementSummary,
 } from "@/lib/settleease/aiSummarization";
 import {
@@ -45,14 +39,27 @@ import {
 } from "@/lib/settleease/aiSummaryViewModel";
 import { formatCurrency } from "@/lib/settleease/utils";
 
+export interface AISummaryActionResult {
+  source: "cached" | "generated";
+  hash: string;
+  cacheKeyVersion: number;
+  promptVersion: number;
+  modelCode: string;
+  modelName?: string | null;
+  modelDisplayName?: string | null;
+  modelConfigFingerprint?: string | null;
+  payload: any;
+  summary: StructuredSettlementSummary;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+}
+
 interface AISummaryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  jsonData: any;
-  hash: string;
-  promptVersion?: number;
-  modelCode?: string;
-  currentUserId: string;
+  result: AISummaryActionResult | null;
+  isLoading: boolean;
+  error: string | null;
 }
 
 type SummarySource = "cached" | "generated" | "loading";
@@ -64,11 +71,6 @@ const BAR_COLORS = [
   "bg-amber-500",
   "bg-rose-500",
 ];
-
-function parseCachedSummary(value: string | null | undefined): StructuredSettlementSummary | null {
-  if (!value) return null;
-  return parseStructuredSummaryText(value);
-}
 
 function normalizeForDedupe(value: string): string {
   return value
@@ -213,24 +215,13 @@ function SettlementDonut({ percent }: { percent: number }) {
 export default function AISummaryDialog({
   open,
   onOpenChange,
-  jsonData,
-  hash,
-  promptVersion,
-  modelCode,
-  currentUserId,
+  result,
+  isLoading,
+  error,
 }: AISummaryDialogProps) {
-  const [summary, setSummary] = useState<StructuredSettlementSummary | null>(null);
-  const [source, setSource] = useState<SummarySource>("loading");
-  const [modelName, setModelName] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loadedHash, setLoadedHash] = useState("");
-
-  const cachedSummary = useQuery(
-    api.app.getAiSummaryByHash,
-    open && hash ? { dataHash: hash } : "skip",
-  ) as { summary: string; model_name?: string | null } | null | undefined;
-  const storeAiSummary = useMutation(api.app.storeAiSummary);
+  const summary = result?.summary ?? null;
+  const jsonData = result?.payload ?? null;
+  const source: SummarySource = isLoading ? "loading" : result?.source ?? "loading";
 
   const metricCards = useMemo(() => buildSummaryMetricCards(jsonData), [jsonData]);
   const progress = useMemo(() => buildSettlementProgress(jsonData), [jsonData]);
@@ -243,7 +234,7 @@ export default function AISummaryDialog({
   );
   const activeManualOverrides = Number(jsonData?.analysis?.totals?.activeManualOverrides || 0);
 
-  const activeModelDisplayName = modelName || getAiModelOption(modelCode).displayName;
+  const activeModelDisplayName = result?.modelDisplayName || result?.modelName || result?.modelCode || "SettleEase AI";
   const sourceLabel = source === "loading" ? "Loading" : source === "cached" ? "Cached" : "Generated";
 
   const snapshotItems = useMemo(
@@ -261,93 +252,6 @@ export default function AISummaryDialog({
     ]);
     return activeManualOverrides > 0 || !isNoExceptionText(items) ? items : [];
   }, [activeManualOverrides, nextActions, snapshotItems, summary]);
-
-  const storeSummary = useCallback(
-    async (summaryData: StructuredSettlementSummary, dataHash: string, usedModelName: string) => {
-      if (!currentUserId || !dataHash) return;
-
-      try {
-        await storeAiSummary({
-          userId: currentUserId,
-          dataHash,
-          summary: JSON.stringify(summaryData),
-          modelName: usedModelName || null,
-        });
-      } catch (storeError) {
-        console.error("Error storing AI summary:", storeError);
-      }
-    },
-    [currentUserId, storeAiSummary],
-  );
-
-  const fetchSummary = useCallback(async () => {
-    if (!jsonData || !hash || isLoading) return;
-
-    setIsLoading(true);
-    setSource("loading");
-    setError(null);
-
-    try {
-      const response = await fetch("/api/summarize", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(buildSummarizeRequestPayload(jsonData, hash, promptVersion, modelCode)),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to generate summary");
-      }
-
-      const structured = normalizeStructuredSummary(data.summary);
-      setSummary(structured);
-      setModelName(data.modelDisplayName || getAiModelOption(data.model).displayName);
-      setSource("generated");
-      setLoadedHash(hash);
-      await storeSummary(structured, hash, data.model || "");
-    } catch (summaryError: any) {
-      const message = summaryError?.message || "Failed to generate summary";
-      setError(message);
-      setLoadedHash(hash);
-      toast({
-        title: "Summary unavailable",
-        description: message,
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [hash, isLoading, jsonData, modelCode, promptVersion, storeSummary]);
-
-  useEffect(() => {
-    if (!open) {
-      setSummary(null);
-      setSource("loading");
-      setModelName("");
-      setError(null);
-      setLoadedHash("");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!hash || !jsonData || loadedHash === hash || isLoading || cachedSummary === undefined) {
-      return;
-    }
-
-    const cached = parseCachedSummary(cachedSummary?.summary);
-    if (cached) {
-      setSummary(cached);
-      setSource("cached");
-      setModelName(cachedSummary?.model_name ? getAiModelOption(cachedSummary.model_name).displayName : "");
-      setLoadedHash(hash);
-      return;
-    }
-
-    fetchSummary();
-  }, [cachedSummary, fetchSummary, hash, isLoading, jsonData, loadedHash, open]);
 
   const handleCopyMarkdown = async () => {
     if (!summary) return;

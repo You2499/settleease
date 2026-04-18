@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as aiSummaryActions from "../aiSummaryActions.js";
+import type * as aiSummaryCache from "../aiSummaryCache.js";
 import type * as app from "../app.js";
 import type * as jwtConfig from "../jwtConfig.js";
 
@@ -18,6 +20,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiSummaryActions: typeof aiSummaryActions;
+  aiSummaryCache: typeof aiSummaryCache;
   app: typeof app;
   jwtConfig: typeof jwtConfig;
 }>;
