@@ -14,7 +14,7 @@ struct SettleGlass<Content: View>: View {
 
     init(
         shape: AnyShape = AnyShape(Capsule()),
-        interactive: Bool = true,
+        interactive: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.shape = shape

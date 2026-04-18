@@ -1,6 +1,7 @@
 #if os(iOS)
 import SwiftUI
 import SettleEaseCore
+import UIKit
 
 enum SettleTheme {
     static let page = adaptive(
@@ -53,6 +54,42 @@ enum SettleTheme {
     static let rowHighlight = adaptive(
         light: UIColor(red: 1, green: 1, blue: 1, alpha: 0.88),
         dark: UIColor(red: 0.16, green: 0.16, blue: 0.15, alpha: 0.92)
+    )
+    static let controlFill = adaptive(
+        light: UIColor(red: 0.985, green: 0.982, blue: 0.972, alpha: 0.96),
+        dark: UIColor(red: 0.145, green: 0.145, blue: 0.135, alpha: 0.96)
+    )
+    static let controlPressedFill = adaptive(
+        light: UIColor(red: 0.935, green: 0.928, blue: 0.910, alpha: 0.98),
+        dark: UIColor(red: 0.215, green: 0.215, blue: 0.200, alpha: 0.98)
+    )
+    static let controlTrackFill = adaptive(
+        light: UIColor(red: 0.915, green: 0.910, blue: 0.895, alpha: 0.70),
+        dark: UIColor(red: 0.195, green: 0.195, blue: 0.185, alpha: 0.82)
+    )
+    static let controlSelectedFill = adaptive(
+        light: UIColor(red: 0.995, green: 0.992, blue: 0.982, alpha: 0.96),
+        dark: UIColor(red: 0.350, green: 0.350, blue: 0.335, alpha: 0.92)
+    )
+    static let controlStroke = adaptive(
+        light: UIColor(white: 0.0, alpha: 0.095),
+        dark: UIColor(white: 1.0, alpha: 0.135)
+    )
+    static let controlFocusStroke = adaptive(
+        light: UIColor(red: 0.18, green: 0.58, blue: 0.40, alpha: 0.62),
+        dark: UIColor(red: 0.42, green: 0.88, blue: 0.63, alpha: 0.70)
+    )
+    static let controlPrimaryFill = adaptive(
+        light: UIColor(red: 0.085, green: 0.090, blue: 0.080, alpha: 0.94),
+        dark: UIColor(red: 0.865, green: 0.965, blue: 0.895, alpha: 0.96)
+    )
+    static let controlPrimaryPressedFill = adaptive(
+        light: UIColor(red: 0.170, green: 0.175, blue: 0.155, alpha: 0.96),
+        dark: UIColor(red: 0.750, green: 0.925, blue: 0.805, alpha: 0.98)
+    )
+    static let controlPrimaryText = adaptive(
+        light: UIColor(red: 0.985, green: 0.985, blue: 0.970, alpha: 1),
+        dark: UIColor(red: 0.035, green: 0.110, blue: 0.070, alpha: 1)
     )
     static let glassControlFill = adaptive(
         light: UIColor(white: 1.0, alpha: 0.72),
@@ -333,6 +370,306 @@ struct SettlePillButtonStyle: ButtonStyle {
     }
 }
 
+enum SettleControlRole {
+    case primary
+    case secondary
+    case quiet
+    case destructive
+}
+
+struct SettleControlSurface<Content: View>: View {
+    var shape: AnyShape = AnyShape(Capsule())
+    var fill: Color = SettleTheme.controlFill
+    var stroke: Color = SettleTheme.controlStroke
+    var focused = false
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        content
+            .background(fill, in: shape)
+            .overlay {
+                shape.stroke(focused ? SettleTheme.controlFocusStroke : stroke, lineWidth: focused ? 1.2 : 0.75)
+            }
+    }
+}
+
+struct SettleGlassButton: View {
+    var title: String
+    var systemImage: String?
+    var role: SettleControlRole = .secondary
+    var isLoading = false
+    var expands = false
+    var action: () -> Void
+
+    var body: some View {
+        Button {
+            guard !isLoading else { return }
+            action()
+        } label: {
+            HStack(spacing: 7) {
+                if isLoading {
+                    ProgressView()
+                        .controlSize(.small)
+                } else if let systemImage {
+                    Image(systemName: SettleIcon.symbol(for: systemImage))
+                        .font(.caption.weight(.bold))
+                }
+
+                Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(foreground)
+            .frame(maxWidth: expands ? .infinity : nil, minHeight: 44)
+            .padding(.horizontal, role == .primary ? 15 : 13)
+        }
+        .buttonStyle(SettleControlButtonStyle(role: role))
+        .accessibilityLabel(title)
+    }
+
+    private var foreground: Color {
+        switch role {
+        case .primary:
+            return SettleTheme.controlPrimaryText
+        case .secondary, .quiet:
+            return SettleTheme.primary
+        case .destructive:
+            return SettleTheme.destructive
+        }
+    }
+}
+
+private struct SettleControlButtonStyle: ButtonStyle {
+    var role: SettleControlRole
+    @Environment(\.isEnabled) private var isEnabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(background(isPressed: configuration.isPressed), in: Capsule())
+            .overlay {
+                Capsule().stroke(stroke, lineWidth: 0.75)
+            }
+            .contentShape(Capsule())
+            .opacity(isEnabled ? 1 : 0.48)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.985 : 1)
+            .animation(reduceMotion ? .easeInOut(duration: 0.1) : .settleEaseFast, value: configuration.isPressed)
+    }
+
+    private func background(isPressed: Bool) -> Color {
+        if isPressed {
+            return role == .primary ? SettleTheme.controlPrimaryPressedFill : SettleTheme.controlPressedFill
+        }
+        switch role {
+        case .primary:
+            return SettleTheme.controlPrimaryFill
+        case .secondary:
+            return SettleTheme.controlFill
+        case .quiet:
+            return SettleTheme.controlTrackFill
+        case .destructive:
+            return SettleTheme.destructiveSurface
+        }
+    }
+
+    private var stroke: Color {
+        switch role {
+        case .primary:
+            return SettleTheme.controlStroke.opacity(0.72)
+        case .secondary, .quiet:
+            return SettleTheme.controlStroke
+        case .destructive:
+            return SettleTheme.destructive.opacity(0.28)
+        }
+    }
+}
+
+struct SettleMenuChip: View {
+    var title: String
+    var systemImage: String
+    var alignment: Alignment = .center
+    var isEnabled = true
+
+    var body: some View {
+        HStack(spacing: 7) {
+            Image(systemName: SettleIcon.symbol(for: systemImage))
+                .font(.caption.weight(.bold))
+                .frame(width: 15)
+            Text(title)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+            Image(systemName: "chevron.up.chevron.down")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(SettleTheme.tertiaryText)
+        }
+        .font(.caption.weight(.bold))
+        .foregroundStyle(SettleTheme.primary)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: alignment)
+        .padding(.horizontal, 12)
+        .background(SettleTheme.controlFill, in: Capsule())
+        .overlay {
+            Capsule().stroke(SettleTheme.controlStroke, lineWidth: 0.75)
+        }
+        .contentShape(Capsule())
+        .opacity(isEnabled ? 1 : 0.45)
+    }
+}
+
+struct SettleSegment<Value: Hashable>: Identifiable {
+    var value: Value
+    var title: String
+
+    var id: Value { value }
+}
+
+struct SettleSegmentedControl<Value: Hashable>: View {
+    @Binding var selection: Value
+    var segments: [SettleSegment<Value>]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        SettleControlSurface(
+            shape: AnyShape(RoundedRectangle(cornerRadius: 13, style: .continuous)),
+            fill: SettleTheme.controlTrackFill,
+            stroke: SettleTheme.controlStroke.opacity(0.72)
+        ) {
+            HStack(spacing: 3) {
+                ForEach(segments) { segment in
+                    Button {
+                        selection = segment.value
+                    } label: {
+                        Text(segment.title)
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(selection == segment.value ? SettleTheme.primary : SettleTheme.mutedText)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.82)
+                            .frame(maxWidth: .infinity, minHeight: 34)
+                            .padding(.horizontal, 8)
+                            .background {
+                                if selection == segment.value {
+                                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                        .fill(SettleTheme.controlSelectedFill)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+                }
+            }
+            .padding(3)
+        }
+        .animation(reduceMotion ? .easeInOut(duration: 0.12) : .settleEaseFast, value: selection)
+    }
+}
+
+struct SettleSearchField: View {
+    var placeholder = "Search"
+    @Binding var text: String
+    var isFocused: FocusState<Bool>.Binding
+
+    var body: some View {
+        SettleControlSurface(
+            shape: AnyShape(RoundedRectangle(cornerRadius: 14, style: .continuous)),
+            fill: SettleTheme.controlFill,
+            stroke: SettleTheme.controlStroke,
+            focused: isFocused.wrappedValue
+        ) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(SettleTheme.mutedText)
+                TextField(placeholder, text: $text)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .focused(isFocused)
+                    .onSubmit { isFocused.wrappedValue = false }
+                    .font(.subheadline)
+                    .foregroundStyle(SettleTheme.primary)
+            }
+            .frame(minHeight: 44)
+            .padding(.horizontal, 12)
+        }
+    }
+}
+
+struct SettleKeyboardDismissInstaller: UIViewRepresentable {
+    var isEnabled: Bool
+    var onDismiss: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        DispatchQueue.main.async {
+            context.coordinator.update(hostView: view, isEnabled: isEnabled, onDismiss: onDismiss)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: UIView, context: Context) {
+        DispatchQueue.main.async {
+            context.coordinator.update(hostView: uiView, isEnabled: isEnabled, onDismiss: onDismiss)
+        }
+    }
+
+    static func dismantleUIView(_ uiView: UIView, coordinator: Coordinator) {
+        coordinator.remove()
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        private weak var installedWindow: UIWindow?
+        private var recognizer: UITapGestureRecognizer?
+        private var isEnabled = false
+        private var onDismiss: (() -> Void)?
+
+        func update(hostView: UIView, isEnabled: Bool, onDismiss: @escaping () -> Void) {
+            self.isEnabled = isEnabled
+            self.onDismiss = onDismiss
+
+            guard let window = hostView.window else { return }
+            if installedWindow !== window {
+                remove()
+                let recognizer = UITapGestureRecognizer(target: self, action: #selector(handleTap))
+                recognizer.cancelsTouchesInView = false
+                recognizer.delegate = self
+                window.addGestureRecognizer(recognizer)
+                installedWindow = window
+                self.recognizer = recognizer
+            }
+        }
+
+        func remove() {
+            if let recognizer, let installedWindow {
+                installedWindow.removeGestureRecognizer(recognizer)
+            }
+            recognizer = nil
+            installedWindow = nil
+        }
+
+        @objc private func handleTap() {
+            guard isEnabled else { return }
+            onDismiss?()
+        }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard isEnabled else { return false }
+            var view = touch.view
+            while let current = view {
+                if current is UIControl || current is UITextField || current is UITextView {
+                    return false
+                }
+                view = current.superview
+            }
+            return true
+        }
+    }
+}
+
 struct SettleGlassActionGroup<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -360,58 +697,16 @@ struct SettleGlassToolbarButton: View {
     var title: String
     var systemImage: String
     var kind: SettleGlassToolbarButtonKind = .secondary
-    var tint: Color?
     var action: () -> Void
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        Button {
-            action()
-        } label: {
-            Label(title, systemImage: SettleIcon.symbol(for: systemImage))
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(foreground)
-                .lineLimit(1)
-                .minimumScaleFactor(0.86)
-                .frame(minHeight: 44)
-                .padding(.horizontal, 14)
-                .labelStyle(.titleAndIcon)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .background(background)
-        .overlay {
-            Capsule()
-                .stroke(stroke, lineWidth: 0.8)
-        }
-        .contentShape(Capsule())
+        SettleGlassButton(
+            title: title,
+            systemImage: systemImage,
+            role: kind == .primary ? .primary : .secondary,
+            action: action
+        )
         .fixedSize(horizontal: true, vertical: false)
-        .scaleEffect(reduceMotion ? 1 : 1)
-    }
-
-    private var foreground: Color {
-        tint ?? (kind == .primary ? SettleTheme.glassPrimaryText : SettleTheme.glassControlText)
-    }
-
-    @ViewBuilder
-    private var background: some View {
-        SettleGlass {
-            switch kind {
-            case .primary:
-                SettleTheme.glassPrimaryFill
-            case .secondary:
-                SettleTheme.glassControlFill
-            }
-        }
-    }
-
-    private var stroke: Color {
-        switch kind {
-        case .primary:
-            SettleTheme.glassPrimaryStroke
-        case .secondary:
-            SettleTheme.glassControlStroke
-        }
     }
 }
 

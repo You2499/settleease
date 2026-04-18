@@ -5,6 +5,7 @@ import UIKit
 
 struct DashboardView: View {
     @Environment(DashboardStore.self) private var store
+    @FocusState private var activitySearchFocused: Bool
 
     var body: some View {
         ScrollView {
@@ -14,14 +15,21 @@ struct DashboardView: View {
                 }
 
                 SettlementHub()
-                ActivityFeed()
+                ActivityFeed(searchFocused: $activitySearchFocused)
             }
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 118)
         }
         .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .background(SettleTheme.page)
+        .background {
+            SettleKeyboardDismissInstaller(isEnabled: activitySearchFocused) {
+                activitySearchFocused = false
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+        }
         .sheet(item: selectedExpenseBinding) { expense in
             ExpenseDetailSheet(expense: expense)
                 .presentationDetents([.large])
@@ -170,27 +178,22 @@ private struct SettlementHub: View {
                 )
                 .layoutPriority(0)
 
-                SettleGlassActionGroup {
-                    SettleGlassToolbarButton(title: "Summarise", systemImage: "sparkles", kind: .primary) {
-                        Task { await store.summarise() }
-                    }
+                SettleGlassButton(
+                    title: "Summarise",
+                    systemImage: "sparkles",
+                    role: .primary,
+                    isLoading: store.isSummarising
+                ) {
+                    Task { await store.summarise() }
                 }
                 .layoutPriority(2)
                 .fixedSize(horizontal: true, vertical: false)
             }
 
-            Picker("Settlement mode", selection: $store.dashboardMode) {
-                ForEach(DashboardMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .background {
-                SettleGlass(shape: AnyShape(RoundedRectangle(cornerRadius: 10, style: .continuous))) {
-                    Color.clear
-                }
-            }
+            SettleSegmentedControl(
+                selection: $store.dashboardMode,
+                segments: DashboardMode.allCases.map { SettleSegment(value: $0, title: $0.rawValue) }
+            )
 
             switch store.dashboardMode {
             case .overview:
@@ -209,7 +212,11 @@ private struct SettlementOverview: View {
         @Bindable var store = store
 
         VStack(alignment: .leading, spacing: 12) {
-            NativePanel(padding: 12, glass: true) {
+            SettleControlSurface(
+                shape: AnyShape(RoundedRectangle(cornerRadius: 16, style: .continuous)),
+                fill: SettleTheme.controlFill,
+                stroke: SettleTheme.controlStroke
+            ) {
                 HStack(spacing: 12) {
                     Text(store.useSimplifiedSettlements ? "Minimum transactions required to settle all debts." : "Detailed pairwise debts reflecting direct expense involvement.")
                         .font(.caption.weight(.medium))
@@ -223,6 +230,7 @@ private struct SettlementOverview: View {
                         .toggleStyle(.switch)
                         .accessibilityLabel("Simplify settlements")
                 }
+                .padding(12)
             }
 
             if store.visibleTransactions.isEmpty {
@@ -267,15 +275,10 @@ private struct TransactionPaymentRow: View {
             Spacer(minLength: 8)
 
             if store.isAdmin {
-                Button {
+                SettleGlassButton(title: "Mark Paid", systemImage: "checkmark.circle", role: .quiet) {
                     Task { await store.markPaid(transaction) }
-                } label: {
-                    Label("Mark Paid", systemImage: "checkmark.circle")
-                        .labelStyle(.titleAndIcon)
-                        .lineLimit(1)
                 }
-                .buttonStyle(WebPillButtonStyle(kind: .tertiary))
-                .font(.caption.weight(.semibold))
+                .fixedSize(horizontal: true, vertical: false)
             }
         }
         .padding(13)
@@ -295,7 +298,11 @@ private struct PerPersonDashboard: View {
         @Bindable var store = store
 
         VStack(alignment: .leading, spacing: 13) {
-            NativePanel(padding: 12, glass: true) {
+            SettleControlSurface(
+                shape: AnyShape(RoundedRectangle(cornerRadius: 16, style: .continuous)),
+                fill: SettleTheme.controlFill,
+                stroke: SettleTheme.controlStroke
+            ) {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 10) {
                         PersonSelectorChip()
@@ -308,6 +315,7 @@ private struct PerPersonDashboard: View {
                         .font(.caption)
                         .foregroundStyle(SettleTheme.mutedText)
                 }
+                .padding(12)
             }
 
             if let person = store.selectedPerson,
@@ -343,22 +351,12 @@ private struct PersonSelectorChip: View {
                 }
             }
         } label: {
-            HStack(spacing: 7) {
-                Image(systemName: "person.crop.circle")
-                Text(selectedName)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.78)
-                Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(SettleTheme.tertiaryText)
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(SettleTheme.primary)
-            .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-            .padding(.horizontal, 13)
-            .background {
-                SettleGlass { Color.clear }
-            }
+            SettleMenuChip(
+                title: selectedName,
+                systemImage: "person.crop.circle",
+                alignment: .leading,
+                isEnabled: !store.personPickerPeople.isEmpty
+            )
         }
         .disabled(store.personPickerPeople.isEmpty)
     }
@@ -764,6 +762,7 @@ private struct SignedAmountText: View {
 
 private struct ActivityFeed: View {
     @Environment(DashboardStore.self) private var store
+    var searchFocused: FocusState<Bool>.Binding
 
     var body: some View {
         VStack(alignment: .leading, spacing: 13) {
@@ -775,18 +774,14 @@ private struct ActivityFeed: View {
                 )
 
                 if store.filters.hasActiveFilters {
-                    Button {
+                    SettleGlassButton(title: "Clear", systemImage: "xmark", role: .quiet) {
                         store.clearFilters()
-                    } label: {
-                        Label("Clear", systemImage: "xmark")
-                            .labelStyle(.titleAndIcon)
                     }
-                    .buttonStyle(WebPillButtonStyle(kind: .tertiary))
-                    .font(.caption.weight(.semibold))
+                    .fixedSize(horizontal: true, vertical: false)
                 }
             }
 
-            FilterToolbar()
+            FilterToolbar(searchFocused: searchFocused)
 
             if store.activities.isEmpty {
                 EmptyState(
@@ -814,30 +809,13 @@ private struct ActivityFeed: View {
 
 private struct FilterToolbar: View {
     @Environment(DashboardStore.self) private var store
+    var searchFocused: FocusState<Bool>.Binding
 
     var body: some View {
         @Bindable var store = store
 
         VStack(spacing: 9) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(SettleTheme.mutedText)
-                TextField("Search", text: $store.filters.searchQuery)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .font(.subheadline)
-            }
-            .frame(minHeight: 44)
-            .padding(.horizontal, 12)
-            .background {
-                SettleGlass(shape: AnyShape(RoundedRectangle(cornerRadius: 14, style: .continuous))) {
-                    SettleTheme.glassControlFill
-                }
-            }
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(SettleTheme.glassControlStroke, lineWidth: 0.7)
-            }
+            SettleSearchField(text: $store.filters.searchQuery, isFocused: searchFocused)
 
             HStack(spacing: 8) {
                 PersonFilterChip()
@@ -892,28 +870,7 @@ private struct FilterChipLabel: View {
     var systemImage: String
 
     var body: some View {
-        HStack(spacing: 7) {
-            Image(systemName: SettleIcon.symbol(for: systemImage))
-                .font(.caption.weight(.bold))
-            Text(title)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-            Image(systemName: "chevron.up.chevron.down")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(SettleTheme.glassControlMutedText)
-        }
-        .font(.caption.weight(.bold))
-        .foregroundStyle(SettleTheme.glassControlText)
-        .frame(maxWidth: .infinity, minHeight: 44)
-        .padding(.horizontal, 10)
-        .background {
-            SettleGlass { SettleTheme.glassControlFill }
-        }
-        .overlay {
-            Capsule()
-                .stroke(SettleTheme.glassControlStroke, lineWidth: 0.7)
-        }
-        .contentShape(Capsule())
+        SettleMenuChip(title: title, systemImage: systemImage)
     }
 }
 
@@ -1488,24 +1445,14 @@ private struct AISummarySheet: View {
                         hasWarnings: presentation.hasDataQualityWarnings
                     )
 
-                    Button {
+                    SettleGlassButton(
+                        title: copiedMarkdown ? "Copied" : "Copy Markdown",
+                        systemImage: copiedMarkdown ? "checkmark" : "doc.on.doc",
+                        role: .secondary,
+                        expands: true
+                    ) {
                         UIPasteboard.general.string = presentation.markdown
                         copiedMarkdown = true
-                    } label: {
-                        Label(copiedMarkdown ? "Copied" : "Copy Markdown", systemImage: copiedMarkdown ? "checkmark" : "doc.on.doc")
-                            .font(.subheadline.weight(.bold))
-                            .foregroundStyle(SettleTheme.glassControlText)
-                            .frame(maxWidth: .infinity, minHeight: 46)
-                            .lineLimit(1)
-                    }
-                    .buttonStyle(.plain)
-                    .background {
-                        SettleGlass(shape: AnyShape(Capsule())) {
-                            SettleTheme.glassControlFill
-                        }
-                    }
-                    .overlay {
-                        Capsule().stroke(SettleTheme.glassControlStroke, lineWidth: 0.8)
                     }
                 }
             }
