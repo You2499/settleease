@@ -53,6 +53,7 @@ public protocol SettleEaseRepository: Sendable {
 public protocol DashboardRepository: Sendable {
     func bootstrapProfile(session: SupabaseSession) async throws -> UserProfile
     func streamDashboardSnapshot(session: SupabaseSession) async throws -> AsyncThrowingStream<DashboardSnapshot, Error>
+    func signOut() async throws
     func markSettlementPaid(_ transaction: CalculatedTransaction, markedByUserId: String) async throws
     func deleteSettlementPayment(id: String) async throws
     func cachedSummary(hash: String) async throws -> AISummaryCacheRecord?
@@ -197,35 +198,29 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
     public func bootstrapProfile(session: SupabaseSession) async throws -> UserProfile {
         try await ensureConvexAuth()
         let supabaseUserId = try requireUserId(session)
-//        let _: UserProfile = try await client.mutation(
-//            "app:markSignIn",
-//            with: [
-//                "supabaseUserId": supabaseUserId,
-//                "email": optionalConvexString(session.email)
-//            ]
-//        )
         do {
-                return try await client.mutation(
-                    "app:upsertUserProfile",
-                    with: [
-                        "supabaseUserId": supabaseUserId,
-                        "email": optionalConvexString(session.email)
-                    ]
-                )
-            } catch {
-                throw NSError(
-                    domain: "BootstrapProfile",
-                    code: 1,
-                    userInfo: [
-                        NSLocalizedDescriptionKey:
-                            "app:upsertUserProfile failed for supabaseUserId=\(supabaseUserId): \(error.localizedDescription)"
-                    ]
-                )
-            }
+            return try await client.mutation(
+                "app:upsertUserProfile",
+                with: [
+                    "supabaseUserId": supabaseUserId,
+                    "email": optionalConvexString(session.email)
+                ]
+            )
+        } catch {
+            throw NSError(
+                domain: "BootstrapProfile",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "app:upsertUserProfile failed for supabaseUserId=\(supabaseUserId): \(error.localizedDescription)"
+                ]
+            )
+        }
     }
 
     public func streamDashboardSnapshot(session: SupabaseSession) async throws -> AsyncThrowingStream<DashboardSnapshot, Error> {
         try await ensureConvexAuth()
+        let supabaseUserId = try requireUserId(session)
         let initialProfile = try await bootstrapProfile(session: session)
 
         return AsyncThrowingStream { continuation in
@@ -235,6 +230,19 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
             }
 
             let tasks = [
+                subscriptionTask(
+                    publisher: client.subscribe(
+                        to: "app:getUserProfile",
+                        with: ["supabaseUserId": supabaseUserId],
+                        yielding: UserProfile?.self
+                    ),
+                    continuation: continuation
+                ) { profile in
+                    if let profile {
+                        await accumulator.updateProfile(profile)
+                    }
+                },
+
                 subscriptionTask(
                     publisher: client.subscribe(to: "app:listPeople", yielding: [Person].self),
                     continuation: continuation
@@ -282,6 +290,10 @@ public final class LiveDashboardRepository: DashboardRepository, @unchecked Send
                 tasks.forEach { $0.cancel() }
             }
         }
+    }
+
+    public func signOut() async throws {
+        await client.logout()
     }
 
     public func markSettlementPaid(_ transaction: CalculatedTransaction, markedByUserId: String) async throws {

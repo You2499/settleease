@@ -1,8 +1,9 @@
+import { ConvexError, v } from "convex/values";
+import { mutation, query } from "./_generated/server";
+
 function normalizeSupabaseUserId(value: string) {
   return value.trim().toLowerCase();
 }
-import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
 
 const nowIso = () => new Date().toISOString();
 
@@ -198,13 +199,15 @@ async function requireAuthenticatedSupabaseUserId(ctx: any) {
   if (!identity?.subject) {
     throw new ConvexError("Authentication required.");
   }
-  return identity.subject;
+  const supabaseUserId = normalizeSupabaseUserId(identity.subject);
+  if (!supabaseUserId) {
+    throw new ConvexError("Authentication required.");
+  }
+  return supabaseUserId;
 }
 
 async function requireSelf(ctx: any, supabaseUserId: string) {
-  const authenticatedUserId = normalizeSupabaseUserId(
-    await requireAuthenticatedSupabaseUserId(ctx),
-  );
+  const authenticatedUserId = await requireAuthenticatedSupabaseUserId(ctx);
   const requestedUserId = normalizeSupabaseUserId(supabaseUserId);
 
   if (authenticatedUserId !== requestedUserId) {
@@ -273,9 +276,9 @@ export const health = query({
 export const getUserProfile = query({
   args: { supabaseUserId: v.string() },
   handler: async (ctx, args) => {
-    await requireSelf(ctx, args.supabaseUserId);
+    const supabaseUserId = await requireSelf(ctx, args.supabaseUserId);
     return profileDto(
-      await getProfileBySupabaseUserId(ctx, args.supabaseUserId),
+      await getProfileBySupabaseUserId(ctx, supabaseUserId),
     );
   },
 });
@@ -288,8 +291,8 @@ export const upsertUserProfile = mutation({
     lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSelf(ctx, args.supabaseUserId);
-    const id = await ensureUserProfile(ctx, args);
+    const supabaseUserId = await requireSelf(ctx, args.supabaseUserId);
+    const id = await ensureUserProfile(ctx, { ...args, supabaseUserId });
     return profileDto(await ctx.db.get(id));
   },
 });
@@ -302,14 +305,16 @@ export const markSignIn = mutation({
     lastName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireSelf(ctx, args.supabaseUserId);
-    const id = await ensureUserProfile(ctx, args);
-    await ctx.db.patch(id, {
-      email: args.email,
-      lastSignInAt: nowIso(),
+    const supabaseUserId = await requireSelf(ctx, args.supabaseUserId);
+    const id = await ensureUserProfile(ctx, { ...args, supabaseUserId });
+    const timestamp = nowIso();
+    const updates: Record<string, any> = {
+      lastSignInAt: timestamp,
       shouldShowWelcomeToast: true,
-      updatedAt: nowIso(),
-    });
+      updatedAt: timestamp,
+    };
+    if (args.email !== undefined) updates.email = args.email;
+    await ctx.db.patch(id, updates);
     return profileDto(await ctx.db.get(id));
   },
 });
@@ -333,8 +338,8 @@ export const updateUserProfile = mutation({
     shouldShowWelcomeToast: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireSelf(ctx, args.supabaseUserId);
-    const profile = await getProfileBySupabaseUserId(ctx, args.supabaseUserId);
+    const supabaseUserId = await requireSelf(ctx, args.supabaseUserId);
+    const profile = await getProfileBySupabaseUserId(ctx, supabaseUserId);
     if (!profile) throw new ConvexError("User profile not found.");
 
     const updates: Record<string, any> = { updatedAt: nowIso() };

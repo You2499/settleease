@@ -264,10 +264,18 @@ final class DashboardStore {
         streamTask = nil
         snapshot = nil
         session = nil
-        do {
-            try await auth?.signOut()
-        } catch {
-            authError = error.localizedDescription
+        if let repository {
+            do {
+                try await repository.signOut()
+            } catch {
+                authError = error.localizedDescription
+            }
+        } else {
+            do {
+                try await auth?.signOut()
+            } catch {
+                authError = error.localizedDescription
+            }
         }
         phase = .needsAuth
     }

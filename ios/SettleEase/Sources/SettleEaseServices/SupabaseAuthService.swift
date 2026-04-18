@@ -104,7 +104,12 @@ public actor SupabaseSessionManager: SupabaseAuthenticating {
     }
 
     public func signOut() async throws {
-        try await client.auth.signOut()
+        do {
+            try await client.auth.signOut()
+        } catch {
+            await client.auth.stopAutoRefresh()
+            throw error
+        }
         await client.auth.stopAutoRefresh()
     }
 

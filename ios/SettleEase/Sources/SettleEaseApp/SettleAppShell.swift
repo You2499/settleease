@@ -5,6 +5,7 @@ struct DashboardOnlyShell: View {
     @Environment(DashboardStore.self) private var store
     @Namespace private var navNamespace
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    @State private var isConfirmingSignOut = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +24,18 @@ struct DashboardOnlyShell: View {
             FuturePhaseSheet(message: message.value)
                 .presentationDetents([.height(260)])
                 .presentationDragIndicator(.visible)
+        }
+        .confirmationDialog(
+            "Sign out of SettleEase?",
+            isPresented: $isConfirmingSignOut,
+            titleVisibility: .visible
+        ) {
+            Button("Sign Out", role: .destructive) {
+                Task { await store.signOut() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You can sign in again with email or Google.")
         }
     }
 
@@ -45,6 +58,22 @@ struct DashboardOnlyShell: View {
                     .foregroundStyle(SettleTheme.positive)
                     .labelStyle(.iconOnly)
                     .accessibilityLabel("Live backend connected")
+
+                Button {
+                    isConfirmingSignOut = true
+                } label: {
+                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(SettleTheme.warmAccent)
+                        .frame(width: 34, height: 34)
+                        .background(SettleTheme.card.opacity(0.92), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(SettleTheme.border.opacity(0.85), lineWidth: 0.8)
+                        }
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Sign Out")
             }
         }
         .padding(.horizontal, 16)
