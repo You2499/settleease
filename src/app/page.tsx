@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -135,13 +135,14 @@ function SettingsTabSkeleton() {
 
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const requestedView = searchParams.get('view');
+  const searchParamsString = searchParams.toString();
+  const lastSyncedQueryRef = React.useRef(searchParamsString);
 
   // Initialize activeView from URL params to prevent dashboard flash on refresh
   const initialView = (() => {
-    const viewParam = searchParams.get('view');
-    if (isValidActiveView(viewParam)) {
-      return viewParam;
+    if (isValidActiveView(requestedView)) {
+      return requestedView;
     }
     return 'dashboard';
   })();
@@ -153,6 +154,10 @@ function SettleEasePageContent() {
   const [hasHandledWelcomeToast, setHasHandledWelcomeToast] = useState(false);
   const [restoredInitialView, setRestoredInitialView] = useState<ActiveView | null>(null);
   const lastAccessDeniedViewRef = React.useRef<ActiveView | null>(null);
+
+  useEffect(() => {
+    lastSyncedQueryRef.current = searchParamsString;
+  }, [searchParamsString]);
 
   // Supabase owns auth; Convex owns data and realtime.
   const {
@@ -302,7 +307,7 @@ function SettleEasePageContent() {
     const { deniedView, resolvedView, restoredView } = resolveInitialView({
       currentView: activeView,
       lastActiveView: userProfile.last_active_view,
-      requestedView: searchParams.get('view'),
+      requestedView,
       userRole,
     });
 
@@ -315,7 +320,7 @@ function SettleEasePageContent() {
     }
     setRestoredInitialView(restoredView);
     setHasResolvedInitialView(true);
-  }, [activeView, hasResolvedInitialView, isAppIdentityReady, searchParams, showAccessDeniedToast, userProfile, userRole]);
+  }, [activeView, hasResolvedInitialView, isAppIdentityReady, requestedView, showAccessDeniedToast, userProfile, userRole]);
 
   // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts.
   useEffect(() => {
@@ -382,14 +387,19 @@ function SettleEasePageContent() {
     if (!hasResolvedInitialView || !isAppIdentityReady || !currentUser || !userRole) return;
     if (!canAccessView(activeView, userRole)) return;
 
-    // Update URL only when it actually changes. Replacing the same query can
-    // retrigger App Router navigation in Firefox.
-    const currentQuery = searchParams.toString();
+    // This is same-page state, so keep it out of Next navigation. In Firefox,
+    // router.replace() can remount the app shell when Add Expense becomes active.
+    const currentQuery = lastSyncedQueryRef.current;
     const params = new URLSearchParams(currentQuery);
     params.set('view', activeView);
     const nextQuery = params.toString();
-    if (nextQuery !== currentQuery) {
-      router.replace(`?${nextQuery}`, { scroll: false });
+    if (nextQuery !== currentQuery && typeof window !== 'undefined') {
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}?${nextQuery}${window.location.hash}`
+      );
+      lastSyncedQueryRef.current = nextQuery;
     }
 
     // Save to Convex (debounced)
@@ -402,7 +412,7 @@ function SettleEasePageContent() {
     }, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [activeView, currentUser, hasResolvedInitialView, isAppIdentityReady, router, searchParams, updateUserProfile, userRole]);
+  }, [activeView, currentUser, hasResolvedInitialView, isAppIdentityReady, updateUserProfile, userRole]);
 
   // Keyboard Shortcuts
   useEffect(() => {
