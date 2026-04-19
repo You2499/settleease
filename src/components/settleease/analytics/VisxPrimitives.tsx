@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AxisBottom, AxisLeft } from "@visx/axis";
 import { localPoint } from "@visx/event";
 import { GridRows } from "@visx/grid";
@@ -8,7 +8,6 @@ import { Group } from "@visx/group";
 import { useParentSize } from "@visx/responsive";
 import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from "@visx/scale";
 import { Bar, LinePath, Pie } from "@visx/shape";
-import { TooltipWithBounds, useTooltip } from "@visx/tooltip";
 import { curveMonotoneX } from "@visx/curve";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -16,30 +15,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatAnalyticsCurrency } from "@/lib/settleease/analyticsModel";
+import {
+  buildBarInspectorDatum,
+  buildDonutInspectorDatum,
+  buildLineInspectorDatum,
+  buildStackedInspectorDatum,
+  type ChartInspectorDatum,
+  type ChartInspectorRow,
+  type ChartSeriesDefinition,
+  getIntegerAxisDomain,
+  getIntegerTickValues,
+  getResponsiveChartHeight,
+  isSinglePointTrend,
+  type PrimitiveChartPoint,
+  shortenAxisLabel,
+} from "./chartHelpers";
 
-type PrimitivePoint = {
-  key: string;
-  label: string;
-  value: number;
-  sortValue?: number;
-};
-
-type SeriesDefinition = {
-  id: string;
-  label: string;
-  color?: string;
-};
-
-type TooltipRow = {
-  label: string;
-  value: string;
-  color?: string;
-};
-
-type TooltipDatum = {
-  title: string;
-  rows: TooltipRow[];
-};
+type PrimitivePoint = PrimitiveChartPoint;
+type SeriesDefinition = ChartSeriesDefinition;
+type InspectorDatum = ChartInspectorDatum;
+type InspectorRow = ChartInspectorRow;
 
 type ChartFrameProps = {
   title: string;
@@ -60,10 +55,11 @@ const CHART_COLORS = [
 
 const axisColor = "hsl(var(--muted-foreground))";
 const gridColor = "hsl(var(--border))";
+const analyticsGhostButtonClass = "transition-none hover:bg-transparent hover:text-foreground";
 
 export function ChartFrame({ title, description, children, actions, className }: ChartFrameProps) {
   return (
-    <Card className={cn("min-w-0 overflow-hidden rounded-lg shadow-lg", className)}>
+    <Card className={cn("flex min-h-full min-w-0 flex-col overflow-hidden rounded-lg shadow-lg", className)}>
       <CardHeader className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
         <div className="min-w-0">
           <CardTitle className="text-base font-semibold leading-tight sm:text-lg">{title}</CardTitle>
@@ -73,7 +69,7 @@ export function ChartFrame({ title, description, children, actions, className }:
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </CardHeader>
-      <CardContent className="px-3 pb-4 pt-0 sm:px-5">{children}</CardContent>
+      <CardContent className="flex flex-1 flex-col px-3 pb-4 pt-0 sm:px-5">{children}</CardContent>
     </Card>
   );
 }
@@ -95,37 +91,43 @@ export function ChartLegend({ series }: { series: SeriesDefinition[] }) {
   );
 }
 
-export function ChartTooltip({
-  left,
-  top,
-  title,
-  rows,
+export function ChartInspector({
+  datum,
+  placeholder = "Inspect the chart to see exact values.",
 }: {
-  left: number;
-  top: number;
-  title: string;
-  rows: TooltipRow[];
+  datum: InspectorDatum | null;
+  placeholder?: string;
 }) {
   return (
-    <TooltipWithBounds
-      left={left}
-      top={top}
-      className="z-50 rounded-lg border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg"
-      style={{ pointerEvents: "none" }}
+    <div
+      className="mt-3 h-24 overflow-hidden rounded-lg bg-muted/35 px-3 py-2 text-xs"
+      aria-live="polite"
     >
-      <div className="mb-1 font-medium">{title}</div>
-      <div className="space-y-1">
-        {rows.map((row) => (
-          <div key={`${row.label}-${row.value}`} className="flex min-w-[150px] items-center justify-between gap-4">
-            <span className="inline-flex min-w-0 items-center gap-2 text-muted-foreground">
-              {row.color ? <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: row.color }} /> : null}
-              <span className="truncate">{row.label}</span>
-            </span>
-            <span className="font-medium">{row.value}</span>
+      {datum ? (
+        <>
+          <div className="truncate font-medium">{datum.title}</div>
+          <div className="mt-2 grid gap-x-4 gap-y-1 sm:grid-cols-2">
+            {datum.rows.slice(0, 4).map((row) => (
+              <InspectorRowItem key={`${row.label}-${row.value}`} row={row} />
+            ))}
           </div>
-        ))}
-      </div>
-    </TooltipWithBounds>
+        </>
+      ) : (
+        <div className="flex h-full items-center text-muted-foreground">{placeholder}</div>
+      )}
+    </div>
+  );
+}
+
+function InspectorRowItem({ row }: { row: InspectorRow }) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-3">
+      <span className="inline-flex min-w-0 items-center gap-2 text-muted-foreground">
+        {row.color ? <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: row.color }} /> : null}
+        <span className="truncate">{row.label}</span>
+      </span>
+      <span className="shrink-0 font-medium">{row.value}</span>
+    </div>
   );
 }
 
@@ -149,13 +151,6 @@ export function ZeroLine({
   );
 }
 
-function responsiveHeight(width: number, preferred = 360) {
-  if (width < 420) return Math.min(preferred, 285);
-  if (width < 768) return Math.min(preferred, 320);
-  if (width < 1100) return Math.max(330, Math.min(preferred, 380));
-  return preferred;
-}
-
 function MeasuredChart({
   preferredHeight = 360,
   children,
@@ -164,18 +159,50 @@ function MeasuredChart({
   children: (size: { width: number; height: number }) => React.ReactNode;
 }) {
   const { parentRef, width } = useParentSize<HTMLDivElement>({
-    initialSize: { width: 640, height: preferredHeight, top: 0, left: 0 },
+    initialSize: { width: 360, height: preferredHeight, top: 0, left: 0 },
     debounceTime: 50,
     ignoreDimensions: ["height"],
   });
-  const safeWidth = Math.max(width || 640, 1);
-  const chartHeight = responsiveHeight(safeWidth, preferredHeight);
+  const safeWidth = Math.max(width || 360, 1);
+  const chartHeight = getResponsiveChartHeight(safeWidth, preferredHeight);
 
   return (
     <div ref={parentRef} className="relative min-w-0" style={{ minHeight: chartHeight }}>
       {children({ width: safeWidth, height: chartHeight })}
     </div>
   );
+}
+
+function useChartInspector(defaultKey: string | null, defaultDatum: InspectorDatum | null) {
+  const [activeKey, setActiveKey] = useState<string | null>(defaultKey);
+  const [activeDatum, setActiveDatum] = useState<InspectorDatum | null>(defaultDatum);
+  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    setActiveKey(defaultKey);
+    setActiveDatum(defaultDatum);
+    setPinnedKey(null);
+  }, [defaultKey, defaultDatum]);
+
+  const inspectDatum = (key: string, datum: InspectorDatum) => {
+    if (pinnedKey) return;
+    setActiveKey(key);
+    setActiveDatum(datum);
+  };
+
+  const pinDatum = (key: string, datum: InspectorDatum) => {
+    setActiveKey(key);
+    setActiveDatum(datum);
+    setPinnedKey((current) => current === key ? null : key);
+  };
+
+  const resetDatum = () => {
+    if (pinnedKey) return;
+    setActiveKey(defaultKey);
+    setActiveDatum(defaultDatum);
+  };
+
+  return { activeKey, activeDatum, inspectDatum, pinDatum, resetDatum };
 }
 
 function visibleTicks<T>(values: T[], maxTicks: number): T[] {
@@ -221,6 +248,7 @@ export function LineChart({
   color = "#2f7d68",
   height = 360,
   balanceMode = false,
+  integerAxis = false,
 }: {
   data: PrimitivePoint[];
   valueLabel: string;
@@ -228,6 +256,7 @@ export function LineChart({
   color?: string;
   height?: number;
   balanceMode?: boolean;
+  integerAxis?: boolean;
 }) {
   if (!data.length) return <EmptyChart message="No data available for this view." />;
 
@@ -244,12 +273,13 @@ export function LineChart({
           padding: 0.4,
         });
         const yScale = scaleLinear<number>({
-          domain: paddedDomain(yValues, true),
+          domain: integerAxis ? getIntegerAxisDomain(yValues) : paddedDomain(yValues, true),
           range: [yMax, 0],
           nice: true,
         });
         const labelMap = new Map(data.map((point) => [point.key, point.label]));
         const tickValues = visibleTicks(data.map((point) => point.key), width < 420 ? 4 : 6);
+        const yTickValues = integerAxis ? getIntegerTickValues(Math.max(0, ...yValues), width < 420 ? 4 : 5) : undefined;
         return (
           <InteractiveLineSvg
             data={data}
@@ -266,6 +296,7 @@ export function LineChart({
             valueFormatter={valueFormatter}
             color={color}
             balanceMode={balanceMode}
+            yTickValues={yTickValues}
           />
         );
       }}
@@ -288,6 +319,7 @@ function InteractiveLineSvg({
   valueFormatter,
   color,
   balanceMode,
+  yTickValues,
 }: {
   data: PrimitivePoint[];
   width: number;
@@ -303,30 +335,22 @@ function InteractiveLineSvg({
   valueFormatter: (value: number) => string;
   color: string;
   balanceMode: boolean;
+  yTickValues?: number[];
 }) {
-  const { tooltipData, tooltipLeft = 0, tooltipTop = 0, showTooltip, hideTooltip } = useTooltip<TooltipDatum>();
-  const [pinnedKey, setPinnedKey] = useState<string | null>(null);
-  const pinnedPoint = pinnedKey ? data.find((point) => point.key === pinnedKey) : null;
+  const defaultPoint = data[data.length - 1] || null;
+  const defaultDatum = useMemo(
+    () => defaultPoint ? buildLineInspectorDatum(defaultPoint, valueLabel, valueFormatter, color) : null,
+    [color, defaultPoint, valueFormatter, valueLabel]
+  );
+  const { activeKey, activeDatum, inspectDatum, pinDatum, resetDatum } = useChartInspector(defaultPoint?.key || null, defaultDatum);
 
-  const showPoint = (point: PrimitivePoint) => {
-    const left = (xScale(point.key) || 0) + margin.left;
-    const top = yScale(point.value) + margin.top;
-    showTooltip({
-      tooltipLeft: left,
-      tooltipTop: top,
-      tooltipData: {
-        title: point.label,
-        rows: [{ label: valueLabel, value: valueFormatter(point.value), color }],
-      },
-    });
-  };
+  const buildDatum = (point: PrimitivePoint) => buildLineInspectorDatum(point, valueLabel, valueFormatter, color);
 
   const handlePointerMove = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
-    if (pinnedKey) return;
     const point = localPoint(event);
     if (!point) return;
     const nearest = nearestPoint(data, xScale, point.x - margin.left);
-    if (nearest) showPoint(nearest);
+    if (nearest) inspectDatum(nearest.key, buildDatum(nearest));
   };
 
   const handlePin = (event: React.MouseEvent<SVGRectElement> | React.TouchEvent<SVGRectElement>) => {
@@ -334,15 +358,12 @@ function InteractiveLineSvg({
     if (!point) return;
     const nearest = nearestPoint(data, xScale, point.x - margin.left);
     if (!nearest) return;
-    setPinnedKey((current) => current === nearest.key ? null : nearest.key);
-    showPoint(nearest);
+    pinDatum(nearest.key, buildDatum(nearest));
   };
 
-  const activePoint = pinnedPoint || (tooltipData ? data.find((point) => point.label === tooltipData.title) : null);
-
   return (
-    <div className="relative min-w-0" style={{ minHeight: height }}>
-      <svg width={width} height={height} role="img" aria-label={`${valueLabel} line chart`}>
+    <div className="min-w-0">
+      <svg className="block" width={width} height={height} role="img" aria-label={`${valueLabel} line chart`}>
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
           {balanceMode ? <ZeroLine y={yScale(0)} width={xMax} /> : null}
@@ -352,6 +373,7 @@ function InteractiveLineSvg({
             tickFormat={(value) => valueFormatter(Number(value))}
             stroke={axisColor}
             tickStroke={axisColor}
+            tickValues={yTickValues}
             tickLabelProps={() => ({
               fill: axisColor,
               fontSize: width < 420 ? 9 : 10,
@@ -363,7 +385,7 @@ function InteractiveLineSvg({
             top={yMax}
             scale={xScale}
             tickValues={tickValues}
-            tickFormat={(value) => labelMap.get(String(value)) || String(value)}
+            tickFormat={(value) => shortenAxisLabel(labelMap.get(String(value)) || String(value), width < 420 ? 8 : 12)}
             stroke={axisColor}
             tickStroke={axisColor}
             tickLabelProps={() => ({
@@ -384,7 +406,7 @@ function InteractiveLineSvg({
           {data.map((point) => {
             const cx = xScale(point.key) || 0;
             const cy = yScale(point.value);
-            const isActive = activePoint?.key === point.key;
+            const isActive = activeKey === point.key;
             return (
               <circle
                 key={point.key}
@@ -397,10 +419,8 @@ function InteractiveLineSvg({
                 tabIndex={0}
                 role="button"
                 aria-label={`${point.label}: ${valueFormatter(point.value)}`}
-                onFocus={() => showPoint(point)}
-                onBlur={() => {
-                  if (!pinnedKey) hideTooltip();
-                }}
+                onFocus={() => inspectDatum(point.key, buildDatum(point))}
+                onBlur={resetDatum}
               />
             );
           })}
@@ -409,17 +429,13 @@ function InteractiveLineSvg({
             height={yMax}
             fill="transparent"
             onMouseMove={handlePointerMove}
-            onMouseLeave={() => {
-              if (!pinnedKey) hideTooltip();
-            }}
+            onMouseLeave={resetDatum}
             onClick={handlePin}
             onTouchStart={handlePin}
           />
         </Group>
       </svg>
-      {tooltipData ? (
-        <ChartTooltip left={tooltipLeft} top={tooltipTop} title={tooltipData.title} rows={tooltipData.rows} />
-      ) : null}
+      <ChartInspector datum={activeDatum} />
     </div>
   );
 }
@@ -430,12 +446,14 @@ export function BarChart({
   valueFormatter = formatAnalyticsCurrency,
   height = 360,
   horizontal = false,
+  integerAxis = false,
 }: {
   data: Array<Record<string, number | string>>;
   series: SeriesDefinition[];
   valueFormatter?: (value: number) => string;
   height?: number;
   horizontal?: boolean;
+  integerAxis?: boolean;
 }) {
   if (!data.length || !series.length) return <EmptyChart message="No data available for this view." />;
 
@@ -458,6 +476,7 @@ export function BarChart({
             yMax={yMax}
             horizontal={horizontal}
             valueFormatter={valueFormatter}
+            integerAxis={integerAxis}
           />
         );
       }}
@@ -475,6 +494,7 @@ function InteractiveBarSvg({
   yMax,
   horizontal,
   valueFormatter,
+  integerAxis,
 }: {
   data: Array<Record<string, number | string>>;
   series: SeriesDefinition[];
@@ -485,15 +505,15 @@ function InteractiveBarSvg({
   yMax: number;
   horizontal: boolean;
   valueFormatter: (value: number) => string;
+  integerAxis: boolean;
 }) {
-  const { tooltipData, tooltipLeft = 0, tooltipTop = 0, showTooltip, hideTooltip } = useTooltip<TooltipDatum>();
-  const colors = series.map((item, index) => item.color || CHART_COLORS[index % CHART_COLORS.length]);
-  const colorScale = scaleOrdinal<string, string>({ domain: series.map((item) => item.id), range: colors });
+  const colors = useMemo(() => series.map((item, index) => item.color || CHART_COLORS[index % CHART_COLORS.length]), [series]);
+  const colorScale = useMemo(() => scaleOrdinal<string, string>({ domain: series.map((item) => item.id), range: colors }), [colors, series]);
   const keys = data.map((datum) => String(datum.key));
   const labels = new Map(data.map((datum) => [String(datum.key), String(datum.label)]));
   const maxValue = Math.max(0, ...data.flatMap((datum) => series.map((item) => Number(datum[item.id]) || 0)));
   const valueScale = scaleLinear<number>({
-    domain: [0, maxValue === 0 ? 100 : maxValue * 1.12],
+    domain: integerAxis ? getIntegerAxisDomain([maxValue]) : [0, maxValue === 0 ? 100 : maxValue * 1.12],
     range: horizontal ? [0, xMax] : [yMax, 0],
     nice: true,
   });
@@ -508,34 +528,40 @@ function InteractiveBarSvg({
     padding: 0.12,
   });
   const tickValues = visibleTicks(keys, width < 420 ? 4 : 7);
+  const valueTickValues = integerAxis ? getIntegerTickValues(maxValue, width < 420 ? 4 : 5) : undefined;
+  const defaultBarDatum = data[0] || null;
+  const defaultSeries = series[0] || null;
+  const defaultKey = defaultBarDatum && defaultSeries ? `${defaultBarDatum.key}-${defaultSeries.id}` : null;
+  const defaultDatum = useMemo(() => {
+    if (!defaultBarDatum || !defaultSeries) return null;
+    return buildBarInspectorDatum(defaultBarDatum, defaultSeries, valueFormatter, colorScale(defaultSeries.id));
+  }, [colorScale, defaultBarDatum, defaultSeries, valueFormatter]);
+  const { activeKey, activeDatum, inspectDatum, pinDatum, resetDatum } = useChartInspector(defaultKey, defaultDatum);
 
-  const showBarTooltip = (
+  const inspectBar = (
     datum: Record<string, number | string>,
     item: SeriesDefinition,
-    left: number,
-    top: number
+    mode: "hover" | "pin"
   ) => {
-    const value = Number(datum[item.id]) || 0;
-    showTooltip({
-      tooltipLeft: left + margin.left,
-      tooltipTop: top + margin.top,
-      tooltipData: {
-        title: String(datum.label),
-        rows: [{ label: item.label, value: valueFormatter(value), color: colorScale(item.id) }],
-      },
-    });
+    const key = `${datum.key}-${item.id}`;
+    const inspectorDatum = buildBarInspectorDatum(datum, item, valueFormatter, colorScale(item.id));
+    if (mode === "pin") {
+      pinDatum(key, inspectorDatum);
+    } else {
+      inspectDatum(key, inspectorDatum);
+    }
   };
 
   return (
-    <div className="relative min-w-0" style={{ minHeight: height }}>
-      <svg width={width} height={height} role="img" aria-label="Bar chart">
+    <div className="min-w-0">
+      <svg className="block" width={width} height={height} role="img" aria-label="Bar chart">
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={horizontal ? scaleLinear({ domain: [0, 1], range: [yMax, 0] }) : valueScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
           {horizontal ? (
             <>
               <AxisLeft
                 scale={categoryScale}
-                tickFormat={(value) => labels.get(String(value)) || String(value)}
+                tickFormat={(value) => shortenAxisLabel(labels.get(String(value)) || String(value), width < 420 ? 8 : 14)}
                 stroke={axisColor}
                 tickStroke={axisColor}
                 tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "end", dy: "0.32em" })}
@@ -544,6 +570,7 @@ function InteractiveBarSvg({
                 top={yMax}
                 scale={valueScale}
                 numTicks={width < 420 ? 3 : 5}
+                tickValues={valueTickValues}
                 tickFormat={(value) => valueFormatter(Number(value))}
                 stroke={axisColor}
                 tickStroke={axisColor}
@@ -555,6 +582,7 @@ function InteractiveBarSvg({
               <AxisLeft
                 scale={valueScale}
                 numTicks={width < 420 ? 4 : 5}
+                tickValues={valueTickValues}
                 tickFormat={(value) => valueFormatter(Number(value))}
                 stroke={axisColor}
                 tickStroke={axisColor}
@@ -564,7 +592,7 @@ function InteractiveBarSvg({
                 top={yMax}
                 scale={categoryScale}
                 tickValues={tickValues}
-                tickFormat={(value) => labels.get(String(value)) || String(value)}
+                tickFormat={(value) => shortenAxisLabel(labels.get(String(value)) || String(value), width < 420 ? 8 : 12)}
                 stroke={axisColor}
                 tickStroke={axisColor}
                 tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "middle", dy: "0.7em" })}
@@ -577,6 +605,8 @@ function InteractiveBarSvg({
               const rawValue = Number(datum[item.id]) || 0;
               const groupPosition = groupScale(item.id) || 0;
               const color = colorScale(item.id);
+              const inspectorKey = `${datum.key}-${item.id}`;
+              const isActive = activeKey === inspectorKey;
               if (horizontal) {
                 const barHeight = Math.max(groupScale.bandwidth(), 3);
                 return (
@@ -587,16 +617,17 @@ function InteractiveBarSvg({
                     width={valueScale(rawValue)}
                     height={barHeight}
                     fill={color}
+                    fillOpacity={isActive ? 1 : 0.88}
                     rx={4}
                     tabIndex={0}
                     role="button"
                     aria-label={`${datum.label}, ${item.label}: ${valueFormatter(rawValue)}`}
-                    onFocus={() => showBarTooltip(datum, item, valueScale(rawValue), categoryPosition + groupPosition)}
-                    onBlur={hideTooltip}
-                    onMouseEnter={() => showBarTooltip(datum, item, valueScale(rawValue), categoryPosition + groupPosition)}
-                    onMouseLeave={hideTooltip}
-                    onClick={() => showBarTooltip(datum, item, valueScale(rawValue), categoryPosition + groupPosition)}
-                    onTouchStart={() => showBarTooltip(datum, item, valueScale(rawValue), categoryPosition + groupPosition)}
+                    onFocus={() => inspectBar(datum, item, "hover")}
+                    onBlur={resetDatum}
+                    onMouseEnter={() => inspectBar(datum, item, "hover")}
+                    onMouseLeave={resetDatum}
+                    onClick={() => inspectBar(datum, item, "pin")}
+                    onTouchStart={() => inspectBar(datum, item, "pin")}
                   />
                 );
               }
@@ -611,26 +642,25 @@ function InteractiveBarSvg({
                   width={barWidth}
                   height={Math.max(barHeight, rawValue > 0 ? 2 : 0)}
                   fill={color}
+                  fillOpacity={isActive ? 1 : 0.88}
                   rx={4}
                   tabIndex={0}
                   role="button"
                   aria-label={`${datum.label}, ${item.label}: ${valueFormatter(rawValue)}`}
-                  onFocus={() => showBarTooltip(datum, item, categoryPosition + groupPosition, valueScale(rawValue))}
-                  onBlur={hideTooltip}
-                  onMouseEnter={() => showBarTooltip(datum, item, categoryPosition + groupPosition, valueScale(rawValue))}
-                  onMouseLeave={hideTooltip}
-                  onClick={() => showBarTooltip(datum, item, categoryPosition + groupPosition, valueScale(rawValue))}
-                  onTouchStart={() => showBarTooltip(datum, item, categoryPosition + groupPosition, valueScale(rawValue))}
+                  onFocus={() => inspectBar(datum, item, "hover")}
+                  onBlur={resetDatum}
+                  onMouseEnter={() => inspectBar(datum, item, "hover")}
+                  onMouseLeave={resetDatum}
+                  onClick={() => inspectBar(datum, item, "pin")}
+                  onTouchStart={() => inspectBar(datum, item, "pin")}
                 />
               );
             });
           })}
         </Group>
       </svg>
-      {tooltipData ? (
-        <ChartTooltip left={tooltipLeft} top={tooltipTop} title={tooltipData.title} rows={tooltipData.rows} />
-      ) : null}
       <ChartLegend series={series.map((item, index) => ({ ...item, color: item.color || colors[index] }))} />
+      <ChartInspector datum={activeDatum} />
     </div>
   );
 }
@@ -648,6 +678,7 @@ export function Histogram({
       series={[{ id: "value", label: valueLabel, color: "#2f7d68" }]}
       valueFormatter={(value) => `${value}`}
       height={320}
+      integerAxis
     />
   );
 }
@@ -665,63 +696,207 @@ export function StackedAreaChart({
 
   return (
     <MeasuredChart preferredHeight={360}>
-      {({ width, height }) => {
-        const margin = { top: 18, right: 14, bottom: width < 420 ? 48 : 38, left: width < 420 ? 44 : 62 };
-        const xMax = Math.max(width - margin.left - margin.right, 1);
-        const yMax = Math.max(height - margin.top - margin.bottom, 1);
-        const keys = data.map((datum) => String(datum.key));
-        const xScale = scalePoint<string>({ domain: keys, range: [0, xMax], padding: 0.4 });
-        const maxStack = Math.max(0, ...data.map((datum) => categories.reduce((sum, category) => sum + (Number(datum[category]) || 0), 0)));
-        const yScale = scaleLinear<number>({ domain: [0, maxStack === 0 ? 100 : maxStack * 1.12], range: [yMax, 0], nice: true });
-        const labelMap = new Map(data.map((datum) => [String(datum.key), String(datum.label)]));
-        const colors = categories.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
-        const paths = categories.map((category, categoryIndex) => {
-          const topPoints: Array<[number, number]> = [];
-          const bottomPoints: Array<[number, number]> = [];
-          data.forEach((datum) => {
-            const x = xScale(String(datum.key)) || 0;
-            const bottom = categories.slice(0, categoryIndex).reduce((sum, key) => sum + (Number(datum[key]) || 0), 0);
-            const top = bottom + (Number(datum[category]) || 0);
-            topPoints.push([x, yScale(top)]);
-            bottomPoints.unshift([x, yScale(bottom)]);
-          });
-          const points = [...topPoints, ...bottomPoints];
-          const d = points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x},${y}`).join(" ");
-          return { category, color: colors[categoryIndex], d: `${d} Z` };
-        });
-
-        return (
-          <div className="relative min-w-0" style={{ minHeight: height }}>
-            <svg width={width} height={height} role="img" aria-label="Stacked area chart">
-              <Group left={margin.left} top={margin.top}>
-                <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
-                <AxisLeft
-                  scale={yScale}
-                  numTicks={width < 420 ? 4 : 5}
-                  tickFormat={(value) => valueFormatter(Number(value))}
-                  stroke={axisColor}
-                  tickStroke={axisColor}
-                  tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "end", dy: "0.32em" })}
-                />
-                <AxisBottom
-                  top={yMax}
-                  scale={xScale}
-                  tickValues={visibleTicks(keys, width < 420 ? 4 : 6)}
-                  tickFormat={(value) => labelMap.get(String(value)) || String(value)}
-                  stroke={axisColor}
-                  tickStroke={axisColor}
-                  tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "middle", dy: "0.7em" })}
-                />
-                {paths.map((path) => (
-                  <path key={path.category} d={path.d} fill={path.color} fillOpacity={0.6} stroke={path.color} strokeWidth={1.5} />
-                ))}
-              </Group>
-            </svg>
-            <ChartLegend series={categories.map((category, index) => ({ id: category, label: category, color: colors[index] }))} />
-          </div>
-        );
-      }}
+      {({ width, height }) => (
+        <InteractiveStackedAreaSvg
+          data={data}
+          categories={categories}
+          valueFormatter={valueFormatter}
+          width={width}
+          height={height}
+        />
+      )}
     </MeasuredChart>
+  );
+}
+
+function InteractiveStackedAreaSvg({
+  data,
+  categories,
+  valueFormatter,
+  width,
+  height,
+}: {
+  data: Array<Record<string, number | string>>;
+  categories: string[];
+  valueFormatter: (value: number) => string;
+  width: number;
+  height: number;
+}) {
+  const margin = { top: 18, right: 14, bottom: width < 420 ? 48 : 38, left: width < 420 ? 44 : 62 };
+  const xMax = Math.max(width - margin.left - margin.right, 1);
+  const yMax = Math.max(height - margin.top - margin.bottom, 1);
+  const keys = data.map((datum) => String(datum.key));
+  const xScale = scalePoint<string>({ domain: keys, range: [0, xMax], padding: 0.4 });
+  const maxStack = Math.max(0, ...data.map((datum) => categories.reduce((sum, category) => sum + (Number(datum[category]) || 0), 0)));
+  const yScale = scaleLinear<number>({ domain: [0, maxStack === 0 ? 100 : maxStack * 1.12], range: [yMax, 0], nice: true });
+  const labelMap = new Map(data.map((datum) => [String(datum.key), String(datum.label)]));
+  const colors = useMemo(() => categories.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]), [categories]);
+  const defaultDatumSource = data[data.length - 1] || null;
+  const defaultDatum = useMemo(
+    () => defaultDatumSource ? buildStackedInspectorDatum(defaultDatumSource, categories, colors, valueFormatter) : null,
+    [categories, colors, defaultDatumSource, valueFormatter]
+  );
+  const { activeKey, activeDatum, inspectDatum, pinDatum, resetDatum } = useChartInspector(defaultDatumSource ? String(defaultDatumSource.key) : null, defaultDatum);
+  const legendSeries = categories.map((category, index) => ({ id: category, label: category, color: colors[index] }));
+
+  const inspectPeriod = (datum: Record<string, number | string>, mode: "hover" | "pin") => {
+    const key = String(datum.key);
+    const inspectorDatum = buildStackedInspectorDatum(datum, categories, colors, valueFormatter);
+    if (mode === "pin") {
+      pinDatum(key, inspectorDatum);
+    } else {
+      inspectDatum(key, inspectorDatum);
+    }
+  };
+
+  if (isSinglePointTrend(data)) {
+    const datum = data[0];
+    const total = categories.reduce((sum, category) => sum + (Number(datum[category]) || 0), 0);
+    const barWidth = Math.min(Math.max(xMax * 0.22, 44), 96);
+    const x = xMax / 2 - barWidth / 2;
+    let runningTotal = 0;
+
+    return (
+      <div className="min-w-0">
+        <svg className="block" width={width} height={height} role="img" aria-label="Category trend chart">
+          <Group left={margin.left} top={margin.top}>
+            <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
+            <AxisLeft
+              scale={yScale}
+              numTicks={width < 420 ? 4 : 5}
+              tickFormat={(value) => valueFormatter(Number(value))}
+              stroke={axisColor}
+              tickStroke={axisColor}
+              tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "end", dy: "0.32em" })}
+            />
+            <AxisBottom
+              top={yMax}
+              scale={xScale}
+              tickValues={keys}
+              tickFormat={(value) => shortenAxisLabel(labelMap.get(String(value)) || String(value), width < 420 ? 9 : 12)}
+              stroke={axisColor}
+              tickStroke={axisColor}
+              tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "middle", dy: "0.7em" })}
+            />
+            {categories.map((category, index) => {
+              const value = Number(datum[category]) || 0;
+              const yTop = yScale(runningTotal + value);
+              const yBottom = yScale(runningTotal);
+              runningTotal += value;
+              return (
+                <Bar
+                  key={category}
+                  x={x}
+                  y={yTop}
+                  width={barWidth}
+                  height={Math.max(yBottom - yTop, value > 0 ? 2 : 0)}
+                  fill={colors[index]}
+                  fillOpacity={activeKey === String(datum.key) ? 0.9 : 0.72}
+                  rx={3}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${datum.label}, ${category}: ${valueFormatter(value)}`}
+                  onFocus={() => inspectPeriod(datum, "hover")}
+                  onBlur={resetDatum}
+                  onMouseEnter={() => inspectPeriod(datum, "hover")}
+                  onMouseLeave={resetDatum}
+                  onClick={() => inspectPeriod(datum, "pin")}
+                  onTouchStart={() => inspectPeriod(datum, "pin")}
+                />
+              );
+            })}
+            <rect
+              x={Math.max(x - 16, 0)}
+              y={0}
+              width={Math.min(barWidth + 32, xMax)}
+              height={yMax}
+              fill="transparent"
+              onMouseMove={() => inspectPeriod(datum, "hover")}
+              onMouseLeave={resetDatum}
+              onClick={() => inspectPeriod(datum, "pin")}
+              onTouchStart={() => inspectPeriod(datum, "pin")}
+            />
+            {total === 0 ? <ZeroLine y={yScale(0)} width={xMax} /> : null}
+          </Group>
+        </svg>
+        <ChartLegend series={legendSeries} />
+        <ChartInspector datum={activeDatum} />
+      </div>
+    );
+  }
+
+  const paths = categories.map((category, categoryIndex) => {
+    const topPoints: Array<[number, number]> = [];
+    const bottomPoints: Array<[number, number]> = [];
+    data.forEach((datum) => {
+      const x = xScale(String(datum.key)) || 0;
+      const bottom = categories.slice(0, categoryIndex).reduce((sum, key) => sum + (Number(datum[key]) || 0), 0);
+      const top = bottom + (Number(datum[category]) || 0);
+      topPoints.push([x, yScale(top)]);
+      bottomPoints.unshift([x, yScale(bottom)]);
+    });
+    const points = [...topPoints, ...bottomPoints];
+    const d = points.map(([x, y], index) => `${index === 0 ? "M" : "L"}${x},${y}`).join(" ");
+    return { category, color: colors[categoryIndex], d: `${d} Z` };
+  });
+
+  return (
+    <div className="min-w-0">
+      <svg className="block" width={width} height={height} role="img" aria-label="Stacked area chart">
+        <Group left={margin.left} top={margin.top}>
+          <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
+          <AxisLeft
+            scale={yScale}
+            numTicks={width < 420 ? 4 : 5}
+            tickFormat={(value) => valueFormatter(Number(value))}
+            stroke={axisColor}
+            tickStroke={axisColor}
+            tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "end", dy: "0.32em" })}
+          />
+          <AxisBottom
+            top={yMax}
+            scale={xScale}
+            tickValues={visibleTicks(keys, width < 420 ? 4 : 6)}
+            tickFormat={(value) => shortenAxisLabel(labelMap.get(String(value)) || String(value), width < 420 ? 9 : 12)}
+            stroke={axisColor}
+            tickStroke={axisColor}
+            tickLabelProps={() => ({ fill: axisColor, fontSize: width < 420 ? 9 : 10, textAnchor: "middle", dy: "0.7em" })}
+          />
+          {paths.map((path) => (
+            <path key={path.category} d={path.d} fill={path.color} fillOpacity={activeKey ? 0.58 : 0.64} stroke={path.color} strokeWidth={1.5} />
+          ))}
+          {data.map((datum, index) => {
+            const key = String(datum.key);
+            const x = xScale(key) || 0;
+            const nextX = index < data.length - 1 ? (xScale(String(data[index + 1].key)) || x) : xMax;
+            const previousX = index > 0 ? (xScale(String(data[index - 1].key)) || x) : 0;
+            const left = index === 0 ? 0 : (previousX + x) / 2;
+            const right = index === data.length - 1 ? xMax : (x + nextX) / 2;
+            return (
+              <rect
+                key={key}
+                x={left}
+                y={0}
+                width={Math.max(right - left, 12)}
+                height={yMax}
+                fill="transparent"
+                tabIndex={0}
+                role="button"
+                aria-label={buildStackedInspectorDatum(datum, categories, colors, valueFormatter).ariaLabel}
+                onFocus={() => inspectPeriod(datum, "hover")}
+                onBlur={resetDatum}
+                onMouseMove={() => inspectPeriod(datum, "hover")}
+                onMouseLeave={resetDatum}
+                onClick={() => inspectPeriod(datum, "pin")}
+                onTouchStart={() => inspectPeriod(datum, "pin")}
+              />
+            );
+          })}
+        </Group>
+      </svg>
+      <ChartLegend series={legendSeries} />
+      <ChartInspector datum={activeDatum} />
+    </div>
   );
 }
 
@@ -736,50 +911,112 @@ export function DonutChart({
 
   return (
     <MeasuredChart preferredHeight={320}>
-      {({ width, height }) => {
-        const size = Math.min(width, height);
-        const radius = Math.max(Math.min(size / 2 - 20, 125), 84);
-        const colors = data.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
-        return (
-          <div className="grid min-w-0 gap-3 sm:grid-cols-[minmax(180px,260px)_1fr] sm:items-center" style={{ minHeight: height }}>
-            <svg width={Math.min(width, 300)} height={height} role="img" aria-label="Donut chart">
-              <Group top={height / 2} left={Math.min(width, 300) / 2}>
-                <Pie
-                  data={data}
-                  pieValue={(datum) => datum.amount}
-                  outerRadius={radius}
-                  innerRadius={Math.max(radius - 38, 46)}
-                  padAngle={0.018}
-                >
-                  {(pie) => pie.arcs.map((arc, index) => (
-                    <path
-                      key={arc.data.name}
-                      d={pie.path(arc) || ""}
-                      fill={colors[index]}
-                      stroke="hsl(var(--card))"
-                      strokeWidth={2}
-                    >
-                      <title>{`${arc.data.name}: ${valueFormatter(arc.data.amount)}`}</title>
-                    </path>
-                  ))}
-                </Pie>
-              </Group>
-            </svg>
-            <div className="space-y-2">
-              {data.slice(0, 6).map((datum, index) => (
-                <div key={datum.name} className="flex items-center justify-between gap-3 rounded-md bg-muted/35 px-3 py-2 text-xs sm:text-sm">
-                  <span className="inline-flex min-w-0 items-center gap-2">
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: colors[index] }} />
-                    <span className="truncate">{datum.name}</span>
-                  </span>
-                  <span className="shrink-0 font-medium">{valueFormatter(datum.amount)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      }}
+      {({ width, height }) => (
+        <InteractiveDonutChart
+          data={data}
+          valueFormatter={valueFormatter}
+          width={width}
+          height={height}
+        />
+      )}
     </MeasuredChart>
+  );
+}
+
+function InteractiveDonutChart({
+  data,
+  valueFormatter,
+  width,
+  height,
+}: {
+  data: Array<{ name: string; amount: number; share?: number }>;
+  valueFormatter: (value: number) => string;
+  width: number;
+  height: number;
+}) {
+  const colors = useMemo(() => data.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]), [data]);
+  const defaultSlice = data[0] || null;
+  const defaultDatum = useMemo(
+    () => defaultSlice ? buildDonutInspectorDatum(defaultSlice, valueFormatter, colors[0]) : null,
+    [colors, defaultSlice, valueFormatter]
+  );
+  const { activeKey, activeDatum, inspectDatum, pinDatum, resetDatum } = useChartInspector(defaultSlice?.name || null, defaultDatum);
+  const chartSize = Math.min(width >= 520 ? 220 : width, Math.max(height - 24, 180));
+  const radius = Math.max(Math.min(chartSize / 2 - 8, 108), 72);
+  const gridColumns = width >= 520 ? "minmax(160px, 220px) minmax(0, 1fr)" : "1fr";
+
+  const inspectSlice = (datum: { name: string; amount: number; share?: number }, index: number, mode: "hover" | "pin") => {
+    const inspectorDatum = buildDonutInspectorDatum(datum, valueFormatter, colors[index]);
+    if (mode === "pin") {
+      pinDatum(datum.name, inspectorDatum);
+    } else {
+      inspectDatum(datum.name, inspectorDatum);
+    }
+  };
+
+  return (
+    <div className="min-w-0">
+      <div className="grid min-w-0 items-center gap-4" style={{ minHeight: height, gridTemplateColumns: gridColumns }}>
+        <div className="flex min-w-0 justify-center">
+          <svg width={chartSize} height={chartSize} role="img" aria-label="Donut chart">
+            <Group top={chartSize / 2} left={chartSize / 2}>
+              <Pie
+                data={data}
+                pieValue={(datum) => datum.amount}
+                outerRadius={radius}
+                innerRadius={Math.max(radius - 34, 42)}
+                padAngle={0.018}
+              >
+                {(pie) => pie.arcs.map((arc, index) => (
+                  <path
+                    key={arc.data.name}
+                    d={pie.path(arc) || ""}
+                    fill={colors[index]}
+                    fillOpacity={activeKey === arc.data.name ? 1 : 0.88}
+                    stroke="hsl(var(--card))"
+                    strokeWidth={2}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`${arc.data.name}: ${valueFormatter(arc.data.amount)}`}
+                    onFocus={() => inspectSlice(arc.data, index, "hover")}
+                    onBlur={resetDatum}
+                    onMouseEnter={() => inspectSlice(arc.data, index, "hover")}
+                    onMouseLeave={resetDatum}
+                    onClick={() => inspectSlice(arc.data, index, "pin")}
+                    onTouchStart={() => inspectSlice(arc.data, index, "pin")}
+                  />
+                ))}
+              </Pie>
+            </Group>
+          </svg>
+        </div>
+        <div className="grid min-w-0 gap-2">
+          {data.slice(0, 6).map((datum, index) => (
+            <button
+              key={datum.name}
+              type="button"
+              className={cn(
+                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-md bg-muted/35 px-3 py-2 text-left text-xs transition-none hover:bg-muted/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
+                activeKey === datum.name && "ring-1 ring-border"
+              )}
+              onFocus={() => inspectSlice(datum, index, "hover")}
+              onBlur={resetDatum}
+              onMouseEnter={() => inspectSlice(datum, index, "hover")}
+              onMouseLeave={resetDatum}
+              onClick={() => inspectSlice(datum, index, "pin")}
+              onTouchStart={() => inspectSlice(datum, index, "pin")}
+            >
+              <span className="inline-flex min-w-0 items-center gap-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: colors[index] }} />
+                <span className="truncate">{datum.name}</span>
+              </span>
+              <span className="shrink-0 font-medium">{valueFormatter(datum.amount)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      <ChartInspector datum={activeDatum} />
+    </div>
   );
 }
 
@@ -816,7 +1053,7 @@ export function HeatmapCalendar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-11 w-11"
+          className={cn("h-11 w-11", analyticsGhostButtonClass)}
           onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1))}
           aria-label="Previous month"
         >
@@ -827,7 +1064,7 @@ export function HeatmapCalendar({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-11 w-11"
+          className={cn("h-11 w-11", analyticsGhostButtonClass)}
           onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1))}
           aria-label="Next month"
         >

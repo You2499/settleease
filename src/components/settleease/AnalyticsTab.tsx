@@ -6,7 +6,6 @@ import {
   AlertTriangle,
   BarChart4,
   CalendarDays,
-  ChevronDown,
   CircleDollarSign,
   Eye,
   LayoutGrid,
@@ -21,9 +20,7 @@ import {
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,6 +67,10 @@ const DATE_PRESETS: Array<{ value: AnalyticsDatePreset; label: string }> = [
   { value: "90d", label: "90 days" },
   { value: "1y", label: "1 year" },
 ];
+
+const analyticsSelectTriggerClass = "h-11 text-sm transition-none hover:bg-background hover:text-foreground data-[state=open]:bg-background";
+const analyticsSelectItemClass = "transition-none hover:bg-transparent hover:text-popover-foreground focus:bg-transparent focus:text-popover-foreground data-[highlighted]:bg-transparent data-[highlighted]:text-popover-foreground";
+const analyticsTabTriggerClass = "h-10 min-w-0 gap-2 rounded-md px-2 text-xs transition-none hover:bg-transparent hover:text-foreground sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-none data-[state=inactive]:bg-transparent";
 
 export default function AnalyticsTab({
   expenses,
@@ -160,11 +161,11 @@ export default function AnalyticsTab({
               className="min-w-0"
             >
               <TabsList className="grid h-12 w-full grid-cols-2 overflow-hidden rounded-lg border border-border/60 bg-muted p-1">
-                <TabsTrigger value="group" className="h-10 min-w-0 gap-2 rounded-md px-2 text-xs sm:text-sm data-[state=active]:bg-card">
+                <TabsTrigger value="group" className={analyticsTabTriggerClass}>
                   <Eye className="h-4 w-4" />
                   <span className="truncate">Group</span>
                 </TabsTrigger>
-                <TabsTrigger value="personal" className="h-10 min-w-0 gap-2 rounded-md px-2 text-xs sm:text-sm data-[state=active]:bg-card">
+                <TabsTrigger value="personal" className={analyticsTabTriggerClass}>
                   <UserSquare className="h-4 w-4" />
                   <span className="truncate">Personal</span>
                 </TabsTrigger>
@@ -173,23 +174,23 @@ export default function AnalyticsTab({
 
             <div className="grid grid-cols-2 gap-2">
               <Select value={datePreset} onValueChange={(value) => setDatePreset(value as AnalyticsDatePreset)}>
-                <SelectTrigger className="h-11 text-sm" aria-label="Date range">
+                <SelectTrigger className={analyticsSelectTriggerClass} aria-label="Date range">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {DATE_PRESETS.map((preset) => (
-                    <SelectItem key={preset.value} value={preset.value}>{preset.label}</SelectItem>
+                    <SelectItem key={preset.value} value={preset.value} className={analyticsSelectItemClass}>{preset.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={granularity} onValueChange={(value) => setGranularity(value as AnalyticsGranularity)}>
-                <SelectTrigger className="h-11 text-sm" aria-label="Granularity">
+                <SelectTrigger className={analyticsSelectTriggerClass} aria-label="Granularity">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="monthly" className={analyticsSelectItemClass}>Monthly</SelectItem>
+                  <SelectItem value="weekly" className={analyticsSelectItemClass}>Weekly</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -204,12 +205,12 @@ export default function AnalyticsTab({
                   onValueChange={setSelectedPersonId}
                   disabled={!people.length}
                 >
-                  <SelectTrigger id="analytics-person" className="h-11 text-sm">
+                  <SelectTrigger id="analytics-person" className={analyticsSelectTriggerClass}>
                     <SelectValue placeholder="Select a person" />
                   </SelectTrigger>
                   <SelectContent>
                     {people.map((person) => (
-                      <SelectItem key={person.id} value={person.id}>{peopleMap[person.id] || person.name}</SelectItem>
+                      <SelectItem key={person.id} value={person.id} className={analyticsSelectItemClass}>{peopleMap[person.id] || person.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -220,11 +221,11 @@ export default function AnalyticsTab({
 
         <TrustStrip model={model} mode={mode} selectedPersonName={selectedPersonName} />
 
-        <AnalyticsSection title="Overview" icon={Sigma} defaultOpen>
+        <AnalyticsSection title="Overview" icon={Sigma}>
           <OverviewGrid model={model} mode={mode} />
         </AnalyticsSection>
 
-        <AnalyticsSection title="Balance & Settlements" icon={CircleDollarSign} defaultOpen>
+        <AnalyticsSection title="Balance & Settlements" icon={CircleDollarSign}>
           <div className="grid gap-4 lg:grid-cols-2">
             {mode === "personal" ? (
               <ChartFrame
@@ -268,7 +269,7 @@ export default function AnalyticsTab({
           <ParticipantCards rows={model.details.participantRows} compact={mode === "personal"} />
         </AnalyticsSection>
 
-        <AnalyticsSection title="Spending Trends" icon={LineChart} defaultOpen>
+        <AnalyticsSection title="Spending Trends" icon={LineChart}>
           <div className="grid gap-4 lg:grid-cols-2">
             <ChartFrame
               title={mode === "personal" ? `${selectedPersonName}'s Spending` : "Group Spending"}
@@ -324,12 +325,13 @@ export default function AnalyticsTab({
             <div className="grid gap-4">
               <ChartFrame title="Expense Frequency" description="Daily expense count in the selected range.">
                 <VisxLineChart
-                  data={model.charts.frequency}
-                  valueLabel="Expenses"
-                  valueFormatter={(value) => `${value}`}
-                  color="#111827"
-                />
-              </ChartFrame>
+                data={model.charts.frequency}
+                valueLabel="Expenses"
+                valueFormatter={(value) => `${value}`}
+                color="#111827"
+                integerAxis
+              />
+            </ChartFrame>
               <ChartFrame title="Expense Velocity" description="Expenses per week.">
                 <VisxLineChart
                   data={model.charts.velocity}
@@ -337,6 +339,7 @@ export default function AnalyticsTab({
                   valueFormatter={(value) => `${value}`}
                   color="#c47f2a"
                   height={320}
+                  integerAxis
                 />
               </ChartFrame>
             </div>
@@ -408,34 +411,19 @@ function TrustItem({
 function AnalyticsSection({
   title,
   icon: Icon,
-  defaultOpen = false,
   children,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
   return (
-    <section className="min-w-0">
-      <Collapsible open={open} onOpenChange={setOpen}>
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Icon className="h-5 w-5 shrink-0 text-primary" />
-            <h2 className="truncate text-lg font-semibold sm:text-xl">{title}</h2>
-          </div>
-          <CollapsibleTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className="h-11 min-w-11 gap-2">
-              <span className="hidden sm:inline">{open ? "Hide" : "Show"}</span>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
-            </Button>
-          </CollapsibleTrigger>
-        </div>
-        <CollapsibleContent>
-          <div className="min-w-0 space-y-4">{children}</div>
-        </CollapsibleContent>
-      </Collapsible>
+    <section className="min-w-0 space-y-3">
+      <div className="flex min-w-0 items-center gap-2">
+        <Icon className="h-5 w-5 shrink-0 text-primary" />
+        <h2 className="truncate text-lg font-semibold sm:text-xl">{title}</h2>
+      </div>
+      <div className="min-w-0 space-y-4">{children}</div>
     </section>
   );
 }
