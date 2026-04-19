@@ -11,7 +11,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.error(supabaseInitializationError);
 } else {
   try {
-    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        persistSession: true,
+      },
+    });
   } catch (error: any) {
     console.error("Error initializing Supabase client:", error);
     supabaseInitializationError = `Supabase Client Initialization Error: ${error.message || "Could not initialize Supabase."}. Ensure your Supabase credentials are correct and the service is reachable.`;

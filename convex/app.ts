@@ -310,7 +310,6 @@ export const markSignIn = mutation({
     const timestamp = nowIso();
     const updates: Record<string, any> = {
       lastSignInAt: timestamp,
-      shouldShowWelcomeToast: true,
       updatedAt: timestamp,
     };
     if (args.email !== undefined) updates.email = args.email;
