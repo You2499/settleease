@@ -9,7 +9,6 @@ import {
   ChevronDown,
   CircleDollarSign,
   Eye,
-  GitFork,
   LayoutGrid,
   LineChart,
   PieChart,
@@ -144,10 +143,6 @@ export default function AnalyticsTab({
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-0 pb-10 pt-4 sm:gap-6">
         <header className="flex flex-col gap-4 rounded-lg bg-card px-4 py-4 shadow-lg sm:px-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0">
-            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Verified analytics
-            </div>
             <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">Analytics</h1>
             <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
               Spending, balances, and settlement movement from one reconciled model.
@@ -164,14 +159,14 @@ export default function AnalyticsTab({
               }}
               className="min-w-0"
             >
-              <TabsList className="grid h-11 w-full grid-cols-2">
-                <TabsTrigger value="group" className="min-h-10 gap-2 text-xs sm:text-sm">
+              <TabsList className="grid h-12 w-full grid-cols-2 overflow-hidden rounded-lg border border-border/60 bg-muted p-1">
+                <TabsTrigger value="group" className="h-10 min-w-0 gap-2 rounded-md px-2 text-xs sm:text-sm data-[state=active]:bg-card">
                   <Eye className="h-4 w-4" />
-                  Group
+                  <span className="truncate">Group</span>
                 </TabsTrigger>
-                <TabsTrigger value="personal" className="min-h-10 gap-2 text-xs sm:text-sm">
+                <TabsTrigger value="personal" className="h-10 min-w-0 gap-2 rounded-md px-2 text-xs sm:text-sm data-[state=active]:bg-card">
                   <UserSquare className="h-4 w-4" />
-                  Personal
+                  <span className="truncate">Personal</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>

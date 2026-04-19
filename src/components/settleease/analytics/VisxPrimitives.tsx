@@ -5,7 +5,7 @@ import { AxisBottom, AxisLeft } from "@visx/axis";
 import { localPoint } from "@visx/event";
 import { GridRows } from "@visx/grid";
 import { Group } from "@visx/group";
-import { ParentSize } from "@visx/responsive";
+import { useParentSize } from "@visx/responsive";
 import { scaleBand, scaleLinear, scaleOrdinal, scalePoint } from "@visx/scale";
 import { Bar, LinePath, Pie } from "@visx/shape";
 import { TooltipWithBounds, useTooltip } from "@visx/tooltip";
@@ -156,6 +156,28 @@ function responsiveHeight(width: number, preferred = 360) {
   return preferred;
 }
 
+function MeasuredChart({
+  preferredHeight = 360,
+  children,
+}: {
+  preferredHeight?: number;
+  children: (size: { width: number; height: number }) => React.ReactNode;
+}) {
+  const { parentRef, width } = useParentSize<HTMLDivElement>({
+    initialSize: { width: 640, height: preferredHeight, top: 0, left: 0 },
+    debounceTime: 50,
+    ignoreDimensions: ["height"],
+  });
+  const safeWidth = Math.max(width || 640, 1);
+  const chartHeight = responsiveHeight(safeWidth, preferredHeight);
+
+  return (
+    <div ref={parentRef} className="relative min-w-0" style={{ minHeight: chartHeight }}>
+      {children({ width: safeWidth, height: chartHeight })}
+    </div>
+  );
+}
+
 function visibleTicks<T>(values: T[], maxTicks: number): T[] {
   if (values.length <= maxTicks) return values;
   const step = Math.ceil(values.length / maxTicks);
@@ -210,9 +232,8 @@ export function LineChart({
   if (!data.length) return <EmptyChart message="No data available for this view." />;
 
   return (
-    <ParentSize>
-      {({ width }) => {
-        const chartHeight = responsiveHeight(width, height);
+    <MeasuredChart preferredHeight={height}>
+      {({ width, height: chartHeight }) => {
         const margin = { top: 18, right: 14, bottom: width < 420 ? 42 : 36, left: width < 420 ? 44 : 62 };
         const xMax = Math.max(width - margin.left - margin.right, 1);
         const yMax = Math.max(chartHeight - margin.top - margin.bottom, 1);
@@ -248,7 +269,7 @@ export function LineChart({
           />
         );
       }}
-    </ParentSize>
+    </MeasuredChart>
   );
 }
 
@@ -320,7 +341,7 @@ function InteractiveLineSvg({
   const activePoint = pinnedPoint || (tooltipData ? data.find((point) => point.label === tooltipData.title) : null);
 
   return (
-    <div className="relative min-w-0" style={{ height }}>
+    <div className="relative min-w-0" style={{ minHeight: height }}>
       <svg width={width} height={height} role="img" aria-label={`${valueLabel} line chart`}>
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -419,9 +440,8 @@ export function BarChart({
   if (!data.length || !series.length) return <EmptyChart message="No data available for this view." />;
 
   return (
-    <ParentSize>
-      {({ width }) => {
-        const chartHeight = responsiveHeight(width, height);
+    <MeasuredChart preferredHeight={height}>
+      {({ width, height: chartHeight }) => {
         const margin = horizontal
           ? { top: 18, right: 18, bottom: 34, left: width < 420 ? 86 : 120 }
           : { top: 18, right: 14, bottom: width < 420 ? 56 : 42, left: width < 420 ? 44 : 62 };
@@ -441,7 +461,7 @@ export function BarChart({
           />
         );
       }}
-    </ParentSize>
+    </MeasuredChart>
   );
 }
 
@@ -507,7 +527,7 @@ function InteractiveBarSvg({
   };
 
   return (
-    <div className="relative min-w-0" style={{ height }}>
+    <div className="relative min-w-0" style={{ minHeight: height }}>
       <svg width={width} height={height} role="img" aria-label="Bar chart">
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={horizontal ? scaleLinear({ domain: [0, 1], range: [yMax, 0] }) : valueScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -644,9 +664,8 @@ export function StackedAreaChart({
   if (!data.length || !categories.length) return <EmptyChart message="No category trend data available." />;
 
   return (
-    <ParentSize>
-      {({ width }) => {
-        const height = responsiveHeight(width, 360);
+    <MeasuredChart preferredHeight={360}>
+      {({ width, height }) => {
         const margin = { top: 18, right: 14, bottom: width < 420 ? 48 : 38, left: width < 420 ? 44 : 62 };
         const xMax = Math.max(width - margin.left - margin.right, 1);
         const yMax = Math.max(height - margin.top - margin.bottom, 1);
@@ -672,7 +691,7 @@ export function StackedAreaChart({
         });
 
         return (
-          <div className="relative min-w-0" style={{ height }}>
+          <div className="relative min-w-0" style={{ minHeight: height }}>
             <svg width={width} height={height} role="img" aria-label="Stacked area chart">
               <Group left={margin.left} top={margin.top}>
                 <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -702,7 +721,7 @@ export function StackedAreaChart({
           </div>
         );
       }}
-    </ParentSize>
+    </MeasuredChart>
   );
 }
 
@@ -716,9 +735,8 @@ export function DonutChart({
   if (!data.length) return <EmptyChart message="No breakdown data available." />;
 
   return (
-    <ParentSize>
-      {({ width }) => {
-        const height = responsiveHeight(width, 320);
+    <MeasuredChart preferredHeight={320}>
+      {({ width, height }) => {
         const size = Math.min(width, height);
         const radius = Math.max(Math.min(size / 2 - 20, 125), 84);
         const colors = data.map((_, index) => CHART_COLORS[index % CHART_COLORS.length]);
@@ -761,7 +779,7 @@ export function DonutChart({
           </div>
         );
       }}
-    </ParentSize>
+    </MeasuredChart>
   );
 }
 
