@@ -1,50 +1,61 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  BarChartBig, Users, Eye, UserSquare
-} from 'lucide-react';
+  Activity,
+  AlertTriangle,
+  BarChart4,
+  CalendarDays,
+  ChevronDown,
+  CircleDollarSign,
+  Eye,
+  GitFork,
+  LayoutGrid,
+  LineChart,
+  PieChart,
+  ReceiptText,
+  ShieldCheck,
+  Sigma,
+  Sparkles,
+  UserSquare,
+  Users,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from '@/components/ui/label';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  buildAnalyticsModel,
+  formatAnalyticsCompactCurrency,
+  formatAnalyticsCurrency,
+  type AnalyticsDatePreset,
+  type AnalyticsGranularity,
+  type AnalyticsMode,
+} from "@/lib/settleease/analyticsModel";
+import { crashTestManager } from "@/lib/settleease/crashTestContext";
+import type { Category, Expense, Person, SettlementPayment } from "@/lib/settleease/types";
+import { cn } from "@/lib/utils";
 
-
-import type {
-  Expense, Person, Category as DynamicCategory, SettlementPayment,
-  CategoryAnalyticsData, ParticipantAnalyticsData, ExpenseAmountDistributionData,
-  SpendingByDayOfWeekData, SplitMethodDistributionData, TopExpenseData, MonthlyExpenseData,
-  ShareVsPaidDataPoint, EnhancedOverallStats, CategorySpendingPieChartDataPoint
-} from '@/lib/settleease/types';
-
-import OverallAnalyticsSnapshot from './analytics/OverallAnalyticsSnapshot';
-import MonthlySpendingChart from './analytics/MonthlySpendingChart';
-import ShareVsPaidComparisonChart from './analytics/ShareVsPaidComparisonChart';
-import SpendingByDayChart from './analytics/SpendingByDayChart';
-import SplitMethodChart from './analytics/SplitMethodChart';
-import TopExpensesTable from './analytics/TopExpensesTable';
-import CategoryAnalyticsTable from './analytics/CategoryAnalyticsTable';
-import ParticipantSummaryTable from './analytics/ParticipantSummaryTable';
-import CategorySpendingPieChart from './analytics/CategorySpendingPieChart';
-import ExpenseDistributionChart from './analytics/ExpenseDistributionChart';
-import TransactionHeatmapCalendar from './analytics/TransactionHeatmapCalendar';
-import MonthlyCategoryTrendsChart from './analytics/MonthlyCategoryTrendsChart';
-import ExpenseFrequencyTimeline from './analytics/ExpenseFrequencyTimeline';
-import ExpenseSizeDistribution from './analytics/ExpenseSizeDistribution';
-import AverageExpenseByCategory from './analytics/AverageExpenseByCategory';
-import ExpenseVelocity from './analytics/ExpenseVelocity';
-import DebtCreditBalanceOverTime from './analytics/DebtCreditBalanceOverTime';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
-import { ANALYTICS_STYLES } from '@/lib/settleease/analytics-styles';
-
+import {
+  BarChart,
+  ChartFrame,
+  DonutChart,
+  HeatmapCalendar,
+  Histogram,
+  LineChart as VisxLineChart,
+  StackedAreaChart,
+} from "./analytics/VisxPrimitives";
 
 interface AnalyticsTabProps {
   expenses: Expense[];
   people: Person[];
   peopleMap: Record<string, string>;
-  dynamicCategories: DynamicCategory[];
+  dynamicCategories: Category[];
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   settlementPayments: SettlementPayment[];
   isLoadingPeople?: boolean;
@@ -54,26 +65,15 @@ interface AnalyticsTabProps {
   isDataFetchedAtLeastOnce?: boolean;
 }
 
-const UNCATEGORIZED = "Uncategorized";
-
-// Utility: Get adjusted paid amount for a person for an expense (net of celebration)
-function getAdjustedPaidAmountForPerson(exp: any, personId: string): number {
-  if (!Array.isArray(exp.paid_by)) return 0;
-  const paymentRecord = exp.paid_by.find((p: any) => p.personId === personId);
-  let paid = paymentRecord ? Number(paymentRecord.amount) : 0;
-  const isCelebrationContributor = exp.celebration_contribution?.personId === personId;
-  if (!isCelebrationContributor && exp.celebration_contribution && Number(exp.celebration_contribution.amount) > 0.001) {
-    const totalPaid = exp.paid_by.reduce((sum: number, p: any) => sum + Number(p.amount), 0);
-    if (totalPaid > 0.001) {
-      const proportionalReduction = (paid / totalPaid) * Number(exp.celebration_contribution.amount);
-      paid = Math.max(0, paid - proportionalReduction);
-    }
-  }
-  return paid;
-}
+const DATE_PRESETS: Array<{ value: AnalyticsDatePreset; label: string }> = [
+  { value: "all", label: "All time" },
+  { value: "30d", label: "30 days" },
+  { value: "90d", label: "90 days" },
+  { value: "1y", label: "1 year" },
+];
 
 export default function AnalyticsTab({
-  expenses: allExpenses,
+  expenses,
   people,
   peopleMap,
   dynamicCategories,
@@ -85,732 +85,627 @@ export default function AnalyticsTab({
   isLoadingSettlements = false,
   isDataFetchedAtLeastOnce = true,
 }: AnalyticsTabProps) {
-
-
-  // Check for crash test
   useEffect(() => {
-    crashTestManager.checkAndCrash('analytics', 'Analytics Tab crashed: Chart rendering failed with invalid data processing');
+    crashTestManager.checkAndCrash("analytics", "Analytics Tab crashed: Chart rendering failed with invalid data processing");
   });
 
-  const [analyticsViewMode, setAnalyticsViewMode] = useState<'group' | 'personal'>('group');
-  const [selectedPersonIdForAnalytics, setSelectedPersonIdForAnalytics] = useState<string | null>(null);
+  const [mode, setMode] = useState<AnalyticsMode>("group");
+  const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
+  const [datePreset, setDatePreset] = useState<AnalyticsDatePreset>("all");
+  const [granularity, setGranularity] = useState<AnalyticsGranularity>("monthly");
+
+  useEffect(() => {
+    if (mode === "personal" && !selectedPersonId && people.length > 0) {
+      setSelectedPersonId(people[0].id);
+    }
+    if (selectedPersonId && !people.some((person) => person.id === selectedPersonId)) {
+      setSelectedPersonId(people[0]?.id || null);
+    }
+  }, [mode, people, selectedPersonId]);
 
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || isLoadingSettlements || !isDataFetchedAtLeastOnce;
 
-  const displayedExpenses = useMemo(() => {
-    // First filter out excluded expenses
-    const includedExpenses = allExpenses.filter(exp => !exp.exclude_from_settlement);
+  const model = useMemo(() => buildAnalyticsModel({
+    expenses,
+    settlementPayments,
+    people,
+    peopleMap,
+    categories: dynamicCategories,
+    mode,
+    selectedPersonId,
+    dateRange: { preset: datePreset },
+    granularity,
+  }), [datePreset, dynamicCategories, expenses, granularity, mode, people, peopleMap, selectedPersonId, settlementPayments]);
 
-    if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      return includedExpenses.filter(exp => {
-        const personPaid = exp.paid_by.some(p => p.personId === selectedPersonIdForAnalytics);
-        const personShared = exp.shares.some(s => s.personId === selectedPersonIdForAnalytics && Number(s.amount) > 0.001);
-        return personPaid || personShared;
-      });
-    }
-    return includedExpenses;
-  }, [allExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
+  const selectedPersonName = model.selectedPersonName || "Selected person";
 
+  if (isLoading) return <AnalyticsSkeleton />;
 
-  const enhancedOverallStats: EnhancedOverallStats = useMemo(() => {
-    const expenseCount = displayedExpenses.length;
-    let firstDate: Date | null = null;
-    let lastDate: Date | null = null;
-
-    if (expenseCount > 0) {
-      const sortedExpensesByDate = [...displayedExpenses].sort((a, b) =>
-        new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime()
-      );
-      firstDate = new Date(sortedExpensesByDate[0].created_at || Date.now());
-      lastDate = new Date(sortedExpensesByDate[expenseCount - 1].created_at || Date.now());
-    }
-
-    const distinctParticipants = new Set<string>();
-    displayedExpenses.forEach(exp => {
-      exp.paid_by.forEach(p => distinctParticipants.add(p.personId));
-      exp.shares.forEach(s => distinctParticipants.add(s.personId));
-    });
-
-    let totalAmount = 0;
-    let mostExpensiveCatData: { name: string; totalAmount: number; } = { name: 'N/A', totalAmount: 0 };
-    let largestSingleExpData: { description: string; amount: number; date: string } = { description: 'N/A', amount: 0, date: '' };
-    const categorySpending: Record<string, number> = {};
-
-
-    if (analyticsViewMode === 'group') {
-      totalAmount = displayedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0);
-
-      displayedExpenses.forEach(exp => {
-        if (exp.split_method === 'itemwise' && exp.items) {
-          exp.items.forEach(item => {
-            const cat = item.categoryName || exp.category || UNCATEGORIZED;
-            categorySpending[cat] = (categorySpending[cat] || 0) + Number(item.price);
-          });
-        } else {
-          const cat = exp.category || UNCATEGORIZED;
-          categorySpending[cat] = (categorySpending[cat] || 0) + Number(exp.total_amount);
-        }
-      });
-
-      if (expenseCount > 0) {
-        const sortedByAmount = [...displayedExpenses].sort((a, b) => Number(b.total_amount) - Number(a.total_amount));
-        largestSingleExpData = {
-          description: sortedByAmount[0].description,
-          amount: Number(sortedByAmount[0].total_amount),
-          date: new Date(sortedByAmount[0].created_at || Date.now()).toLocaleDateString()
-        };
-      }
-    } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      let maxPersonalShareOverall = 0;
-
-      displayedExpenses.forEach(exp => {
-        const personShareForEntireExpense = Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0);
-        totalAmount += personShareForEntireExpense;
-
-        if (personShareForEntireExpense > 0.001) {
-          if (personShareForEntireExpense > maxPersonalShareOverall) {
-            maxPersonalShareOverall = personShareForEntireExpense;
-            largestSingleExpData = {
-              description: exp.description,
-              amount: personShareForEntireExpense,
-              date: new Date(exp.created_at || Date.now()).toLocaleDateString()
-            };
-          }
-
-          if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-            const originalTotalBillForThisExpense = Number(exp.total_amount) || 0;
-            const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
-            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForThisExpense - celebrationContributionForExpense);
-            const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-
-            const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
-              ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
-              : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
-
-            exp.items.forEach(item => {
-              if (item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
-                const originalItemPrice = Number(item.price) || 0;
-                const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
-                const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
-
-                if (personShareOfThisItem > 0.001) {
-                  const cat = item.categoryName || exp.category || UNCATEGORIZED;
-                  categorySpending[cat] = (categorySpending[cat] || 0) + personShareOfThisItem;
-                }
-              }
-            });
-          } else {
-            const cat = exp.category || UNCATEGORIZED;
-            categorySpending[cat] = (categorySpending[cat] || 0) + personShareForEntireExpense;
-          }
-        }
-      });
-    }
-
-    const sortedCategories = Object.entries(categorySpending).sort(([, a], [, b]) => b - a);
-    if (sortedCategories.length > 0) {
-      mostExpensiveCatData = { name: sortedCategories[0][0], totalAmount: sortedCategories[0][1] };
-    }
-    const averageAmount = expenseCount > 0 ? totalAmount / expenseCount : 0;
-
-    return {
-      totalAmount, expenseCount, averageAmount, firstDate, lastDate,
-      distinctParticipantCount: distinctParticipants.size,
-      mostExpensiveCategory: mostExpensiveCatData,
-      largestSingleExpense: largestSingleExpData,
-    };
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-  const detailedCategoryAnalytics: CategoryAnalyticsData[] = useMemo(() => {
-    const categoryDataMap: Record<string, {
-      totalAmount: number;
-      expenseIds: Set<string>;
-      potentialMostExpensive: Array<{ type: 'expense' | 'item', id: string, description: string, amount: number, date: string, mainExpenseDescription?: string }>;
-      personalPaymentsForCategory: number;
-    }> = {};
-
-    dynamicCategories.forEach(cat => {
-      categoryDataMap[cat.name] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
-    });
-    if (!categoryDataMap[UNCATEGORIZED]) {
-      categoryDataMap[UNCATEGORIZED] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
-    }
-
-    displayedExpenses.forEach(exp => {
-      const expDate = new Date(exp.created_at || Date.now()).toLocaleDateString();
-      const originalTotalBillForExpense = Number(exp.total_amount) || 0;
-
-      const selectedPersonPaymentForThisWholeExpense = (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)
-        ? exp.paid_by
-          .filter(p => p.personId === selectedPersonIdForAnalytics)
-          .reduce((sum, p) => sum + Number(p.amount), 0)
-        : 0;
-
-      if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-        const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
-        const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForExpense - celebrationContributionForExpense);
-        const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-
-        const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
-          ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
-          : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
-
-        exp.items.forEach(item => {
-          const originalItemPrice = Number(item.price) || 0;
-          if (originalItemPrice <= 0.001) return;
-
-          const targetCategory = item.categoryName || exp.category || UNCATEGORIZED;
-          if (!categoryDataMap[targetCategory]) {
-            categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
-          }
-
-          let amountToCreditToCategory = 0;
-          let paymentContributionToCategoryForItem = 0;
-
-          if (analyticsViewMode === 'group') {
-            amountToCreditToCategory = originalItemPrice;
-          } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && item.sharedBy.includes(selectedPersonIdForAnalytics!)) {
-            const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
-            const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
-            amountToCreditToCategory = personShareOfThisItem;
-
-            if (selectedPersonPaymentForThisWholeExpense > 0.001 && originalTotalBillForExpense > 0.001) {
-              const itemProportionOfOriginalBill = originalItemPrice / originalTotalBillForExpense;
-              paymentContributionToCategoryForItem = itemProportionOfOriginalBill * selectedPersonPaymentForThisWholeExpense;
-            }
-          }
-
-          if (amountToCreditToCategory > 0.001) {
-            categoryDataMap[targetCategory].totalAmount += amountToCreditToCategory;
-            categoryDataMap[targetCategory].expenseIds.add(exp.id);
-            categoryDataMap[targetCategory].potentialMostExpensive.push({
-              type: 'item',
-              id: item.id || `item-${exp.id}-${item.name}`,
-              description: item.name,
-              amount: amountToCreditToCategory,
-              date: expDate,
-              mainExpenseDescription: exp.description
-            });
-            if (analyticsViewMode === 'personal' && paymentContributionToCategoryForItem > 0.001) {
-              categoryDataMap[targetCategory].personalPaymentsForCategory += paymentContributionToCategoryForItem;
-            }
-          }
-        });
-      } else {
-        const personShareForEntireExpense = (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)
-          ? Number(exp.shares.find(s => s.personId === selectedPersonIdForAnalytics)?.amount || 0)
-          : originalTotalBillForExpense;
-
-        const amountForCategory = (analyticsViewMode === 'group') ? originalTotalBillForExpense : personShareForEntireExpense;
-        if (amountForCategory <= 0.001) return;
-
-        const targetCategory = exp.category || UNCATEGORIZED;
-        if (!categoryDataMap[targetCategory]) {
-          categoryDataMap[targetCategory] = { totalAmount: 0, expenseIds: new Set(), potentialMostExpensive: [], personalPaymentsForCategory: 0 };
-        }
-
-        categoryDataMap[targetCategory].totalAmount += amountForCategory;
-        categoryDataMap[targetCategory].expenseIds.add(exp.id);
-        categoryDataMap[targetCategory].potentialMostExpensive.push({
-          type: 'expense',
-          id: exp.id,
-          description: exp.description,
-          amount: amountForCategory,
-          date: expDate
-        });
-        if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && selectedPersonPaymentForThisWholeExpense > 0.001) {
-          // Corrected: attribute the payment *proportionally* to the person's share of this expense.
-          // However, this specific logic might be better handled when calculating largestPayer below, as 'personalPaymentsForCategory'
-          // is more about 'how much I paid for things that fell into this category *for me*'.
-          // For now, let's sum the share amount if the person paid anything for this expense.
-          // This implies that if they paid (even partially), their share for this category contributes to "their payments for this category".
-          // A more precise "personalPaymentsForCategory" would track how much of their *actual payment* on an expense contributed to *their share* of items in a category.
-          // Given the current data structure, this is a reasonable approximation if we assume 'personalPaymentsForCategory' means 'my share in this category that I also contributed payment towards'.
-          categoryDataMap[targetCategory].personalPaymentsForCategory += personShareForEntireExpense;
-        }
-      }
-    });
-
-    return Object.entries(categoryDataMap).map(([name, data]) => {
-      const { totalAmount, expenseIds, potentialMostExpensive, personalPaymentsForCategory } = data;
-      const expenseCount = expenseIds.size;
-
-      let mostExpensiveItemData: { description: string; amount: number; date: string; } | null = null;
-      if (potentialMostExpensive.length > 0) {
-        const sortedItems = [...potentialMostExpensive].sort((a, b) => b.amount - a.amount);
-        const topItem = sortedItems[0];
-        mostExpensiveItemData = {
-          description: topItem.type === 'item' ? `${topItem.description} (from "${topItem.mainExpenseDescription}")` : topItem.description,
-          amount: topItem.amount,
-          date: topItem.date
-        };
-      }
-
-      let largestPayerData: { name: string; amount: number; } | null = null;
-      if (analyticsViewMode === 'group') {
-        const categoryExpenses = displayedExpenses.filter(exp => expenseIds.has(exp.id));
-        const payerTotals: Record<string, number> = {};
-        categoryExpenses.forEach(catExp => {
-          const currentExpenseTotalBill = Number(catExp.total_amount) || 0;
-          if (catExp.split_method === 'itemwise' && catExp.items) {
-            catExp.items.forEach(item => {
-              const itemCat = item.categoryName || catExp.category || UNCATEGORIZED;
-              if (itemCat === name) { // Only consider items belonging to the current category 'name'
-                catExp.paid_by.forEach(p => {
-                  // Approximate: attribute payment based on item's proportion of total bill
-                  if (currentExpenseTotalBill > 0.001) {
-                    const itemProportion = Number(item.price) / currentExpenseTotalBill;
-                    payerTotals[p.personId] = (payerTotals[p.personId] || 0) + (Number(p.amount) * itemProportion);
-                  }
-                });
-              }
-            });
-          } else { // For non-itemwise expenses, if the expense category matches
-            if ((catExp.category || UNCATEGORIZED) === name) {
-              catExp.paid_by.forEach(p => {
-                payerTotals[p.personId] = (payerTotals[p.personId] || 0) + Number(p.amount); // Full payment amount for this expense
-              });
-            }
-          }
-        });
-        const sortedPayers = Object.entries(payerTotals).sort(([, a], [, b]) => b - a);
-        if (sortedPayers.length > 0 && sortedPayers[0][1] > 0.001) {
-          largestPayerData = { name: peopleMap[sortedPayers[0][0]] || 'Unknown', amount: sortedPayers[0][1] };
-        }
-      } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-        // For personal view, "largestPayer" means "how much I paid towards my share of this category"
-        if (personalPaymentsForCategory > 0.001) { // This uses the refined personalPaymentsForCategory
-          largestPayerData = { name: peopleMap[selectedPersonIdForAnalytics] || "You", amount: personalPaymentsForCategory };
-        }
-      }
-
-      return {
-        name,
-        totalAmount,
-        expenseCount,
-        averageAmount: expenseCount > 0 && totalAmount > 0.001 ? totalAmount / expenseCount : 0,
-        Icon: getCategoryIconFromName((dynamicCategories.find(c => c.name === name)?.icon_name) || ""),
-        mostExpensiveItem: mostExpensiveItemData,
-        largestPayer: largestPayerData,
-      };
-    }).filter(cat => cat.totalAmount > 0.001 || dynamicCategories.some(dc => dc.name === cat.name))
-      .sort((a, b) => b.totalAmount - a.totalAmount);
-  }, [displayedExpenses, dynamicCategories, getCategoryIconFromName, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-
-  const detailedParticipantAnalytics: ParticipantAnalyticsData[] = useMemo(() => {
-    const peopleToAnalyze = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
-      ? people.filter(p => p.id === selectedPersonIdForAnalytics)
-      : people;
-
-    return peopleToAnalyze.map(person => {
-      let totalPaid = 0;
-      let totalShared = 0; // This is now Total Obligation (share + celebration)
-      let expensesPaidCount = 0;
-      let expensesSharedCount = 0;
-      const categoryShares: Record<string, number> = {};
-
-      displayedExpenses.forEach(exp => {
-        let personPaidThisExpense = false;
-        const paidAmount = exp.paid_by.find(p => p.personId === person.id)?.amount || 0;
-        if (paidAmount > 0.001) {
-          totalPaid += Number(paidAmount);
-          personPaidThisExpense = true;
-        }
-        if (personPaidThisExpense) expensesPaidCount++;
-
-        const personShareAmountForThisExpense = Number(exp.shares.find(s => s.personId === person.id)?.amount || 0);
-        let personCelebrationAmount = 0;
-        if (exp.celebration_contribution?.personId === person.id) {
-          personCelebrationAmount = Number(exp.celebration_contribution.amount);
-        }
-
-        totalShared += personShareAmountForThisExpense + personCelebrationAmount;
-
-        if (personShareAmountForThisExpense > 0.001) {
-          expensesSharedCount++;
-
-          if (exp.split_method === 'itemwise' && Array.isArray(exp.items) && exp.items.length > 0) {
-            const originalTotalBillForThisExpense = Number(exp.total_amount) || 0;
-            const celebrationContributionForExpense = exp.celebration_contribution ? Number(exp.celebration_contribution.amount) : 0;
-            const amountEffectivelySplitForExpense = Math.max(0, originalTotalBillForThisExpense - celebrationContributionForExpense);
-            const sumOfOriginalItemPricesForExpense = exp.items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
-
-            const reductionFactor = (sumOfOriginalItemPricesForExpense > 0.001 && amountEffectivelySplitForExpense >= 0)
-              ? (amountEffectivelySplitForExpense / sumOfOriginalItemPricesForExpense)
-              : (sumOfOriginalItemPricesForExpense === 0 && amountEffectivelySplitForExpense === 0 ? 1 : 0);
-
-            exp.items.forEach(item => {
-              if (item.sharedBy.includes(person.id)) {
-                const originalItemPrice = Number(item.price) || 0;
-                const adjustedItemPriceForSplitting = originalItemPrice * reductionFactor;
-                const personShareOfThisItem = (item.sharedBy.length > 0) ? adjustedItemPriceForSplitting / item.sharedBy.length : 0;
-
-                if (personShareOfThisItem > 0.001) {
-                  const cat = item.categoryName || exp.category || UNCATEGORIZED;
-                  categoryShares[cat] = (categoryShares[cat] || 0) + personShareOfThisItem;
-                }
-              }
-            });
-          } else {
-            const targetCategory = exp.category || UNCATEGORIZED;
-            categoryShares[targetCategory] = (categoryShares[targetCategory] || 0) + personShareAmountForThisExpense;
-          }
-        }
-      });
-
-      const sortedCategoryShares = Object.entries(categoryShares)
-        .filter(([, amount]) => amount > 0.001)
-        .sort(([, a], [, b]) => b - a);
-      const mostFreqCatShared = sortedCategoryShares.length > 0 ? { name: sortedCategoryShares[0][0], amount: sortedCategoryShares[0][1] } : null;
-
-      return {
-        name: person.name,
-        totalPaid,
-        totalShared,
-        netBalance: totalPaid - totalShared,
-        expensesPaidCount,
-        expensesSharedCount,
-        mostFrequentCategoryShared: mostFreqCatShared,
-        averageShareAmount: expensesSharedCount > 0 ? totalShared / expensesSharedCount : 0,
-      };
-    }).sort((a, b) => b.totalPaid - a.totalPaid);
-  }, [displayedExpenses, people, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-
-  const pieChartData: CategorySpendingPieChartDataPoint[] = useMemo(() => {
-    const top5Categories = detailedCategoryAnalytics.slice(0, 5);
-    if (top5Categories.length === 0) {
-      return [];
-    }
-
-    const sumOfTop5Amounts = top5Categories.reduce((acc, curr) => acc + curr.totalAmount, 0);
-
-    if (sumOfTop5Amounts < 0.001) {
-      return [];
-    }
-
-    return top5Categories.filter(entry => {
-      if (entry.totalAmount < 0.001) return false;
-      const percentage = (entry.totalAmount / sumOfTop5Amounts) * 100;
-
-      return percentage >= 0.5 || (top5Categories.length === 1 && entry.totalAmount > 0.001);
-    }).map(cat => ({ name: cat.name, totalAmount: cat.totalAmount })); // Ensure correct type for CategorySpendingPieChart
-  }, [detailedCategoryAnalytics]);
-
-  const shareVsPaidData: ShareVsPaidDataPoint[] = useMemo(() => {
-    const peopleToAnalyze = analyticsViewMode === 'personal' && selectedPersonIdForAnalytics
-      ? people.filter(p => p.id === selectedPersonIdForAnalytics)
-      : people;
-    if (!peopleToAnalyze.length) return [];
-
-    return peopleToAnalyze.map(person => {
-      let totalPaidByPerson = 0;
-      let totalObligationForPerson = 0;
-      displayedExpenses.forEach(expense => {
-        const paidAmount = expense.paid_by.find(p => p.personId === person.id)?.amount || 0;
-        if (paidAmount > 0.001) totalPaidByPerson += Number(paidAmount);
-
-        const shareAmount = expense.shares.find(s => s.personId === person.id)?.amount || 0;
-        let celebrationAmount = 0;
-        if (expense.celebration_contribution?.personId === person.id) {
-          celebrationAmount = Number(expense.celebration_contribution.amount);
-        }
-        totalObligationForPerson += Number(shareAmount) + celebrationAmount;
-      });
-      return { name: peopleMap[person.id] || person.name, paid: totalPaidByPerson, share: totalObligationForPerson };
-    }).filter(d => d.paid > 0.01 || d.share > 0.01);
-  }, [displayedExpenses, people, peopleMap, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-  const topExpensesData: TopExpenseData[] = useMemo(() => {
-    if (analyticsViewMode === 'group') {
-      return [...displayedExpenses]
-        .sort((a, b) => Number(b.total_amount) - Number(a.total_amount))
-        .slice(0, 10);
-    } else if (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics) {
-      return displayedExpenses.map(exp => {
-        const personShare = exp.shares.find(s => s.personId === selectedPersonIdForAnalytics);
-        return { ...exp, personalShareAmount: Number(personShare?.amount || 0) };
-      })
-        .filter(exp => exp.personalShareAmount > 0.001)
-        .sort((a, b) => b.personalShareAmount - a.personalShareAmount)
-        .slice(0, 10)
-        .map(({ personalShareAmount, ...rest }) => ({ ...rest, total_amount: personalShareAmount }));
-    }
-    return [];
-  }, [displayedExpenses, analyticsViewMode, selectedPersonIdForAnalytics]);
-
-  // Show skeleton loaders while data is loading - CHECK THIS FIRST
-  if (isLoading) {
+  if (!expenses.length) {
     return (
-      <div className="h-full w-full overflow-x-hidden overflow-y-auto bg-background">
-        <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4">
-          {/* Tabs Skeleton - Mobile Optimized */}
-          <div className="flex flex-col gap-4">
-            <Skeleton className="h-10 w-full" /> {/* Tab selector */}
-          </div>
-
-          {/* Overall Snapshot Skeleton - Mobile Optimized */}
-          <Card className="w-full shadow-lg rounded-lg">
-            <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
-              <div className="flex items-center gap-2">
-                <Skeleton className="h-5 w-5 sm:h-6 sm:w-6 rounded" />
-                <Skeleton className="h-6 w-full max-w-[160px] sm:w-48" />
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {/* Stat cards */}
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <div key={i} className={`p-3 sm:p-4 rounded-lg border bg-muted/30 ${i === 5 ? 'col-span-2 md:col-span-1' : i === 6 ? 'col-span-2 md:col-span-3' : ''}`}>
-                    <Skeleton className="h-3 sm:h-4 w-full max-w-[120px] sm:w-32 mb-2" />
-                    <Skeleton className="h-5 sm:h-6 w-20 sm:w-24 mb-1" />
-                    {i >= 5 && <Skeleton className="h-3 w-full max-w-[140px] sm:w-36" />}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Charts Grid Skeleton - Mobile Optimized */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="w-full shadow-lg rounded-lg">
-                <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3">
-                  <Skeleton className="h-6 w-full max-w-[200px] sm:w-48" />
-                  <Skeleton className="h-4 w-full sm:w-64 mt-2" />
-                </CardHeader>
-                <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
-                  <Skeleton className="h-48 sm:h-64 w-full" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
+      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
+        <Card className="mx-auto mt-4 max-w-2xl rounded-lg py-8 text-center shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-center gap-2 text-xl">
+              <BarChart4 className="h-5 w-5" />
+              Analytics
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-6 text-sm text-muted-foreground">
+            Add expenses to see spending, balances, categories, and settlement activity here.
+          </CardContent>
+        </Card>
       </div>
-    );
-  }
-
-  // Show empty state only when NOT loading and no data exists
-  if (!isLoading && allExpenses.length === 0) {
-    return (
-      <Card className={`${ANALYTICS_STYLES.card} text-center py-6 sm:py-10`}>
-        <CardHeader className={ANALYTICS_STYLES.header}>
-          <CardTitle className={`${ANALYTICS_STYLES.title} justify-center text-primary`}>
-            <BarChartBig className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Expense Analytics
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 pt-0">
-          <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
-            <BarChartBig className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-            <p className="font-medium text-base sm:text-lg mb-2">No Data to Analyze</p>
-            <p className="text-sm sm:text-base max-w-md">
-              Add some expenses to see detailed analytics and insights here.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     );
   }
 
   return (
     <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-      <div className="flex flex-col space-y-4 md:space-y-6 px-0 pb-8 pt-4 min-h-0">
-        <Tabs value={analyticsViewMode} onValueChange={(value) => {
-          setAnalyticsViewMode(value as 'group' | 'personal');
-          if (value === 'group') setSelectedPersonIdForAnalytics(null);
-          else if (people.length > 0 && !selectedPersonIdForAnalytics) setSelectedPersonIdForAnalytics(people[0].id);
-        }} className="w-full max-w-full">
-          <TabsList className="grid w-full grid-cols-2 mb-4 sticky top-0 z-10 bg-muted text-muted-foreground p-1 rounded-md text-xs sm:text-sm">
-            <TabsTrigger value="group" className="flex items-center gap-1.5 sm:gap-2">
-              <Eye className="h-4 w-4" /> Group Overview
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="flex items-center gap-1.5 sm:gap-2">
-              <UserSquare className="h-4 w-4" /> Personal Insights
-            </TabsTrigger>
-          </TabsList>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-0 pb-10 pt-4 sm:gap-6">
+        <header className="flex flex-col gap-4 rounded-lg bg-card px-4 py-4 shadow-lg sm:px-5 lg:flex-row lg:items-end lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Verified analytics
+            </div>
+            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">Analytics</h1>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Spending, balances, and settlement movement from one reconciled model.
+            </p>
+          </div>
 
-          <TabsContent value="group" className="mt-0"> {/* Ensure mt-0 for TabsContent */}
-          </TabsContent>
-          <TabsContent value="personal" className="mt-0">
-            <Card className={`${ANALYTICS_STYLES.card} mb-4 sm:mb-6`}>
-              <CardContent className={ANALYTICS_STYLES.header}>
-                <Label htmlFor="person-analytics-select" className="block text-xs sm:text-sm font-medium mb-1.5 sm:mb-2 text-primary">
-                  Select Person for Detailed Insights:
+          <div className="grid gap-3 sm:grid-cols-2 lg:min-w-[520px]">
+            <Tabs
+              value={mode}
+              onValueChange={(value) => {
+                const nextMode = value as AnalyticsMode;
+                setMode(nextMode);
+                if (nextMode === "group") setSelectedPersonId(null);
+              }}
+              className="min-w-0"
+            >
+              <TabsList className="grid h-11 w-full grid-cols-2">
+                <TabsTrigger value="group" className="min-h-10 gap-2 text-xs sm:text-sm">
+                  <Eye className="h-4 w-4" />
+                  Group
+                </TabsTrigger>
+                <TabsTrigger value="personal" className="min-h-10 gap-2 text-xs sm:text-sm">
+                  <UserSquare className="h-4 w-4" />
+                  Personal
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={datePreset} onValueChange={(value) => setDatePreset(value as AnalyticsDatePreset)}>
+                <SelectTrigger className="h-11 text-sm" aria-label="Date range">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_PRESETS.map((preset) => (
+                    <SelectItem key={preset.value} value={preset.value}>{preset.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={granularity} onValueChange={(value) => setGranularity(value as AnalyticsGranularity)}>
+                <SelectTrigger className="h-11 text-sm" aria-label="Granularity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {mode === "personal" ? (
+              <div className="sm:col-span-2">
+                <Label htmlFor="analytics-person" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                  Person
                 </Label>
                 <Select
-                  value={selectedPersonIdForAnalytics || ''}
-                  onValueChange={setSelectedPersonIdForAnalytics}
-                  disabled={people.length === 0}
+                  value={model.selectedPersonId || ""}
+                  onValueChange={setSelectedPersonId}
+                  disabled={!people.length}
                 >
-                  <SelectTrigger id="person-analytics-select" className="h-9 text-xs sm:text-sm">
-                    <SelectValue placeholder="Select a person..." />
+                  <SelectTrigger id="analytics-person" className="h-11 text-sm">
+                    <SelectValue placeholder="Select a person" />
                   </SelectTrigger>
                   <SelectContent>
-                    {people.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                    {people.map((person) => (
+                      <SelectItem key={person.id} value={person.id}>{peopleMap[person.id] || person.name}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-              </CardContent>
-            </Card>
-            {analyticsViewMode === 'personal' && !selectedPersonIdForAnalytics && (
-              <Card className={`${ANALYTICS_STYLES.card} text-center py-6`}>
-                <CardContent className={ANALYTICS_STYLES.tableContent}>
-                  <p className="text-sm sm:text-md text-muted-foreground">Please select a person to view their personal analytics.</p>
-                </CardContent>
-              </Card>
+              </div>
+            ) : null}
+          </div>
+        </header>
+
+        <TrustStrip model={model} mode={mode} selectedPersonName={selectedPersonName} />
+
+        <AnalyticsSection title="Overview" icon={Sigma} defaultOpen>
+          <OverviewGrid model={model} mode={mode} />
+        </AnalyticsSection>
+
+        <AnalyticsSection title="Balance & Settlements" icon={CircleDollarSign} defaultOpen>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {mode === "personal" ? (
+              <ChartFrame
+                title={`${selectedPersonName}'s Balance Over Time`}
+                description="Positive means they are owed. Negative means they owe."
+              >
+                <VisxLineChart
+                  data={model.charts.balanceTimeline.map((point) => ({
+                    key: point.key,
+                    label: point.label,
+                    value: point.balance,
+                    sortValue: point.sortValue,
+                  }))}
+                  valueLabel="Balance"
+                  color={model.snapshot.currentNetBalance && model.snapshot.currentNetBalance < 0 ? "#c2415d" : "#2f7d68"}
+                  balanceMode
+                />
+              </ChartFrame>
+            ) : (
+              <SettlementSummaryPanel model={model} />
             )}
-          </TabsContent>
-        </Tabs>
 
-        {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics)) && displayedExpenses.length === 0 && (
-          <Card className={`${ANALYTICS_STYLES.card} text-center py-6`}>
-            <CardContent className={ANALYTICS_STYLES.tableContent}>
-              <p className="text-sm sm:text-md text-muted-foreground">
-                {analyticsViewMode === 'personal' && selectedPersonIdForAnalytics ?
-                  `${peopleMap[selectedPersonIdForAnalytics] || 'The selected person'} is not involved in any expenses with a share.` :
-                  "No expenses match the current filter."}
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ========== ANALYTICS CARD GRIDS ========== */}
-        {(analyticsViewMode === 'group' || (analyticsViewMode === 'personal' && selectedPersonIdForAnalytics && displayedExpenses.length > 0)) && (
-          <>
-            <div className="">
-              <OverallAnalyticsSnapshot
-                enhancedOverallStats={enhancedOverallStats}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                peopleMap={peopleMap}
+            <ChartFrame
+              title={mode === "personal" ? "Paid vs Share" : "Paid vs Share by Person"}
+              description="Share includes regular shares and celebration contributions."
+            >
+              <BarChart
+                data={model.charts.paidVsShare.map((row) => ({
+                  key: row.personId,
+                  label: row.name,
+                  paid: row.paid,
+                  obligation: row.obligation,
+                }))}
+                series={[
+                  { id: "paid", label: "Paid", color: "#2f7d68" },
+                  { id: "obligation", label: "Share", color: "#c47f2a" },
+                ]}
               />
-            </div>
+            </ChartFrame>
+          </div>
+          <ParticipantCards rows={model.details.participantRows} compact={mode === "personal"} />
+        </AnalyticsSection>
 
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <MonthlySpendingChart
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-                <ShareVsPaidComparisonChart
-                  shareVsPaidData={shareVsPaidData}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                  peopleMap={peopleMap}
-                />
-              </div>
-            </div>
-
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <SpendingByDayChart
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-                <SplitMethodChart
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-              </div>
-            </div>
-
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <TransactionHeatmapCalendar
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                  peopleMap={peopleMap}
-                />
-                <MonthlyCategoryTrendsChart
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-              </div>
-            </div>
-
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <ExpenseFrequencyTimeline
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-                <ExpenseVelocity
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-              </div>
-            </div>
-
-            <div className="">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <ExpenseSizeDistribution
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-                <AverageExpenseByCategory
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                />
-              </div>
-            </div>
-
-            <div className="">
-              <DebtCreditBalanceOverTime
-                expenses={displayedExpenses}
-                settlementPayments={settlementPayments}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                peopleMap={peopleMap}
+        <AnalyticsSection title="Spending Trends" icon={LineChart} defaultOpen>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartFrame
+              title={mode === "personal" ? `${selectedPersonName}'s Spending` : "Group Spending"}
+              description={`Grouped ${model.granularity}. Excluded expenses still count as spending.`}
+            >
+              <VisxLineChart
+                data={model.charts.spendingTrend}
+                valueLabel={mode === "personal" ? "Share" : "Spent"}
+                color="#2f7d68"
               />
-            </div>
-            {!!topExpensesData.length && (
-              <div className="">
-                <TopExpensesTable
-                  topExpensesData={topExpensesData}
-                  analyticsViewMode={analyticsViewMode}
-                  peopleMap={peopleMap}
-                />
-              </div>
-            )}
-            <div className="">
-              <CategoryAnalyticsTable
-                detailedCategoryAnalytics={detailedCategoryAnalytics}
-                analyticsViewMode={analyticsViewMode}
+            </ChartFrame>
+            <ChartFrame title="Category Trends" description="Top categories over the selected range.">
+              <StackedAreaChart data={model.charts.categoryTrend.data} categories={model.charts.categoryTrend.categories} />
+            </ChartFrame>
+            <ChartFrame title="Spending by Day" description="Which weekdays carry the most spend.">
+              <BarChart
+                data={model.charts.dayOfWeek.map((point) => ({ key: point.key, label: point.label, value: point.value }))}
+                series={[{ id: "value", label: "Spent", color: "#111827" }]}
               />
-            </div>
-            <div className="">
-              <ParticipantSummaryTable
-                detailedParticipantAnalytics={detailedParticipantAnalytics}
-                analyticsViewMode={analyticsViewMode}
-                selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
-                peopleMap={peopleMap}
+            </ChartFrame>
+            <ChartFrame title="Average by Category" description="Average amount per expense in each category.">
+              <BarChart
+                data={model.charts.averageByCategory.slice(0, 8).map((point) => ({ key: point.key, label: point.label, value: point.value }))}
+                series={[{ id: "value", label: "Average", color: "#777169" }]}
+                horizontal
               />
-            </div>
-            <div className="mb-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full">
-                <CategorySpendingPieChart
-                  pieChartData={pieChartData}
-                  analyticsViewMode={analyticsViewMode}
+            </ChartFrame>
+          </div>
+        </AnalyticsSection>
+
+        <AnalyticsSection title="Composition" icon={PieChart}>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <ChartFrame title="Category Breakdown" className="lg:col-span-2">
+              <DonutChart data={model.charts.categoryBreakdown.slice(0, 6).map((row) => ({ name: row.name, amount: row.amount, share: row.share }))} />
+            </ChartFrame>
+            <ChartFrame title="Split Methods">
+              <DonutChart
+                data={model.charts.splitMethods.map((row) => ({ name: row.label, amount: row.count, share: row.share }))}
+                valueFormatter={(value) => `${value} expense${value === 1 ? "" : "s"}`}
+              />
+            </ChartFrame>
+            <ChartFrame title="Expense Size Distribution" className="lg:col-span-3">
+              <Histogram data={model.charts.expenseSizeDistribution} valueLabel="Expenses" />
+            </ChartFrame>
+          </div>
+        </AnalyticsSection>
+
+        <AnalyticsSection title="Activity Patterns" icon={Activity}>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChartFrame title="Expense Activity Heatmap" description="Tap a day to inspect the expense list.">
+              <HeatmapCalendar data={model.charts.activityHeatmap} />
+            </ChartFrame>
+            <div className="grid gap-4">
+              <ChartFrame title="Expense Frequency" description="Daily expense count in the selected range.">
+                <VisxLineChart
+                  data={model.charts.frequency}
+                  valueLabel="Expenses"
+                  valueFormatter={(value) => `${value}`}
+                  color="#111827"
                 />
-                <ExpenseDistributionChart
-                  expenses={displayedExpenses}
-                  analyticsViewMode={analyticsViewMode}
-                  selectedPersonIdForAnalytics={selectedPersonIdForAnalytics}
+              </ChartFrame>
+              <ChartFrame title="Expense Velocity" description="Expenses per week.">
+                <VisxLineChart
+                  data={model.charts.velocity}
+                  valueLabel="Expenses per week"
+                  valueFormatter={(value) => `${value}`}
+                  color="#c47f2a"
+                  height={320}
                 />
-              </div>
+              </ChartFrame>
             </div>
-          </>
-        )}
+          </div>
+        </AnalyticsSection>
+
+        <AnalyticsSection title="Details" icon={ReceiptText}>
+          <DetailsGrid
+            model={model}
+            getCategoryIconFromName={getCategoryIconFromName}
+          />
+        </AnalyticsSection>
       </div>
     </div>
   );
+}
+
+function TrustStrip({
+  model,
+  mode,
+  selectedPersonName,
+}: {
+  model: ReturnType<typeof buildAnalyticsModel>;
+  mode: AnalyticsMode;
+  selectedPersonName: string;
+}) {
+  const balanceText = mode === "personal"
+    ? `${selectedPersonName}: ${signedCurrency(model.snapshot.currentNetBalance || 0)}`
+    : `${formatAnalyticsCurrency(model.snapshot.totalOutstanding)} outstanding`;
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <TrustItem icon={ShieldCheck} label="Balance check" value={model.trust.balanceReconciled ? "Reconciled" : "Needs review"} tone={model.trust.balanceReconciled ? "good" : "warn"} />
+      <TrustItem icon={Sparkles} label="Current position" value={balanceText} />
+      <TrustItem icon={ReceiptText} label="Expenses counted" value={`${model.trust.spendingExpenseCount} spending / ${model.trust.settlementExpenseCount} settlement`} />
+      <TrustItem icon={AlertTriangle} label="Data warnings" value={`${model.trust.dataQualityWarningCount}`} tone={model.trust.dataQualityWarningCount ? "warn" : "good"} />
+    </div>
+  );
+}
+
+function TrustItem({
+  icon: Icon,
+  label,
+  value,
+  tone = "neutral",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: string;
+  tone?: "neutral" | "good" | "warn";
+}) {
+  return (
+    <div className="flex min-w-0 items-center gap-3 rounded-lg bg-card px-4 py-3 shadow-sm">
+      <div className={cn(
+        "flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-muted",
+        tone === "good" && "bg-green-100 text-green-700",
+        tone === "warn" && "bg-yellow-100 text-yellow-800"
+      )}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="truncate text-sm font-semibold">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsSection({
+  title,
+  icon: Icon,
+  defaultOpen = false,
+  children,
+}: {
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="min-w-0">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Icon className="h-5 w-5 shrink-0 text-primary" />
+            <h2 className="truncate text-lg font-semibold sm:text-xl">{title}</h2>
+          </div>
+          <CollapsibleTrigger asChild>
+            <Button type="button" variant="ghost" size="sm" className="h-11 min-w-11 gap-2">
+              <span className="hidden sm:inline">{open ? "Hide" : "Show"}</span>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <CollapsibleContent>
+          <div className="min-w-0 space-y-4">{children}</div>
+        </CollapsibleContent>
+      </Collapsible>
+    </section>
+  );
+}
+
+function OverviewGrid({
+  model,
+  mode,
+}: {
+  model: ReturnType<typeof buildAnalyticsModel>;
+  mode: AnalyticsMode;
+}) {
+  const stats = [
+    {
+      label: mode === "personal" ? "Total Share" : "Total Spend",
+      value: formatAnalyticsCurrency(model.snapshot.totalSpend),
+      detail: model.dateRange.label,
+      icon: CircleDollarSign,
+    },
+    {
+      label: "Expenses",
+      value: `${model.snapshot.expenseCount}`,
+      detail: `${model.trust.excludedExpenseCount} excluded from settlement`,
+      icon: ReceiptText,
+    },
+    {
+      label: "Average",
+      value: formatAnalyticsCurrency(model.snapshot.averageExpense),
+      detail: "Per counted expense",
+      icon: BarChart4,
+    },
+    {
+      label: mode === "personal" ? "Current Balance" : "Outstanding",
+      value: mode === "personal"
+        ? signedCurrency(model.snapshot.currentNetBalance || 0)
+        : formatAnalyticsCurrency(model.snapshot.totalOutstanding),
+      detail: mode === "personal" ? "After settlements" : "Total owed to creditors",
+      icon: Users,
+    },
+  ];
+
+  return (
+    <>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {stats.map((stat) => (
+          <MetricCard key={stat.label} {...stat} />
+        ))}
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2">
+        <InsightCard
+          icon={LayoutGrid}
+          label="Top category"
+          title={model.snapshot.topCategory?.name || "No category yet"}
+          value={model.snapshot.topCategory ? formatAnalyticsCurrency(model.snapshot.topCategory.amount) : formatAnalyticsCurrency(0)}
+        />
+        <InsightCard
+          icon={CalendarDays}
+          label="Largest expense"
+          title={model.snapshot.largestExpense?.description || "No expense yet"}
+          value={model.snapshot.largestExpense ? `${formatAnalyticsCurrency(model.snapshot.largestExpense.amount)} on ${model.snapshot.largestExpense.dateLabel}` : model.snapshot.dateRangeLabel}
+        />
+      </div>
+    </>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  detail,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="min-w-0 rounded-lg bg-card p-4 shadow-sm">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="truncate text-xs font-medium text-muted-foreground">{label}</div>
+        <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </div>
+      <div className="truncate text-xl font-semibold">{value}</div>
+      <div className="mt-1 truncate text-xs text-muted-foreground">{detail}</div>
+    </div>
+  );
+}
+
+function InsightCard({
+  icon: Icon,
+  label,
+  title,
+  value,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  title: string;
+  value: string;
+}) {
+  return (
+    <div className="flex min-w-0 gap-3 rounded-lg bg-card p-4 shadow-sm">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-secondary">
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="truncate text-base font-semibold">{title}</div>
+        <div className="truncate text-sm text-muted-foreground">{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function SettlementSummaryPanel({ model }: { model: ReturnType<typeof buildAnalyticsModel> }) {
+  return (
+    <ChartFrame title="Settlement Position" description="Net positions after recorded settlement payments.">
+      <div className="grid min-h-[280px] content-center gap-3">
+        <div className="rounded-lg bg-muted/35 p-4">
+          <div className="text-sm text-muted-foreground">Outstanding across the group</div>
+          <div className="mt-1 text-2xl font-semibold">{formatAnalyticsCurrency(model.snapshot.totalOutstanding)}</div>
+        </div>
+        <div className="grid gap-2">
+          {model.details.participantRows.slice(0, 5).map((row) => (
+            <div key={row.personId} className="flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2 text-sm">
+              <span className="min-w-0 truncate">{row.name}</span>
+              <Badge variant={row.netBalance >= 0 ? "secondary" : "outline"} className="shrink-0">
+                {signedCurrency(row.netBalance)}
+              </Badge>
+            </div>
+          ))}
+        </div>
+      </div>
+    </ChartFrame>
+  );
+}
+
+function ParticipantCards({
+  rows,
+  compact,
+}: {
+  rows: ReturnType<typeof buildAnalyticsModel>["details"]["participantRows"];
+  compact?: boolean;
+}) {
+  if (!rows.length) return null;
+  return (
+    <div className={cn("grid gap-3", compact ? "sm:grid-cols-1" : "sm:grid-cols-2 xl:grid-cols-3")}>
+      {rows.map((row) => (
+        <div key={row.personId} className="min-w-0 rounded-lg bg-card p-4 shadow-sm">
+          <div className="mb-3 flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{row.name}</div>
+              <div className="text-xs text-muted-foreground">{row.expensesSharedCount} shared / {row.expensesPaidCount} paid</div>
+            </div>
+            <Badge variant={row.netBalance >= 0 ? "secondary" : "outline"}>{signedCurrency(row.netBalance)}</Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <MiniStat label="Paid" value={formatAnalyticsCompactCurrency(row.paid)} />
+            <MiniStat label="Share" value={formatAnalyticsCompactCurrency(row.obligation)} />
+            <MiniStat label="Sent" value={formatAnalyticsCompactCurrency(row.settlementsSent)} />
+            <MiniStat label="Received" value={formatAnalyticsCompactCurrency(row.settlementsReceived)} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-md bg-muted/35 px-3 py-2">
+      <div className="truncate text-muted-foreground">{label}</div>
+      <div className="truncate font-medium">{value}</div>
+    </div>
+  );
+}
+
+function DetailsGrid({
+  model,
+  getCategoryIconFromName,
+}: {
+  model: ReturnType<typeof buildAnalyticsModel>;
+  getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
+}) {
+  return (
+    <div className="grid gap-4 xl:grid-cols-2">
+      <ChartFrame title="Top Expenses" description="Largest expenses or personal shares in the selected view.">
+        <div className="space-y-2">
+          {model.details.topExpenses.length ? model.details.topExpenses.map((expense) => (
+            <div key={expense.id} className="grid gap-2 rounded-lg border bg-card p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+              <div className="min-w-0">
+                <div className="truncate font-medium">{expense.description}</div>
+                <div className="mt-1 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span>{expense.category}</span>
+                  <span>{expense.dateLabel}</span>
+                  {expense.excluded ? <Badge variant="outline" className="px-1.5 py-0 text-[10px]">Excluded</Badge> : null}
+                </div>
+              </div>
+              <div className="font-semibold sm:text-right">{formatAnalyticsCurrency(expense.amount)}</div>
+            </div>
+          )) : <EmptyDetails label="No expenses in this view." />}
+        </div>
+      </ChartFrame>
+
+      <ChartFrame title="Category Deep Dive" description="Totals, averages, and payer context by category.">
+        <div className="space-y-2">
+          {model.details.categoryRows.length ? model.details.categoryRows.map((category) => {
+            const Icon = getCategoryIconFromName(category.iconName);
+            return (
+              <div key={category.name} className="rounded-lg border bg-card p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{category.name}</div>
+                      <div className="text-xs text-muted-foreground">{category.expenseCount} expenses</div>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right font-semibold">{formatAnalyticsCurrency(category.totalAmount)}</div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                  <MiniStat label="Average" value={formatAnalyticsCompactCurrency(category.averageAmount)} />
+                  <MiniStat label="Top payer" value={category.topPayer ? category.topPayer.name : "N/A"} />
+                </div>
+              </div>
+            );
+          }) : <EmptyDetails label="No category spending in this view." />}
+        </div>
+      </ChartFrame>
+    </div>
+  );
+}
+
+function EmptyDetails({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-[160px] items-center justify-center rounded-lg bg-muted/35 px-4 text-center text-sm text-muted-foreground">
+      {label}
+    </div>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="h-full w-full overflow-x-hidden overflow-y-auto">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-0 pb-10 pt-4">
+        <div className="rounded-lg bg-card p-4 shadow-lg">
+          <Skeleton className="mb-3 h-6 w-36" />
+          <Skeleton className="h-9 w-full max-w-md" />
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+            <Skeleton className="h-11 w-full" />
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-20 w-full rounded-lg" />)}
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">
+          {[0, 1, 2, 3].map((item) => <Skeleton key={item} className="h-96 w-full rounded-lg" />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function signedCurrency(value: number) {
+  if (Math.abs(value) < 0.01) return formatAnalyticsCurrency(0);
+  return value > 0 ? `+${formatAnalyticsCurrency(value)}` : formatAnalyticsCurrency(value);
 }
