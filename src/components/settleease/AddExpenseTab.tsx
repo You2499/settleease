@@ -87,6 +87,7 @@ export default function AddExpenseTab({
 
   const initialPeopleSetForFormInstance = useRef<Set<string>>(new Set());
   const previousExpenseToEdit = useRef<Expense | null | undefined>(undefined);
+  const latestPayersRef = useRef(payers);
 
   const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
@@ -110,6 +111,7 @@ export default function AddExpenseTab({
   }, [totalAmount, actualCelebrationAmount]);
 
   const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
+  const payerAutoCalculationKey = useMemo(() => payers.slice(0, -1).map(p => p.amount).join('|'), [payers]);
 
   const { handleSubmitExpense } = useExpenseFormLogic({ onExpenseAdded });
 
@@ -140,6 +142,10 @@ export default function AddExpenseTab({
       initialPeopleSetForFormInstance.current = new Set();
     }
   }, [expenseToEdit]);
+
+  useEffect(() => {
+    latestPayersRef.current = payers;
+  }, [payers]);
 
   // Main effect to populate form when expenseToEdit changes or for a new expense
   useEffect(() => {
@@ -205,10 +211,10 @@ export default function AddExpenseTab({
           name: item.name,
           price: item.price.toString(),
           sharedBy: item.sharedBy || [],
-          categoryName: item.categoryName || category || defaultItemCategory,
+          categoryName: item.categoryName || expenseToEdit.category || defaultItemCategory,
         })));
       } else {
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
       }
 
     } else if (isTransitioningToNewExpense || isInitialMount) {
@@ -228,7 +234,7 @@ export default function AddExpenseTab({
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
 
       // Logic for setting default selected people for equal split
       const currentPeopleIds = people.map(p => p.id);
@@ -258,7 +264,7 @@ export default function AddExpenseTab({
 
     // Update the ref to track the current expenseToEdit for next render
     previousExpenseToEdit.current = expenseToEdit;
-  }, [expenseToEdit, people, dynamicCategories, defaultPayerId]);
+  }, [expenseToEdit, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
 
   // Effect to manage payer amount(s) based on totalAmount and isMultiplePayers
   useEffect(() => {
@@ -270,21 +276,25 @@ export default function AddExpenseTab({
         const personIdToUse = currentPayer?.personId ||
           (expenseToEdit.paid_by && expenseToEdit.paid_by.length === 1 ? expenseToEdit.paid_by[0].personId : defaultPayerId || (people.length > 0 ? people[0].id : ''));
 
-        if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
-          setPayers([{
-            id: currentPayer?.id || Date.now().toString(),
-            personId: personIdToUse!,
-            amount: expectedAmount
-          }]);
+        const nextPayer = {
+          id: currentPayer?.id || Date.now().toString(),
+          personId: personIdToUse || '',
+          amount: expectedAmount
+        };
+
+        if (!currentPayer || currentPayer.personId !== nextPayer.personId || currentPayer.amount !== nextPayer.amount) {
+          setPayers([nextPayer]);
         }
       } else {
         const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
-        if (!currentPayer || currentPayer.personId === '' || currentPayer.amount !== expectedAmount) {
-          setPayers([{
-            id: currentPayer?.id || Date.now().toString(),
-            personId: defaultPersonIdForNewExpense!,
-            amount: expectedAmount
-          }]);
+        const nextPayer = {
+          id: currentPayer?.id || Date.now().toString(),
+          personId: defaultPersonIdForNewExpense,
+          amount: expectedAmount
+        };
+
+        if (!currentPayer || currentPayer.personId !== nextPayer.personId || currentPayer.amount !== nextPayer.amount) {
+          setPayers([nextPayer]);
         }
       }
     } else {
@@ -297,7 +307,7 @@ export default function AddExpenseTab({
         }
       }
     }
-  }, [totalAmount, isMultiplePayers, defaultPayerId, people, expenseToEdit]);
+  }, [totalAmount, isMultiplePayers, defaultPayerId, people, expenseToEdit, payers]);
 
   useEffect(() => {
     if (expenseToEdit) return;
@@ -315,7 +325,7 @@ export default function AddExpenseTab({
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0) {
       setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
     }
-  }, [splitMethod, people, expenseToEdit, items, unequalShares]);
+  }, [splitMethod, people, expenseToEdit, items, unequalShares, category, defaultItemCategory]);
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -325,14 +335,15 @@ export default function AddExpenseTab({
   
   // Separate effect to handle auto-calculation without blocking input
   useEffect(() => {
-    if (!isMultiplePayers || payers.length <= 1) return;
+    const currentPayers = latestPayersRef.current;
+    if (!isMultiplePayers || currentPayers.length <= 1) return;
     
     const total = parseFloat(totalAmount) || 0;
     
     // Calculate sum of all entered amounts except the last payer
     let sumOfOthers = 0;
-    for (let i = 0; i < payers.length - 1; i++) {
-      const amt = parseFloat(payers[i].amount) || 0;
+    for (let i = 0; i < currentPayers.length - 1; i++) {
+      const amt = parseFloat(currentPayers[i].amount) || 0;
       sumOfOthers += amt;
     }
     
@@ -341,14 +352,15 @@ export default function AddExpenseTab({
     const expectedLastAmount = remainder.toFixed(2);
     
     // Only update if different to avoid infinite loop
-    if (payers[payers.length - 1].amount !== expectedLastAmount) {
+    if (currentPayers[currentPayers.length - 1].amount !== expectedLastAmount) {
       setPayers(prev => {
+        if (prev.length <= 1 || prev[prev.length - 1].amount === expectedLastAmount) return prev;
         const updated = [...prev];
         updated[updated.length - 1] = { ...updated[updated.length - 1], amount: expectedLastAmount };
         return updated;
       });
     }
-  }, [isMultiplePayers, totalAmount, ...payers.slice(0, -1).map(p => p.amount)]);
+  }, [isMultiplePayers, totalAmount, payerAutoCalculationKey, payers.length]);
 
   const addPayer = () => {
     // Find first available person who isn't already selected

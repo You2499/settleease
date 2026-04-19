@@ -480,10 +480,15 @@ function SettleEasePageContent() {
     if (!hasResolvedInitialView || !isAppIdentityReady || !currentUser || !userRole) return;
     if (!canAccessView(activeView, userRole)) return;
 
-    // Update URL
-    const params = new URLSearchParams(searchParams.toString());
+    // Update URL only when it actually changes. Replacing the same query can
+    // retrigger App Router navigation in Firefox.
+    const currentQuery = searchParams.toString();
+    const params = new URLSearchParams(currentQuery);
     params.set('view', activeView);
-    router.replace(`?${params.toString()}`, { scroll: false });
+    const nextQuery = params.toString();
+    if (nextQuery !== currentQuery) {
+      router.replace(`?${nextQuery}`, { scroll: false });
+    }
 
     // Save to Convex (debounced)
     const timeoutId = setTimeout(async () => {
