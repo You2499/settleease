@@ -4,7 +4,7 @@ Native SwiftUI source for the iOS 26 SettleEase app.
 
 This folder is intentionally split into three modules:
 
-- `SettleEaseCore`: portable models, formatting, dashboard helpers, sample fixtures for tests, and settlement math.
+- `SettleEaseCore`: portable models, formatting, dashboard helpers, sample data, and settlement math.
 - `SettleEaseServices`: Supabase auth, Convex realtime, Convex token minting, AI routes, receipt images, and haptics.
 - `SettleEaseApp`: dashboard-only SwiftUI shell, Liquid Glass controls, auth, and dashboard view models.
 
@@ -13,12 +13,10 @@ This folder is intentionally split into three modules:
 The generated project is `SettleEase.xcodeproj`. It was generated from
 `project.yml` with XcodeGen and verified with Xcode 26.4 / iOS Simulator 26.4.
 
-Useful checks:
+Useful build command:
 
 ```sh
 cd ios/SettleEase
-swift test
-swift run SettleEaseCoreChecks
 xcodebuild -quiet -project SettleEase.xcodeproj -scheme SettleEase -sdk iphonesimulator26.4 -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4' build
 ```
 

@@ -40,7 +40,7 @@ export interface ReportRedactionValue {
 
 export type ReportRedactionMap = Record<string, ReportRedactionValue>;
 
-export const REDACTION_PROMPT_VERSION = 1;
+const REDACTION_PROMPT_VERSION = 1;
 
 export function buildRedactionCachePayload({
   entries,
@@ -100,7 +100,7 @@ export const REDACTION_RESPONSE_SCHEMA = {
   required: ["schemaVersion", "entries"],
 };
 
-export const REDACTION_PROMPT = `You are SettleEase's privacy redaction assistant.
+const REDACTION_PROMPT = `You are SettleEase's privacy redaction assistant.
 
 Task:
 Redact only sensitive, private, embarrassing, regulated, or potentially uncomfortable expense labels for export reports.

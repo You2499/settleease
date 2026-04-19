@@ -57,7 +57,7 @@ interface BuildPersonalStatementReportModelParams extends BuildBaseReportModelPa
   categories?: { name: string; icon_name?: string | null }[];
 }
 
-export function toReportAmount(value: number | string | null | undefined): number {
+function toReportAmount(value: number | string | null | undefined): number {
   const amount = Number(value);
   return Number.isFinite(amount) ? amount : 0;
 }
@@ -66,17 +66,17 @@ export function roundReportAmount(value: number): number {
   return Number(value.toFixed(2));
 }
 
-export function compareReportText(a: string, b: string): number {
+function compareReportText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });
 }
 
-export function safeReportDate(value: string | Date | null | undefined): Date | null {
+function safeReportDate(value: string | Date | null | undefined): Date | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-export function formatReportDate(value: string | Date | null | undefined): string {
+function formatReportDate(value: string | Date | null | undefined): string {
   const date = safeReportDate(value);
   if (!date) return "Date unavailable";
   return new Intl.DateTimeFormat("en-IN", {

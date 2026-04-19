@@ -52,7 +52,7 @@ function getLucideComponent(iconName: string | null | undefined): React.Componen
   return ((LucideIcons as Record<string, unknown>)[iconName] as React.ComponentType<React.SVGProps<SVGSVGElement>>) || fallback;
 }
 
-export function renderLucideSvg(iconName: string | null | undefined, className = "report-icon"): string {
+function renderLucideSvg(iconName: string | null | undefined, className = "report-icon"): string {
   const Icon = getLucideComponent(iconName);
   return renderToStaticMarkup(
     <Icon className={className} aria-hidden="true" focusable="false" />

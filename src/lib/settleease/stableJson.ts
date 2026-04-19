@@ -1,4 +1,4 @@
-export function sortObjectKeys(value: unknown): unknown {
+function sortObjectKeys(value: unknown): unknown {
   if (value === null || typeof value !== "object") {
     return value;
   }

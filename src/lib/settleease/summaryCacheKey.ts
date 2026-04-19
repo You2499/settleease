@@ -2,7 +2,7 @@ import type { AiModelConfig } from "./aiModels";
 import { stableJsonStringify } from "./stableJson";
 
 export const SETTLEMENT_SUMMARY_CACHE_KEY_VERSION = 3;
-export const SETTLEMENT_SUMMARY_CACHE_KEY_PREFIX = "settlement-summary:v3:";
+const SETTLEMENT_SUMMARY_CACHE_KEY_PREFIX = "settlement-summary:v3:";
 
 export interface SettlementSummaryCacheHashInput {
   cacheKeyVersion: number;

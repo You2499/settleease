@@ -13,6 +13,7 @@
 # Production
 /build
 ios/SettleEase/.build/
+tsconfig.tsbuildinfo
 
 # Environment variables
 .env.local
@@ -45,6 +46,18 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Local AI/tooling state
+.agents/
+.claude/
+.kiro/
+skills/
+skills-lock.json
+settings.json
+
+# Xcode local user state
+**/xcuserdata/
+*.xcuserstate
 
 # Lucide Icons (downloaded during build)
 /lucide-icons/

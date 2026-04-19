@@ -96,27 +96,6 @@ export interface ManualSettlementOverride {
   is_active: boolean; // Whether this override is currently active
 }
 
-export interface AIPrompt {
-  id: string; // Convex document ID mapped to the legacy DTO shape
-  name: string; // Unique name for the prompt (e.g., "settlement-summary")
-  prompt_text: string; // The actual prompt text
-  is_active: boolean; // Only one prompt can be active per name
-  created_by_user_id?: string | null; // FK to auth.users.id
-  created_at: string; // ISO date string
-  updated_at: string; // ISO date string
-  version: number; // Version number for tracking changes
-  description?: string | null; // Optional description
-}
-
-export interface AIConfig {
-  id: string | null; // Convex document ID mapped to the legacy DTO shape
-  key: string;
-  modelCode: string;
-  fallbackModelCodes: string[];
-  updatedAt: string | null;
-  updatedByUserId?: string | null;
-}
-
 // Used for displaying calculated settlements
 export interface CalculatedTransaction {
   from: string; // debtorId
@@ -127,7 +106,7 @@ export interface CalculatedTransaction {
 
 
 // Active view type for navigation
-export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'testErrorBoundary' | 'exportExpense' | 'scanReceipt' | 'settings';
+export type ActiveView = 'dashboard' | 'addExpense' | 'editExpenses' | 'managePeople' | 'manageCategories' | 'manageSettlements' | 'analytics' | 'exportExpense' | 'scanReceipt' | 'settings';
 
 export interface ParsedReceiptData {
   restaurant_name: string | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { FileText, Sparkles } from 'lucide-react';
@@ -20,7 +20,6 @@ import ExpenseLog from './dashboard/ExpenseLog';
 
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import ManualOverrideAlert from './ManualOverrideAlert';
 
 interface BetaDashboardViewProps {
@@ -60,11 +59,6 @@ export default function BetaDashboardView({
   isLoadingOverrides = false,
   isDataFetchedAtLeastOnce = false,
 }: BetaDashboardViewProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('dashboard', 'Dashboard View crashed: Settlement calculation failed with corrupted expense data');
-  });
-
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bug, FileDown, Settings as SettingsIcon } from 'lucide-react';
+import { FileDown } from 'lucide-react';
 import type { ActiveView } from '@/lib/settleease';
 
 interface SettingsTabProps {
@@ -16,7 +16,7 @@ export default function SettingsTab({ onNavigate }: SettingsTabProps) {
       <div>
         <h1 className="text-display-section mb-2">Settings</h1>
         <p className="text-body-standard text-muted-foreground">
-          Manage system settings, exports, and debugging tools
+          Manage system settings and exports
         </p>
       </div>
 
@@ -42,31 +42,6 @@ export default function SettingsTab({ onNavigate }: SettingsTabProps) {
             </p>
             <Button variant="outline" className="w-full">
               Open Export Tool
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Debug Card */}
-        <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => onNavigate('testErrorBoundary')}>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-secondary">
-                <Bug className="h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-xl">Debug Tools</CardTitle>
-                <CardDescription className="text-caption">
-                  Test error handling and system diagnostics
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-body-standard text-muted-foreground mb-4">
-              Developer tools for testing error boundaries and system behavior.
-            </p>
-            <Button variant="outline" className="w-full">
-              Open Debug Tools
             </Button>
           </CardContent>
         </Card>

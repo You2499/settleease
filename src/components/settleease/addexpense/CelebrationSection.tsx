@@ -10,7 +10,6 @@ import { PartyPopper, Info } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type { Person } from "@/lib/settleease/types";
 import SettleEaseErrorBoundary from "../../ui/SettleEaseErrorBoundary";
-import { crashTestManager } from "@/lib/settleease/crashTestContext";
 
 interface CelebrationSectionProps {
   isCelebrationMode: boolean;
@@ -26,14 +25,11 @@ interface CelebrationSectionProps {
   peopleMap: Record<string, string>;
 }
 
-// Individual component wrappers with crash test logic
 const CelebrationPayerSelectComponent = ({ celebrationPayerId, setCelebrationPayerId, people }: {
   celebrationPayerId: string;
   setCelebrationPayerId: (value: string) => void;
   people: Person[];
 }) => {
-  crashTestManager.checkAndCrash('celebrationPayerSelect', 'Celebration Payer Select crashed: Person lookup failed with invalid person ID');
-  
   return (
     <div>
       <Label htmlFor="celebrationPayer" className="text-sm font-medium mb-2 block">
@@ -60,8 +56,6 @@ const CelebrationAmountInputComponent = ({ celebrationAmountInput, setCelebratio
   setCelebrationAmountInput: (value: string) => void;
   totalAmount: string;
 }) => {
-  crashTestManager.checkAndCrash('celebrationAmountInput', 'Celebration Amount Input crashed: Invalid celebration amount format');
-  
   const total = parseFloat(totalAmount) || 0;
   
   const handlePercentageClick = (percentage: number) => {
@@ -126,8 +120,6 @@ export default function CelebrationSection({
   people,
   peopleMap,
 }: CelebrationSectionProps) {
-  // Check for section-level crash
-  crashTestManager.checkAndCrash('celebrationSection', 'Celebration Section crashed: Celebration mode validation failed');
   return (
     <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
       <div className="flex items-center space-x-2 mb-3 sm:mb-4">

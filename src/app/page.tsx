@@ -20,7 +20,6 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
-import TestErrorBoundaryTab from '@/components/settleease/TestErrorBoundaryTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
 import SettingsTab from '@/components/settleease/SettingsTab';
@@ -676,31 +675,6 @@ function SettleEasePageContent() {
                       isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
                       isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                       userRole={userRole}
-                    />
-                  </SettleEaseErrorBoundary>
-                )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'testErrorBoundary' && (
-                  <SettleEaseErrorBoundary
-                    componentName="Test Error Boundary"
-                    size="large"
-                    onNavigateHome={() => setActiveView('dashboard')}
-                  >
-                    <TestErrorBoundaryTab
-                      userRole={userRole}
-                      setActiveView={handleSetActiveView}
-                      people={people}
-                      expenses={expenses}
-                      settlementPayments={settlementPayments}
-                      manualOverrides={manualOverrides}
-                      peopleMap={peopleMap}
-                      categories={categories}
-                      currentUserId={currentUser?.id}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
-                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
                     />
                   </SettleEaseErrorBoundary>
                 )}

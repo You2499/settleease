@@ -1,6 +1,6 @@
 import type { ActiveView, UserProfile, UserRole } from "./types";
 
-export const VALID_ACTIVE_VIEWS: ActiveView[] = [
+const VALID_ACTIVE_VIEWS: ActiveView[] = [
   "dashboard",
   "analytics",
   "addExpense",
@@ -8,25 +8,23 @@ export const VALID_ACTIVE_VIEWS: ActiveView[] = [
   "managePeople",
   "manageCategories",
   "manageSettlements",
-  "testErrorBoundary",
   "exportExpense",
   "scanReceipt",
   "settings",
 ];
 
-export const ADMIN_ONLY_VIEWS = new Set<ActiveView>([
+const ADMIN_ONLY_VIEWS = new Set<ActiveView>([
   "addExpense",
   "editExpenses",
   "managePeople",
   "manageCategories",
   "manageSettlements",
-  "testErrorBoundary",
   "exportExpense",
   "scanReceipt",
   "settings",
 ]);
 
-export const VIEW_NAMES: Record<ActiveView, string> = {
+const VIEW_NAMES: Record<ActiveView, string> = {
   dashboard: "Dashboard",
   analytics: "Analytics",
   addExpense: "Add Expense",
@@ -34,7 +32,6 @@ export const VIEW_NAMES: Record<ActiveView, string> = {
   managePeople: "Manage People",
   manageCategories: "Manage Categories",
   manageSettlements: "Manage Settlements",
-  testErrorBoundary: "Test Error Boundary",
   exportExpense: "Export Expense",
   scanReceipt: "Smart Scan",
   settings: "Settings",
@@ -42,9 +39,9 @@ export const VIEW_NAMES: Record<ActiveView, string> = {
 
 export const SETTLEEASE_AUTH_LOGOUT_CHANNEL = "settleease-auth";
 export const SETTLEEASE_AUTH_LOGOUT_STORAGE_KEY = "settleease:logout";
-export const SETTLEEASE_AUTH_LOGOUT_TYPE = "settleease:logout";
+const SETTLEEASE_AUTH_LOGOUT_TYPE = "settleease:logout";
 
-export type LogoutMessage = {
+type LogoutMessage = {
   type: typeof SETTLEEASE_AUTH_LOGOUT_TYPE;
   issuedAt: number;
   userId?: string | null;

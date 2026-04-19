@@ -33,7 +33,6 @@ import {
   type AnalyticsGranularity,
   type AnalyticsMode,
 } from "@/lib/settleease/analyticsModel";
-import { crashTestManager } from "@/lib/settleease/crashTestContext";
 import type { Category, Expense, Person, SettlementPayment } from "@/lib/settleease/types";
 import { cn } from "@/lib/utils";
 
@@ -85,10 +84,6 @@ export default function AnalyticsTab({
   isLoadingSettlements = false,
   isDataFetchedAtLeastOnce = true,
 }: AnalyticsTabProps) {
-  useEffect(() => {
-    crashTestManager.checkAndCrash("analytics", "Analytics Tab crashed: Chart rendering failed with invalid data processing");
-  });
-
   const [mode, setMode] = useState<AnalyticsMode>("group");
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [datePreset, setDatePreset] = useState<AnalyticsDatePreset>("all");

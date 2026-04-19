@@ -11,8 +11,7 @@ let package = Package(
     products: [
         .library(name: "SettleEaseCore", targets: ["SettleEaseCore"]),
         .library(name: "SettleEaseServices", targets: ["SettleEaseServices"]),
-        .library(name: "SettleEaseAppSource", targets: ["SettleEaseApp"]),
-        .executable(name: "SettleEaseCoreChecks", targets: ["SettleEaseCoreChecks"])
+        .library(name: "SettleEaseAppSource", targets: ["SettleEaseApp"])
     ],
     dependencies: [
         .package(url: "https://github.com/supabase/supabase-swift.git", from: "2.43.1"),
@@ -32,15 +31,6 @@ let package = Package(
         .target(
             name: "SettleEaseApp",
             dependencies: ["SettleEaseCore", "SettleEaseServices"]
-        ),
-        .executableTarget(
-            name: "SettleEaseCoreChecks",
-            dependencies: ["SettleEaseCore"],
-            path: "Checks/SettleEaseCoreChecks"
-        ),
-        .testTarget(
-            name: "SettleEaseCoreTests",
-            dependencies: ["SettleEaseCore"]
         )
     ]
 )

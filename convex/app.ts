@@ -25,12 +25,6 @@ const celebrationContribution = v.object({
   amount: v.number(),
 });
 
-const aiModelCode = v.union(
-  v.literal("gemini-3.1-flash-lite-preview"),
-  v.literal("gemini-3-flash-preview"),
-  v.literal("gemini-2.5-flash"),
-);
-
 const DEFAULT_AI_CONFIG_KEY = "global-ai-config";
 const DEFAULT_AI_MODEL_CODE = "gemini-3.1-flash-lite-preview";
 const DEFAULT_AI_FALLBACK_MODEL_CODES = [
@@ -46,7 +40,6 @@ const activeView = v.union(
   v.literal("manageCategories"),
   v.literal("manageSettlements"),
   v.literal("analytics"),
-  v.literal("testErrorBoundary"),
   v.literal("exportExpense"),
   v.literal("scanReceipt"),
   v.literal("settings"),
@@ -833,113 +826,6 @@ export const getActiveAiConfig = query({
       );
       return defaultAiConfigDto(configKey);
     }
-  },
-});
-
-export const saveAiConfig = mutation({
-  args: {
-    key: v.optional(v.string()),
-    modelCode: aiModelCode,
-    fallbackModelCodes: v.array(aiModelCode),
-    currentUserId: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-
-    const configKey = args.key ?? DEFAULT_AI_CONFIG_KEY;
-    const timestamp = nowIso();
-    const uniqueFallbacks = [...new Set(args.fallbackModelCodes)].filter(
-      (modelCode) => modelCode !== args.modelCode,
-    );
-
-    const existing = await ctx.db
-      .query("aiConfigs")
-      .withIndex("by_key", (q) => q.eq("key", configKey))
-      .first();
-
-    const update = {
-      modelCode: args.modelCode,
-      fallbackModelCodes: uniqueFallbacks,
-      updatedAt: timestamp,
-      updatedByUserId: args.currentUserId ?? null,
-    };
-
-    if (existing) {
-      await ctx.db.patch(existing._id, update);
-      return existing._id;
-    }
-
-    return await ctx.db.insert("aiConfigs", {
-      key: configKey,
-      ...update,
-    });
-  },
-});
-
-export const getAiPromptEditorData = query({
-  args: { name: v.string() },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const prompts = await ctx.db.query("aiPrompts").collect();
-    const matching = prompts.filter((prompt: any) => prompt.name === args.name);
-    return {
-      activePrompt: aiPromptDto(
-        matching.find((prompt: any) => prompt.isActive),
-      ),
-      promptHistory: matching
-        .map(aiPromptDto)
-        .sort((a: any, b: any) => b.version - a.version),
-    };
-  },
-});
-
-export const saveAiPrompt = mutation({
-  args: {
-    name: v.string(),
-    promptText: v.string(),
-    description: v.optional(v.union(v.string(), v.null())),
-    currentUserId: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const active = await ctx.db
-      .query("aiPrompts")
-      .withIndex("by_name_active", (q) =>
-        q.eq("name", args.name).eq("isActive", true),
-      )
-      .first();
-    const timestamp = nowIso();
-    const nextVersion = active ? active.version + 1 : 1;
-
-    if (active) {
-      await ctx.db.patch(active._id, {
-        isActive: false,
-        updatedAt: timestamp,
-      });
-    }
-
-    await ctx.db.insert("aiPrompts", {
-      name: args.name,
-      promptText: args.promptText,
-      isActive: true,
-      createdByUserId: args.currentUserId ?? null,
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      version: nextVersion,
-      description: args.description ?? null,
-    });
-    return nextVersion;
-  },
-});
-
-export const clearAiSummaries = mutation({
-  args: {},
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    const summaries = await ctx.db.query("aiSummaries").collect();
-    await Promise.all(
-      summaries.map((summary: any) => ctx.db.delete(summary._id)),
-    );
   },
 });
 

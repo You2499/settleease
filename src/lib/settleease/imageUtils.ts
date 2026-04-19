@@ -3,7 +3,7 @@
  * Optimizes images before upload to reduce payload size and improve performance
  */
 
-export interface CompressionResult {
+interface CompressionResult {
   base64: string;
   mimeType: string;
   originalSize: number;
@@ -109,16 +109,6 @@ export async function compressImage(
 }
 
 /**
- * Generates a low-resolution thumbnail for instant preview
- * @param file - The image file
- * @returns Promise with thumbnail data URL
- */
-export async function generateThumbnail(file: File): Promise<string> {
-  const result = await compressImage(file, 400, 600, 0.6);
-  return `data:${result.mimeType};base64,${result.base64}`;
-}
-
-/**
  * Formats file size in human-readable format
  * @param bytes - Size in bytes
  * @returns Formatted string (e.g., "2.5 MB")
@@ -141,14 +131,4 @@ export function formatFileSize(bytes: number): string {
 export function isSupportedImageType(file: File): boolean {
   const supportedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   return supportedTypes.includes(file.type);
-}
-
-/**
- * Checks if image compression is needed based on file size
- * @param fileSize - Size in bytes
- * @param threshold - Threshold in bytes (default: 1MB)
- * @returns true if compression recommended
- */
-export function shouldCompressImage(fileSize: number, threshold: number = 1024 * 1024): boolean {
-  return fileSize > threshold;
 }

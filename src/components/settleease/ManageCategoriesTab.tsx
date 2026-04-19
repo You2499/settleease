@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,11 +41,6 @@ export default function ManageCategoriesTab({
   isLoadingCategories = false,
   isDataFetchedAtLeastOnce = true,
 }: ManageCategoriesTabProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('manageCategories', 'Manage Categories Tab crashed: Category validation failed with corrupted data');
-  });
-  
   const isLoadingData = isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [newCategoryName, setNewCategoryName] = useState('');

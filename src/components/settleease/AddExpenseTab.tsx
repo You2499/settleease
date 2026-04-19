@@ -16,7 +16,6 @@ import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
 import CelebrationSection from './addexpense/CelebrationSection';
 import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
 
@@ -31,22 +30,6 @@ interface AddExpenseTabProps {
   isDataFetchedAtLeastOnce?: boolean;
 }
 
-// Section wrapper components with crash test logic
-const PaymentDetailsSection = ({ children }: { children: React.ReactNode }) => {
-  crashTestManager.checkAndCrash('paymentDetails', 'Payment Details Section crashed: Payment validation engine failed');
-  return <>{children}</>;
-};
-
-const PayerInputSectionWrapper = ({ children }: { children: React.ReactNode }) => {
-  crashTestManager.checkAndCrash('payerInputSection', 'Payer Input Section crashed: Payer validation failed with invalid person data');
-  return <>{children}</>;
-};
-
-const SplitMethodSelectorWrapper = ({ children }: { children: React.ReactNode }) => {
-  crashTestManager.checkAndCrash('splitMethodSelector', 'Split Method Selector crashed: Split method validation failed');
-  return <>{children}</>;
-};
-
 export default function AddExpenseTab({
   people,
   onExpenseAdded,
@@ -57,11 +40,6 @@ export default function AddExpenseTab({
   isLoadingCategories = false,
   isDataFetchedAtLeastOnce = true,
 }: AddExpenseTabProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('addExpense', 'Add Expense Tab crashed: Form validation failed with corrupted category data');
-  });
-  
   const isLoadingData = isLoadingPeople || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [description, setDescription] = useState('');
@@ -576,18 +554,16 @@ export default function AddExpenseTab({
             </h3>
             <div className="space-y-4 sm:space-y-5">
               <SettleEaseErrorBoundary componentName="Payer Input Section" size="small">
-                <PayerInputSectionWrapper>
-                  <PayerInputSection
-                    payers={payers}
-                    people={people}
-                    isMultiplePayers={isMultiplePayers}
-                    handlePayerChange={handlePayerChange}
-                    addPayer={addPayer}
-                    removePayer={removePayer}
-                    onToggleMultiplePayers={handleToggleMultiplePayers}
-                    defaultPayerId={defaultPayerId}
-                  />
-                </PayerInputSectionWrapper>
+                <PayerInputSection
+                  payers={payers}
+                  people={people}
+                  isMultiplePayers={isMultiplePayers}
+                  handlePayerChange={handlePayerChange}
+                  addPayer={addPayer}
+                  removePayer={removePayer}
+                  onToggleMultiplePayers={handleToggleMultiplePayers}
+                  defaultPayerId={defaultPayerId}
+                />
               </SettleEaseErrorBoundary>
             </div>
           </div>
@@ -601,9 +577,7 @@ export default function AddExpenseTab({
             </h3>
             <div className="space-y-4 sm:space-y-5">
               <SettleEaseErrorBoundary componentName="Split Method Selector" size="small">
-                <SplitMethodSelectorWrapper>
-                  <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
-                </SplitMethodSelectorWrapper>
+                <SplitMethodSelector splitMethod={splitMethod} setSplitMethod={setSplitMethod} />
               </SettleEaseErrorBoundary>
 
               {splitMethod === 'equal' && (

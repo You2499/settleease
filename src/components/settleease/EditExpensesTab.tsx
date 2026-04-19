@@ -1,8 +1,7 @@
 "use client";
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,11 +46,6 @@ export default function EditExpensesTab({
   isLoadingCategories = false,
   isDataFetchedAtLeastOnce = true,
 }: EditExpensesTabProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('editExpenses', 'Edit Expenses Tab crashed: Expense modification failed with invalid data');
-  });
-
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);

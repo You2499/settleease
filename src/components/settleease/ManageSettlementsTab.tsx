@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -77,11 +76,6 @@ export default function ManageSettlementsTab({
   isDataFetchedAtLeastOnce = true,
   userRole,
 }: ManageSettlementsTabProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('manageSettlements', 'Manage Settlements Tab crashed: Settlement processing failed with corrupted payment data');
-  });
-  
   const isLoadingData = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || isLoadingOverrides || !isDataFetchedAtLeastOnce;
 
   const [settlementToConfirm, setSettlementToConfirm] = useState<CalculatedSettlement | null>(null);

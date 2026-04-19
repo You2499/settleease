@@ -25,7 +25,7 @@ export interface AiModelConfig {
   updatedByUserId?: string | null;
 }
 
-export const AI_MODEL_OPTIONS: AiModelOption[] = [
+const AI_MODEL_OPTIONS: AiModelOption[] = [
   {
     code: "gemini-3.1-flash-lite-preview",
     displayName: "Gemini 3.1 Flash-Lite Preview",
@@ -58,9 +58,9 @@ export const AI_MODEL_OPTIONS: AiModelOption[] = [
   },
 ];
 
-export const AI_MODEL_CODES = AI_MODEL_OPTIONS.map((model) => model.code);
+const AI_MODEL_CODES = AI_MODEL_OPTIONS.map((model) => model.code);
 
-export function isSupportedAiModelCode(code: unknown): code is AiModelCode {
+function isSupportedAiModelCode(code: unknown): code is AiModelCode {
   return typeof code === "string" && AI_MODEL_CODES.includes(code as AiModelCode);
 }
 
@@ -71,7 +71,7 @@ export function getAiModelOption(code: string | null | undefined): AiModelOption
   );
 }
 
-export function getDefaultFallbackModelCodes(modelCode: AiModelCode): AiModelCode[] {
+function getDefaultFallbackModelCodes(modelCode: AiModelCode): AiModelCode[] {
   return AI_MODEL_OPTIONS
     .map((model) => model.code)
     .filter((code) => code !== modelCode);

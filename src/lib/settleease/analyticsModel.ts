@@ -214,13 +214,13 @@ const EPSILON = 0.01;
 const UNCATEGORIZED = "Uncategorized";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-export const analyticsCurrencyFormatter = new Intl.NumberFormat("en-IN", {
+const analyticsCurrencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
   maximumFractionDigits: 2,
 });
 
-export const analyticsCompactCurrencyFormatter = new Intl.NumberFormat("en-IN", {
+const analyticsCompactCurrencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
   notation: "compact",

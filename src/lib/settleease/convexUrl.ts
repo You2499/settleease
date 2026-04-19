@@ -1,6 +1,6 @@
 const DEFAULT_CONVEX_URL = "https://fortunate-fox-427.convex.cloud";
 
-export function normalizeConvexUrl(url: string | undefined | null): string | undefined {
+function normalizeConvexUrl(url: string | undefined | null): string | undefined {
   const normalized = url?.trim().replace(/\/+$/, "");
   return normalized || undefined;
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -14,7 +13,6 @@ import { cn } from "@/lib/utils";
 import type { Category } from "@/lib/settleease/types";
 import * as LucideIcons from "lucide-react";
 import SettleEaseErrorBoundary from "../../ui/SettleEaseErrorBoundary";
-import { crashTestManager } from "@/lib/settleease/crashTestContext";
 
 interface ExpenseBasicInfoProps {
   description: string;
@@ -30,10 +28,7 @@ interface ExpenseBasicInfoProps {
   dynamicCategories: Category[];
 }
 
-// Individual component wrappers with crash test logic
 const DescriptionInputComponent = ({ description, setDescription }: { description: string; setDescription: (value: string) => void }) => {
-  crashTestManager.checkAndCrash('descriptionInput', 'Description Input crashed: Invalid input validation failed');
-  
   return (
     <div>
       <Label htmlFor="description" className="text-sm sm:text-base">
@@ -51,8 +46,6 @@ const DescriptionInputComponent = ({ description, setDescription }: { descriptio
 };
 
 const AmountInputComponent = ({ totalAmount, setTotalAmount }: { totalAmount: string; setTotalAmount: (value: string) => void }) => {
-  crashTestManager.checkAndCrash('amountInput', 'Amount Input crashed: Currency validation failed with invalid decimal format');
-  
   return (
     <div>
       <Label htmlFor="totalAmount" className="text-sm sm:text-base">
@@ -77,8 +70,6 @@ const CategorySelectComponent = ({ category, setCategory, dynamicCategories }: {
   setCategory: (value: string) => void; 
   dynamicCategories: Category[] 
 }) => {
-  crashTestManager.checkAndCrash('categorySelect', 'Category Select crashed: Category lookup failed with corrupted category data');
-  
   return (
     <div>
       <Label htmlFor="category" className="text-sm sm:text-base">
@@ -112,8 +103,6 @@ const DatePickerComponent = ({ expenseDate, setExpenseDate, calendarOpen, setCal
   calendarOpen: boolean;
   setCalendarOpen: (open: boolean) => void;
 }) => {
-  crashTestManager.checkAndCrash('datePicker', 'Date Picker crashed: Date parsing failed with invalid date format');
-  
   return (
     <div>
       <Label className="text-sm sm:text-base">Expense Date</Label>
@@ -159,8 +148,6 @@ export default function ExpenseBasicInfo({
   setCalendarOpen,
   dynamicCategories,
 }: ExpenseBasicInfoProps) {
-  // Check for section-level crash
-  crashTestManager.checkAndCrash('expenseBasicInfo', 'Expense Basic Info Section crashed: Form validation engine failed');
   return (
     <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
       <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">

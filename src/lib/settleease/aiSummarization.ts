@@ -1,7 +1,7 @@
 export const SUMMARY_PROMPT_PLACEHOLDER = "{{JSON_DATA}}";
 export const SETTLEMENT_SUMMARY_PROMPT_NAME = "settlement-summary";
 
-export const STRUCTURED_SUMMARY_SECTION_ORDER = [
+const STRUCTURED_SUMMARY_SECTION_ORDER = [
   "settlementSnapshot",
   "keyNumbers",
   "whoShouldReceiveMoney",
@@ -12,20 +12,6 @@ export const STRUCTURED_SUMMARY_SECTION_ORDER = [
   "dataQuality",
   "nextBestActions",
 ] as const;
-
-export type StructuredSummarySectionKey = typeof STRUCTURED_SUMMARY_SECTION_ORDER[number];
-
-export const STRUCTURED_SUMMARY_SECTION_TITLES: Record<StructuredSummarySectionKey, string> = {
-  settlementSnapshot: "Settlement Snapshot",
-  keyNumbers: "Key Numbers",
-  whoShouldReceiveMoney: "Who Should Receive Money",
-  whoShouldPay: "Who Should Pay",
-  recommendedSettlementActions: "Recommended Settlement Actions",
-  spendingDrivers: "Spending Drivers",
-  manualOverridesAndExceptions: "Manual Overrides and Exceptions",
-  dataQuality: "Data Quality",
-  nextBestActions: "Next Best Actions",
-};
 
 export interface StructuredSettlementSummary {
   schemaVersion: number;
@@ -125,27 +111,6 @@ export function injectSummaryJsonIntoPrompt(promptText: string, jsonData: unknow
   return promptText.split(SUMMARY_PROMPT_PLACEHOLDER).join(jsonString);
 }
 
-export interface SummarizeRequestPayload {
-  jsonData: unknown;
-  hash: string;
-  promptVersion?: number;
-  modelCode?: string;
-}
-
-export function buildSummarizeRequestPayload(
-  jsonData: unknown,
-  hash: string,
-  promptVersion?: number,
-  modelCode?: string
-): SummarizeRequestPayload {
-  return {
-    jsonData,
-    hash,
-    promptVersion,
-    modelCode,
-  };
-}
-
 function toStringList(value: unknown): string[] {
   if (!Array.isArray(value)) return ["Not available in input data"];
   const strings = value
@@ -185,16 +150,4 @@ export function parseStructuredSummaryText(text: string): StructuredSettlementSu
       return null;
     }
   }
-}
-
-export function structuredSummaryToMarkdown(summary: StructuredSettlementSummary): string {
-  return STRUCTURED_SUMMARY_SECTION_ORDER
-    .map((sectionKey) => {
-      const title = STRUCTURED_SUMMARY_SECTION_TITLES[sectionKey];
-      const items = summary[sectionKey]
-        .map((item) => `- ${item}`)
-        .join("\n");
-      return `# ${title}\n${items}`;
-    })
-    .join("\n\n");
 }

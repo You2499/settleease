@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
-import { crashTestManager } from '@/lib/settleease/crashTestContext';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,11 +34,6 @@ export default function ManagePeopleTab({
   isLoadingPeople = false,
   isDataFetchedAtLeastOnce = true,
 }: ManagePeopleTabProps) {
-  // Check for crash test
-  useEffect(() => {
-    crashTestManager.checkAndCrash('managePeople', 'Manage People Tab crashed: Database connection lost during people management operation');
-  });
-  
   const isLoadingData = isLoadingPeople || !isDataFetchedAtLeastOnce;
 
   const [newPersonName, setNewPersonName] = useState('');

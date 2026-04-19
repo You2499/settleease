@@ -74,7 +74,7 @@ export function ChartFrame({ title, description, children, actions, className }:
   );
 }
 
-export function ChartLegend({ series }: { series: SeriesDefinition[] }) {
+function ChartLegend({ series }: { series: SeriesDefinition[] }) {
   if (!series.length) return null;
   return (
     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
@@ -91,7 +91,7 @@ export function ChartLegend({ series }: { series: SeriesDefinition[] }) {
   );
 }
 
-export function ChartInspector({
+function ChartInspector({
   datum,
   placeholder = "Inspect the chart to see exact values.",
 }: {
@@ -131,7 +131,7 @@ function InspectorRowItem({ row }: { row: InspectorRow }) {
   );
 }
 
-export function ZeroLine({
+function ZeroLine({
   y,
   width,
 }: {
