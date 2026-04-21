@@ -161,6 +161,20 @@ export function buildWelcomeToastModel({
   };
 }
 
+export function shouldShowWelcomeToastForNavigation({
+  hasSeenWelcomeToast,
+  navigationType,
+}: {
+  hasSeenWelcomeToast: boolean;
+  navigationType?: string | null;
+}) {
+  if (!hasSeenWelcomeToast) {
+    return true;
+  }
+
+  return navigationType !== "reload";
+}
+
 export function createLogoutMessage(userId?: string | null, issuedAt = Date.now()): LogoutMessage {
   return {
     type: SETTLEEASE_AUTH_LOGOUT_TYPE,

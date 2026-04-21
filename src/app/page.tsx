@@ -40,6 +40,7 @@ import {
   getWelcomeUserName,
   isValidActiveView,
   resolveInitialView,
+  shouldShowWelcomeToastForNavigation,
 } from '@/lib/settleease/authFlow';
 import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
@@ -154,6 +155,23 @@ function SettleEasePageContent() {
   const [hasHandledWelcomeToast, setHasHandledWelcomeToast] = useState(false);
   const [restoredInitialView, setRestoredInitialView] = useState<ActiveView | null>(null);
   const lastAccessDeniedViewRef = React.useRef<ActiveView | null>(null);
+  const navigationType = useMemo(() => {
+    if (typeof window === 'undefined') return null;
+
+    const navigationEntry = window.performance
+      ?.getEntriesByType?.('navigation')
+      ?.at(0) as PerformanceNavigationTiming | undefined;
+
+    if (typeof navigationEntry?.type === 'string') {
+      return navigationEntry.type;
+    }
+
+    const legacyNavigationType = window.performance?.navigation?.type;
+    if (legacyNavigationType === 1) return 'reload';
+    if (legacyNavigationType === 2) return 'back_forward';
+    if (legacyNavigationType === 0) return 'navigate';
+    return null;
+  }, []);
 
   useEffect(() => {
     lastSyncedQueryRef.current = searchParamsString;
@@ -326,6 +344,18 @@ function SettleEasePageContent() {
   useEffect(() => {
     if (hasHandledWelcomeToast || !hasResolvedInitialView || !isAppIdentityReady || !currentUser || !userProfile || !userRole) return;
 
+    if (!shouldShowWelcomeToastForNavigation({
+      hasSeenWelcomeToast: !!userProfile.has_seen_welcome_toast,
+      navigationType,
+    })) {
+      setHasHandledWelcomeToast(true);
+
+      if (userProfile.should_show_welcome_toast) {
+        void updateUserProfile({ should_show_welcome_toast: false });
+      }
+      return;
+    }
+
     const userName = getWelcomeUserName({
       email: currentUser.email,
       metadataFullName: currentUser.user_metadata?.full_name || currentUser.user_metadata?.name || '',
@@ -368,7 +398,7 @@ function SettleEasePageContent() {
         duration: 5000
       });
     }, 0);
-  }, [currentUser, hasHandledWelcomeToast, hasResolvedInitialView, isAppIdentityReady, restoredInitialView, updateUserProfile, userProfile, userRole]);
+  }, [currentUser, hasHandledWelcomeToast, hasResolvedInitialView, isAppIdentityReady, navigationType, restoredInitialView, updateUserProfile, userProfile, userRole]);
 
   // Effect to synchronize activeView based on userRole
   useEffect(() => {
