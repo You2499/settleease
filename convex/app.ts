@@ -34,6 +34,7 @@ const DEFAULT_AI_FALLBACK_MODEL_CODES = [
 
 const activeView = v.union(
   v.literal("dashboard"),
+  v.literal("health"),
   v.literal("addExpense"),
   v.literal("editExpenses"),
   v.literal("managePeople"),

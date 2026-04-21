@@ -11,6 +11,7 @@
 import type * as aiSummaryActions from "../aiSummaryActions.js";
 import type * as aiSummaryCache from "../aiSummaryCache.js";
 import type * as app from "../app.js";
+import type * as healthActions from "../healthActions.js";
 import type * as jwtConfig from "../jwtConfig.js";
 
 import type {
@@ -23,6 +24,7 @@ declare const fullApi: ApiFromModules<{
   aiSummaryActions: typeof aiSummaryActions;
   aiSummaryCache: typeof aiSummaryCache;
   app: typeof app;
+  healthActions: typeof healthActions;
   jwtConfig: typeof jwtConfig;
 }>;
 

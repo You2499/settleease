@@ -20,6 +20,7 @@ import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
 import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
+import HealthTab from '@/components/settleease/HealthTab';
 import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
 import SettingsTab from '@/components/settleease/SettingsTab';
@@ -594,6 +595,25 @@ function SettleEasePageContent() {
                     />
                   </SettleEaseErrorBoundary>
                 )}
+                {activeView === 'health' && (
+                  <SettleEaseErrorBoundary
+                    componentName="Health"
+                    size="large"
+                    onNavigateHome={() => setActiveView('dashboard')}
+                  >
+                    <HealthTab
+                      expenses={expenses}
+                      people={people}
+                      peopleMap={peopleMap}
+                      dynamicCategories={categories}
+                      getCategoryIconFromName={getCategoryIconFromName}
+                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
+                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
+                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
+                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
+                    />
+                  </SettleEaseErrorBoundary>
+                )}
                 {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'addExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Add Expense"
@@ -731,7 +751,7 @@ function SettleEasePageContent() {
                 )}
               </div>
             </main>
-            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady} />
+            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} />
           </div>
         </SidebarInset>
       </SidebarProvider >

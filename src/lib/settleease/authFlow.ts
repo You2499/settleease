@@ -2,6 +2,7 @@ import type { ActiveView, UserProfile, UserRole } from "./types";
 
 const VALID_ACTIVE_VIEWS: ActiveView[] = [
   "dashboard",
+  "health",
   "analytics",
   "addExpense",
   "editExpenses",
@@ -26,6 +27,7 @@ const ADMIN_ONLY_VIEWS = new Set<ActiveView>([
 
 const VIEW_NAMES: Record<ActiveView, string> = {
   dashboard: "Dashboard",
+  health: "Health",
   analytics: "Analytics",
   addExpense: "Add Expense",
   editExpenses: "Edit Expenses",

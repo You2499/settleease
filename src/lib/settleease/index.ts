@@ -3,6 +3,7 @@
 
 export * from './constants';
 export * from './types';
+export * from './healthTypes';
 export * from './utils';
 export * from './authUtils';
 export * from './itemwiseDisplay';

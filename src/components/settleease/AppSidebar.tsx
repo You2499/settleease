@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Activity
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -105,6 +105,17 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
               <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Insights</p>
             </div>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={() => handleNavigation('health')}
+                isActive={activeView === 'health'}
+                tooltip={{ content: "Health", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                className="justify-start h-8"
+              >
+                <Activity className="h-4 w-4" />
+                <span className="group-data-[state=collapsed]:hidden">Health</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => handleNavigation('analytics')}
