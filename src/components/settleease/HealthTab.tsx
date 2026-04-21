@@ -22,7 +22,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DonutChart, LineChart, StackedAreaChart } from "./analytics/VisxPrimitives";
 import { cn } from "@/lib/utils";
 import {
-  describeHealthChunkActivity,
   formatCalories,
   formatGrams,
   formatServings,
@@ -104,7 +103,7 @@ function HeroPillButton({
       onClick={onClick}
       aria-pressed={selected}
       className={cn(
-        "inline-flex h-10 items-center justify-center rounded-full border px-4 text-sm font-medium tracking-[0.01em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        "inline-flex min-w-0 h-10 items-center justify-center rounded-full border px-4 text-sm font-medium tracking-[0.01em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         selected
           ? "border-transparent bg-black text-white shadow-lg"
           : "border-border/70 bg-white/90 text-foreground shadow-sm hover:bg-secondary/40",
@@ -161,7 +160,7 @@ function SurfaceFrame({
 }: {
   eyebrow: string;
   title: string;
-  description: string;
+  description?: string;
   state: SurfaceChromeState | null;
   actions?: React.ReactNode;
   children: React.ReactNode;
@@ -171,12 +170,12 @@ function SurfaceFrame({
   return (
     <Card
       className={cn(
-        "overflow-hidden rounded-[24px] border border-border/70 shadow-lg motion-safe:animate-in motion-safe:fade-in-50",
+        "prevent-horizontal-scroll min-w-0 max-w-full overflow-hidden rounded-[24px] border border-border/70 shadow-lg motion-safe:animate-in motion-safe:fade-in-50",
         tone === "warm" ? "bg-[rgba(245,242,239,0.72)]" : "bg-white/95",
         className,
       )}
     >
-      <CardContent className="flex h-full flex-col gap-5 p-5 sm:p-6">
+      <CardContent className="flex h-full min-w-0 flex-col gap-5 p-5 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p
@@ -191,9 +190,11 @@ function SurfaceFrame({
             >
               {title}
             </h2>
-            <p className="mt-2 max-w-[60ch] text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {description}
-            </p>
+            {description ? (
+              <p className="mt-2 max-w-[60ch] text-sm leading-6 tracking-[0.01em] text-muted-foreground">
+                {description}
+              </p>
+            ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <SurfaceBadge state={state} />
@@ -247,19 +248,12 @@ function FailurePanel({
 }
 
 function LoadingPanel({
-  state,
   skeleton,
 }: {
-  state: SurfaceChromeState | null;
   skeleton: React.ReactNode;
 }) {
   return (
-    <div className="space-y-4">
-      {skeleton}
-      <p className="text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-        {describeHealthChunkActivity(state?.coverage.activeChunkLabel || null)}
-      </p>
-    </div>
+    <div>{skeleton}</div>
   );
 }
 
@@ -281,7 +275,7 @@ function SurfaceBody<TPayload>({
   children: (payload: TPayload, state: HealthSurfaceState<TPayload>) => React.ReactNode;
 }) {
   if (isInitialLoading || !surfaceState) {
-    return <LoadingPanel state={surfaceState} skeleton={skeleton} />;
+    return <LoadingPanel skeleton={skeleton} />;
   }
 
   if (!surfaceState.payload) {
@@ -299,7 +293,7 @@ function SurfaceBody<TPayload>({
       return <EmptyPanel message={emptyMessage} />;
     }
 
-    return <LoadingPanel state={surfaceState} skeleton={skeleton} />;
+    return <LoadingPanel skeleton={skeleton} />;
   }
 
   return <>{children(surfaceState.payload, surfaceState)}</>;
@@ -308,12 +302,10 @@ function SurfaceBody<TPayload>({
 function SectionHeading({
   label,
   title,
-  description,
   icon,
 }: {
   label: string;
   title: string;
-  description: string;
   icon: React.ReactNode;
 }) {
   return (
@@ -327,9 +319,6 @@ function SectionHeading({
           {title}
         </h2>
       </div>
-      <p className="max-w-[58ch] text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-        {description}
-      </p>
     </div>
   );
 }
@@ -421,28 +410,19 @@ function Hero({
   isLoadingPeople: boolean;
 }) {
   return (
-    <section className="rounded-[32px] border border-border/60 bg-white/95 shadow-lg">
-      <div className="grid gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[1.2fr_0.95fr] lg:items-end">
+    <section className="prevent-horizontal-scroll overflow-hidden rounded-[32px] border border-border/60 bg-white/95 shadow-lg">
+      <div className="grid min-w-0 gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[1.2fr_0.95fr] lg:items-end">
         <div className="min-w-0">
           <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
             <Sparkles className="h-3.5 w-3.5" />
-            <span style={capsHeadingStyle}>Health Journal</span>
+            <span style={capsHeadingStyle}>Health</span>
           </div>
           <h1 className="mt-5 text-[3rem] leading-[0.95] text-foreground sm:text-[3.5rem]" style={displayHeadingStyle}>
             Health
           </h1>
-          <p className="mt-4 max-w-[64ch] text-[15px] leading-7 tracking-[0.01em] text-muted-foreground sm:text-base">
-            A calmer read on food and alcohol intake, estimated from your expense history and revealed as cached month chunks become ready.
-          </p>
-          <div className="mt-5 inline-flex items-start gap-3 rounded-[24px] bg-[rgba(245,242,239,0.8)] px-4 py-3 shadow-sm">
-            <Activity className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
-            <p className="text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              Every number in Health comes from AI-estimated ledger rows. Filters and charts only regroup those cached estimates, so changing views should feel lighter over time.
-            </p>
-          </div>
         </div>
 
-        <div className="grid gap-5">
+        <div className="grid min-w-0 gap-5">
           <div>
             <p className="mb-3 text-[11px] text-muted-foreground" style={capsHeadingStyle}>
               Lens
@@ -527,8 +507,7 @@ function TrustAndCoverageSurface({
   return (
     <SurfaceFrame
       eyebrow="Trust & Coverage"
-      title="What is already grounded"
-      description="Health reveals itself as cached months become available. Partial reads stay visible while missing periods continue to estimate in the background."
+      title="Coverage"
       state={surfaceState}
       tone="warm"
     >
@@ -548,7 +527,7 @@ function TrustAndCoverageSurface({
       >
         {(payload, state) => (
           <div className="space-y-4">
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "Coverage", value: payload.coverageLabel },
                 { label: "Cache", value: payload.cacheLabel },
@@ -560,10 +539,6 @@ function TrustAndCoverageSurface({
                   <p className="mt-3 text-sm leading-6 tracking-[0.01em] text-foreground">{item.value}</p>
                 </div>
               ))}
-            </div>
-            <div className="rounded-[20px] bg-white/70 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.disclaimer}
-              {payload.ignoredRowCount > 0 ? ` ${payload.ignoredRowCount} entries were marked as non-health and excluded from totals.` : ""}
             </div>
             {payload.failureMessage && state.status !== "cached" ? (
               <div className="rounded-[18px] bg-white/80 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-foreground">
@@ -600,7 +575,6 @@ function OverviewCaloriesSurface({
     <SurfaceFrame
       eyebrow="This Period"
       title="Calories"
-      description="Estimated intake for the selected window, shaped by cached month chunks rather than one blocking dashboard run."
       state={surfaceState}
       className="lg:min-h-[360px]"
     >
@@ -615,7 +589,7 @@ function OverviewCaloriesSurface({
         {(payload) => (
           <div className="flex h-full flex-col justify-between gap-6">
             <div>
-              <p className="text-[4rem] leading-none text-foreground sm:text-[4.75rem]" style={displayHeadingStyle}>
+              <p className="break-words text-[3.5rem] leading-none text-foreground sm:text-[4.75rem]" style={displayHeadingStyle}>
                 {Math.round(payload.totalCalories).toLocaleString("en-IN")}
               </p>
               <p className="mt-3 text-base tracking-[0.01em] text-muted-foreground">estimated calories</p>
@@ -630,9 +604,6 @@ function OverviewCaloriesSurface({
                 <p className="mt-3 text-xl font-medium text-foreground">{payload.topCategoryName || "None yet"}</p>
               </div>
             </div>
-            <p className="rounded-[20px] bg-secondary/35 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.note}
-            </p>
           </div>
         )}
       </SurfaceBody>
@@ -663,7 +634,6 @@ function OverviewMacrosSurface({
     <SurfaceFrame
       eyebrow="Macro Read"
       title="Protein, carbs, fat"
-      description="A lighter read on the macro profile the AI inferred from your expense text."
       state={surfaceState}
       tone="warm"
     >
@@ -689,9 +659,6 @@ function OverviewMacrosSurface({
                 </div>
               ))}
             </div>
-            <p className="rounded-[20px] bg-white/75 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.note} {payload.totalMacroGrams > 0 ? `Across all three, that is ${formatGrams(payload.totalMacroGrams)} in total.` : ""}
-            </p>
           </div>
         )}
       </SurfaceBody>
@@ -722,7 +689,6 @@ function OverviewAlcoholSurface({
     <SurfaceFrame
       eyebrow="Alcohol Read"
       title="Alcohol"
-      description="A softer estimate of drink servings and the calories tied to them."
       state={surfaceState}
     >
       <SurfaceBody
@@ -745,10 +711,6 @@ function OverviewAlcoholSurface({
                 <p className="mt-3 text-2xl font-medium text-foreground">{formatCalories(payload.calories)}</p>
               </div>
             </div>
-            <p className="rounded-[20px] bg-secondary/35 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.note}
-              {payload.topAlcoholSourceName ? ` ${payload.topAlcoholSourceName} stood out most in the current selection.` : ""}
-            </p>
           </div>
         )}
       </SurfaceBody>
@@ -764,14 +726,14 @@ function TrendGranularityToggle({
   onChange: (value: HealthGranularity) => void;
 }) {
   return (
-    <div className="inline-flex rounded-full border border-border/60 bg-white/85 p-1 shadow-sm">
+    <div className="inline-flex max-w-full rounded-full border border-border/60 bg-white/85 p-1 shadow-sm">
       {(["weekly", "monthly"] as const).map((option) => (
         <button
           key={option}
           type="button"
           onClick={() => onChange(option)}
           className={cn(
-            "rounded-full px-3 py-1.5 text-xs font-medium capitalize tracking-[0.01em] transition-colors",
+            "min-w-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize tracking-[0.01em] transition-colors",
             value === option ? "bg-black text-white" : "text-muted-foreground hover:text-foreground",
           )}
         >
@@ -799,7 +761,6 @@ function CalorieRhythmSurface(props: {
     <SurfaceFrame
       eyebrow="How Intake Moved"
       title="Calorie rhythm"
-      description="The tempo of calorie estimates across the selected range, with a local weekly or monthly lens."
       state={surfaceState}
       actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
       className="lg:min-h-[420px]"
@@ -813,17 +774,16 @@ function CalorieRhythmSurface(props: {
         emptyMessage="No expense rows landed in this period yet."
       >
         {(payload) => (
-          <div className="space-y-4">
-            <p className="rounded-[18px] bg-secondary/35 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
+          <div className="min-w-0 space-y-4">
             {payload.data.length > 0 ? (
-              <LineChart
-                data={payload.data}
-                valueLabel="Calories"
-                valueFormatter={formatCalories}
-                color="#2f7d68"
-              />
+              <div className="min-w-0 overflow-x-hidden">
+                <LineChart
+                  data={payload.data}
+                  valueLabel="Calories"
+                  valueFormatter={formatCalories}
+                  color="#2f7d68"
+                />
+              </div>
             ) : (
               <EmptyPanel message="Not enough classified data is ready to draw this rhythm yet." />
             )}
@@ -851,7 +811,6 @@ function MacroRhythmSurface(props: {
     <SurfaceFrame
       eyebrow="How Intake Moved"
       title="Macro rhythm"
-      description="A layered view of protein, carbs, and fat as the AI-estimated ledger fills in."
       state={surfaceState}
       actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
       className="lg:min-h-[420px]"
@@ -866,16 +825,15 @@ function MacroRhythmSurface(props: {
         emptyMessage="No expense rows landed in this period yet."
       >
         {(payload) => (
-          <div className="space-y-4">
-            <p className="rounded-[18px] bg-white/80 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
+          <div className="min-w-0 space-y-4">
             {payload.data.length > 0 ? (
-              <StackedAreaChart
-                data={payload.data}
-                categories={payload.categories}
-                valueFormatter={formatGrams}
-              />
+              <div className="min-w-0 overflow-x-hidden">
+                <StackedAreaChart
+                  data={payload.data}
+                  categories={payload.categories}
+                  valueFormatter={formatGrams}
+                />
+              </div>
             ) : (
               <EmptyPanel message="Not enough classified data is ready to draw this macro rhythm yet." />
             )}
@@ -903,7 +861,6 @@ function AlcoholRhythmSurface(props: {
     <SurfaceFrame
       eyebrow="How Intake Moved"
       title="Alcohol rhythm"
-      description="A narrower look at when alcohol-linked calories peaked."
       state={surfaceState}
       actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
     >
@@ -916,17 +873,16 @@ function AlcoholRhythmSurface(props: {
         emptyMessage="No expense rows landed in this period yet."
       >
         {(payload) => (
-          <div className="space-y-4">
-            <p className="rounded-[18px] bg-secondary/35 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
+          <div className="min-w-0 space-y-4">
             {payload.data.length > 0 ? (
-              <LineChart
-                data={payload.data}
-                valueLabel="Alcohol calories"
-                valueFormatter={formatCalories}
-                color="#c47f2a"
-              />
+              <div className="min-w-0 overflow-x-hidden">
+                <LineChart
+                  data={payload.data}
+                  valueLabel="Alcohol calories"
+                  valueFormatter={formatCalories}
+                  color="#c47f2a"
+                />
+              </div>
             ) : (
               <EmptyPanel message="No alcohol-signaled entries are ready to chart yet." />
             )}
@@ -952,7 +908,6 @@ function SourceSplitSurface(props: {
     <SurfaceFrame
       eyebrow="Where It Came From"
       title="Food vs alcohol"
-      description="A softer split of estimated calories between food-oriented and alcohol-oriented entries."
       state={surfaceState}
       className="lg:min-h-[420px]"
     >
@@ -965,12 +920,11 @@ function SourceSplitSurface(props: {
         emptyMessage="No expense rows landed in this period yet."
       >
         {(payload) => (
-          <div className="space-y-4">
-            <p className="rounded-[18px] bg-secondary/35 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.narrative}
-            </p>
+          <div className="min-w-0 space-y-4">
             {payload.breakdown.length > 0 ? (
-              <DonutChart data={payload.breakdown} valueFormatter={formatCalories} />
+              <div className="min-w-0 overflow-x-hidden">
+                <DonutChart data={payload.breakdown} valueFormatter={formatCalories} />
+              </div>
             ) : (
               <EmptyPanel message="No classified food or alcohol estimates are ready yet." />
             )}
@@ -996,7 +950,6 @@ function TopCategoriesSurface(props: {
     <SurfaceFrame
       eyebrow="Where It Came From"
       title="Top categories"
-      description="Which categories carried the biggest share of estimated intake."
       state={surfaceState}
       tone="warm"
     >
@@ -1010,9 +963,6 @@ function TopCategoriesSurface(props: {
       >
         {(payload) => (
           <div className="space-y-4">
-            <p className="rounded-[18px] bg-white/80 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
             <RankedList rows={payload.rows} valueFormatter={formatCalories} />
           </div>
         )}
@@ -1036,7 +986,6 @@ function TopContributorsSurface(props: {
     <SurfaceFrame
       eyebrow="Where It Came From"
       title="Top contributors"
-      description="The items or expenses that contributed the most estimated calories."
       state={surfaceState}
     >
       <SurfaceBody
@@ -1049,9 +998,6 @@ function TopContributorsSurface(props: {
       >
         {(payload) => (
           <div className="space-y-4">
-            <p className="rounded-[18px] bg-secondary/35 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
             <RankedList rows={payload.rows} valueFormatter={formatCalories} />
           </div>
         )}
@@ -1075,7 +1021,6 @@ function ParticipantLensSurface(props: {
     <SurfaceFrame
       eyebrow="People"
       title="Shared intake"
-      description="A participant view built from shared item rows and apportioned expense rows."
       state={surfaceState}
       tone="warm"
     >
@@ -1095,10 +1040,7 @@ function ParticipantLensSurface(props: {
       >
         {(payload) => (
           <div className="space-y-4">
-            <p className="rounded-[18px] bg-white/75 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {payload.rows.map((row) => (
                 <div key={row.personId} className="rounded-[20px] bg-white/85 p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -1155,7 +1097,6 @@ function LedgerSurface({
     <SurfaceFrame
       eyebrow="Estimated Ledger"
       title="Journal"
-      description="The entries underneath Health, kept close to the expense detail you already have."
       state={surfaceState}
     >
       <SurfaceBody
@@ -1174,16 +1115,13 @@ function LedgerSurface({
       >
         {(payload) => (
           <div className="space-y-4">
-            <p className="rounded-[18px] bg-secondary/35 px-4 py-3 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-              {payload.summary}
-            </p>
             {payload.rows.length > 0 ? (
               <div className="space-y-3">
                 {payload.rows.map((row) => (
                   <button
                     key={row.sourceKey}
                     type="button"
-                    className="w-full rounded-[22px] bg-white/95 p-4 text-left shadow-sm transition-colors hover:bg-secondary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="prevent-horizontal-scroll w-full max-w-full rounded-[22px] bg-white/95 p-4 text-left shadow-sm transition-colors hover:bg-secondary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => onOpenExpense(row.expenseId)}
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1242,8 +1180,8 @@ function GlobalEmptyState({ hasExpenses }: { hasExpenses: boolean }) {
         </h2>
         <p className="mx-auto mt-4 max-w-[56ch] text-sm leading-7 tracking-[0.01em] text-muted-foreground sm:text-base">
           {hasExpenses
-            ? "Add Food or Alcohol expenses with recognizable item names or descriptions to unlock Health estimates."
-            : "Add Food or Alcohol expenses to unlock Health estimates. Once the ledger has something to classify, cards and charts will begin to reveal themselves progressively."}
+            ? "No Health estimates are available for this selection."
+            : "Add Food or Alcohol expenses to unlock Health estimates."}
         </p>
       </CardContent>
     </Card>
@@ -1285,8 +1223,8 @@ export default function HealthTab({
 
   return (
     <>
-      <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-        <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-8 px-0 pb-14 pt-4 sm:gap-10">
+      <div className="prevent-horizontal-scroll h-full w-full overflow-x-hidden overflow-y-auto">
+        <div className="mx-auto flex min-w-0 w-full max-w-[1180px] max-w-full flex-col gap-8 px-2 pb-14 pt-4 sm:gap-10 sm:px-0">
           <Hero
             mode={mode}
             onModeChange={(nextMode) => {
@@ -1318,8 +1256,7 @@ export default function HealthTab({
               <section className="space-y-5">
                 <SectionHeading
                   label="This period"
-                  title="A calmer first read"
-                  description="Start with the broad shape of intake, then move into rhythm, source, people, and the journal beneath it."
+                  title="This period"
                   icon={<Activity className="h-3.5 w-3.5" />}
                 />
                 <div className="grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
@@ -1350,7 +1287,6 @@ export default function HealthTab({
                 <SectionHeading
                   label="Rhythm"
                   title="How intake moved"
-                  description="These views stay independent, so a ready month can surface immediately instead of waiting for the slowest chart."
                   icon={<CalendarDays className="h-3.5 w-3.5" />}
                 />
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -1379,7 +1315,6 @@ export default function HealthTab({
                 <SectionHeading
                   label="Origins"
                   title="Where it came from"
-                  description="A softer breakdown of what drove the period instead of a dense analytics wall."
                   icon={<Sparkles className="h-3.5 w-3.5" />}
                 />
                 <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
@@ -1411,7 +1346,6 @@ export default function HealthTab({
                   <SectionHeading
                     label="People"
                     title="Shared intake"
-                    description="Health allocates itemwise rows by participants and non-itemwise rows by shares, not by who paid."
                     icon={<Users className="h-3.5 w-3.5" />}
                   />
                   <ParticipantLensSurface
@@ -1427,7 +1361,6 @@ export default function HealthTab({
                 <SectionHeading
                   label="Journal"
                   title="The estimated ledger"
-                  description="A drillable reading of the entries behind Health, so you can move from estimate to original expense detail without losing context."
                   icon={<Sparkles className="h-3.5 w-3.5" />}
                 />
                 <LedgerSurface
