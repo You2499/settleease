@@ -3,9 +3,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import {
-  Activity,
   AlertTriangle,
   CalendarDays,
+  Heart,
   RefreshCw,
   Sparkles,
   Users,
@@ -13,8 +13,10 @@ import {
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DonutChart, LineChart, StackedAreaChart } from "./analytics/VisxPrimitives";
@@ -28,27 +30,18 @@ import {
 import type {
   HealthDatePreset,
   HealthGranularity,
+  HealthMacroRhythmPayload,
   HealthMode,
   HealthParticipantLensPayload,
   HealthSurfaceCoverage,
-  HealthSurfaceStatus,
   HealthSurfaceState,
+  HealthSurfaceStatus,
+  HealthTopCategoriesPayload,
+  HealthTopContributorsPayload,
+  HealthTrendPayload,
 } from "@/lib/settleease/healthTypes";
 import type { Category, Expense, Person } from "@/lib/settleease/types";
 import { useHealthSurface } from "@/hooks/useHealthSurface";
-import {
-  InsightsEmptyPanel,
-  InsightsEmptyState,
-  InsightsLayout,
-  InsightsMetaBadge,
-  InsightsPageHeader,
-  InsightsSectionHeader,
-  InsightsSurface,
-  insightsSelectItemClass,
-  insightsSelectTriggerClass,
-  insightsTabsListClass,
-  insightsTabsTriggerClass,
-} from "./insights/InsightsChrome";
 
 const ExpenseDetailModal = dynamic(() => import("./ExpenseDetailModal"), {
   ssr: false,
@@ -66,12 +59,18 @@ interface HealthTabProps {
   isDataFetchedAtLeastOnce?: boolean;
 }
 
+type HealthTrendMetric = "calories" | "macros" | "alcohol";
+type HealthSourceListMode = "categories" | "contributors";
+
 const DATE_PRESETS: Array<{ value: HealthDatePreset; label: string }> = [
   { value: "30d", label: "30 days" },
   { value: "90d", label: "90 days" },
   { value: "1y", label: "1 year" },
   { value: "all", label: "All time" },
 ];
+
+const panelClass = "min-w-0 rounded-lg border bg-card/50 p-4 shadow-sm";
+const insetTileClass = "rounded-lg border bg-background p-3";
 
 interface SurfaceChromeState {
   status: HealthSurfaceStatus;
@@ -83,28 +82,28 @@ function SurfaceBadge({ state }: { state: SurfaceChromeState | null }) {
   if (!state) return null;
   if (state.status === "partial") {
     return (
-      <Badge variant="outline" className="rounded-full bg-secondary/40">
+      <Badge variant="outline" className="rounded-full bg-background text-xs">
         {state.coverage.coveragePercent}% ready
       </Badge>
     );
   }
   if (state.status === "generating") {
     return (
-      <Badge variant="outline" className="rounded-full bg-secondary/40">
+      <Badge variant="outline" className="rounded-full bg-background text-xs">
         Estimating
       </Badge>
     );
   }
   if (state.isRefreshing) {
     return (
-      <Badge variant="outline" className="rounded-full bg-secondary/40">
+      <Badge variant="outline" className="rounded-full bg-background text-xs">
         Refreshing
       </Badge>
     );
   }
   if (state.status === "failed") {
     return (
-      <Badge variant="outline" className="rounded-full bg-secondary/40">
+      <Badge variant="outline" className="rounded-full bg-background text-xs">
         Needs retry
       </Badge>
     );
@@ -112,49 +111,42 @@ function SurfaceBadge({ state }: { state: SurfaceChromeState | null }) {
   return null;
 }
 
-function SurfaceFrame({
-  eyebrow,
+function HealthPanel({
   title,
   description,
   state,
   actions,
   children,
   className,
-  tone = "white",
+  tone = "default",
 }: {
-  eyebrow: string;
   title: string;
   description?: string;
-  state: SurfaceChromeState | null;
+  state?: SurfaceChromeState | null;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
-  tone?: "white" | "warm";
+  tone?: "default" | "muted";
 }) {
   return (
-    <InsightsSurface
-      eyebrow={eyebrow}
-      title={title}
-      description={description}
-      headerAside={
-        <>
-          <SurfaceBadge state={state} />
+    <div className={cn(panelClass, tone === "muted" && "bg-secondary/20", className)}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-sm sm:text-base font-semibold text-foreground">{title}</h3>
+          {description ? <p className="mt-1 text-xs sm:text-sm text-muted-foreground">{description}</p> : null}
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {state ? <SurfaceBadge state={state} /> : null}
           {actions}
-        </>
-      }
-      tone={tone === "warm" ? "muted" : "default"}
-      className={cn(
-        "prevent-horizontal-scroll h-full motion-safe:animate-in motion-safe:fade-in-50",
-        className,
-      )}
-    >
-      <div className="flex h-full min-w-0 flex-col gap-4">{children}</div>
-    </InsightsSurface>
+        </div>
+      </div>
+      <div className="mt-4 min-w-0">{children}</div>
+    </div>
   );
 }
 
 function EmptyPanel({ message }: { message: string }) {
-  return <InsightsEmptyPanel message={message} />;
+  return <div className="rounded-lg border bg-secondary/20 px-4 py-5 text-sm text-muted-foreground">{message}</div>;
 }
 
 function FailurePanel({
@@ -167,7 +159,7 @@ function FailurePanel({
   isRetrying: boolean;
 }) {
   return (
-    <div className="rounded-lg bg-secondary/35 p-4 text-sm leading-6 text-foreground">
+    <div className="rounded-lg border bg-secondary/20 p-4 text-sm leading-6 text-foreground">
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-1 h-4 w-4 shrink-0 text-foreground" />
         <div className="min-w-0">
@@ -189,14 +181,8 @@ function FailurePanel({
   );
 }
 
-function LoadingPanel({
-  skeleton,
-}: {
-  skeleton: React.ReactNode;
-}) {
-  return (
-    <div>{skeleton}</div>
-  );
+function LoadingPanel({ skeleton }: { skeleton: React.ReactNode }) {
+  return <div>{skeleton}</div>;
 }
 
 function SurfaceBody<TPayload>({
@@ -224,7 +210,7 @@ function SurfaceBody<TPayload>({
     if (surfaceState.status === "failed") {
       return (
         <FailurePanel
-          message={surfaceState.error || "This health surface could not be estimated yet."}
+          message={surfaceState.error || "This health section could not be estimated yet."}
           onRetry={retry}
           isRetrying={isRetrying}
         />
@@ -239,28 +225,6 @@ function SurfaceBody<TPayload>({
   }
 
   return <>{children(surfaceState.payload, surfaceState)}</>;
-}
-
-function SectionHeading({
-  label,
-  title,
-  icon,
-}: {
-  label: string;
-  title: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <InsightsSectionHeader
-      label={label}
-      title={title}
-      icon={
-        (({ className }: { className?: string }) => (
-          <span className={cn("inline-flex", className)}>{icon}</span>
-        )) as React.ComponentType<{ className?: string }>
-      }
-    />
-  );
 }
 
 function MetricSkeleton({ large = false }: { large?: boolean }) {
@@ -282,53 +246,27 @@ function ChartSkeleton({ tall = false }: { tall?: boolean }) {
   );
 }
 
-function RankedList({
-  rows,
-  valueFormatter,
+function HealthSection({
+  icon: Icon,
+  title,
+  children,
 }: {
-  rows: Array<{ key: string; label: string; calories: number; share: number; subtitle?: string }>;
-  valueFormatter: (value: number) => string;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
 }) {
-  if (!rows.length) {
-    return <EmptyPanel message="Nothing has accumulated here yet for the selected range." />;
-  }
-
   return (
-    <div className="space-y-3">
-      {rows.map((row, index) => (
-        <div key={row.key} className="rounded-lg bg-secondary/25 p-4">
-          <div className="flex items-start gap-3">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-sm font-medium text-foreground shadow-sm">
-              {index + 1}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-medium text-foreground">{row.label}</p>
-                  {row.subtitle ? (
-                    <p className="mt-1 text-sm text-muted-foreground">{row.subtitle}</p>
-                  ) : null}
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-sm font-medium text-foreground">{valueFormatter(row.calories)}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{row.share.toFixed(1)}% of total</p>
-                </div>
-              </div>
-              <div className="mt-3 h-2 rounded-full bg-white/80">
-                <div
-                  className="h-full rounded-full bg-black/80"
-                  style={{ width: `${Math.max(6, Math.min(100, row.share))}%` }}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
+    <section className="space-y-4 min-w-0">
+      <div className="flex items-center gap-2">
+        <Icon className="h-4 w-4 text-primary" />
+        <h2 className="text-base sm:text-lg font-semibold text-primary">{title}</h2>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
   );
 }
 
-function Hero({
+function HealthToolbar({
   mode,
   onModeChange,
   datePreset,
@@ -350,88 +288,67 @@ function Hero({
   isLoadingPeople: boolean;
 }) {
   return (
-    <InsightsPageHeader
-      icon={Activity}
-      title="Health"
-      meta={
-        <>
-          <InsightsMetaBadge
-            icon={Users}
-            label={mode === "group" ? "Group estimates" : peopleMap[selectedPersonId || ""] || "Personal estimates"}
-          />
-          <InsightsMetaBadge
-            icon={CalendarDays}
-            label={DATE_PRESETS.find((preset) => preset.value === datePreset)?.label || "Date range"}
-          />
-          <InsightsMetaBadge icon={Sparkles} label="Estimated" />
-        </>
-      }
-      controls={
-        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,220px)_minmax(0,180px)_minmax(0,220px)]">
-          <div className="min-w-0">
-            <Label className="mb-2 block text-xs font-medium text-muted-foreground">View</Label>
-            <Tabs value={mode} onValueChange={(value) => onModeChange(value as HealthMode)} className="w-full">
-              <TabsList className={insightsTabsListClass}>
-                <TabsTrigger value="group" className={insightsTabsTriggerClass}>
-                  Group
-                </TabsTrigger>
-                <TabsTrigger value="personal" className={insightsTabsTriggerClass}>
-                  Personal
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
+    <div className={cn("grid gap-2", mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-2")}>
+      <div className="min-w-0 space-y-1.5">
+        <Label className="text-xs text-muted-foreground">View</Label>
+        <Tabs value={mode} onValueChange={(value) => onModeChange(value as HealthMode)} className="w-full">
+          <TabsList className="grid h-9 w-full grid-cols-2">
+            <TabsTrigger value="group" className="text-xs sm:text-sm">
+              Group
+            </TabsTrigger>
+            <TabsTrigger value="personal" className="text-xs sm:text-sm">
+              Personal
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-          <div className="min-w-0">
-            <Label htmlFor="health-date-preset" className="mb-2 block text-xs font-medium text-muted-foreground">
-              Date range
-            </Label>
-            <Select value={datePreset} onValueChange={(value) => onDatePresetChange(value as HealthDatePreset)}>
-              <SelectTrigger id="health-date-preset" className={insightsSelectTriggerClass}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {DATE_PRESETS.map((preset) => (
-                  <SelectItem key={preset.value} value={preset.value} className={insightsSelectItemClass}>
-                    {preset.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <div className="min-w-0 space-y-1.5">
+        <Label htmlFor="health-date-range" className="text-xs text-muted-foreground">
+          Date range
+        </Label>
+        <Select value={datePreset} onValueChange={(value) => onDatePresetChange(value as HealthDatePreset)}>
+          <SelectTrigger id="health-date-range" className="h-9 w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {DATE_PRESETS.map((preset) => (
+              <SelectItem key={preset.value} value={preset.value}>
+                {preset.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-          {mode === "personal" ? (
-            <div className="min-w-0">
-              <Label htmlFor="health-person" className="mb-2 block text-xs font-medium text-muted-foreground">
-                Person
-              </Label>
-              <Select
-                value={selectedPersonId || ""}
-                onValueChange={onSelectedPersonIdChange}
-                disabled={isLoadingPeople || people.length === 0}
-              >
-                <SelectTrigger id="health-person" className={insightsSelectTriggerClass}>
-                  <SelectValue placeholder="Select a person" />
-                </SelectTrigger>
-                <SelectContent>
-                  {people.map((person) => (
-                    <SelectItem key={person.id} value={person.id} className={insightsSelectItemClass}>
-                      {peopleMap[person.id] || person.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ) : (
-            <div className="hidden lg:block" />
-          )}
+      {mode === "personal" ? (
+        <div className="min-w-0 space-y-1.5">
+          <Label htmlFor="health-person" className="text-xs text-muted-foreground">
+            Person
+          </Label>
+          <Select
+            value={selectedPersonId || ""}
+            onValueChange={onSelectedPersonIdChange}
+            disabled={isLoadingPeople || people.length === 0}
+          >
+            <SelectTrigger id="health-person" className="h-9 w-full">
+              <SelectValue placeholder="Select a person" />
+            </SelectTrigger>
+            <SelectContent>
+              {people.map((person) => (
+                <SelectItem key={person.id} value={person.id}>
+                  {peopleMap[person.id] || person.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      }
-    />
+      ) : null}
+    </div>
   );
 }
 
-function TrustAndCoverageSurface({
+function CoverageSection({
   mode,
   selectedPersonId,
   startDate,
@@ -451,12 +368,7 @@ function TrustAndCoverageSurface({
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="Trust & Coverage"
-      title="Coverage"
-      state={surfaceState}
-      tone="warm"
-    >
+    <HealthPanel title="Current coverage" state={surfaceState}>
       <SurfaceBody
         surfaceState={surfaceState}
         isInitialLoading={isInitialLoading}
@@ -480,9 +392,9 @@ function TrustAndCoverageSurface({
                 { label: "Confidence", value: payload.confidenceLabel },
                 { label: "Latest update", value: payload.latestUpdateLabel },
               ].map((item) => (
-                <div key={item.label} className="rounded-lg border bg-background p-4 shadow-sm">
+                <div key={item.label} className={insetTileClass}>
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 text-sm leading-6 text-foreground">{item.value}</p>
+                  <p className="mt-2 text-sm leading-6 text-foreground">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -491,14 +403,15 @@ function TrustAndCoverageSurface({
                 {payload.failureMessage}
               </div>
             ) : null}
+            <p className="text-xs text-muted-foreground">{payload.disclaimer}</p>
           </div>
         )}
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function OverviewCaloriesSurface({
+function OverviewCaloriesPanel({
   mode,
   selectedPersonId,
   startDate,
@@ -518,11 +431,7 @@ function OverviewCaloriesSurface({
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="Overview"
-      title="Calories"
-      state={surfaceState}
-    >
+    <HealthPanel title="Calories" state={surfaceState} className="h-full">
       <SurfaceBody
         surfaceState={surfaceState}
         isInitialLoading={isInitialLoading}
@@ -532,31 +441,39 @@ function OverviewCaloriesSurface({
         emptyMessage="No expense rows landed in this period yet."
       >
         {(payload) => (
-          <div className="flex h-full flex-col justify-between gap-6">
+          <div className="space-y-4">
             <div>
-              <p className="break-words text-4xl font-semibold leading-none tracking-tight text-foreground sm:text-5xl">
+              <p className="break-words text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
                 {Math.round(payload.totalCalories).toLocaleString("en-IN")}
               </p>
-              <p className="mt-3 text-base text-muted-foreground">Estimated calories</p>
+              <p className="mt-2 text-sm text-muted-foreground">Estimated calories</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-secondary/35 p-4">
+              <div className={insetTileClass}>
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Entries</p>
-                <p className="mt-3 text-2xl font-semibold text-foreground">{payload.entryCount}</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">{payload.entryCount}</p>
               </div>
-              <div className="rounded-lg bg-secondary/35 p-4">
+              <div className={insetTileClass}>
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Average / active day</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">{formatCalories(payload.averagePerActiveDay)}</p>
+              </div>
+              <div className={insetTileClass}>
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Active days</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{payload.activeDayCount}</p>
+              </div>
+              <div className={insetTileClass}>
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Leading category</p>
-                <p className="mt-3 text-xl font-semibold text-foreground">{payload.topCategoryName || "None yet"}</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{payload.topCategoryName || "None yet"}</p>
               </div>
             </div>
           </div>
         )}
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function OverviewMacrosSurface({
+function OverviewMacrosPanel({
   mode,
   selectedPersonId,
   startDate,
@@ -576,12 +493,7 @@ function OverviewMacrosSurface({
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="Macro Read"
-      title="Protein, carbs, fat"
-      state={surfaceState}
-      tone="warm"
-    >
+    <HealthPanel title="Macros" state={surfaceState} className="h-full" tone="muted">
       <SurfaceBody
         surfaceState={surfaceState}
         isInitialLoading={isInitialLoading}
@@ -598,20 +510,23 @@ function OverviewMacrosSurface({
                 { label: "Carbs", value: formatGrams(payload.carbs) },
                 { label: "Fat", value: formatGrams(payload.fat) },
               ].map((item) => (
-                <div key={item.label} className="rounded-lg border bg-background p-4 shadow-sm">
+                <div key={item.label} className={insetTileClass}>
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 text-lg font-semibold text-foreground">{item.value}</p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">{item.value}</p>
                 </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              {payload.leadingMacroLabel ? `${payload.leadingMacroLabel} leads this range.` : "No macro lead yet."}
+            </p>
           </div>
         )}
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function OverviewAlcoholSurface({
+function OverviewAlcoholPanel({
   mode,
   selectedPersonId,
   startDate,
@@ -631,11 +546,7 @@ function OverviewAlcoholSurface({
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="Alcohol Read"
-      title="Alcohol"
-      state={surfaceState}
-    >
+    <HealthPanel title="Alcohol" state={surfaceState} className="h-full">
       <SurfaceBody
         surfaceState={surfaceState}
         isInitialLoading={isInitialLoading}
@@ -647,130 +558,96 @@ function OverviewAlcoholSurface({
         {(payload) => (
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-secondary/35 p-4">
+              <div className={insetTileClass}>
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Servings</p>
-                <p className="mt-3 text-2xl font-semibold text-foreground">{formatServings(payload.servings)}</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">{formatServings(payload.servings)}</p>
               </div>
-              <div className="rounded-lg bg-secondary/35 p-4">
+              <div className={insetTileClass}>
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Calories</p>
-                <p className="mt-3 text-2xl font-semibold text-foreground">{formatCalories(payload.calories)}</p>
+                <p className="mt-2 text-2xl font-semibold text-foreground">{formatCalories(payload.calories)}</p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className={insetTileClass}>
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Share of calories</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{payload.shareOfCalories.toFixed(1)}%</p>
+              </div>
+              <div className={insetTileClass}>
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Top source</p>
+                <p className="mt-2 text-lg font-semibold text-foreground">{payload.topAlcoholSourceName || "None yet"}</p>
               </div>
             </div>
           </div>
         )}
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function TrendGranularityToggle({
-  value,
-  onChange,
-}: {
-  value: HealthGranularity;
-  onChange: (value: HealthGranularity) => void;
-}) {
-  return (
-    <div className="inline-flex max-w-full rounded-full border border-border/60 bg-white/85 p-1 shadow-sm">
-      {(["weekly", "monthly"] as const).map((option) => (
-        <button
-          key={option}
-          type="button"
-          onClick={() => onChange(option)}
-          className={cn(
-            "min-w-0 rounded-full px-3 py-1.5 text-xs font-medium capitalize tracking-[0.01em] transition-colors",
-            value === option ? "bg-black text-white" : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function CalorieRhythmSurface(props: {
+function TrendsSection(props: {
   mode: HealthMode;
   selectedPersonId: string | null;
   startDate?: string;
   endDate?: string;
 }) {
+  const [metric, setMetric] = useState<HealthTrendMetric>("calories");
   const [granularity, setGranularity] = useState<HealthGranularity>("weekly");
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
+
+  const calorie = useHealthSurface({
     surfaceId: "calorieRhythm",
     granularity,
     ...props,
   });
-
-  return (
-    <SurfaceFrame
-      eyebrow="How Intake Moved"
-      title="Calorie rhythm"
-      state={surfaceState}
-      actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
-        skeleton={<ChartSkeleton tall />}
-        emptyMessage="No expense rows landed in this period yet."
-      >
-        {(payload) => (
-          <div className="min-w-0 space-y-4">
-            {payload.data.length > 0 ? (
-              <div className="min-w-0 overflow-x-hidden">
-                <LineChart
-                  data={payload.data}
-                  valueLabel="Calories"
-                  valueFormatter={formatCalories}
-                  color="#2f7d68"
-                />
-              </div>
-            ) : (
-              <EmptyPanel message="Not enough classified data is ready to draw this rhythm yet." />
-            )}
-          </div>
-        )}
-      </SurfaceBody>
-    </SurfaceFrame>
-  );
-}
-
-function MacroRhythmSurface(props: {
-  mode: HealthMode;
-  selectedPersonId: string | null;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const [granularity, setGranularity] = useState<HealthGranularity>("weekly");
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
+  const macro = useHealthSurface({
     surfaceId: "macroRhythm",
     granularity,
     ...props,
   });
+  const alcohol = useHealthSurface({
+    surfaceId: "alcoholRhythm",
+    granularity,
+    ...props,
+  });
 
-  return (
-    <SurfaceFrame
-      eyebrow="How Intake Moved"
-      title="Macro rhythm"
-      state={surfaceState}
-      actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
-      tone="warm"
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
-        skeleton={<ChartSkeleton tall />}
-        emptyMessage="No expense rows landed in this period yet."
-      >
-        {(payload) => (
-          <div className="min-w-0 space-y-4">
-            {payload.data.length > 0 ? (
-              <div className="min-w-0 overflow-x-hidden">
+  const actions = (
+    <div className="grid w-full gap-2 sm:w-auto sm:grid-cols-2">
+      <Select value={metric} onValueChange={(value) => setMetric(value as HealthTrendMetric)}>
+        <SelectTrigger className="h-8 w-full sm:w-40">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="calories">Calories</SelectItem>
+          <SelectItem value="macros">Macros</SelectItem>
+          <SelectItem value="alcohol">Alcohol</SelectItem>
+        </SelectContent>
+      </Select>
+
+      <Select value={granularity} onValueChange={(value) => setGranularity(value as HealthGranularity)}>
+        <SelectTrigger className="h-8 w-full sm:w-36">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="weekly">Weekly</SelectItem>
+          <SelectItem value="monthly">Monthly</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
+  if (metric === "macros") {
+    return (
+      <HealthPanel title="Estimated intake trend" state={macro.surfaceState} actions={actions} tone="muted">
+        <SurfaceBody<HealthMacroRhythmPayload>
+          surfaceState={macro.surfaceState as HealthSurfaceState<HealthMacroRhythmPayload> | null}
+          isInitialLoading={macro.isInitialLoading}
+          retry={macro.retry}
+          isRetrying={macro.isRetrying}
+          skeleton={<ChartSkeleton tall />}
+          emptyMessage="No expense rows landed in this period yet."
+        >
+          {(payload) =>
+            payload.data.length > 0 ? (
+              <div className="min-w-0 overflow-hidden">
                 <StackedAreaChart
                   data={payload.data}
                   categories={payload.categories}
@@ -778,177 +655,145 @@ function MacroRhythmSurface(props: {
                 />
               </div>
             ) : (
-              <EmptyPanel message="Not enough classified data is ready to draw this macro rhythm yet." />
-            )}
-          </div>
-        )}
-      </SurfaceBody>
-    </SurfaceFrame>
-  );
-}
+              <EmptyPanel message="Not enough classified data is ready to draw this macro trend yet." />
+            )
+          }
+        </SurfaceBody>
+      </HealthPanel>
+    );
+  }
 
-function AlcoholRhythmSurface(props: {
-  mode: HealthMode;
-  selectedPersonId: string | null;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const [granularity, setGranularity] = useState<HealthGranularity>("weekly");
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
-    surfaceId: "alcoholRhythm",
-    granularity,
-    ...props,
-  });
+  const active = metric === "calories" ? calorie : alcohol;
+  const valueLabel = metric === "calories" ? "Calories" : "Alcohol calories";
+  const valueFormatter = formatCalories;
+  const color = metric === "calories" ? "#2f7d68" : "#c47f2a";
+  const emptyMessage =
+    metric === "calories"
+      ? "Not enough classified data is ready to draw this calorie trend yet."
+      : "No alcohol-signaled entries are ready to chart yet.";
 
   return (
-    <SurfaceFrame
-      eyebrow="How Intake Moved"
-      title="Alcohol rhythm"
-      state={surfaceState}
-      actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
-        skeleton={<ChartSkeleton />}
-        emptyMessage="No expense rows landed in this period yet."
-      >
-        {(payload) => (
-          <div className="min-w-0 space-y-4">
-            {payload.data.length > 0 ? (
-              <div className="min-w-0 overflow-x-hidden">
-                <LineChart
-                  data={payload.data}
-                  valueLabel="Alcohol calories"
-                  valueFormatter={formatCalories}
-                  color="#c47f2a"
-                />
-              </div>
-            ) : (
-              <EmptyPanel message="No alcohol-signaled entries are ready to chart yet." />
-            )}
-          </div>
-        )}
-      </SurfaceBody>
-    </SurfaceFrame>
-  );
-}
-
-function SourceSplitSurface(props: {
-  mode: HealthMode;
-  selectedPersonId: string | null;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
-    surfaceId: "sourceSplit",
-    ...props,
-  });
-
-  return (
-    <SurfaceFrame
-      eyebrow="Where It Came From"
-      title="Food vs alcohol"
-      state={surfaceState}
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
+    <HealthPanel title="Estimated intake trend" state={active.surfaceState} actions={actions}>
+      <SurfaceBody<HealthTrendPayload>
+        surfaceState={active.surfaceState as HealthSurfaceState<HealthTrendPayload> | null}
+        isInitialLoading={active.isInitialLoading}
+        retry={active.retry}
+        isRetrying={active.isRetrying}
         skeleton={<ChartSkeleton tall />}
         emptyMessage="No expense rows landed in this period yet."
       >
-        {(payload) => (
-          <div className="min-w-0 space-y-4">
-            {payload.breakdown.length > 0 ? (
-              <div className="min-w-0 overflow-x-hidden">
-                <DonutChart data={payload.breakdown} valueFormatter={formatCalories} />
-              </div>
-            ) : (
-              <EmptyPanel message="No classified food or alcohol estimates are ready yet." />
-            )}
-          </div>
-        )}
+        {(payload) =>
+          payload.data.length > 0 ? (
+            <div className="min-w-0 overflow-hidden">
+              <LineChart
+                data={payload.data}
+                valueLabel={valueLabel}
+                valueFormatter={valueFormatter}
+                color={color}
+              />
+            </div>
+          ) : (
+            <EmptyPanel message={emptyMessage} />
+          )
+        }
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function TopCategoriesSurface(props: {
+function SourcesSection(props: {
   mode: HealthMode;
   selectedPersonId: string | null;
   startDate?: string;
   endDate?: string;
 }) {
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
+  const [listMode, setListMode] = useState<HealthSourceListMode>("categories");
+
+  const split = useHealthSurface({
+    surfaceId: "sourceSplit",
+    ...props,
+  });
+  const categories = useHealthSurface({
     surfaceId: "topCategories",
     ...props,
   });
-
-  return (
-    <SurfaceFrame
-      eyebrow="Where It Came From"
-      title="Top categories"
-      state={surfaceState}
-      tone="warm"
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
-        skeleton={<ChartSkeleton />}
-        emptyMessage="No category estimates are ready yet."
-      >
-        {(payload) => (
-          <div className="space-y-4">
-            <RankedList rows={payload.rows} valueFormatter={formatCalories} />
-          </div>
-        )}
-      </SurfaceBody>
-    </SurfaceFrame>
-  );
-}
-
-function TopContributorsSurface(props: {
-  mode: HealthMode;
-  selectedPersonId: string | null;
-  startDate?: string;
-  endDate?: string;
-}) {
-  const { surfaceState, isInitialLoading, retry, isRetrying } = useHealthSurface({
+  const contributors = useHealthSurface({
     surfaceId: "topContributors",
     ...props,
   });
 
+  const activeList = listMode === "categories" ? categories : contributors;
+
   return (
-    <SurfaceFrame
-      eyebrow="Where It Came From"
-      title="Top contributors"
-      state={surfaceState}
-    >
-      <SurfaceBody
-        surfaceState={surfaceState}
-        isInitialLoading={isInitialLoading}
-        retry={retry}
-        isRetrying={isRetrying}
-        skeleton={<ChartSkeleton />}
-        emptyMessage="No contributor estimates are ready yet."
-      >
-        {(payload) => (
-          <div className="space-y-4">
-            <RankedList rows={payload.rows} valueFormatter={formatCalories} />
+    <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <HealthPanel title="Food vs alcohol" state={split.surfaceState}>
+        <SurfaceBody
+          surfaceState={split.surfaceState}
+          isInitialLoading={split.isInitialLoading}
+          retry={split.retry}
+          isRetrying={split.isRetrying}
+          skeleton={<ChartSkeleton tall />}
+          emptyMessage="No expense rows landed in this period yet."
+        >
+          {(payload) =>
+            payload.breakdown.length > 0 ? (
+              <div className="min-w-0 overflow-hidden">
+                <DonutChart data={payload.breakdown} valueFormatter={formatCalories} />
+              </div>
+            ) : (
+              <EmptyPanel message="No classified food or alcohol estimates are ready yet." />
+            )
+          }
+        </SurfaceBody>
+      </HealthPanel>
+
+      <HealthPanel
+        title={listMode === "categories" ? "Top categories" : "Top contributors"}
+        state={activeList.surfaceState}
+        actions={
+          <div className="w-full sm:w-44">
+            <Select value={listMode} onValueChange={(value) => setListMode(value as HealthSourceListMode)}>
+              <SelectTrigger className="h-8 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="categories">Categories</SelectItem>
+                <SelectItem value="contributors">Contributors</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+        }
+        tone="muted"
+      >
+        {listMode === "categories" ? (
+          <SurfaceBody<HealthTopCategoriesPayload>
+            surfaceState={categories.surfaceState as HealthSurfaceState<HealthTopCategoriesPayload> | null}
+            isInitialLoading={categories.isInitialLoading}
+            retry={categories.retry}
+            isRetrying={categories.isRetrying}
+            skeleton={<ChartSkeleton />}
+            emptyMessage="No category estimates are ready yet."
+          >
+            {(payload) => <RankedList rows={payload.rows} valueFormatter={formatCalories} />}
+          </SurfaceBody>
+        ) : (
+          <SurfaceBody<HealthTopContributorsPayload>
+            surfaceState={contributors.surfaceState as HealthSurfaceState<HealthTopContributorsPayload> | null}
+            isInitialLoading={contributors.isInitialLoading}
+            retry={contributors.retry}
+            isRetrying={contributors.isRetrying}
+            skeleton={<ChartSkeleton />}
+            emptyMessage="No contributor estimates are ready yet."
+          >
+            {(payload) => <RankedList rows={payload.rows} valueFormatter={formatCalories} />}
+          </SurfaceBody>
         )}
-      </SurfaceBody>
-    </SurfaceFrame>
+      </HealthPanel>
+    </div>
   );
 }
 
-function ParticipantLensSurface(props: {
+function PeopleSection(props: {
   mode: HealthMode;
   selectedPersonId: string | null;
   startDate?: string;
@@ -960,12 +805,7 @@ function ParticipantLensSurface(props: {
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="People"
-      title="Shared intake"
-      state={surfaceState}
-      tone="warm"
-    >
+    <HealthPanel title="Shared intake" state={surfaceState} tone="muted">
       <SurfaceBody<HealthParticipantLensPayload>
         surfaceState={surfaceState as HealthSurfaceState<HealthParticipantLensPayload> | null}
         isInitialLoading={isInitialLoading}
@@ -981,40 +821,38 @@ function ParticipantLensSurface(props: {
         emptyMessage="No participant allocations are ready yet."
       >
         {(payload) => (
-          <div className="space-y-4">
-            <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {payload.rows.map((row) => (
-                <div key={row.personId} className="rounded-lg border bg-background p-4 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-foreground">{row.name}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{row.entryCount} estimated entries</p>
-                    </div>
-                    <Badge variant="outline" className="rounded-full bg-secondary/35">
-                      {row.shareOfCalories.toFixed(1)}%
-                    </Badge>
+          <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {payload.rows.map((row) => (
+              <div key={row.personId} className={insetTileClass}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold text-foreground">{row.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{row.entryCount} estimated entries</p>
                   </div>
-                  <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Calories</span>
-                      <span className="font-medium text-foreground">{formatCalories(row.calories)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <span>Alcohol</span>
-                      <span className="font-medium text-foreground">{formatServings(row.alcoholServings)}</span>
-                    </div>
+                  <Badge variant="outline" className="rounded-full bg-background">
+                    {row.shareOfCalories.toFixed(1)}%
+                  </Badge>
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Calories</span>
+                    <span className="font-medium text-foreground">{formatCalories(row.calories)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span>Alcohol</span>
+                    <span className="font-medium text-foreground">{formatServings(row.alcoholServings)}</span>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
         )}
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function LedgerSurface({
+function LedgerSection({
   mode,
   selectedPersonId,
   startDate,
@@ -1036,11 +874,7 @@ function LedgerSurface({
   });
 
   return (
-    <SurfaceFrame
-      eyebrow="Estimated Ledger"
-      title="Estimated entries"
-      state={surfaceState}
-    >
+    <HealthPanel title="Estimated entries" state={surfaceState}>
       <SurfaceBody
         surfaceState={surfaceState}
         isInitialLoading={isInitialLoading}
@@ -1055,72 +889,156 @@ function LedgerSurface({
         }
         emptyMessage="No AI-estimated health entries are ready for this range."
       >
-        {(payload) => (
-          <div className="space-y-4">
-            {payload.rows.length > 0 ? (
-              <div className="space-y-3">
-                {payload.rows.map((row) => (
-                  <button
-                    key={row.sourceKey}
-                    type="button"
-                    className="prevent-horizontal-scroll w-full max-w-full rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    onClick={() => onOpenExpense(row.expenseId)}
-                  >
-                    <div className="flex flex-col gap-4">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-base font-semibold text-foreground sm:text-lg">{row.title}</span>
-                          <Badge variant="outline" className="rounded-full bg-secondary/35">
-                            {row.classification}
-                          </Badge>
-                          <Badge variant="outline" className="rounded-full">
-                            {row.confidence}
-                          </Badge>
-                        </div>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                          {row.categoryName} • {row.dateLabel}
-                        </p>
-                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-                          {row.rationale}
-                        </p>
+        {(payload) =>
+          payload.rows.length > 0 ? (
+            <div className="space-y-3">
+              {payload.rows.map((row) => (
+                <button
+                  key={row.sourceKey}
+                  type="button"
+                  className="w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => onOpenExpense(row.expenseId)}
+                >
+                  <div className="space-y-4">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-base sm:text-lg font-semibold text-foreground">{row.title}</span>
+                        <Badge variant="outline" className="rounded-full bg-secondary/35">
+                          {row.classification}
+                        </Badge>
+                        <Badge variant="outline" className="rounded-full bg-background">
+                          {row.confidence}
+                        </Badge>
                       </div>
-                      <div className="grid grid-cols-1 gap-2 rounded-lg bg-secondary/20 p-3 text-sm sm:grid-cols-2 sm:gap-x-5">
-                        <span className="text-muted-foreground">Calories</span>
-                        <span className="font-medium text-foreground sm:text-right">{formatCalories(row.calories)}</span>
-                        <span className="text-muted-foreground">Macros</span>
-                        <span className="font-medium text-foreground sm:text-right">
-                          {formatGrams(row.protein)} / {formatGrams(row.carbs)} / {formatGrams(row.fat)}
-                        </span>
-                        <span className="text-muted-foreground">Alcohol</span>
-                        <span className="font-medium text-foreground sm:text-right">
-                          {formatServings(row.alcoholServings)}
-                        </span>
-                      </div>
+                      <p className="mt-2 text-sm text-muted-foreground">
+                        {row.categoryName} • {row.dateLabel}
+                      </p>
+                      <p className="mt-3 text-sm leading-6 text-muted-foreground">{row.rationale}</p>
                     </div>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <EmptyPanel message="No AI-estimated health entries are ready for this range." />
-            )}
-          </div>
-        )}
+
+                    <div className="grid grid-cols-1 gap-2 rounded-lg bg-secondary/20 p-3 text-sm sm:grid-cols-2 sm:gap-x-5">
+                      <span className="text-muted-foreground">Calories</span>
+                      <span className="font-medium text-foreground sm:text-right">{formatCalories(row.calories)}</span>
+                      <span className="text-muted-foreground">Macros</span>
+                      <span className="font-medium text-foreground sm:text-right">
+                        {formatGrams(row.protein)} / {formatGrams(row.carbs)} / {formatGrams(row.fat)}
+                      </span>
+                      <span className="text-muted-foreground">Alcohol</span>
+                      <span className="font-medium text-foreground sm:text-right">{formatServings(row.alcoholServings)}</span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <EmptyPanel message="No AI-estimated health entries are ready for this range." />
+          )
+        }
       </SurfaceBody>
-    </SurfaceFrame>
+    </HealthPanel>
   );
 }
 
-function GlobalEmptyState({ hasExpenses }: { hasExpenses: boolean }) {
+function RankedList({
+  rows,
+  valueFormatter,
+}: {
+  rows: Array<{ key: string; label: string; calories: number; share: number; subtitle?: string }>;
+  valueFormatter: (value: number) => string;
+}) {
+  if (!rows.length) {
+    return <EmptyPanel message="Nothing has accumulated here yet for the selected range." />;
+  }
+
   return (
-    <InsightsEmptyState
-      icon={Sparkles}
-      title="Health"
-      message={
-        hasExpenses
-          ? "No Health estimates are available for this selection."
-          : "Add Food or Alcohol expenses to unlock Health estimates."
-      }
-    />
+    <div className="space-y-3">
+      {rows.map((row, index) => (
+        <div key={row.key} className={cn(insetTileClass, "shadow-sm")}>
+          <div className="flex items-start gap-3">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-secondary/35 text-sm font-medium text-foreground">
+              {index + 1}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <p className="truncate text-base font-medium text-foreground">{row.label}</p>
+                  {row.subtitle ? <p className="mt-1 text-sm text-muted-foreground">{row.subtitle}</p> : null}
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="text-sm font-medium text-foreground">{valueFormatter(row.calories)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{row.share.toFixed(1)}% of total</p>
+                </div>
+              </div>
+              <div className="mt-3 h-2 rounded-full bg-secondary/35">
+                <div
+                  className="h-full rounded-full bg-primary"
+                  style={{ width: `${Math.max(6, Math.min(100, row.share))}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HealthEmptyState() {
+  return (
+    <div className="flex items-center justify-center px-4 py-10 text-center">
+        <div className="max-w-md">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/50">
+            <Heart className="h-6 w-6 text-primary" />
+          </div>
+          <h2 className="mt-5 text-xl sm:text-2xl font-semibold text-foreground">No health estimates yet</h2>
+          <p className="mt-3 text-sm text-muted-foreground">Add Food or Alcohol expenses to unlock Health estimates.</p>
+      </div>
+    </div>
+  );
+}
+
+function HealthSkeleton() {
+  return (
+    <Card className="shadow-lg rounded-lg h-full flex flex-col">
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-5 w-5 rounded" />
+          <Skeleton className="h-8 w-24" />
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-2">
+            <Skeleton className="h-14 rounded-lg" />
+            <Skeleton className="h-14 rounded-lg" />
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-28" />
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-20 rounded-lg" />
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="space-y-4">
+            <Skeleton className="h-6 w-24" />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+              <Skeleton className="h-[260px] rounded-lg" />
+              <div className="grid gap-4">
+                <Skeleton className="h-[180px] rounded-lg" />
+                <Skeleton className="h-[180px] rounded-lg" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1150,167 +1068,145 @@ export default function HealthTab({
   }, [mode, people, selectedPersonId]);
 
   const dateRange = useMemo(() => resolveHealthDateRange({ preset: datePreset }), [datePreset]);
+  const startDate = dateRange.startDate ? dateRange.startDate.toISOString() : undefined;
+  const endDate = dateRange.endDate ? dateRange.endDate.toISOString() : undefined;
   const selectedExpense = selectedExpenseId
     ? expenses.find((expense) => expense.id === selectedExpenseId) || null
     : null;
-  const startDate = dateRange.startDate ? dateRange.startDate.toISOString() : undefined;
-  const endDate = dateRange.endDate ? dateRange.endDate.toISOString() : undefined;
+
   const isShellLoading = isLoadingPeople || isLoadingExpenses || isLoadingCategories || !isDataFetchedAtLeastOnce;
+
+  if (isShellLoading) {
+    return <HealthSkeleton />;
+  }
 
   return (
     <>
-      <div className="prevent-horizontal-scroll h-full w-full overflow-x-hidden overflow-y-auto">
-        <InsightsLayout className="max-w-7xl">
-          <Hero
-            mode={mode}
-            onModeChange={(nextMode) => {
-              setMode(nextMode);
-              if (nextMode === "group") {
-                setSelectedPersonId(null);
-              }
-            }}
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            selectedPersonId={selectedPersonId}
-            onSelectedPersonIdChange={setSelectedPersonId}
-            people={people}
-            peopleMap={peopleMap}
-            isLoadingPeople={isLoadingPeople}
-          />
+      <Card className="shadow-lg rounded-lg h-full flex flex-col">
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+            <Heart className="mr-2 h-5 w-5 text-primary" />
+            Health
+          </CardTitle>
+        </CardHeader>
 
-          {!isShellLoading && expenses.length === 0 ? (
-            <GlobalEmptyState hasExpenses={false} />
-          ) : (
-            <>
-              <TrustAndCoverageSurface
-                mode={mode}
-                selectedPersonId={selectedPersonId}
-                startDate={startDate}
-                endDate={endDate}
-              />
+        <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
+          <div className="space-y-6">
+            <HealthToolbar
+              mode={mode}
+              onModeChange={(nextMode) => {
+                setMode(nextMode);
+                if (nextMode === "group") {
+                  setSelectedPersonId(null);
+                }
+              }}
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              selectedPersonId={selectedPersonId}
+              onSelectedPersonIdChange={setSelectedPersonId}
+              people={people}
+              peopleMap={peopleMap}
+              isLoadingPeople={isLoadingPeople}
+            />
 
-              <section className="space-y-5">
-                <SectionHeading
-                  label="Overview"
-                  title="Overview"
-                  icon={<Activity className="h-3.5 w-3.5" />}
-                />
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-                  <OverviewCaloriesSurface
+            {!expenses.length ? (
+              <>
+                <Separator />
+                <HealthEmptyState />
+              </>
+            ) : (
+              <>
+                <Separator />
+
+                <HealthSection icon={Sparkles} title="Coverage">
+                  <CoverageSection
                     mode={mode}
                     selectedPersonId={selectedPersonId}
                     startDate={startDate}
                     endDate={endDate}
                   />
-                  <div className="grid gap-4">
-                    <OverviewMacrosSurface
+                </HealthSection>
+
+                <Separator />
+
+                <HealthSection icon={Heart} title="Overview">
+                  <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
+                    <OverviewCaloriesPanel
                       mode={mode}
                       selectedPersonId={selectedPersonId}
                       startDate={startDate}
                       endDate={endDate}
                     />
-                    <OverviewAlcoholSurface
-                      mode={mode}
-                      selectedPersonId={selectedPersonId}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
+                    <div className="grid gap-4">
+                      <OverviewMacrosPanel
+                        mode={mode}
+                        selectedPersonId={selectedPersonId}
+                        startDate={startDate}
+                        endDate={endDate}
+                      />
+                      <OverviewAlcoholPanel
+                        mode={mode}
+                        selectedPersonId={selectedPersonId}
+                        startDate={startDate}
+                        endDate={endDate}
+                      />
+                    </div>
                   </div>
-                </div>
-              </section>
+                </HealthSection>
 
-              <section className="space-y-5">
-                <SectionHeading
-                  label="Trends"
-                  title="Trends"
-                  icon={<CalendarDays className="h-3.5 w-3.5" />}
-                />
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <CalorieRhythmSurface
+                <Separator />
+
+                <HealthSection icon={CalendarDays} title="Trends">
+                  <TrendsSection
                     mode={mode}
                     selectedPersonId={selectedPersonId}
                     startDate={startDate}
                     endDate={endDate}
                   />
-                  <MacroRhythmSurface
+                </HealthSection>
+
+                <Separator />
+
+                <HealthSection icon={Sparkles} title="Sources">
+                  <SourcesSection
                     mode={mode}
                     selectedPersonId={selectedPersonId}
                     startDate={startDate}
                     endDate={endDate}
                   />
-                </div>
-                <AlcoholRhythmSurface
-                  mode={mode}
-                  selectedPersonId={selectedPersonId}
-                  startDate={startDate}
-                  endDate={endDate}
-                />
-              </section>
+                </HealthSection>
 
-              <section className="space-y-5">
-                <SectionHeading
-                  label="Sources"
-                  title="Sources"
-                  icon={<Sparkles className="h-3.5 w-3.5" />}
-                />
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
-                  <SourceSplitSurface
+                {mode === "group" ? (
+                  <>
+                    <Separator />
+
+                    <HealthSection icon={Users} title="People">
+                      <PeopleSection
+                        mode={mode}
+                        selectedPersonId={selectedPersonId}
+                        startDate={startDate}
+                        endDate={endDate}
+                      />
+                    </HealthSection>
+                  </>
+                ) : null}
+
+                <Separator />
+
+                <HealthSection icon={Heart} title="Ledger">
+                  <LedgerSection
                     mode={mode}
                     selectedPersonId={selectedPersonId}
                     startDate={startDate}
                     endDate={endDate}
+                    onOpenExpense={setSelectedExpenseId}
                   />
-                  <div className="grid gap-4">
-                    <TopCategoriesSurface
-                      mode={mode}
-                      selectedPersonId={selectedPersonId}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
-                    <TopContributorsSurface
-                      mode={mode}
-                      selectedPersonId={selectedPersonId}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {mode === "group" ? (
-                <section className="space-y-5">
-                  <SectionHeading
-                    label="People"
-                    title="Shared intake"
-                    icon={<Users className="h-3.5 w-3.5" />}
-                  />
-                  <ParticipantLensSurface
-                    mode={mode}
-                    selectedPersonId={selectedPersonId}
-                    startDate={startDate}
-                    endDate={endDate}
-                  />
-                </section>
-              ) : null}
-
-              <section className="space-y-5">
-                <SectionHeading
-                  label="Ledger"
-                  title="Ledger"
-                  icon={<Sparkles className="h-3.5 w-3.5" />}
-                />
-                <LedgerSurface
-                  mode={mode}
-                  selectedPersonId={selectedPersonId}
-                  startDate={startDate}
-                  endDate={endDate}
-                  onOpenExpense={setSelectedExpenseId}
-                />
-              </section>
-            </>
-          )}
-        </InsightsLayout>
-      </div>
+                </HealthSection>
+              </>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {selectedExpense ? (
         <ExpenseDetailModal

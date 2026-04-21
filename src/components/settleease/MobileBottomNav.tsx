@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { LayoutDashboard, BarChartBig, Activity, Menu } from 'lucide-react';
+import { LayoutDashboard, BarChartBig, Heart, Menu } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { ActiveView } from '@/lib/settleease';
 import { useSidebar } from "@/components/ui/sidebar";
@@ -16,7 +16,7 @@ export default function MobileBottomNav({ activeView, setActiveView }: MobileBot
 
     const navItems = [
         { view: 'dashboard', label: 'Home', icon: LayoutDashboard },
-        { view: 'health', label: 'Health', icon: Activity },
+        { view: 'health', label: 'Health', icon: Heart },
         { view: 'analytics', label: 'Analytics', icon: BarChartBig },
     ];
 

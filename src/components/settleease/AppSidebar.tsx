@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Activity
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Heart
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -112,7 +112,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                 tooltip={{ content: "Health", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                 className="justify-start h-8"
               >
-                <Activity className="h-4 w-4" />
+                <Heart className="h-4 w-4" />
                 <span className="group-data-[state=collapsed]:hidden">Health</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
