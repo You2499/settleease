@@ -59,17 +59,17 @@ const analyticsGhostButtonClass = "transition-none hover:bg-transparent hover:te
 
 export function ChartFrame({ title, description, children, actions, className }: ChartFrameProps) {
   return (
-    <Card className={cn("flex min-h-full min-w-0 flex-col overflow-hidden rounded-lg shadow-lg", className)}>
-      <CardHeader className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5">
+    <Card className={cn("flex min-h-full min-w-0 flex-col overflow-hidden rounded-[24px] border-border/70 bg-white/95 shadow-lg", className)}>
+      <CardHeader className="flex flex-col gap-3 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
         <div className="min-w-0">
-          <CardTitle className="text-base font-semibold leading-tight sm:text-lg">{title}</CardTitle>
+          <CardTitle className="text-[1.2rem] font-light leading-tight tracking-[-0.03em] sm:text-[1.35rem]">{title}</CardTitle>
           {description ? (
-            <CardDescription className="mt-1 text-xs leading-relaxed sm:text-sm">{description}</CardDescription>
+            <CardDescription className="mt-1 text-xs leading-relaxed tracking-[0.01em] sm:text-sm">{description}</CardDescription>
           ) : null}
         </div>
         {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col px-3 pb-4 pt-0 sm:px-5">{children}</CardContent>
+      <CardContent className="flex flex-1 flex-col px-4 pb-5 pt-0 sm:px-6">{children}</CardContent>
     </Card>
   );
 }
@@ -77,9 +77,9 @@ export function ChartFrame({ title, description, children, actions, className }:
 function ChartLegend({ series }: { series: SeriesDefinition[] }) {
   if (!series.length) return null;
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+    <div className="mt-4 grid min-w-0 gap-2 text-[11px] text-muted-foreground sm:flex sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-2 sm:text-xs">
       {series.map((item, index) => (
-        <span key={item.id} className="inline-flex items-center gap-2">
+        <span key={item.id} className="inline-flex min-w-0 items-center gap-2">
           <span
             className="h-2.5 w-2.5 rounded-sm"
             style={{ backgroundColor: item.color || CHART_COLORS[index % CHART_COLORS.length] }}
@@ -100,7 +100,7 @@ function ChartInspector({
 }) {
   return (
     <div
-      className="mt-3 h-24 overflow-hidden rounded-lg bg-muted/35 px-3 py-2 text-xs"
+      className="mt-4 h-24 overflow-hidden rounded-[18px] bg-secondary/35 px-4 py-3 text-xs"
       aria-live="polite"
     >
       {datum ? (
@@ -167,7 +167,7 @@ function MeasuredChart({
   const chartHeight = getResponsiveChartHeight(safeWidth, preferredHeight);
 
   return (
-    <div ref={parentRef} className="relative min-w-0" style={{ minHeight: chartHeight }}>
+    <div ref={parentRef} className="relative min-w-0 max-w-full overflow-hidden" style={{ minHeight: chartHeight }}>
       {children({ width: safeWidth, height: chartHeight })}
     </div>
   );
@@ -362,7 +362,7 @@ function InteractiveLineSvg({
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <svg className="block" width={width} height={height} role="img" aria-label={`${valueLabel} line chart`}>
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -553,7 +553,7 @@ function InteractiveBarSvg({
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <svg className="block" width={width} height={height} role="img" aria-label="Bar chart">
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={horizontal ? scaleLinear({ domain: [0, 1], range: [yMax, 0] }) : valueScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -757,7 +757,7 @@ function InteractiveStackedAreaSvg({
     let runningTotal = 0;
 
     return (
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full overflow-hidden">
         <svg className="block" width={width} height={height} role="img" aria-label="Category trend chart">
           <Group left={margin.left} top={margin.top}>
             <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -841,7 +841,7 @@ function InteractiveStackedAreaSvg({
   });
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <svg className="block" width={width} height={height} role="img" aria-label="Stacked area chart">
         <Group left={margin.left} top={margin.top}>
           <GridRows scale={yScale} width={xMax} stroke={gridColor} strokeOpacity={0.55} strokeDasharray="3 4" />
@@ -955,7 +955,7 @@ function InteractiveDonutChart({
   };
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <div className="grid min-w-0 items-center gap-4" style={{ minHeight: height, gridTemplateColumns: gridColumns }}>
         <div className="flex min-w-0 justify-center">
           <svg width={chartSize} height={chartSize} role="img" aria-label="Donut chart">
@@ -996,7 +996,7 @@ function InteractiveDonutChart({
               key={datum.name}
               type="button"
               className={cn(
-                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-md bg-muted/35 px-3 py-2 text-left text-xs transition-none hover:bg-muted/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
+                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-[16px] bg-secondary/35 px-3 py-2.5 text-left text-xs transition-none hover:bg-secondary/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
                 activeKey === datum.name && "ring-1 ring-border"
               )}
               onFocus={() => inspectSlice(datum, index, "hover")}
@@ -1047,13 +1047,13 @@ export function HeatmapCalendar({
   const activeDay = activeKey ? dataMap.get(activeKey) : null;
 
   return (
-    <div className="min-w-0">
+    <div className="min-w-0 max-w-full overflow-hidden">
       <div className="mb-3 flex items-center justify-between gap-2">
         <Button
           type="button"
           variant="ghost"
           size="icon"
-          className={cn("h-11 w-11", analyticsGhostButtonClass)}
+          className={cn("h-11 w-11 rounded-full", analyticsGhostButtonClass)}
           onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1))}
           aria-label="Previous month"
         >
@@ -1064,7 +1064,7 @@ export function HeatmapCalendar({
           type="button"
           variant="ghost"
           size="icon"
-          className={cn("h-11 w-11", analyticsGhostButtonClass)}
+          className={cn("h-11 w-11 rounded-full", analyticsGhostButtonClass)}
           onClick={() => setSelectedMonth(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1))}
           aria-label="Next month"
         >
@@ -1104,7 +1104,7 @@ export function HeatmapCalendar({
           );
         })}
       </div>
-      <div className="mt-3 min-h-[84px] rounded-lg bg-muted/35 p-3 text-xs">
+      <div className="mt-4 min-h-[84px] rounded-[18px] bg-secondary/35 p-4 text-xs">
         {activeDay ? (
           <>
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -1130,7 +1130,7 @@ export function HeatmapCalendar({
 
 function EmptyChart({ message }: { message: string }) {
   return (
-    <div className="flex min-h-[260px] items-center justify-center rounded-lg bg-muted/35 px-4 text-center text-sm text-muted-foreground">
+    <div className="flex min-h-[260px] items-center justify-center rounded-[20px] bg-secondary/35 px-4 text-center text-sm text-muted-foreground">
       {message}
     </div>
   );
