@@ -6,19 +6,17 @@ import {
   Activity,
   AlertTriangle,
   CalendarDays,
-  Eye,
   RefreshCw,
   Sparkles,
-  UserSquare,
   Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DonutChart, LineChart, StackedAreaChart } from "./analytics/VisxPrimitives";
 import { cn } from "@/lib/utils";
 import {
@@ -38,6 +36,19 @@ import type {
 } from "@/lib/settleease/healthTypes";
 import type { Category, Expense, Person } from "@/lib/settleease/types";
 import { useHealthSurface } from "@/hooks/useHealthSurface";
+import {
+  InsightsEmptyPanel,
+  InsightsEmptyState,
+  InsightsLayout,
+  InsightsMetaBadge,
+  InsightsPageHeader,
+  InsightsSectionHeader,
+  InsightsSurface,
+  insightsSelectItemClass,
+  insightsSelectTriggerClass,
+  insightsTabsListClass,
+  insightsTabsTriggerClass,
+} from "./insights/InsightsChrome";
 
 const ExpenseDetailModal = dynamic(() => import("./ExpenseDetailModal"), {
   ssr: false,
@@ -62,57 +73,10 @@ const DATE_PRESETS: Array<{ value: HealthDatePreset; label: string }> = [
   { value: "all", label: "All time" },
 ];
 
-const displayHeadingStyle: React.CSSProperties = {
-  fontFamily: "\"Waldenburg\", \"Iowan Old Style\", \"Times New Roman\", serif",
-  fontWeight: 300,
-  letterSpacing: "-0.04em",
-};
-
-const capsHeadingStyle: React.CSSProperties = {
-  fontFamily: "\"WaldenburgFH\", var(--font-inter), serif",
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const selectTriggerClass =
-  "h-11 rounded-full border-border/60 bg-white/90 px-4 text-sm shadow-sm transition-none hover:bg-background hover:text-foreground data-[state=open]:bg-background";
-const selectItemClass =
-  "transition-none hover:bg-transparent hover:text-popover-foreground focus:bg-transparent focus:text-popover-foreground data-[highlighted]:bg-transparent data-[highlighted]:text-popover-foreground";
-
 interface SurfaceChromeState {
   status: HealthSurfaceStatus;
   coverage: HealthSurfaceCoverage;
   isRefreshing: boolean;
-}
-
-function HeroPillButton({
-  selected,
-  onClick,
-  children,
-  className,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "inline-flex min-w-0 h-10 items-center justify-center rounded-full border px-4 text-sm font-medium tracking-[0.01em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected
-          ? "border-transparent bg-black text-white shadow-lg"
-          : "border-border/70 bg-white/90 text-foreground shadow-sm hover:bg-secondary/40",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
 }
 
 function SurfaceBadge({ state }: { state: SurfaceChromeState | null }) {
@@ -168,51 +132,29 @@ function SurfaceFrame({
   tone?: "white" | "warm";
 }) {
   return (
-    <Card
+    <InsightsSurface
+      eyebrow={eyebrow}
+      title={title}
+      description={description}
+      headerAside={
+        <>
+          <SurfaceBadge state={state} />
+          {actions}
+        </>
+      }
+      tone={tone === "warm" ? "muted" : "default"}
       className={cn(
-        "prevent-horizontal-scroll min-w-0 max-w-full overflow-hidden rounded-[24px] border border-border/70 shadow-lg motion-safe:animate-in motion-safe:fade-in-50",
-        tone === "warm" ? "bg-[rgba(245,242,239,0.72)]" : "bg-white/95",
+        "prevent-horizontal-scroll h-full motion-safe:animate-in motion-safe:fade-in-50",
         className,
       )}
     >
-      <CardContent className="flex h-full min-w-0 flex-col gap-5 p-5 sm:p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <p
-              className="text-[11px] text-muted-foreground"
-              style={capsHeadingStyle}
-            >
-              {eyebrow}
-            </p>
-            <h2
-              className="mt-3 text-[2rem] leading-[1.08] text-foreground"
-              style={displayHeadingStyle}
-            >
-              {title}
-            </h2>
-            {description ? (
-              <p className="mt-2 max-w-[60ch] text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <SurfaceBadge state={state} />
-            {actions}
-          </div>
-        </div>
-        {children}
-      </CardContent>
-    </Card>
+      <div className="flex h-full min-w-0 flex-col gap-4">{children}</div>
+    </InsightsSurface>
   );
 }
 
 function EmptyPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-[20px] bg-secondary/35 px-4 py-5 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-      {message}
-    </div>
-  );
+  return <InsightsEmptyPanel message={message} />;
 }
 
 function FailurePanel({
@@ -225,7 +167,7 @@ function FailurePanel({
   isRetrying: boolean;
 }) {
   return (
-    <div className="rounded-[20px] bg-secondary/35 p-4 text-sm leading-6 tracking-[0.01em] text-foreground">
+    <div className="rounded-lg bg-secondary/35 p-4 text-sm leading-6 text-foreground">
       <div className="flex items-start gap-3">
         <AlertTriangle className="mt-1 h-4 w-4 shrink-0 text-foreground" />
         <div className="min-w-0">
@@ -309,17 +251,15 @@ function SectionHeading({
   icon: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
-          {icon}
-          <span style={capsHeadingStyle}>{label}</span>
-        </div>
-        <h2 className="mt-4 text-[2.25rem] leading-[1.04]" style={displayHeadingStyle}>
-          {title}
-        </h2>
-      </div>
-    </div>
+    <InsightsSectionHeader
+      label={label}
+      title={title}
+      icon={
+        (({ className }: { className?: string }) => (
+          <span className={cn("inline-flex", className)}>{icon}</span>
+        )) as React.ComponentType<{ className?: string }>
+      }
+    />
   );
 }
 
@@ -337,7 +277,7 @@ function ChartSkeleton({ tall = false }: { tall?: boolean }) {
   return (
     <div className="space-y-4">
       <Skeleton className="h-5 w-full max-w-[220px] rounded-full" />
-      <Skeleton className={cn("h-[240px] w-full rounded-[20px]", tall && "h-[300px]")} />
+      <Skeleton className={cn("h-[220px] w-full rounded-lg", tall && "h-[280px]")} />
     </div>
   );
 }
@@ -356,9 +296,9 @@ function RankedList({
   return (
     <div className="space-y-3">
       {rows.map((row, index) => (
-        <div key={row.key} className="rounded-[18px] bg-secondary/30 p-4">
+        <div key={row.key} className="rounded-lg bg-secondary/25 p-4">
           <div className="flex items-start gap-3">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-sm font-medium text-foreground shadow-sm">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-sm font-medium text-foreground shadow-sm">
               {index + 1}
             </div>
             <div className="min-w-0 flex-1">
@@ -410,55 +350,59 @@ function Hero({
   isLoadingPeople: boolean;
 }) {
   return (
-    <section className="prevent-horizontal-scroll overflow-hidden rounded-[32px] border border-border/60 bg-white/95 shadow-lg">
-      <div className="grid min-w-0 gap-8 px-5 py-6 sm:px-7 sm:py-8 lg:grid-cols-[1.2fr_0.95fr] lg:items-end">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span style={capsHeadingStyle}>Health</span>
+    <InsightsPageHeader
+      icon={Activity}
+      title="Health"
+      meta={
+        <>
+          <InsightsMetaBadge
+            icon={Users}
+            label={mode === "group" ? "Group estimates" : peopleMap[selectedPersonId || ""] || "Personal estimates"}
+          />
+          <InsightsMetaBadge
+            icon={CalendarDays}
+            label={DATE_PRESETS.find((preset) => preset.value === datePreset)?.label || "Date range"}
+          />
+          <InsightsMetaBadge icon={Sparkles} label="Estimated" />
+        </>
+      }
+      controls={
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,220px)_minmax(0,180px)_minmax(0,220px)]">
+          <div className="min-w-0">
+            <Label className="mb-2 block text-xs font-medium text-muted-foreground">View</Label>
+            <Tabs value={mode} onValueChange={(value) => onModeChange(value as HealthMode)} className="w-full">
+              <TabsList className={insightsTabsListClass}>
+                <TabsTrigger value="group" className={insightsTabsTriggerClass}>
+                  Group
+                </TabsTrigger>
+                <TabsTrigger value="personal" className={insightsTabsTriggerClass}>
+                  Personal
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-          <h1 className="mt-5 text-[3rem] leading-[0.95] text-foreground sm:text-[3.5rem]" style={displayHeadingStyle}>
-            Health
-          </h1>
-        </div>
 
-        <div className="grid min-w-0 gap-5">
-          <div>
-            <p className="mb-3 text-[11px] text-muted-foreground" style={capsHeadingStyle}>
-              Lens
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <HeroPillButton selected={mode === "group"} onClick={() => onModeChange("group")}>
-                <Eye className="mr-2 h-4 w-4" />
-                Group
-              </HeroPillButton>
-              <HeroPillButton selected={mode === "personal"} onClick={() => onModeChange("personal")}>
-                <UserSquare className="mr-2 h-4 w-4" />
-                Personal
-              </HeroPillButton>
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-3 text-[11px] text-muted-foreground" style={capsHeadingStyle}>
-              Time Window
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {DATE_PRESETS.map((preset) => (
-                <HeroPillButton
-                  key={preset.value}
-                  selected={datePreset === preset.value}
-                  onClick={() => onDatePresetChange(preset.value)}
-                >
-                  {preset.label}
-                </HeroPillButton>
-              ))}
-            </div>
+          <div className="min-w-0">
+            <Label htmlFor="health-date-preset" className="mb-2 block text-xs font-medium text-muted-foreground">
+              Date range
+            </Label>
+            <Select value={datePreset} onValueChange={(value) => onDatePresetChange(value as HealthDatePreset)}>
+              <SelectTrigger id="health-date-preset" className={insightsSelectTriggerClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_PRESETS.map((preset) => (
+                  <SelectItem key={preset.value} value={preset.value} className={insightsSelectItemClass}>
+                    {preset.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {mode === "personal" ? (
-            <div>
-              <Label htmlFor="health-person" className="mb-3 block text-[11px] text-muted-foreground" style={capsHeadingStyle}>
+            <div className="min-w-0">
+              <Label htmlFor="health-person" className="mb-2 block text-xs font-medium text-muted-foreground">
                 Person
               </Label>
               <Select
@@ -466,22 +410,24 @@ function Hero({
                 onValueChange={onSelectedPersonIdChange}
                 disabled={isLoadingPeople || people.length === 0}
               >
-                <SelectTrigger id="health-person" className={selectTriggerClass}>
+                <SelectTrigger id="health-person" className={insightsSelectTriggerClass}>
                   <SelectValue placeholder="Select a person" />
                 </SelectTrigger>
                 <SelectContent>
                   {people.map((person) => (
-                    <SelectItem key={person.id} value={person.id} className={selectItemClass}>
+                    <SelectItem key={person.id} value={person.id} className={insightsSelectItemClass}>
                       {peopleMap[person.id] || person.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          ) : null}
+          ) : (
+            <div className="hidden lg:block" />
+          )}
         </div>
-      </div>
-    </section>
+      }
+    />
   );
 }
 
@@ -519,7 +465,7 @@ function TrustAndCoverageSurface({
         skeleton={
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 rounded-[18px]" />
+              <Skeleton key={index} className="h-20 rounded-lg" />
             ))}
           </div>
         }
@@ -534,14 +480,14 @@ function TrustAndCoverageSurface({
                 { label: "Confidence", value: payload.confidenceLabel },
                 { label: "Latest update", value: payload.latestUpdateLabel },
               ].map((item) => (
-                <div key={item.label} className="rounded-[18px] bg-white/85 p-4 shadow-sm">
+                <div key={item.label} className="rounded-lg border bg-background p-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 text-sm leading-6 tracking-[0.01em] text-foreground">{item.value}</p>
+                  <p className="mt-3 text-sm leading-6 text-foreground">{item.value}</p>
                 </div>
               ))}
             </div>
             {payload.failureMessage && state.status !== "cached" ? (
-              <div className="rounded-[18px] bg-white/80 px-4 py-4 text-sm leading-6 tracking-[0.01em] text-foreground">
+              <div className="rounded-lg border bg-background px-4 py-4 text-sm leading-6 text-foreground">
                 {payload.failureMessage}
               </div>
             ) : null}
@@ -573,10 +519,9 @@ function OverviewCaloriesSurface({
 
   return (
     <SurfaceFrame
-      eyebrow="This Period"
+      eyebrow="Overview"
       title="Calories"
       state={surfaceState}
-      className="lg:min-h-[360px]"
     >
       <SurfaceBody
         surfaceState={surfaceState}
@@ -589,19 +534,19 @@ function OverviewCaloriesSurface({
         {(payload) => (
           <div className="flex h-full flex-col justify-between gap-6">
             <div>
-              <p className="break-words text-[3.5rem] leading-none text-foreground sm:text-[4.75rem]" style={displayHeadingStyle}>
+              <p className="break-words text-4xl font-semibold leading-none tracking-tight text-foreground sm:text-5xl">
                 {Math.round(payload.totalCalories).toLocaleString("en-IN")}
               </p>
-              <p className="mt-3 text-base tracking-[0.01em] text-muted-foreground">estimated calories</p>
+              <p className="mt-3 text-base text-muted-foreground">Estimated calories</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[20px] bg-secondary/35 p-4">
+              <div className="rounded-lg bg-secondary/35 p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Entries</p>
-                <p className="mt-3 text-2xl font-medium text-foreground">{payload.entryCount}</p>
+                <p className="mt-3 text-2xl font-semibold text-foreground">{payload.entryCount}</p>
               </div>
-              <div className="rounded-[20px] bg-secondary/35 p-4">
+              <div className="rounded-lg bg-secondary/35 p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Leading category</p>
-                <p className="mt-3 text-xl font-medium text-foreground">{payload.topCategoryName || "None yet"}</p>
+                <p className="mt-3 text-xl font-semibold text-foreground">{payload.topCategoryName || "None yet"}</p>
               </div>
             </div>
           </div>
@@ -653,9 +598,9 @@ function OverviewMacrosSurface({
                 { label: "Carbs", value: formatGrams(payload.carbs) },
                 { label: "Fat", value: formatGrams(payload.fat) },
               ].map((item) => (
-                <div key={item.label} className="rounded-[18px] bg-white/85 p-4 shadow-sm">
+                <div key={item.label} className="rounded-lg border bg-background p-4 shadow-sm">
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 text-lg font-medium text-foreground">{item.value}</p>
+                  <p className="mt-3 text-lg font-semibold text-foreground">{item.value}</p>
                 </div>
               ))}
             </div>
@@ -702,13 +647,13 @@ function OverviewAlcoholSurface({
         {(payload) => (
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[18px] bg-secondary/35 p-4">
+              <div className="rounded-lg bg-secondary/35 p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Servings</p>
-                <p className="mt-3 text-2xl font-medium text-foreground">{formatServings(payload.servings)}</p>
+                <p className="mt-3 text-2xl font-semibold text-foreground">{formatServings(payload.servings)}</p>
               </div>
-              <div className="rounded-[18px] bg-secondary/35 p-4">
+              <div className="rounded-lg bg-secondary/35 p-4">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Calories</p>
-                <p className="mt-3 text-2xl font-medium text-foreground">{formatCalories(payload.calories)}</p>
+                <p className="mt-3 text-2xl font-semibold text-foreground">{formatCalories(payload.calories)}</p>
               </div>
             </div>
           </div>
@@ -763,7 +708,6 @@ function CalorieRhythmSurface(props: {
       title="Calorie rhythm"
       state={surfaceState}
       actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
-      className="lg:min-h-[420px]"
     >
       <SurfaceBody
         surfaceState={surfaceState}
@@ -813,7 +757,6 @@ function MacroRhythmSurface(props: {
       title="Macro rhythm"
       state={surfaceState}
       actions={<TrendGranularityToggle value={granularity} onChange={setGranularity} />}
-      className="lg:min-h-[420px]"
       tone="warm"
     >
       <SurfaceBody
@@ -909,7 +852,6 @@ function SourceSplitSurface(props: {
       eyebrow="Where It Came From"
       title="Food vs alcohol"
       state={surfaceState}
-      className="lg:min-h-[420px]"
     >
       <SurfaceBody
         surfaceState={surfaceState}
@@ -1032,7 +974,7 @@ function ParticipantLensSurface(props: {
         skeleton={
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 rounded-[20px]" />
+              <Skeleton key={index} className="h-28 rounded-lg" />
             ))}
           </div>
         }
@@ -1042,10 +984,10 @@ function ParticipantLensSurface(props: {
           <div className="space-y-4">
             <div className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {payload.rows.map((row) => (
-                <div key={row.personId} className="rounded-[20px] bg-white/85 p-4 shadow-sm">
+                <div key={row.personId} className="rounded-lg border bg-background p-4 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="truncate text-base font-medium text-foreground">{row.name}</p>
+                      <p className="truncate text-base font-semibold text-foreground">{row.name}</p>
                       <p className="mt-1 text-sm text-muted-foreground">{row.entryCount} estimated entries</p>
                     </div>
                     <Badge variant="outline" className="rounded-full bg-secondary/35">
@@ -1096,7 +1038,7 @@ function LedgerSurface({
   return (
     <SurfaceFrame
       eyebrow="Estimated Ledger"
-      title="Journal"
+      title="Estimated entries"
       state={surfaceState}
     >
       <SurfaceBody
@@ -1107,7 +1049,7 @@ function LedgerSurface({
         skeleton={
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 rounded-[20px]" />
+              <Skeleton key={index} className="h-28 rounded-lg" />
             ))}
           </div>
         }
@@ -1121,13 +1063,13 @@ function LedgerSurface({
                   <button
                     key={row.sourceKey}
                     type="button"
-                    className="prevent-horizontal-scroll w-full max-w-full rounded-[22px] bg-white/95 p-4 text-left shadow-sm transition-colors hover:bg-secondary/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="prevent-horizontal-scroll w-full max-w-full rounded-lg border bg-card p-4 text-left shadow-sm transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => onOpenExpense(row.expenseId)}
                   >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex flex-col gap-4">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="truncate text-lg font-medium text-foreground">{row.title}</span>
+                          <span className="truncate text-base font-semibold text-foreground sm:text-lg">{row.title}</span>
                           <Badge variant="outline" className="rounded-full bg-secondary/35">
                             {row.classification}
                           </Badge>
@@ -1138,19 +1080,19 @@ function LedgerSurface({
                         <p className="mt-2 text-sm text-muted-foreground">
                           {row.categoryName} • {row.dateLabel}
                         </p>
-                        <p className="mt-3 max-w-[70ch] text-sm leading-6 tracking-[0.01em] text-muted-foreground">
+                        <p className="mt-3 text-sm leading-6 text-muted-foreground">
                           {row.rationale}
                         </p>
                       </div>
-                      <div className="grid shrink-0 grid-cols-2 gap-x-5 gap-y-2 text-sm sm:min-w-[260px]">
+                      <div className="grid grid-cols-1 gap-2 rounded-lg bg-secondary/20 p-3 text-sm sm:grid-cols-2 sm:gap-x-5">
                         <span className="text-muted-foreground">Calories</span>
-                        <span className="text-right font-medium text-foreground">{formatCalories(row.calories)}</span>
+                        <span className="font-medium text-foreground sm:text-right">{formatCalories(row.calories)}</span>
                         <span className="text-muted-foreground">Macros</span>
-                        <span className="text-right font-medium text-foreground">
+                        <span className="font-medium text-foreground sm:text-right">
                           {formatGrams(row.protein)} / {formatGrams(row.carbs)} / {formatGrams(row.fat)}
                         </span>
                         <span className="text-muted-foreground">Alcohol</span>
-                        <span className="text-right font-medium text-foreground">
+                        <span className="font-medium text-foreground sm:text-right">
                           {formatServings(row.alcoholServings)}
                         </span>
                       </div>
@@ -1170,21 +1112,15 @@ function LedgerSurface({
 
 function GlobalEmptyState({ hasExpenses }: { hasExpenses: boolean }) {
   return (
-    <Card className="rounded-[32px] border border-border/60 bg-white/95 shadow-lg">
-      <CardContent className="px-6 py-10 text-center sm:px-8">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/50">
-          <Sparkles className="h-5 w-5 text-foreground" />
-        </div>
-        <h2 className="mt-5 text-[2.5rem] leading-[1.02]" style={displayHeadingStyle}>
-          Nothing to read yet
-        </h2>
-        <p className="mx-auto mt-4 max-w-[56ch] text-sm leading-7 tracking-[0.01em] text-muted-foreground sm:text-base">
-          {hasExpenses
-            ? "No Health estimates are available for this selection."
-            : "Add Food or Alcohol expenses to unlock Health estimates."}
-        </p>
-      </CardContent>
-    </Card>
+    <InsightsEmptyState
+      icon={Sparkles}
+      title="Health"
+      message={
+        hasExpenses
+          ? "No Health estimates are available for this selection."
+          : "Add Food or Alcohol expenses to unlock Health estimates."
+      }
+    />
   );
 }
 
@@ -1224,7 +1160,7 @@ export default function HealthTab({
   return (
     <>
       <div className="prevent-horizontal-scroll h-full w-full overflow-x-hidden overflow-y-auto">
-        <div className="mx-auto flex min-w-0 w-full max-w-[1180px] max-w-full flex-col gap-8 px-2 pb-14 pt-4 sm:gap-10 sm:px-0">
+        <InsightsLayout className="max-w-7xl">
           <Hero
             mode={mode}
             onModeChange={(nextMode) => {
@@ -1255,11 +1191,11 @@ export default function HealthTab({
 
               <section className="space-y-5">
                 <SectionHeading
-                  label="This period"
-                  title="This period"
+                  label="Overview"
+                  title="Overview"
                   icon={<Activity className="h-3.5 w-3.5" />}
                 />
-                <div className="grid gap-4 lg:grid-cols-[1.12fr_0.88fr]">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
                   <OverviewCaloriesSurface
                     mode={mode}
                     selectedPersonId={selectedPersonId}
@@ -1285,8 +1221,8 @@ export default function HealthTab({
 
               <section className="space-y-5">
                 <SectionHeading
-                  label="Rhythm"
-                  title="How intake moved"
+                  label="Trends"
+                  title="Trends"
                   icon={<CalendarDays className="h-3.5 w-3.5" />}
                 />
                 <div className="grid gap-4 lg:grid-cols-2">
@@ -1313,11 +1249,11 @@ export default function HealthTab({
 
               <section className="space-y-5">
                 <SectionHeading
-                  label="Origins"
-                  title="Where it came from"
+                  label="Sources"
+                  title="Sources"
                   icon={<Sparkles className="h-3.5 w-3.5" />}
                 />
-                <div className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,0.94fr)_minmax(0,1.06fr)]">
                   <SourceSplitSurface
                     mode={mode}
                     selectedPersonId={selectedPersonId}
@@ -1359,8 +1295,8 @@ export default function HealthTab({
 
               <section className="space-y-5">
                 <SectionHeading
-                  label="Journal"
-                  title="The estimated ledger"
+                  label="Ledger"
+                  title="Ledger"
                   icon={<Sparkles className="h-3.5 w-3.5" />}
                 />
                 <LedgerSurface
@@ -1373,7 +1309,7 @@ export default function HealthTab({
               </section>
             </>
           )}
-        </div>
+        </InsightsLayout>
       </div>
 
       {selectedExpense ? (

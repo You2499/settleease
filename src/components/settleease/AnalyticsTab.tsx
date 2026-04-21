@@ -7,22 +7,18 @@ import {
   BarChart4,
   CalendarDays,
   CircleDollarSign,
-  Eye,
   LineChart,
   PieChart,
   ReceiptText,
   ShieldCheck,
-  Sigma,
-  Sparkles,
-  UserSquare,
   Users,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   buildAnalyticsModel,
   formatAnalyticsCompactCurrency,
@@ -42,6 +38,19 @@ import {
   LineChart as VisxLineChart,
   StackedAreaChart,
 } from "./analytics/VisxPrimitives";
+import {
+  InsightsEmptyPanel,
+  InsightsEmptyState,
+  InsightsLayout,
+  InsightsMetaBadge,
+  InsightsPageHeader,
+  InsightsSectionHeader,
+  InsightsSurface,
+  insightsSelectItemClass,
+  insightsSelectTriggerClass,
+  insightsTabsListClass,
+  insightsTabsTriggerClass,
+} from "./insights/InsightsChrome";
 
 interface AnalyticsTabProps {
   expenses: Expense[];
@@ -73,24 +82,6 @@ const GRANULARITY_OPTIONS: Array<{ value: AnalyticsGranularity; label: string }>
   { value: "monthly", label: "Monthly" },
   { value: "weekly", label: "Weekly" },
 ];
-
-const displayHeadingStyle: React.CSSProperties = {
-  fontFamily: "\"Waldenburg\", \"Iowan Old Style\", \"Times New Roman\", serif",
-  fontWeight: 300,
-  letterSpacing: "-0.04em",
-};
-
-const capsHeadingStyle: React.CSSProperties = {
-  fontFamily: "\"WaldenburgFH\", var(--font-inter), serif",
-  fontWeight: 700,
-  letterSpacing: "0.08em",
-  textTransform: "uppercase",
-};
-
-const selectTriggerClass =
-  "h-11 rounded-full border-border/60 bg-white/90 px-4 text-sm shadow-sm transition-none hover:bg-background hover:text-foreground data-[state=open]:bg-background";
-const selectItemClass =
-  "transition-none hover:bg-transparent hover:text-popover-foreground focus:bg-transparent focus:text-popover-foreground data-[highlighted]:bg-transparent data-[highlighted]:text-popover-foreground";
 
 export default function AnalyticsTab({
   expenses,
@@ -148,7 +139,7 @@ export default function AnalyticsTab({
 
   return (
     <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-12 pt-4 sm:px-5 lg:gap-8 lg:px-6">
+      <InsightsLayout className="max-w-7xl">
         <AnalyticsHero
           mode={mode}
           onModeChange={(nextMode) => {
@@ -210,7 +201,7 @@ export default function AnalyticsTab({
         >
           <RecordsSection model={model} getCategoryIconFromName={getCategoryIconFromName} />
         </DashboardSection>
-      </div>
+      </InsightsLayout>
     </div>
   );
 }
@@ -245,93 +236,109 @@ function AnalyticsHero({
   model: AnalyticsViewModel;
 }) {
   return (
-    <section className="prevent-horizontal-scroll overflow-hidden rounded-[32px] border border-border/60 bg-white/95 shadow-lg">
-      <div className="grid min-w-0 gap-8 px-5 py-6 sm:px-7 sm:py-8 xl:grid-cols-[minmax(0,1.05fr)_minmax(320px,0.95fr)] xl:items-end">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span style={capsHeadingStyle}>Analytics</span>
+    <InsightsPageHeader
+      icon={BarChart4}
+      title="Analytics"
+      meta={
+        <>
+          <InsightsMetaBadge icon={CalendarDays} label={model.dateRange.label} />
+          <InsightsMetaBadge
+            icon={Users}
+            label={mode === "group" ? `${model.snapshot.participantCount} people` : selectedPersonName}
+          />
+          <InsightsMetaBadge
+            icon={ShieldCheck}
+            label={model.trust.balanceReconciled ? "Reconciled" : "Needs review"}
+          />
+        </>
+      }
+      controls={
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,220px)_minmax(0,180px)_minmax(0,180px)_minmax(0,220px)]">
+          <div className="min-w-0">
+            <Label className="mb-2 block text-xs font-medium text-muted-foreground">View</Label>
+            <Tabs
+              value={mode}
+              onValueChange={(value) => onModeChange(value as AnalyticsMode)}
+              className="w-full"
+            >
+              <TabsList className={insightsTabsListClass}>
+                <TabsTrigger value="group" className={insightsTabsTriggerClass}>
+                  Group
+                </TabsTrigger>
+                <TabsTrigger value="personal" className={insightsTabsTriggerClass}>
+                  Personal
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
-          <h1 className="mt-5 text-[3rem] leading-[0.95] text-foreground sm:text-[3.5rem]" style={displayHeadingStyle}>
-            Analytics
-          </h1>
-          <div className="mt-6 flex flex-wrap gap-2">
-            <MetaChip icon={CalendarDays} label={model.dateRange.label} />
-            <MetaChip icon={Users} label={mode === "group" ? `${model.snapshot.participantCount} people` : selectedPersonName} />
-            <MetaChip icon={ShieldCheck} label={model.trust.balanceReconciled ? "Reconciled" : "Needs review"} />
-          </div>
-        </div>
 
-        <div className="grid min-w-0 gap-5">
-          <DashboardControlGroup label="Lens">
-            <div className="flex flex-wrap gap-2">
-              <ControlPill selected={mode === "group"} onClick={() => onModeChange("group")}>
-                <Eye className="h-4 w-4" />
-                Group
-              </ControlPill>
-              <ControlPill selected={mode === "personal"} onClick={() => onModeChange("personal")}>
-                <UserSquare className="h-4 w-4" />
-                Personal
-              </ControlPill>
-            </div>
-          </DashboardControlGroup>
-
-          <DashboardControlGroup label="Window">
-            <div className="flex flex-wrap gap-2">
-              {DATE_PRESETS.map((preset) => (
-                <ControlPill
-                  key={preset.value}
-                  selected={datePreset === preset.value}
-                  onClick={() => onDatePresetChange(preset.value)}
-                >
-                  {preset.label}
-                </ControlPill>
-              ))}
-            </div>
-          </DashboardControlGroup>
-
-          <div className="grid gap-5 lg:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
-            <DashboardControlGroup label="Granularity">
-              <div className="flex flex-wrap gap-2">
-                {GRANULARITY_OPTIONS.map((option) => (
-                  <ControlPill
-                    key={option.value}
-                    selected={granularity === option.value}
-                    onClick={() => onGranularityChange(option.value)}
-                  >
-                    {option.label}
-                  </ControlPill>
+          <div className="min-w-0">
+            <Label htmlFor="analytics-date-preset" className="mb-2 block text-xs font-medium text-muted-foreground">
+              Date range
+            </Label>
+            <Select value={datePreset} onValueChange={(value) => onDatePresetChange(value as AnalyticsDatePreset)}>
+              <SelectTrigger id="analytics-date-preset" className={insightsSelectTriggerClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DATE_PRESETS.map((preset) => (
+                  <SelectItem key={preset.value} value={preset.value} className={insightsSelectItemClass}>
+                    {preset.label}
+                  </SelectItem>
                 ))}
-              </div>
-            </DashboardControlGroup>
-
-            {mode === "personal" ? (
-              <div className="min-w-0">
-                <Label htmlFor="analytics-person" className="mb-3 block text-[11px] text-muted-foreground" style={capsHeadingStyle}>
-                  Person
-                </Label>
-                <Select
-                  value={selectedPersonId || ""}
-                  onValueChange={onSelectedPersonIdChange}
-                  disabled={isLoadingPeople || people.length === 0}
-                >
-                  <SelectTrigger id="analytics-person" className={selectTriggerClass}>
-                    <SelectValue placeholder="Select a person" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {people.map((person) => (
-                      <SelectItem key={person.id} value={person.id} className={selectItemClass}>
-                        {peopleMap[person.id] || person.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+              </SelectContent>
+            </Select>
           </div>
+
+          <div className="min-w-0">
+            <Label htmlFor="analytics-granularity" className="mb-2 block text-xs font-medium text-muted-foreground">
+              Granularity
+            </Label>
+            <Select
+              value={granularity}
+              onValueChange={(value) => onGranularityChange(value as AnalyticsGranularity)}
+            >
+              <SelectTrigger id="analytics-granularity" className={insightsSelectTriggerClass}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {GRANULARITY_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value} className={insightsSelectItemClass}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {mode === "personal" ? (
+            <div className="min-w-0">
+              <Label htmlFor="analytics-person" className="mb-2 block text-xs font-medium text-muted-foreground">
+                Person
+              </Label>
+              <Select
+                value={selectedPersonId || ""}
+                onValueChange={onSelectedPersonIdChange}
+                disabled={isLoadingPeople || people.length === 0}
+              >
+                <SelectTrigger id="analytics-person" className={insightsSelectTriggerClass}>
+                  <SelectValue placeholder="Select a person" />
+                </SelectTrigger>
+                <SelectContent>
+                  {people.map((person) => (
+                    <SelectItem key={person.id} value={person.id} className={insightsSelectItemClass}>
+                      {peopleMap[person.id] || person.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <div className="hidden lg:block" />
+          )}
         </div>
-      </div>
-    </section>
+      }
+    />
   );
 }
 
@@ -348,35 +355,35 @@ function SummaryBand({
   const largestExpense = model.snapshot.largestExpense;
 
   return (
-    <section className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
+    <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
       <DashboardSurface
-        eyebrow="This View"
-        title={mode === "personal" ? `${selectedPersonName}'s snapshot` : "Group snapshot"}
+        eyebrow="Overview"
+        title={mode === "personal" ? `${selectedPersonName}'s snapshot` : "Group overview"}
         tone="warm"
         variant="featured"
         className="h-full"
       >
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(230px,280px)]">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,240px)]">
           <div className="min-w-0">
-            <div className="text-[11px] text-muted-foreground" style={capsHeadingStyle}>
+            <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               {mode === "personal" ? "Total share" : "Total spend"}
             </div>
-            <div className="mt-4 break-words text-[3.8rem] leading-[0.92] text-foreground sm:text-[4.8rem]" style={displayHeadingStyle}>
+            <div className="mt-3 break-words text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
               {formatAnalyticsCurrency(model.snapshot.totalSpend)}
             </div>
-            <p className="mt-3 text-sm tracking-[0.01em] text-muted-foreground">{model.dateRange.label}</p>
+            <p className="mt-2 text-sm text-muted-foreground">{model.dateRange.label}</p>
           </div>
 
-          <div className="rounded-[24px] bg-white/85 p-5 shadow-sm">
-            <p className="text-[11px] text-muted-foreground" style={capsHeadingStyle}>
+          <div className="rounded-lg border bg-background/90 p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
               {mode === "personal" ? "Current balance" : "Outstanding"}
             </p>
-            <p className="mt-4 text-3xl font-medium tracking-[-0.02em] text-foreground">
+            <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">
               {mode === "personal"
                 ? signedCurrency(model.snapshot.currentNetBalance || 0)
                 : formatAnalyticsCurrency(model.snapshot.totalOutstanding)}
             </p>
-            <div className="mt-5 space-y-3 text-sm">
+            <div className="mt-4 space-y-3 text-sm">
               <SummaryLine label="Settlement payments" value={`${model.trust.settlementPaymentCount}`} />
               <SummaryLine
                 label={mode === "personal" ? "Selected person" : "People tracked"}
@@ -391,7 +398,7 @@ function SummaryBand({
         </div>
       </DashboardSurface>
 
-      <div className="grid min-w-0 gap-4 md:grid-cols-2">
+      <div className="grid min-w-0 gap-4 sm:grid-cols-2">
         <CompactMetricSurface
           eyebrow="Volume"
           title="Expenses"
@@ -480,7 +487,7 @@ function MoneyFlowSection({
 }) {
   return (
     <div className="space-y-4">
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.12fr)_minmax(0,0.88fr)]">
         <DashboardSurface
           eyebrow={mode === "personal" ? "Balance" : "Settlement"}
           title={mode === "personal" ? `${selectedPersonName}'s balance` : "Settlement position"}
@@ -555,7 +562,7 @@ function SpendingIntelligenceSection({
 
   return (
     <div className="space-y-4">
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
         <DashboardSurface
           eyebrow="Trend"
           title={mode === "personal" ? "Share over time" : "Spend over time"}
@@ -581,8 +588,8 @@ function SpendingIntelligenceSection({
         </DashboardSurface>
       </div>
 
-      <DashboardSurface eyebrow="Composition" title="Category breakdown" tone="warm">
-        <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,320px)_minmax(0,1fr)] xl:items-center">
+      <DashboardSurface eyebrow="Sources" title="Category breakdown" tone="warm">
+        <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] lg:items-center">
           <div className="min-w-0 overflow-x-hidden">
             <DonutChart
               data={breakdownRows.map((row) => ({
@@ -605,7 +612,7 @@ function SpendingIntelligenceSection({
 function PatternsSection({ model }: { model: AnalyticsViewModel }) {
   return (
     <div className="space-y-4">
-      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.18fr)_minmax(0,0.92fr)]">
+      <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.06fr)_minmax(0,0.94fr)]">
         <DashboardSurface eyebrow="Calendar" title="Activity heatmap" variant="featured">
           <HeatmapCalendar data={model.charts.activityHeatmap} />
         </DashboardSurface>
@@ -702,17 +709,15 @@ function DashboardSection({
 }) {
   return (
     <section id={id} className="min-w-0 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
-            {icon}
-            <span style={capsHeadingStyle}>{label}</span>
-          </div>
-          <h2 className="mt-4 text-[2.25rem] leading-[1.02] text-foreground" style={displayHeadingStyle}>
-            {title}
-          </h2>
-        </div>
-      </div>
+      <InsightsSectionHeader
+        label={label}
+        title={title}
+        icon={
+          (({ className }: { className?: string }) => (
+            <span className={cn("inline-flex", className)}>{icon}</span>
+          )) as React.ComponentType<{ className?: string }>
+        }
+      />
       <div className="min-w-0">{children}</div>
     </section>
   );
@@ -736,99 +741,28 @@ function DashboardSurface({
   variant?: AnalyticsSurfaceVariant;
 }) {
   return (
-    <Card
+    <InsightsSurface
+      eyebrow={eyebrow}
+      title={title}
+      headerAside={actions}
+      tone={tone === "warm" ? "muted" : "default"}
       className={cn(
-        "prevent-horizontal-scroll min-w-0 max-w-full overflow-hidden rounded-[24px] border border-border/70 shadow-lg",
-        tone === "warm" ? "bg-[rgba(245,242,239,0.72)]" : "bg-white/95",
+        "prevent-horizontal-scroll h-full",
+        variant === "featured" && "sm:[&_h3]:text-xl",
+        variant === "compact" && "sm:[&_h3]:text-base",
         className,
       )}
     >
-      <CardContent
+      <div
         className={cn(
           "flex h-full min-w-0 flex-col",
-          variant === "featured" ? "gap-6 p-5 sm:p-6 lg:p-7" : "gap-5 p-5 sm:p-6",
-          variant === "compact" && "gap-4 p-5",
+          variant === "featured" ? "gap-5" : "gap-4",
+          variant === "compact" && "gap-3",
         )}
       >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] text-muted-foreground" style={capsHeadingStyle}>
-              {eyebrow}
-            </p>
-            <h3
-              className={cn(
-                "mt-3 min-w-0 text-foreground",
-                variant === "featured" ? "text-[2rem] leading-[1.04]" : "text-[1.75rem] leading-[1.05]",
-                variant === "compact" && "text-[1.35rem] leading-[1.08]",
-              )}
-              style={displayHeadingStyle}
-            >
-              {title}
-            </h3>
-          </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-        </div>
         {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function DashboardControlGroup({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-0">
-      <p className="mb-3 text-[11px] text-muted-foreground" style={capsHeadingStyle}>
-        {label}
-      </p>
-      {children}
-    </div>
-  );
-}
-
-function ControlPill({
-  selected,
-  onClick,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={selected}
-      className={cn(
-        "inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-full border px-4 text-sm font-medium tracking-[0.01em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected
-          ? "border-transparent bg-black text-white shadow-lg"
-          : "border-border/70 bg-white/90 text-foreground shadow-sm hover:bg-secondary/40",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function MetaChip({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}) {
-  return (
-    <div className="inline-flex min-w-0 items-center gap-2 rounded-full bg-secondary/35 px-3 py-2 text-sm text-muted-foreground">
-      <Icon className="h-4 w-4 shrink-0" />
-      <span className="truncate">{label}</span>
-    </div>
+      </div>
+    </InsightsSurface>
   );
 }
 
@@ -864,10 +798,10 @@ function CompactMetricSurface({
     <DashboardSurface eyebrow={eyebrow} title={title} variant="compact" className="h-full">
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">
-          <div className="truncate text-3xl font-medium tracking-[-0.03em] text-foreground">{value}</div>
-          <div className="mt-2 text-sm tracking-[0.01em] text-muted-foreground">{detail}</div>
+          <div className="truncate text-2xl font-semibold tracking-tight text-foreground">{value}</div>
+          <div className="mt-2 text-sm text-muted-foreground">{detail}</div>
         </div>
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary/40">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/40">
           <Icon className="h-5 w-5 text-foreground" />
         </div>
       </div>
@@ -894,10 +828,10 @@ function HighlightSurface({
     <DashboardSurface eyebrow={eyebrow} title={title} className={className}>
       <div className="flex min-w-0 items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-lg font-medium tracking-[-0.02em] text-foreground">{value}</p>
-          <p className="mt-2 text-sm tracking-[0.01em] text-muted-foreground">{detail}</p>
+          <p className="text-lg font-semibold tracking-tight text-foreground">{value}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{detail}</p>
         </div>
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-secondary/35">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/35">
           <Icon className="h-5 w-5 text-foreground" />
         </div>
       </div>
@@ -917,10 +851,10 @@ function TrustChip({
   tone: "neutral" | "good" | "warn";
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-[20px] border border-border/60 bg-white/90 px-4 py-4 shadow-sm">
+    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border/60 bg-card px-4 py-4 shadow-sm">
       <div
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/35 text-foreground",
+          "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/35 text-foreground",
           tone === "good" && "bg-[rgba(245,242,239,0.8)]",
           tone === "warn" && "bg-secondary/60",
         )}
@@ -967,7 +901,7 @@ function SettlementPositionPanel({ model }: { model: AnalyticsViewModel }) {
 
       <div className="space-y-2">
         {model.details.participantRows.slice(0, 5).map((row) => (
-          <div key={row.personId} className="flex items-center justify-between gap-3 rounded-[18px] bg-secondary/35 px-4 py-3 text-sm">
+          <div key={row.personId} className="flex items-center justify-between gap-3 rounded-lg bg-secondary/35 px-4 py-3 text-sm">
             <div className="min-w-0">
               <div className="truncate font-medium text-foreground">{row.name}</div>
               <div className="text-xs text-muted-foreground">
@@ -992,11 +926,11 @@ function MetricBlock({
   subdued?: boolean;
 }) {
   return (
-    <div className={cn("rounded-[20px] p-4", subdued ? "bg-white/85 shadow-sm" : "bg-secondary/35")}>
-      <p className="text-[11px] text-muted-foreground" style={capsHeadingStyle}>
+    <div className={cn("rounded-lg p-4", subdued ? "bg-background shadow-sm" : "bg-secondary/35")}>
+      <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-3 text-2xl font-medium tracking-[-0.02em] text-foreground">{value}</p>
+      <p className="mt-3 text-2xl font-semibold tracking-tight text-foreground">{value}</p>
     </div>
   );
 }
@@ -1011,11 +945,11 @@ function BalanceCallout({
   value: string;
 }) {
   return (
-    <div className="rounded-[20px] bg-white/85 p-4 shadow-sm">
-      <p className="text-[11px] text-muted-foreground" style={capsHeadingStyle}>
+    <div className="rounded-lg border bg-background p-4 shadow-sm">
+      <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-3 truncate text-lg font-medium text-foreground">{name}</p>
+      <p className="mt-3 truncate text-lg font-semibold text-foreground">{name}</p>
       <p className="mt-1 text-sm text-muted-foreground">{value}</p>
     </div>
   );
@@ -1048,8 +982,8 @@ function ParticipantBalanceGrid({
           <div
             key={row.personId}
             className={cn(
-              "rounded-[20px] p-4",
-              isSelected ? "bg-white/90 shadow-sm" : "bg-secondary/35",
+              "rounded-lg border p-4",
+              isSelected ? "bg-background shadow-sm" : "bg-secondary/20",
             )}
           >
             <div className="flex items-start justify-between gap-3">
@@ -1095,10 +1029,10 @@ function CategoryBreakdownList({
       {rows.map((row) => {
         const Icon = getCategoryIconFromName(row.iconName);
         return (
-          <div key={row.name} className="rounded-[18px] bg-white/85 p-4 shadow-sm">
+          <div key={row.name} className="rounded-lg border bg-background p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-secondary/35">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/35">
                   <Icon className="h-4 w-4 text-foreground" />
                 </div>
                 <div className="min-w-0">
@@ -1134,9 +1068,9 @@ function MiniTrendBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0 rounded-[20px] bg-white/85 p-4 shadow-sm">
+    <div className="min-w-0 rounded-lg border bg-background p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium tracking-[0.01em] text-foreground">{label}</p>
+        <p className="text-sm font-medium text-foreground">{label}</p>
         <p className="text-xs text-muted-foreground">{valueLabel}</p>
       </div>
       <div className="mt-4 min-w-0">{children}</div>
@@ -1156,9 +1090,9 @@ function TopExpensesList({
   return (
     <div className="space-y-3">
       {rows.map((expense, index) => (
-        <div key={expense.id} className="rounded-[18px] bg-secondary/35 p-4">
+        <div key={expense.id} className="rounded-lg bg-secondary/25 p-4">
           <div className="flex items-start gap-3">
-            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-sm font-medium text-foreground shadow-sm">
+            <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-background text-sm font-medium text-foreground shadow-sm">
               {index + 1}
             </div>
             <div className="min-w-0 flex-1">
@@ -1174,7 +1108,7 @@ function TopExpensesList({
                 <div className="shrink-0 text-right">
                   <p className="font-medium text-foreground">{formatAnalyticsCurrency(expense.amount)}</p>
                   {expense.excluded ? (
-                    <Badge variant="outline" className="mt-2 rounded-full bg-white/85 px-2.5 py-1 text-[10px]">
+                    <Badge variant="outline" className="mt-2 rounded-full bg-background px-2.5 py-1 text-[10px]">
                       Excluded
                     </Badge>
                   ) : null}
@@ -1204,10 +1138,10 @@ function CategoryDeepDiveList({
       {rows.map((category) => {
         const Icon = getCategoryIconFromName(category.iconName);
         return (
-          <div key={category.name} className="rounded-[18px] bg-white/85 p-4 shadow-sm">
+          <div key={category.name} className="rounded-lg border bg-background p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] bg-secondary/35">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-secondary/35">
                   <Icon className="h-4 w-4 text-foreground" />
                 </div>
                 <div className="min-w-0">
@@ -1242,7 +1176,7 @@ function BalanceBadge({ value }: { value: number }) {
       variant="outline"
       className={cn(
         "rounded-full px-2.5 py-1 text-[11px] font-medium",
-        isPositive ? "bg-white/90 text-foreground" : "bg-secondary/55 text-foreground",
+        isPositive ? "bg-background text-foreground" : "bg-secondary/55 text-foreground",
       )}
     >
       {signedCurrency(value)}
@@ -1258,7 +1192,7 @@ function MiniValue({
   value: string;
 }) {
   return (
-    <div className="rounded-[14px] bg-secondary/40 px-3 py-2">
+    <div className="rounded-md bg-secondary/40 px-3 py-2">
       <div className="truncate text-muted-foreground">{label}</div>
       <div className="mt-1 truncate font-medium text-foreground">{value}</div>
     </div>
@@ -1266,30 +1200,19 @@ function MiniValue({
 }
 
 function EmptyPanel({ message }: { message: string }) {
-  return (
-    <div className="rounded-[20px] bg-secondary/35 px-4 py-5 text-sm leading-6 tracking-[0.01em] text-muted-foreground">
-      {message}
-    </div>
-  );
+  return <InsightsEmptyPanel message={message} />;
 }
 
 function AnalyticsEmptyState() {
   return (
     <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-3xl flex-col px-4 pb-12 pt-4 sm:px-5">
-        <section className="rounded-[32px] border border-border/60 bg-white/95 px-6 py-10 text-center shadow-lg sm:px-8">
-          <div className="inline-flex items-center gap-2 rounded-full bg-secondary/45 px-3 py-1.5 text-xs text-muted-foreground">
-            <BarChart4 className="h-3.5 w-3.5" />
-            <span style={capsHeadingStyle}>Analytics</span>
-          </div>
-          <h1 className="mt-5 text-[3rem] leading-[0.96] text-foreground" style={displayHeadingStyle}>
-            Analytics
-          </h1>
-          <p className="mt-4 text-sm tracking-[0.01em] text-muted-foreground">
-            Add expenses to unlock the dashboard.
-          </p>
-        </section>
-      </div>
+      <InsightsLayout className="max-w-3xl">
+        <InsightsEmptyState
+          icon={BarChart4}
+          title="Analytics"
+          message="Add expenses to unlock the dashboard."
+        />
+      </InsightsLayout>
     </div>
   );
 }
@@ -1297,42 +1220,42 @@ function AnalyticsEmptyState() {
 function AnalyticsSkeleton() {
   return (
     <div className="h-full w-full overflow-x-hidden overflow-y-auto">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 pb-12 pt-4 sm:px-5 lg:gap-8 lg:px-6">
-        <div className="rounded-[32px] border border-border/60 bg-white/95 p-6 shadow-lg sm:p-8">
+      <InsightsLayout className="max-w-7xl">
+        <div className="rounded-lg border bg-card p-4 shadow-lg sm:p-6">
           <Skeleton className="h-8 w-28 rounded-full" />
-          <Skeleton className="mt-5 h-16 w-48 rounded-full sm:h-20 sm:w-56" />
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <Skeleton className="h-9 w-28 rounded-full" />
             <Skeleton className="h-9 w-32 rounded-full" />
             <Skeleton className="h-9 w-36 rounded-full" />
           </div>
-          <div className="mt-8 grid gap-4 lg:grid-cols-2">
-            <Skeleton className="h-40 rounded-[24px]" />
-            <Skeleton className="h-40 rounded-[24px]" />
+          <div className="mt-4 grid gap-4 lg:grid-cols-3">
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
+            <Skeleton className="h-10 rounded-lg" />
           </div>
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.95fr)]">
-          <Skeleton className="h-[320px] rounded-[24px]" />
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+          <Skeleton className="h-[280px] rounded-lg" />
           <div className="grid gap-4 md:grid-cols-2">
-            <Skeleton className="h-[140px] rounded-[24px]" />
-            <Skeleton className="h-[140px] rounded-[24px]" />
-            <Skeleton className="h-[160px] rounded-[24px] md:col-span-2" />
-            <Skeleton className="h-[160px] rounded-[24px] md:col-span-2" />
+            <Skeleton className="h-[132px] rounded-lg" />
+            <Skeleton className="h-[132px] rounded-lg" />
+            <Skeleton className="h-[148px] rounded-lg md:col-span-2" />
+            <Skeleton className="h-[148px] rounded-lg md:col-span-2" />
           </div>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
-            <Skeleton key={index} className="h-24 rounded-[20px]" />
+            <Skeleton key={index} className="h-24 rounded-lg" />
           ))}
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          <Skeleton className="h-[420px] rounded-[24px]" />
-          <Skeleton className="h-[420px] rounded-[24px]" />
+          <Skeleton className="h-[360px] rounded-lg" />
+          <Skeleton className="h-[360px] rounded-lg" />
         </div>
-      </div>
+      </InsightsLayout>
     </div>
   );
 }

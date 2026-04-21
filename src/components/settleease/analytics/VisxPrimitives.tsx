@@ -59,17 +59,17 @@ const analyticsGhostButtonClass = "transition-none hover:bg-transparent hover:te
 
 export function ChartFrame({ title, description, children, actions, className }: ChartFrameProps) {
   return (
-    <Card className={cn("flex min-h-full min-w-0 flex-col overflow-hidden rounded-[24px] border-border/70 bg-white/95 shadow-lg", className)}>
-      <CardHeader className="flex flex-col gap-3 px-5 py-5 sm:flex-row sm:items-start sm:justify-between sm:px-6">
+    <Card className={cn("flex min-h-full min-w-0 flex-col overflow-hidden rounded-lg border-border/70 bg-card shadow-lg", className)}>
+      <CardHeader className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:px-5 sm:py-5">
         <div className="min-w-0">
-          <CardTitle className="text-[1.2rem] font-light leading-tight tracking-[-0.03em] sm:text-[1.35rem]">{title}</CardTitle>
+          <CardTitle className="text-base font-semibold leading-tight tracking-tight sm:text-lg">{title}</CardTitle>
           {description ? (
-            <CardDescription className="mt-1 text-xs leading-relaxed tracking-[0.01em] sm:text-sm">{description}</CardDescription>
+            <CardDescription className="mt-1 text-xs leading-relaxed sm:text-sm">{description}</CardDescription>
           ) : null}
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {actions ? <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col px-4 pb-5 pt-0 sm:px-6">{children}</CardContent>
+      <CardContent className="flex flex-1 flex-col px-4 pb-4 pt-0 sm:px-5 sm:pb-5">{children}</CardContent>
     </Card>
   );
 }
@@ -100,7 +100,7 @@ function ChartInspector({
 }) {
   return (
     <div
-      className="mt-4 h-24 overflow-hidden rounded-[18px] bg-secondary/35 px-4 py-3 text-xs"
+      className="mt-4 h-24 overflow-hidden rounded-lg bg-secondary/35 px-4 py-3 text-xs"
       aria-live="polite"
     >
       {datum ? (
@@ -996,7 +996,7 @@ function InteractiveDonutChart({
               key={datum.name}
               type="button"
               className={cn(
-                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-[16px] bg-secondary/35 px-3 py-2.5 text-left text-xs transition-none hover:bg-secondary/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
+                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-lg bg-secondary/35 px-3 py-2.5 text-left text-xs transition-none hover:bg-secondary/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
                 activeKey === datum.name && "ring-1 ring-border"
               )}
               onFocus={() => inspectSlice(datum, index, "hover")}
@@ -1104,7 +1104,7 @@ export function HeatmapCalendar({
           );
         })}
       </div>
-      <div className="mt-4 min-h-[84px] rounded-[18px] bg-secondary/35 p-4 text-xs">
+      <div className="mt-4 min-h-[72px] rounded-lg bg-secondary/35 p-4 text-xs">
         {activeDay ? (
           <>
             <div className="mb-2 flex items-center justify-between gap-3">
@@ -1130,7 +1130,7 @@ export function HeatmapCalendar({
 
 function EmptyChart({ message }: { message: string }) {
   return (
-    <div className="flex min-h-[260px] items-center justify-center rounded-[20px] bg-secondary/35 px-4 text-center text-sm text-muted-foreground">
+    <div className="flex min-h-[220px] items-center justify-center rounded-lg bg-secondary/35 px-4 text-center text-sm text-muted-foreground">
       {message}
     </div>
   );
