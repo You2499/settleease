@@ -112,6 +112,75 @@ function parseStoredHealthEstimate(value: string | null | undefined): Structured
   return parseStructuredHealthEstimateText(value);
 }
 
+function buildHealthChunkDataHash({
+  payload,
+  promptVersion,
+  modelCode,
+  modelConfigFingerprint,
+}: {
+  payload: ReturnType<typeof buildHealthChunkPayload>;
+  promptVersion: number;
+  modelCode: string;
+  modelConfigFingerprint: string;
+}) {
+  const hashInput = buildHealthLedgerCacheHashInput({
+    promptName: HEALTH_LEDGER_PROMPT_NAME,
+    promptVersion,
+    modelCode,
+    modelConfigFingerprint,
+    payloadSchemaVersion: HEALTH_LEDGER_PAYLOAD_SCHEMA_VERSION,
+    payload,
+  });
+  return versionedHealthLedgerCacheKey(sha256Hex(hashInput));
+}
+
+async function loadHealthRequestContext(ctx: any, args: { startDate?: string; endDate?: string }) {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity?.subject) {
+    throw new ConvexError("Authentication required.");
+  }
+
+  const [people, allExpenses, activePrompt, rawAiConfig] = await Promise.all([
+    ctx.runQuery(api.app.listPeople, {}),
+    ctx.runQuery(api.app.listExpenses, {}),
+    ctx.runQuery(api.app.getActiveAiPrompt, { name: HEALTH_LEDGER_PROMPT_NAME }),
+    ctx.runQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }),
+  ]) as [any[], any[], any, any];
+
+  const parsedStartDate = safeDate(args.startDate);
+  const parsedEndDate = safeDate(args.endDate);
+  const rangeStart = parsedStartDate ? startOfDay(parsedStartDate) : null;
+  const rangeEnd = parsedEndDate ? endOfDay(parsedEndDate) : null;
+
+  const sourceRows = buildHealthSourceRows({
+    expenses: allExpenses as any,
+    people: people as any,
+  }).filter((row) => isRowInDateRange({
+    rowDate: row.date,
+    startDate: rangeStart,
+    endDate: rangeEnd,
+  }));
+
+  const rowsByChunk = groupHealthSourceRowsByChunk(sourceRows);
+  const requestedChunkKeys = [...rowsByChunk.keys()].sort(compareChunkKey);
+  const aiConfig = resolveAiModelConfig(rawAiConfig as any);
+
+  return {
+    sourceRows,
+    rowsByChunk,
+    requestedChunkKeys,
+    aiConfig,
+    modelAttemptOrder: buildAiModelAttemptOrder(aiConfig),
+    promptVersion: Number(activePrompt?.version ?? 0),
+    promptText: activePrompt?.prompt_text || DEFAULT_HEALTH_LEDGER_PROMPT,
+    modelConfigFingerprint: buildHealthLedgerModelConfigFingerprint(aiConfig),
+    requestedRange: {
+      startDate: rangeStart ? rangeStart.toISOString() : null,
+      endDate: rangeEnd ? rangeEnd.toISOString() : null,
+    },
+  };
+}
+
 async function generateHealthEstimate({
   jsonData,
   promptText,
@@ -190,15 +259,12 @@ async function getOrGenerateChunkEstimate({
       error: string;
     }
 > {
-  const hashInput = buildHealthLedgerCacheHashInput({
-    promptName: HEALTH_LEDGER_PROMPT_NAME,
+  const dataHash = buildHealthChunkDataHash({
+    payload,
     promptVersion,
     modelCode,
     modelConfigFingerprint,
-    payloadSchemaVersion: HEALTH_LEDGER_PAYLOAD_SCHEMA_VERSION,
-    payload,
   });
-  const dataHash = versionedHealthLedgerCacheKey(sha256Hex(hashInput));
 
   const reserve = async (forceRegenerate = false): Promise<any> =>
     await ctx.runMutation(internal.aiSummaryCache.reserveAiSummaryGeneration, {
@@ -321,40 +387,17 @@ export const getHealthLedger = action({
     endDate: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<HealthLedgerResult> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.subject) {
-      throw new ConvexError("Authentication required.");
-    }
-
-    const [people, allExpenses, activePrompt, rawAiConfig] = await Promise.all([
-      ctx.runQuery(api.app.listPeople, {}),
-      ctx.runQuery(api.app.listExpenses, {}),
-      ctx.runQuery(api.app.getActiveAiPrompt, { name: HEALTH_LEDGER_PROMPT_NAME }),
-      ctx.runQuery(api.app.getActiveAiConfig, { key: AI_CONFIG_KEY }),
-    ]) as [any[], any[], any, any];
-
-    const parsedStartDate = safeDate(args.startDate);
-    const parsedEndDate = safeDate(args.endDate);
-    const rangeStart = parsedStartDate ? startOfDay(parsedStartDate) : null;
-    const rangeEnd = parsedEndDate ? endOfDay(parsedEndDate) : null;
-
-    const sourceRows = buildHealthSourceRows({
-      expenses: allExpenses as any,
-      people: people as any,
-    }).filter((row) => isRowInDateRange({
-      rowDate: row.date,
-      startDate: rangeStart,
-      endDate: rangeEnd,
-    }));
-
-    const rowsByChunk = groupHealthSourceRowsByChunk(sourceRows);
-    const requestedChunkKeys = [...rowsByChunk.keys()].sort(compareChunkKey);
-
-    const aiConfig = resolveAiModelConfig(rawAiConfig as any);
-    const modelAttemptOrder = buildAiModelAttemptOrder(aiConfig);
-    const promptVersion = Number(activePrompt?.version ?? 0);
-    const promptText = activePrompt?.prompt_text || DEFAULT_HEALTH_LEDGER_PROMPT;
-    const modelConfigFingerprint = buildHealthLedgerModelConfigFingerprint(aiConfig);
+    const {
+      sourceRows,
+      rowsByChunk,
+      requestedChunkKeys,
+      aiConfig,
+      modelAttemptOrder,
+      promptVersion,
+      promptText,
+      modelConfigFingerprint,
+      requestedRange,
+    } = await loadHealthRequestContext(ctx, args);
 
     const chunkStatuses: HealthLedgerChunkStatus[] = [];
     const ledgerRows: HealthEstimatedLedgerRow[] = [];
@@ -430,10 +473,7 @@ export const getHealthLedger = action({
         failedChunkCount,
         coveragePercent: computeCoveragePercent(coveredChunkCount, requestedChunkKeys.length),
       },
-      requestedRange: {
-        startDate: rangeStart ? rangeStart.toISOString() : null,
-        endDate: rangeEnd ? rangeEnd.toISOString() : null,
-      },
+      requestedRange,
       dataStats: {
         candidateRowCount: sourceRows.length,
         qualifyingRowCount,
@@ -442,6 +482,100 @@ export const getHealthLedger = action({
       },
       disclaimer:
         "Health values are AI estimates generated from expense and item text. They are not verified nutrition facts or medical guidance.",
+      generatedAt: new Date().toISOString(),
+    };
+  },
+});
+
+export const ensureHealthChunks = action({
+  args: {
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+    regenerateFailed: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const {
+      rowsByChunk,
+      requestedChunkKeys,
+      aiConfig,
+      modelAttemptOrder,
+      promptVersion,
+      promptText,
+      modelConfigFingerprint,
+      requestedRange,
+    } = await loadHealthRequestContext(ctx, args);
+
+    let cachedChunkCount = 0;
+    let generatedChunkCount = 0;
+    let generatingChunkCount = 0;
+    let failedChunkCount = 0;
+    let processedChunkCount = 0;
+
+    for (const chunkKey of requestedChunkKeys) {
+      const chunkRows = rowsByChunk.get(chunkKey) || [];
+      const payload = buildHealthChunkPayload(chunkKey, chunkRows);
+      const dataHash = buildHealthChunkDataHash({
+        payload,
+        promptVersion,
+        modelCode: aiConfig.modelCode,
+        modelConfigFingerprint,
+      });
+      const existingRecord: any = await ctx.runQuery(internal.aiSummaryCache.getAiSummaryCacheByHash, {
+        dataHash,
+      });
+
+      if (existingRecord?.status === "ready") {
+        const cached = parseStoredHealthEstimate(existingRecord.summary);
+        if (cached) {
+          cachedChunkCount += 1;
+          continue;
+        }
+      }
+
+      if (existingRecord?.status === "generating") {
+        generatingChunkCount += 1;
+        continue;
+      }
+
+      if (existingRecord?.status === "failed" && !args.regenerateFailed) {
+        failedChunkCount += 1;
+        continue;
+      }
+
+      processedChunkCount += 1;
+      const chunkResult = await getOrGenerateChunkEstimate({
+        ctx,
+        chunkKey,
+        payload,
+        promptVersion,
+        promptText,
+        modelCode: aiConfig.modelCode,
+        modelConfigFingerprint,
+        modelAttemptOrder,
+      });
+
+      if (chunkResult.source === "generated") {
+        generatedChunkCount += 1;
+        continue;
+      }
+
+      if (chunkResult.source === "cached") {
+        cachedChunkCount += 1;
+        continue;
+      }
+
+      failedChunkCount += 1;
+    }
+
+    return {
+      schemaVersion: 1,
+      requestedRange,
+      requestedChunkCount: requestedChunkKeys.length,
+      processedChunkCount,
+      cachedChunkCount,
+      generatedChunkCount,
+      generatingChunkCount,
+      failedChunkCount,
       generatedAt: new Date().toISOString(),
     };
   },
