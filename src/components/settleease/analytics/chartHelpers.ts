@@ -24,9 +24,9 @@ export type ChartSeriesDefinition = {
 };
 
 export function getResponsiveChartHeight(width: number, preferred = 360) {
-  if (width < 420) return Math.min(preferred, 220);
-  if (width < 768) return Math.min(preferred, 250);
-  if (width < 1100) return Math.min(preferred, 310);
+  if (width < 420) return Math.min(preferred, 200);
+  if (width < 768) return Math.min(preferred, 236);
+  if (width < 1100) return Math.min(preferred, 300);
   return Math.min(preferred, 360);
 }
 

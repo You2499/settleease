@@ -69,7 +69,7 @@ const DATE_PRESETS: Array<{ value: HealthDatePreset; label: string }> = [
   { value: "all", label: "All time" },
 ];
 
-const panelClass = "min-w-0 rounded-lg border bg-card/50 p-4 shadow-sm";
+const panelClass = "min-w-0 overflow-hidden rounded-lg border bg-card/50 p-3 sm:p-4 shadow-sm";
 const insetTileClass = "rounded-lg border bg-background p-3";
 
 interface SurfaceChromeState {
@@ -288,11 +288,11 @@ function HealthToolbar({
   isLoadingPeople: boolean;
 }) {
   return (
-    <div className={cn("grid gap-2", mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-2")}>
+    <div className={cn("grid gap-3", mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-2")}>
       <div className="min-w-0 space-y-1.5">
         <Label className="text-xs text-muted-foreground">View</Label>
         <Tabs value={mode} onValueChange={(value) => onModeChange(value as HealthMode)} className="w-full">
-          <TabsList className="grid h-9 w-full grid-cols-2">
+          <TabsList className="grid h-9 w-full min-w-0 grid-cols-2">
             <TabsTrigger value="group" className="text-xs sm:text-sm">
               Group
             </TabsTrigger>
@@ -443,7 +443,7 @@ function OverviewCaloriesPanel({
         {(payload) => (
           <div className="space-y-4">
             <div>
-              <p className="break-words text-4xl sm:text-5xl font-bold tracking-tight text-foreground">
+              <p className="break-words text-[2.5rem] leading-none sm:text-5xl font-bold tracking-tight text-foreground">
                 {Math.round(payload.totalCalories).toLocaleString("en-IN")}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">Estimated calories</p>
@@ -999,15 +999,15 @@ function HealthEmptyState() {
 
 function HealthSkeleton() {
   return (
-    <Card className="shadow-lg rounded-lg h-full flex flex-col">
-      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+    <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
+      <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
         <div className="flex items-center gap-2">
           <Skeleton className="h-5 w-5 rounded" />
           <Skeleton className="h-8 w-24" />
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
-        <div className="space-y-6">
+      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
+        <div className="min-w-0 space-y-4 sm:space-y-5">
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-2">
             <Skeleton className="h-14 rounded-lg" />
             <Skeleton className="h-14 rounded-lg" />
@@ -1082,16 +1082,16 @@ export default function HealthTab({
 
   return (
     <>
-      <Card className="shadow-lg rounded-lg h-full flex flex-col">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
+      <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
+        <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
           <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
             <Heart className="mr-2 h-5 w-5 text-primary" />
             Health
           </CardTitle>
         </CardHeader>
 
-        <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
-          <div className="space-y-6">
+        <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
+          <div className="min-w-0 space-y-4 sm:space-y-5">
             <HealthToolbar
               mode={mode}
               onModeChange={(nextMode) => {

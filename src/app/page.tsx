@@ -565,16 +565,16 @@ function SettleEasePageContent() {
           onEditName={handleEditName}
           isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady}
         />
-        <SidebarInset>
-          <div className="flex flex-col h-full">
-            <header className="p-4 md:hidden flex items-center justify-center sticky top-0 bg-background z-20 border-b shadow-sm">
+        <SidebarInset className="min-w-0 overflow-x-hidden">
+          <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
+            <header className="sticky top-0 z-20 flex items-center justify-center border-b bg-background px-4 py-3 shadow-sm md:hidden">
               <div className="flex items-center justify-center"> {/* Center part for logo */}
                 <HandCoins className="h-7 w-7 text-primary mr-2" />
                 <span className="text-xl font-bold text-primary">SettleEase</span>
               </div>
             </header>
-            <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-background no-scrollbar min-h-0 pb-24 md:pb-6">
-              <div className="min-h-full bg-background">
+            <main className="no-scrollbar flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
+              <div className="min-h-full w-full min-w-0 bg-background">
                 {isLoadingData && isDataFetchedAtLeastOnce && !shouldShowPageSkeleton && (
                   <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
                 )}
@@ -781,7 +781,7 @@ function SettleEasePageContent() {
                 )}
               </div>
             </main>
-            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} />
+            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} />
           </div>
         </SidebarInset>
       </SidebarProvider >

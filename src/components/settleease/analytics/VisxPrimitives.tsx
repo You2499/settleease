@@ -159,16 +159,16 @@ function MeasuredChart({
   children: (size: { width: number; height: number }) => React.ReactNode;
 }) {
   const { parentRef, width } = useParentSize<HTMLDivElement>({
-    initialSize: { width: 360, height: preferredHeight, top: 0, left: 0 },
+    initialSize: { width: 0, height: preferredHeight, top: 0, left: 0 },
     debounceTime: 50,
     ignoreDimensions: ["height"],
   });
-  const safeWidth = Math.max(width || 360, 1);
-  const chartHeight = getResponsiveChartHeight(safeWidth, preferredHeight);
+  const safeWidth = Math.max(width, 1);
+  const chartHeight = getResponsiveChartHeight(width > 0 ? width : 320, preferredHeight);
 
   return (
     <div ref={parentRef} className="relative min-w-0 max-w-full overflow-hidden" style={{ minHeight: chartHeight }}>
-      {children({ width: safeWidth, height: chartHeight })}
+      {width > 0 ? children({ width: safeWidth, height: chartHeight }) : null}
     </div>
   );
 }
