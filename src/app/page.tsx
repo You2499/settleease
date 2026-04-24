@@ -506,7 +506,7 @@ function SettleEasePageContent() {
             <main className="no-scrollbar flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
               <div className="min-h-full w-full min-w-0 bg-background">
                 {isLoadingData && isDataFetchedAtLeastOnce && !shouldShowPageSkeleton && (
-                  <div className="text-center text-sm text-muted-foreground mb-4">Syncing data...</div>
+                  <div className="sr-only" aria-live="polite">Syncing data...</div>
                 )}
                 {activeView === 'dashboard' && (
                   <SettleEaseErrorBoundary
