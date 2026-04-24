@@ -73,7 +73,7 @@ export default function Step1BalanceOverview({
               return (
                 <div
                   key={person.id}
-                  className={`relative p-4 rounded-xl border-2 shadow-sm transition-all h-64 flex flex-col ${
+                  className={`relative p-4 rounded-xl border-2 shadow-sm h-64 flex flex-col ${
                     isCreditor
                       ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                       : isDebtor

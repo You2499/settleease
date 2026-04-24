@@ -103,7 +103,7 @@ export default function Step2DirectDebtAnalysis({
               return (
                 <div
                   key={personId}
-                  className={`relative p-4 rounded-xl border-2 shadow-sm transition-all ${
+                  className={`relative p-4 rounded-xl border-2 shadow-sm ${
                     isCreditor
                       ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                       : isDebtor
@@ -172,12 +172,12 @@ export default function Step2DirectDebtAnalysis({
                     <Button
                       variant="ghost"
                       onClick={() => togglePersonExpansion(personId)}
-                      className={`w-full justify-start p-2 h-auto font-semibold rounded-md transition-colors ${
+                      className={`w-full justify-start p-2 h-auto font-semibold rounded-md ${
                         isCreditor
-                          ? "text-green-800 dark:text-green-200 hover:bg-green-200/50 hover:text-green-800 dark:hover:bg-green-800/30 dark:hover:text-green-200"
+                          ? "text-green-800 dark:text-green-200"
                           : isDebtor
-                          ? "text-red-800 dark:text-red-200 hover:bg-red-200/50 hover:text-red-800 dark:hover:bg-red-800/30 dark:hover:text-red-200"
-                          : "text-gray-800 dark:text-gray-200 hover:bg-gray-200/50 hover:text-gray-800 dark:hover:bg-gray-800/30 dark:hover:text-gray-200"
+                          ? "text-red-800 dark:text-red-200"
+                          : "text-gray-800 dark:text-gray-200"
                       }`}
                     >
                       {expandedPersons.has(personId) ? (
@@ -234,15 +234,13 @@ export default function Step2DirectDebtAnalysis({
                               <div
                                 key={expense.id}
                                 className={`p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${
-                                  onExpenseClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors' : ''
+                                  onExpenseClick ? 'cursor-pointer' : ''
                                 }`}
                                 onClick={() => onExpenseClick?.(expense)}
                               >
                                 <div className="flex flex-col sm:flex-row justify-between items-start mb-2 gap-2 sm:gap-0">
                                   <div className="flex-1 min-w-0">
-                                    <h5 className={`font-medium text-gray-900 dark:text-gray-100 truncate text-sm ${
-                                      onExpenseClick ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''
-                                    }`}>
+                                    <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
                                       {expense.description}
                                       {onExpenseClick && (
                                         <Eye className="inline ml-1 h-3 w-3 text-blue-500 dark:text-blue-400" />

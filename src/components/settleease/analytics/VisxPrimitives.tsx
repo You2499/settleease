@@ -996,7 +996,7 @@ function InteractiveDonutChart({
               key={datum.name}
               type="button"
               className={cn(
-                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-lg bg-secondary/35 px-3 py-2.5 text-left text-xs transition-none hover:bg-secondary/35 focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
+                "flex min-h-11 min-w-0 items-center justify-between gap-3 rounded-lg bg-secondary/35 px-3 py-2.5 text-left text-xs transition-none focus:outline-none focus:ring-2 focus:ring-ring sm:text-sm",
                 activeKey === datum.name && "ring-1 ring-border"
               )}
               onFocus={() => inspectSlice(datum, index, "hover")}
@@ -1090,7 +1090,7 @@ export function HeatmapCalendar({
               key={key}
               type="button"
               className={cn(
-                "flex aspect-square min-h-10 items-center justify-center rounded-md text-xs transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
+                "flex aspect-square min-h-10 items-center justify-center rounded-md text-xs focus:outline-none focus:ring-2 focus:ring-ring",
                 intensity,
                 !isCurrentMonth && "opacity-35",
                 activeKey === key && "ring-2 ring-ring"

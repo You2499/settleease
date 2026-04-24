@@ -48,7 +48,7 @@ export default function PersonBalanceOverview({
         <div className="p-2 overflow-x-hidden w-full min-w-0">
           {/* Single person card with same design as Step1BalanceOverview */}
           <div
-            className={`relative p-4 rounded-xl border-2 shadow-sm transition-all min-h-64 flex flex-col overflow-hidden w-full max-w-full ${
+            className={`relative p-4 rounded-xl border-2 shadow-sm min-h-64 flex flex-col overflow-hidden w-full max-w-full ${
               personSummary.netBalance > 0.01
                 ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                 : personSummary.netBalance < -0.01

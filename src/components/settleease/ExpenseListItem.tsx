@@ -35,7 +35,7 @@ export default function ExpenseListItem({
 
   return (
     <li onClick={() => onClick?.(expense)} className={onClick ? 'cursor-pointer' : ''}>
-      <Card className="bg-card/70 hover:bg-card/90 transition-all rounded-md">
+      <Card className="bg-card/70 rounded-md">
         <CardHeader className="pb-1.5 pt-2.5 px-3">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <div className="flex items-center gap-2 flex-wrap">
@@ -76,4 +76,4 @@ export default function ExpenseListItem({
       </Card>
     </li>
   );
-} 
+}

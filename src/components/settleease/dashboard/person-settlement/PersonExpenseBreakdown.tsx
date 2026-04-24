@@ -53,7 +53,7 @@ export default function PersonExpenseBreakdown({
         <div className="space-y-4 p-2 overflow-x-hidden w-full min-w-0">
           {/* Single person breakdown with same design as Step2DirectDebtAnalysis */}
           <div
-            className={`relative p-4 rounded-xl border-2 shadow-sm transition-all overflow-hidden w-full max-w-full ${
+            className={`relative p-4 rounded-xl border-2 shadow-sm overflow-hidden w-full max-w-full ${
               personSummary.netBalance > 0.01
                 ? "bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/30 dark:to-green-900/20 border-green-300 dark:border-green-700"
                 : personSummary.netBalance < -0.01
@@ -168,13 +168,13 @@ export default function PersonExpenseBreakdown({
                   return (
                     <div
                       key={expense.id}
-                      className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors overflow-hidden"
+                      className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm cursor-pointer overflow-hidden"
                       onClick={() => onViewExpenseDetails(expense)}
                     >
                       <div className="flex flex-col gap-2 mb-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm hover:text-blue-600 dark:hover:text-blue-400">
+                            <h5 className="font-medium text-gray-900 dark:text-gray-100 truncate text-sm">
                               {expense.description}
                               <ExternalLink className="inline ml-1 h-3 w-3 text-blue-500 dark:text-blue-400" />
                             </h5>

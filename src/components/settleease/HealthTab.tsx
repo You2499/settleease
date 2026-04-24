@@ -284,7 +284,6 @@ function HealthSection({
 
 function HealthToolbar({
   mode,
-  onModeChange,
   datePreset,
   onDatePresetChange,
   selectedPersonId,
@@ -294,7 +293,6 @@ function HealthToolbar({
   isLoadingPeople,
 }: {
   mode: HealthMode;
-  onModeChange: (mode: HealthMode) => void;
   datePreset: HealthDatePreset;
   onDatePresetChange: (preset: HealthDatePreset) => void;
   selectedPersonId: string | null;
@@ -304,21 +302,12 @@ function HealthToolbar({
   isLoadingPeople: boolean;
 }) {
   return (
-    <div className={cn("grid gap-3", mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-2")}>
-      <div className="min-w-0 space-y-1.5">
-        <Label className="text-xs text-muted-foreground">View</Label>
-        <Tabs value={mode} onValueChange={(value) => onModeChange(value as HealthMode)} className="w-full">
-          <TabsList className="grid h-9 w-full min-w-0 grid-cols-2">
-            <TabsTrigger value="group" className="text-xs sm:text-sm">
-              Group
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="text-xs sm:text-sm">
-              Personal
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
+    <div
+      className={cn(
+        "grid gap-3 rounded-md bg-muted/50 px-3 py-2",
+        mode === "personal" ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1"
+      )}
+    >
       <div className="min-w-0 space-y-1.5">
         <Label htmlFor="health-date-range" className="text-xs text-muted-foreground">
           Date range
@@ -912,7 +901,7 @@ function LedgerSection({
                 <button
                   key={row.sourceKey}
                   type="button"
-                  className="w-full rounded-lg border bg-background p-4 text-left shadow-sm transition-colors hover:bg-secondary/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-full rounded-lg border bg-background p-4 text-left shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => onOpenExpense(row.expenseId)}
                 >
                   <div className="space-y-4">
@@ -1017,15 +1006,20 @@ function HealthSkeleton() {
   return (
     <LoadingRegion label="Loading health dashboard" className="h-full">
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-      <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-5 rounded" />
-          <Skeleton className="h-8 w-24" />
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-8 w-24" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-md sm:w-56" />
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
+      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
         <div className="min-w-0 space-y-4 sm:space-y-5">
-          <SkeletonToolbar count={2} className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-2" />
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <SkeletonToolbar count={1} className="grid-cols-1" />
+          </div>
 
           <Separator />
 
@@ -1139,23 +1133,37 @@ export default function HealthTab({
   return (
     <>
       <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-        <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
-          <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-            <Heart className="mr-2 h-5 w-5 text-primary" />
-            Health
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
-          <div className="min-w-0 space-y-4 sm:space-y-5">
-            <HealthToolbar
-              mode={mode}
-              onModeChange={(nextMode) => {
+        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start">
+              <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+                <Heart className="mr-2 h-5 w-5 text-primary" />
+                Health
+              </CardTitle>
+            </div>
+            <Tabs
+              value={mode}
+              onValueChange={(value) => {
+                const nextMode = value as HealthMode;
                 setMode(nextMode);
                 if (nextMode === "group") {
                   setSelectedPersonId(null);
                 }
               }}
+              className="w-full sm:w-auto"
+            >
+              <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
+                <TabsTrigger value="group">Overview</TabsTrigger>
+                <TabsTrigger value="personal">Per Person</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+
+        <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+          <div className="min-w-0 space-y-4 sm:space-y-5">
+            <HealthToolbar
+              mode={mode}
               datePreset={datePreset}
               onDatePresetChange={setDatePreset}
               selectedPersonId={selectedPersonId}

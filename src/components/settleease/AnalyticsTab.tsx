@@ -135,21 +135,35 @@ export default function AnalyticsTab({
 
   return (
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-      <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <BarChart4 className="mr-2 h-5 w-5 text-primary" />
-          Analytics
-        </CardTitle>
-      </CardHeader>
-
-      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
-        <div className="min-w-0 space-y-4 sm:space-y-5">
-          <AnalyticsToolbar
-            mode={mode}
-            onModeChange={(nextMode) => {
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start">
+            <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+              <BarChart4 className="mr-2 h-5 w-5 text-primary" />
+              Analytics
+            </CardTitle>
+          </div>
+          <Tabs
+            value={mode}
+            onValueChange={(value) => {
+              const nextMode = value as AnalyticsMode;
               setMode(nextMode);
               if (nextMode === "group") setSelectedPersonId(null);
             }}
+            className="w-full sm:w-auto"
+          >
+            <TabsList className="grid w-full grid-cols-2 sm:w-auto text-xs sm:text-sm">
+              <TabsTrigger value="group">Overview</TabsTrigger>
+              <TabsTrigger value="personal">Per Person</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      </CardHeader>
+
+      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
+        <div className="min-w-0 space-y-4 sm:space-y-5">
+          <AnalyticsToolbar
+            mode={mode}
             datePreset={datePreset}
             onDatePresetChange={setDatePreset}
             granularity={granularity}
@@ -198,7 +212,6 @@ export default function AnalyticsTab({
 
 function AnalyticsToolbar({
   mode,
-  onModeChange,
   datePreset,
   onDatePresetChange,
   granularity,
@@ -210,7 +223,6 @@ function AnalyticsToolbar({
   isLoadingPeople,
 }: {
   mode: AnalyticsMode;
-  onModeChange: (mode: AnalyticsMode) => void;
   datePreset: AnalyticsDatePreset;
   onDatePresetChange: (preset: AnalyticsDatePreset) => void;
   granularity: AnalyticsGranularity;
@@ -222,21 +234,12 @@ function AnalyticsToolbar({
   isLoadingPeople: boolean;
 }) {
   return (
-    <div className={cn("grid gap-3", mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-4" : "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3")}>
-      <div className="min-w-0 space-y-1.5">
-        <Label className="text-xs text-muted-foreground">View</Label>
-        <Tabs value={mode} onValueChange={(value) => onModeChange(value as AnalyticsMode)} className="w-full">
-          <TabsList className="grid h-9 w-full min-w-0 grid-cols-2">
-            <TabsTrigger value="group" className="text-xs sm:text-sm">
-              Group
-            </TabsTrigger>
-            <TabsTrigger value="personal" className="text-xs sm:text-sm">
-              Personal
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
+    <div
+      className={cn(
+        "grid gap-3 rounded-md bg-muted/50 px-3 py-2",
+        mode === "personal" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"
+      )}
+    >
       <div className="min-w-0 space-y-1.5">
         <Label htmlFor="analytics-date-range" className="text-xs text-muted-foreground">
           Date range
@@ -995,13 +998,13 @@ function EmptyPanel({ message }: { message: string }) {
 function AnalyticsEmptyState() {
   return (
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-      <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
         <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
           <BarChart4 className="mr-2 h-5 w-5 text-primary" />
           Analytics
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 min-w-0 overflow-x-hidden flex items-center justify-center px-3 sm:px-6 py-10 text-center">
+      <CardContent className="flex-1 min-w-0 overflow-x-hidden flex items-center justify-center px-4 sm:px-6 pb-4 sm:pb-6 pt-2 text-center">
         <div className="max-w-md">
           <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/50">
             <BarChart4 className="h-6 w-6 text-primary" />
@@ -1018,15 +1021,20 @@ function AnalyticsSkeleton() {
   return (
     <LoadingRegion label="Loading analytics" className="h-full">
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-      <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
-        <div className="flex items-center gap-2">
-          <Skeleton className="h-5 w-5 rounded" />
-          <Skeleton className="h-8 w-32" />
+      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-5 w-5 rounded" />
+            <Skeleton className="h-8 w-32" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-md sm:w-56" />
         </div>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
+      <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
         <div className="min-w-0 space-y-4 sm:space-y-5">
-          <SkeletonToolbar count={3} className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" />
+          <div className="rounded-md bg-muted/50 px-3 py-2">
+            <SkeletonToolbar count={2} className="grid-cols-1 sm:grid-cols-2" />
+          </div>
 
           <Separator />
 
