@@ -11,9 +11,6 @@ import { toast } from "@/hooks/use-toast";
 import {
   ExpenseActivitySkeleton,
   LoadingRegion,
-  SettlementActivitySkeleton,
-  SkeletonCardHeader,
-  SkeletonSectionHeader,
   SkeletonToolbar,
 } from './SkeletonLayouts';
 
@@ -32,37 +29,63 @@ import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import ManualOverrideAlert from './ManualOverrideAlert';
 
+function SettlementTransactionSkeleton() {
+  return (
+    <li>
+      <Card className="rounded-md bg-card/70 px-2 py-2 shadow-sm">
+        <div className="flex flex-col gap-2 sm:grid sm:grid-cols-5 sm:items-center sm:gap-1.5">
+          <div className="w-full sm:col-span-3">
+            <div className="flex items-center justify-between sm:grid sm:grid-cols-3">
+              <Skeleton className="h-5 w-28 min-w-0 sm:justify-self-start" />
+              <Skeleton className="h-4 w-5 shrink-0 rounded sm:justify-self-center" />
+              <Skeleton className="h-5 w-28 min-w-0 sm:justify-self-end" />
+            </div>
+          </div>
+          <div className="flex w-full items-center justify-between gap-2 sm:col-span-2 sm:justify-end">
+            <Skeleton className="h-5 w-20 shrink-0" />
+            <Skeleton className="h-8 w-24 shrink-0 rounded-lg" />
+          </div>
+        </div>
+      </Card>
+    </li>
+  );
+}
+
 function SettlementSummarySkeleton() {
   return (
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg">
-      <SkeletonCardHeader
-        titleWidth="w-52"
-        descriptionWidth="w-full max-w-lg"
-        actions={["w-full sm:w-44", "w-full sm:w-32"]}
-      />
-      <CardContent className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
-        <div className="grid gap-2 rounded-lg bg-muted p-1 sm:grid-cols-2">
-          <Skeleton className="h-9 rounded-md" />
-          <Skeleton className="h-9 rounded-md" />
-        </div>
-        <div className="rounded-lg border bg-card/50 p-4">
-          <Skeleton className="h-4 w-full max-w-2xl" />
-          <Skeleton className="mt-2 h-4 w-full max-w-xl" />
-        </div>
-        <div className="flex flex-col gap-3 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-44" />
-            <Skeleton className="h-3.5 w-64 max-w-full" />
+      <div className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Skeleton className="h-5 w-5 shrink-0 rounded" />
+            <Skeleton className="h-8 w-52" />
+            <Skeleton className="h-9 w-full rounded-full sm:w-44" />
+            <Skeleton className="h-9 w-full rounded-full sm:w-32" />
           </div>
-          <Skeleton className="h-6 w-11 rounded-full" />
+          <div className="grid w-full grid-cols-2 gap-1 rounded-md bg-muted p-1 sm:w-60">
+            <Skeleton className="h-8 rounded-sm" />
+            <Skeleton className="h-8 rounded-sm" />
+          </div>
         </div>
-        <div className="space-y-3">
-          <SkeletonSectionHeader width="w-44" actionWidth="w-24" />
-          <ul className="space-y-3">
-            {[0, 1, 2].map((item) => (
-              <SettlementActivitySkeleton key={item} actions={1} />
+      </div>
+      <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col gap-2 rounded-md bg-muted/50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <Skeleton className="h-4 w-full max-w-2xl" />
+          <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
+            <Skeleton className="h-6 w-11 rounded-full" />
+            <Skeleton className="h-4 w-14" />
+          </div>
+        </div>
+        <div className="mt-2 min-h-[132px] rounded-md border p-1">
+          <ul className="space-y-2 p-2">
+            {[0, 1].map((item) => (
+              <SettlementTransactionSkeleton key={item} />
             ))}
           </ul>
+        </div>
+        <div className="mt-4 grid gap-2 rounded-lg bg-muted p-1 sm:grid-cols-2">
+          <Skeleton className="h-9 rounded-md" />
+          <Skeleton className="h-9 rounded-md" />
         </div>
       </CardContent>
     </Card>
@@ -72,11 +95,18 @@ function SettlementSummarySkeleton() {
 function ExpenseLogSkeleton() {
   return (
     <Card className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-lg shadow-lg">
-      <SkeletonCardHeader
-        titleWidth="w-44"
-        descriptionWidth="w-full max-w-sm"
-        actions={["w-24"]}
-      />
+      <div className="shrink-0 px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-5 shrink-0 rounded" />
+              <Skeleton className="h-8 w-44" />
+            </div>
+            <Skeleton className="h-4 w-40" />
+          </div>
+          <Skeleton className="h-9 w-20 shrink-0 rounded-lg" />
+        </div>
+      </div>
       <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
         <Skeleton className="h-10 w-full rounded-lg" />
         <SkeletonToolbar count={2} className="grid-cols-1 sm:grid-cols-2" itemClassName="h-10 rounded-lg" />
@@ -90,7 +120,7 @@ function ExpenseLogSkeleton() {
               </div>
               <ul className="space-y-3">
                 <ExpenseActivitySkeleton showBadge={group === 0} />
-                {group === 0 ? <SettlementActivitySkeleton /> : <ExpenseActivitySkeleton />}
+                <ExpenseActivitySkeleton />
               </ul>
             </div>
           ))}

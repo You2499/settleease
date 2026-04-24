@@ -52,16 +52,16 @@ function MobileTopBar() {
   const SidebarIcon = openMobile ? SidebarClose : SidebarOpen;
 
   return (
-    <header className="sticky top-0 z-20 flex items-center justify-start gap-2 border-b bg-background px-4 py-3 shadow-sm md:hidden">
+    <header className="sticky top-0 z-20 flex items-center justify-center border-b bg-background px-4 py-3 shadow-sm md:hidden">
       <button
         type="button"
         onClick={() => setOpenMobile(!openMobile)}
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-primary hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="absolute left-4 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-primary hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label={openMobile ? "Close menu" : "Open menu"}
       >
         <SidebarIcon className="h-5 w-5" />
       </button>
-      <div className="flex min-w-0 items-center">
+      <div className="flex min-w-0 items-center justify-center px-12">
         <HandCoins className="mr-2 h-7 w-7 shrink-0 text-primary" />
         <span className="truncate text-xl font-bold text-primary">SettleEase</span>
       </div>
