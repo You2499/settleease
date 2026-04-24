@@ -102,7 +102,7 @@ function ExpenseLogSkeleton() {
 
 function DashboardSkeleton() {
   return (
-    <LoadingRegion label="Loading dashboard" className="flex h-full min-h-0 flex-1 flex-col space-y-6 py-2">
+    <LoadingRegion label="Loading dashboard" className="flex h-full min-h-0 flex-1 flex-col space-y-6">
       <SettlementSummarySkeleton />
       <ExpenseLogSkeleton />
     </LoadingRegion>
@@ -264,7 +264,7 @@ export default function BetaDashboardView({
   }
 
   return (
-    <div className="h-full flex-1 flex flex-col space-y-6 md:space-y-8 min-h-0 py-2">
+    <div className="h-full flex-1 flex flex-col space-y-6 md:space-y-8 min-h-0">
       {/* Manual Override Alert — no visual change needed, themed by CSS */}
       <ManualOverrideAlert
         overrides={manualOverrides}

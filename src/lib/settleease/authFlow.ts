@@ -26,7 +26,7 @@ const ADMIN_ONLY_VIEWS = new Set<ActiveView>([
 ]);
 
 const VIEW_NAMES: Record<ActiveView, string> = {
-  dashboard: "Dashboard",
+  dashboard: "Home",
   health: "Health",
   analytics: "Analytics",
   addExpense: "Add Expense",
@@ -145,7 +145,7 @@ export function buildWelcomeToastModel({
 
     return {
       action: "dashboard" as const,
-      description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go to Dashboard.`,
+      description: `Session restored to ${viewName}. Use the sidebar to navigate or click the button to go Home.`,
       profileUpdates,
       title: "Welcome back!",
       variant: "default" as const,

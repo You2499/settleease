@@ -187,7 +187,7 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
                       className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center"
                     >
                       <Home className="h-5 w-5 mr-2" />
-                      Go to Dashboard
+                      Go Home
                     </button>
                   )}
                 </div>

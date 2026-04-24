@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
+import { Settings2, AlertTriangle, HandCoins, SidebarClose, SidebarOpen } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ import { ToastAction } from "@/components/ui/toast";
 import {
   SidebarProvider,
   SidebarInset,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 import AuthForm from '@/components/settleease/AuthForm';
@@ -45,6 +46,28 @@ import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 import MobileBottomNav from '@/components/settleease/MobileBottomNav';
+
+function MobileTopBar() {
+  const { openMobile, setOpenMobile } = useSidebar();
+  const SidebarIcon = openMobile ? SidebarClose : SidebarOpen;
+
+  return (
+    <header className="sticky top-0 z-20 flex items-center justify-start gap-2 border-b bg-background px-4 py-3 shadow-sm md:hidden">
+      <button
+        type="button"
+        onClick={() => setOpenMobile(!openMobile)}
+        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-primary hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-label={openMobile ? "Close menu" : "Open menu"}
+      >
+        <SidebarIcon className="h-5 w-5" />
+      </button>
+      <div className="flex min-w-0 items-center">
+        <HandCoins className="mr-2 h-7 w-7 shrink-0 text-primary" />
+        <span className="truncate text-xl font-bold text-primary">SettleEase</span>
+      </div>
+    </header>
+  );
+}
 
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
@@ -293,10 +316,10 @@ function SettleEasePageContent() {
           duration: 5000,
           action: (
             <ToastAction
-              altText="Go to Dashboard"
+              altText="Go Home"
               onClick={() => setActiveView('dashboard')}
             >
-              Dashboard
+              Home
             </ToastAction>
           )
         });
@@ -479,12 +502,7 @@ function SettleEasePageContent() {
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
-            <header className="sticky top-0 z-20 flex items-center justify-center border-b bg-background px-4 py-3 shadow-sm md:hidden">
-              <div className="flex items-center justify-center"> {/* Center part for logo */}
-                <HandCoins className="h-7 w-7 text-primary mr-2" />
-                <span className="text-xl font-bold text-primary">SettleEase</span>
-              </div>
-            </header>
+            <MobileTopBar />
             <main className="no-scrollbar flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
               <div className="min-h-full w-full min-w-0 bg-background">
                 {isLoadingData && isDataFetchedAtLeastOnce && !shouldShowPageSkeleton && (
@@ -492,7 +510,7 @@ function SettleEasePageContent() {
                 )}
                 {activeView === 'dashboard' && (
                   <SettleEaseErrorBoundary
-                    componentName="Dashboard"
+                    componentName="Home"
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >

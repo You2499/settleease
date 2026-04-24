@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, LayoutDashboard, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Heart
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, Home, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Heart
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -89,16 +89,16 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
         )}
         <SidebarContent className="p-2">
           <SidebarMenu className="space-y-1">
-            {/* Dashboard */}
+            {/* Home */}
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={() => handleNavigation('dashboard')}
                 isActive={activeView === 'dashboard'}
-                tooltip={{ content: "Dashboard", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
+                tooltip={{ content: "Home", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
                 className="justify-start h-8"
               >
-                <LayoutDashboard className="h-4 w-4" />
-                <span className="group-data-[state=collapsed]:hidden">Dashboard</span>
+                <Home className="h-4 w-4" />
+                <span className="group-data-[state=collapsed]:hidden">Home</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
 

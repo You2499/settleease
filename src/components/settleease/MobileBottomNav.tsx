@@ -1,11 +1,10 @@
 "use client";
 
 import React from 'react';
-import { LayoutDashboard, BarChartBig, Heart, Menu, ScanLine } from 'lucide-react';
+import { Home, BarChartBig, Heart, ScanLine } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
-import { useSidebar } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { LoadingRegion } from "./SkeletonLayouts";
 
@@ -17,10 +16,8 @@ interface MobileBottomNavProps {
 }
 
 export default function MobileBottomNav({ activeView, setActiveView, userRole, isLoading = false }: MobileBottomNavProps) {
-    const { toggleSidebar } = useSidebar();
-
     const navItems = [
-        { view: 'dashboard', label: 'Home', icon: LayoutDashboard },
+        { view: 'dashboard', label: 'Home', icon: Home },
         { view: 'health', label: 'Health', icon: Heart },
         ...(userRole === 'admin' ? [{ view: 'scanReceipt', label: 'Smart Scan', icon: ScanLine }] : []),
         { view: 'analytics', label: 'Analytics', icon: BarChartBig },
@@ -32,8 +29,8 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole, i
                 label="Loading mobile navigation"
                 className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]"
             >
-                <div className="grid h-16 grid-cols-5 items-center px-1">
-                    {Array.from({ length: 5 }).map((_, index) => (
+                <div className="grid h-16 grid-cols-4 items-center px-1">
+                    {Array.from({ length: 4 }).map((_, index) => (
                         <div key={index} className="flex min-w-0 flex-col items-center justify-center gap-1 px-1">
                             <Skeleton className="h-5 w-5 rounded" />
                             <Skeleton className="h-2.5 w-10" />
@@ -48,7 +45,7 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole, i
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
             <div
                 className="grid h-16 items-center px-1"
-                style={{ gridTemplateColumns: `repeat(${navItems.length + 1}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
             >
                 {navItems.map((item) => {
                     const isActive = activeView === item.view;
@@ -68,14 +65,6 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole, i
                     );
                 })}
 
-                <button
-                    onClick={toggleSidebar}
-                    className="flex min-w-0 flex-col items-center justify-center gap-1 px-1 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
-                    aria-label="Menu"
-                >
-                    <Menu className="h-5 w-5 shrink-0" />
-                    <span className="truncate text-[9px] font-medium leading-none">Menu</span>
-                </button>
             </div>
         </div>
     );

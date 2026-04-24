@@ -8,7 +8,6 @@ import {
   Copy,
   Loader2,
   ReceiptText,
-  Sparkles,
 } from "lucide-react";
 
 import {
@@ -43,6 +42,7 @@ import {
   SkeletonMetricTile,
   SkeletonSectionHeader,
 } from "../SkeletonLayouts";
+import { GeminiMark } from "../BrandAssets";
 
 export interface AISummaryActionResult {
   source: "cached" | "generated";
@@ -361,7 +361,7 @@ export default function AISummaryDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
         <DialogHeader className="border-b pb-3 pr-8">
           <DialogTitle className="flex items-center gap-2 text-xl text-primary sm:text-2xl">
-            <Sparkles className="h-5 w-5 shrink-0" />
+            <GeminiMark size={20} />
             AI Settlement Summary
           </DialogTitle>
           <DialogDescription className="flex flex-wrap items-center gap-2 pt-1 text-left">
