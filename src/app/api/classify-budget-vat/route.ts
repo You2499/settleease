@@ -61,14 +61,14 @@ function sanitizeItems(value: unknown): BudgetVatInputItem[] {
 }
 
 function buildBudgetVatPrompt(items: BudgetVatInputItem[]) {
-  return `You are SettleEase's budget VAT classifier.
+  return `You are SettleEase's alcohol VAT classifier for budget simulation.
 
 Task:
-Classify every provided bill item as either "alcohol" or "standard" for VAT simulation.
+Classify every provided bill item as either "alcohol" or "standard" for alcohol VAT.
 
-VAT rules:
-- "standard": all food, non-alcoholic drinks, fees, and unknown items. These are charged 5% VAT.
-- "alcohol": beer, wine, spirits, liquor, cocktails, and clearly alcoholic beverages. These are charged 10% VAT.
+Tax and VAT rules:
+- "standard": all food, non-alcoholic drinks, fees, and unknown items. These receive 5% Tax.
+- "alcohol": beer, wine, spirits, liquor, cocktails, and clearly alcoholic beverages. These receive 10% VAT instead of the standard 5% Tax.
 
 Classification rules:
 - Return ONLY valid JSON matching the response schema.

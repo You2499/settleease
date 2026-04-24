@@ -48,10 +48,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import {
+  BUDGET_ITEM_TAX_RATE,
   classifyBudgetVatFallback,
-  getBudgetVatRate,
+  getBudgetAlcoholVatRate,
   type BudgetVatInputItem,
 } from "@/lib/settleease/budgetVat";
 import { formatCurrency } from "@/lib/settleease/utils";
@@ -238,45 +240,45 @@ export default function CreateBudgetModal({
 
   const totals = useMemo(() => {
     let subtotal = 0;
-    let standardSubtotal = 0;
+    let taxableSubtotal = 0;
     let alcoholSubtotal = 0;
-    let standardVatAmount = 0;
     let alcoholVatAmount = 0;
 
     selectedLines.forEach((line) => {
       const lineTotal = line.unit_price * line.quantity;
       const classification = getLineVatClassification(line);
-      const vatAmount = lineTotal * getBudgetVatRate(classification.vat_class);
+      const vatAmount =
+        lineTotal * getBudgetAlcoholVatRate(classification.vat_class);
 
       subtotal += lineTotal;
       if (classification.vat_class === "alcohol") {
         alcoholSubtotal += lineTotal;
         alcoholVatAmount += vatAmount;
       } else {
-        standardSubtotal += lineTotal;
-        standardVatAmount += vatAmount;
+        taxableSubtotal += lineTotal;
       }
     });
 
     subtotal = roundMoney(subtotal);
-    standardSubtotal = roundMoney(standardSubtotal);
+    taxableSubtotal = roundMoney(taxableSubtotal);
     alcoholSubtotal = roundMoney(alcoholSubtotal);
-    standardVatAmount = roundMoney(standardVatAmount);
+    const taxAmount = roundMoney(taxableSubtotal * BUDGET_ITEM_TAX_RATE);
     alcoholVatAmount = roundMoney(alcoholVatAmount);
-    const vatAmount = roundMoney(standardVatAmount + alcoholVatAmount);
     const otherCharge = roundMoney(toNonNegativeNumber(fees.other_charge));
     const discount = roundMoney(toNonNegativeNumber(fees.discount));
     const finalTotal = roundMoney(
-      Math.max(0, subtotal + vatAmount + otherCharge - discount)
+      Math.max(
+        0,
+        subtotal + taxAmount + alcoholVatAmount + otherCharge - discount
+      )
     );
 
     return {
       subtotal,
-      standardSubtotal,
+      taxableSubtotal,
       alcoholSubtotal,
-      standardVatAmount,
+      taxAmount,
       alcoholVatAmount,
-      vatAmount,
       otherCharge,
       discount,
       finalTotal,
@@ -445,13 +447,16 @@ export default function CreateBudgetModal({
     return (
       <div
         key={item.id}
-        className="rounded-md border bg-background p-3 shadow-sm"
+        className="min-w-0 rounded-md border bg-background p-3 shadow-sm"
       >
-        <div className="flex items-start justify-between gap-3">
+        <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <CategoryIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <p className="truncate text-sm font-semibold" title={item.name}>
+              <p
+                className="min-w-0 break-words text-sm font-semibold leading-snug sm:truncate"
+                title={item.name}
+              >
                 {item.name}
               </p>
             </div>
@@ -460,23 +465,25 @@ export default function CreateBudgetModal({
                 {item.category_name}
               </Badge>
               <span>{observationCount} seen</span>
-              <span>Latest {formatCurrency(item.latest_price)}</span>
+              <span className="min-w-0 break-words">
+                Latest {formatCurrency(item.latest_price)}
+              </span>
               {hasRange && (
-                <span>
+                <span className="min-w-0 break-words">
                   {formatCurrency(item.min_price)}-{formatCurrency(item.max_price)}
                 </span>
               )}
             </div>
           </div>
-          <div className="shrink-0 text-right">
-            <p className="text-base font-bold text-primary">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:block lg:shrink-0 lg:text-right">
+            <p className="min-w-0 break-words text-base font-bold text-primary lg:max-w-40">
               {formatCurrency(item.default_price)}
             </p>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="mt-2 h-8 rounded-md px-2 text-xs"
+              className="h-8 shrink-0 rounded-md px-2 text-xs lg:mt-2"
               onClick={() => addCatalogItem(item)}
             >
               <Plus className="h-3.5 w-3.5" />
@@ -488,49 +495,77 @@ export default function CreateBudgetModal({
     );
   };
 
+  const renderCatalogSkeletonRows = () => (
+    <div
+      className="min-w-0 space-y-2"
+      role="status"
+      aria-label="Loading item catalog"
+    >
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="min-w-0 rounded-md border bg-background p-3 shadow-sm"
+        >
+          <div className="flex min-w-0 items-start gap-3">
+            <Skeleton className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4 max-w-[260px]" />
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-3 w-14" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+            </div>
+            <div className="min-w-[76px] shrink-0 space-y-2">
+              <Skeleton className="ml-auto h-4 w-16" />
+              <Skeleton className="ml-auto h-8 w-14" />
+            </div>
+          </div>
+        </div>
+      ))}
+      <span className="sr-only">Loading catalog items</span>
+    </div>
+  );
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[96vw] overflow-hidden p-0 sm:max-w-6xl">
-        <div className="flex max-h-[90vh] min-h-0 flex-col">
-          <DialogHeader className="border-b px-4 pb-3 pt-4 sm:px-6">
-            <DialogTitle className="flex items-center text-xl text-primary sm:text-2xl">
+      <DialogContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)] lg:max-w-[1400px] xl:max-w-[1500px]">
+        <div className="flex h-full min-h-0 flex-col">
+          <DialogHeader className="shrink-0 border-b px-4 pb-3 pr-14 pt-4 sm:px-6 sm:pr-16">
+            <DialogTitle className="flex min-w-0 items-center text-xl text-primary sm:text-2xl">
               <Calculator className="mr-2 h-5 w-5" />
-              Create Your Budget
+              <span className="min-w-0 truncate">Create Your Budget</span>
             </DialogTitle>
           </DialogHeader>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-              <div className="space-y-4">
-                <Card>
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:overflow-hidden">
+            <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] xl:grid-cols-[minmax(0,1fr)_minmax(430px,520px)]">
+              <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:space-y-0 lg:gap-4">
+                <Card className="min-w-0 overflow-hidden lg:flex lg:min-h-0 lg:flex-col">
                   <CardHeader className="pb-3 pt-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <CardTitle className="flex items-center text-lg font-semibold tracking-normal sm:text-xl">
+                    <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <CardTitle className="flex min-w-0 items-center text-lg font-semibold tracking-normal sm:text-xl">
                         <ReceiptText className="mr-2 h-4 w-4 text-muted-foreground" />
-                        Item Catalog
+                        <span className="min-w-0 truncate">Item Catalog</span>
                       </CardTitle>
                       {isAdmin && (
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="h-8 rounded-md px-2 text-xs"
+                          className="h-8 w-full rounded-md px-2 text-xs sm:w-auto"
                           onClick={handleSyncExistingPrices}
                           disabled={isBackfilling}
                         >
-                          {isBackfilling ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <RefreshCw className="h-3.5 w-3.5" />
-                          )}
-                          Sync Prices
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          {isBackfilling ? "Syncing" : "Sync Prices"}
                         </Button>
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3 pt-0">
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_220px]">
-                      <div className="relative">
+                  <CardContent className="min-w-0 space-y-3 pt-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                      <div className="relative min-w-0">
                         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           value={search}
@@ -543,7 +578,7 @@ export default function CreateBudgetModal({
                         value={categoryFilter}
                         onValueChange={setCategoryFilter}
                       >
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger className="h-10 min-w-0">
                           <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent>
@@ -559,14 +594,9 @@ export default function CreateBudgetModal({
                       </Select>
                     </div>
 
-                    <ScrollArea className="h-[360px] rounded-md border bg-muted/20 p-2">
-                      <div className="space-y-2 pr-2">
-                        {budgetItems === undefined && (
-                          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Loading catalog
-                          </div>
-                        )}
+                    <ScrollArea className="h-72 min-w-0 rounded-md border bg-muted/20 p-2 sm:h-80 md:h-96 lg:h-auto lg:min-h-0 lg:flex-1">
+                      <div className="min-w-0 space-y-2 pr-1 sm:pr-2">
+                        {budgetItems === undefined && renderCatalogSkeletonRows()}
                         {budgetItems &&
                           budgetItems.length > 0 &&
                           budgetItems.map(renderCatalogItem)}
@@ -580,16 +610,16 @@ export default function CreateBudgetModal({
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="min-w-0 overflow-hidden">
                   <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="flex items-center text-lg font-semibold tracking-normal sm:text-xl">
+                    <CardTitle className="flex min-w-0 items-center text-lg font-semibold tracking-normal sm:text-xl">
                       <Plus className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Custom Item
+                      <span className="min-w-0 truncate">Custom Item</span>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 pt-0">
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_140px]">
-                      <div>
+                  <CardContent className="min-w-0 space-y-3 pt-0">
+                    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_140px]">
+                      <div className="min-w-0">
                         <Label className="mb-1.5 block text-xs text-muted-foreground">
                           Name
                         </Label>
@@ -597,9 +627,10 @@ export default function CreateBudgetModal({
                           value={customName}
                           onChange={(event) => setCustomName(event.target.value)}
                           placeholder="Item name"
+                          className="min-w-0"
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <Label className="mb-1.5 block text-xs text-muted-foreground">
                           Price
                         </Label>
@@ -611,12 +642,12 @@ export default function CreateBudgetModal({
                             setCustomPrice(event.target.value)
                           }
                           placeholder="0.00"
-                          className="text-right font-mono"
+                          className="min-w-0 text-right font-mono"
                         />
                       </div>
                     </div>
-                    <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                      <div>
+                    <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                      <div className="min-w-0">
                         <Label className="mb-1.5 block text-xs text-muted-foreground">
                           Category
                         </Label>
@@ -624,7 +655,7 @@ export default function CreateBudgetModal({
                           value={customCategory}
                           onValueChange={setCustomCategory}
                         >
-                          <SelectTrigger className="h-10">
+                          <SelectTrigger className="h-10 min-w-0">
                             <SelectValue placeholder="Category" />
                           </SelectTrigger>
                           <SelectContent>
@@ -638,7 +669,7 @@ export default function CreateBudgetModal({
                       </div>
                       <Button
                         type="button"
-                        className="h-10 rounded-md px-3"
+                        className="h-10 w-full rounded-md px-3 md:w-auto"
                         onClick={handleAddCustomItem}
                         disabled={isSavingCustom}
                       >
@@ -653,7 +684,7 @@ export default function CreateBudgetModal({
                       </Button>
                     </div>
                     {isAdmin && (
-                      <label className="flex cursor-pointer items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-md border bg-muted/20 px-3 py-2 text-sm">
                         <Checkbox
                           checked={saveCustomToCatalog}
                           onCheckedChange={(checked) =>
@@ -667,13 +698,13 @@ export default function CreateBudgetModal({
                 </Card>
               </div>
 
-              <div className="space-y-4">
-                <Card>
+              <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_auto] lg:space-y-0 lg:gap-4">
+                <Card className="min-w-0 overflow-hidden lg:flex lg:min-h-0 lg:flex-col">
                   <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="flex items-center justify-between gap-3 text-lg font-semibold tracking-normal sm:text-xl">
-                      <span className="flex items-center">
+                    <CardTitle className="flex min-w-0 items-center justify-between gap-3 text-lg font-semibold tracking-normal sm:text-xl">
+                      <span className="flex min-w-0 items-center">
                         <Calculator className="mr-2 h-4 w-4 text-muted-foreground" />
-                        Estimate
+                        <span className="min-w-0 truncate">Estimate</span>
                       </span>
                       {selectedLines.length > 0 && (
                         <Button
@@ -688,9 +719,9 @@ export default function CreateBudgetModal({
                       )}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 pt-0">
-                    <ScrollArea className="h-[250px] rounded-md border bg-muted/20 p-2">
-                      <div className="space-y-2 pr-2">
+                  <CardContent className="min-w-0 space-y-3 pt-0 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
+                    <ScrollArea className="h-64 min-w-0 rounded-md border bg-muted/20 p-2 sm:h-72 lg:h-auto lg:min-h-0 lg:flex-1">
+                      <div className="min-w-0 space-y-2 pr-1 sm:pr-2">
                         {selectedLines.length === 0 && (
                           <div className="flex h-32 items-center justify-center rounded-md bg-background text-center text-sm text-muted-foreground">
                             Select items to start estimating.
@@ -699,19 +730,19 @@ export default function CreateBudgetModal({
                         {selectedLines.map((line) => {
                           const CategoryIcon = getCategoryIcon(line.category_name);
                           const vatClassification = getLineVatClassification(line);
-                          const vatRatePercent =
-                            getBudgetVatRate(vatClassification.vat_class) * 100;
+                          const hasAlcoholVat =
+                            vatClassification.vat_class === "alcohol";
                           return (
                             <div
                               key={line.id}
-                              className="rounded-md border bg-background p-3"
+                              className="min-w-0 rounded-md border bg-background p-3"
                             >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0 flex-1">
+                              <div className="min-w-0 space-y-3">
+                                <div className="min-w-0">
                                   <div className="flex items-center gap-2">
                                     <CategoryIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
                                     <p
-                                      className="truncate text-sm font-semibold"
+                                      className="min-w-0 break-words text-sm font-semibold leading-snug sm:truncate"
                                       title={line.name}
                                     >
                                       {line.name}
@@ -722,32 +753,27 @@ export default function CreateBudgetModal({
                                   </p>
                                   <div className="mt-2 flex flex-wrap items-center gap-1.5">
                                     <Badge
-                                      variant={
-                                        vatClassification.vat_class === "alcohol"
-                                          ? "default"
-                                          : "outline"
-                                      }
+                                      variant={hasAlcoholVat ? "default" : "outline"}
                                       className="rounded-md"
                                     >
-                                      {vatClassification.vat_class === "alcohol"
-                                        ? "Alcohol"
-                                        : "Standard"}{" "}
-                                      VAT {vatRatePercent}%
+                                      {hasAlcoholVat
+                                        ? "VAT 10%"
+                                        : "Tax 5%"}
                                     </Badge>
                                     <span className="text-[11px] text-muted-foreground">
                                       {vatClassification.source === "ai"
-                                        ? "AI"
-                                        : "Fallback"}
+                                        ? "AI alcohol check"
+                                        : "Fallback check"}
                                     </span>
                                   </div>
                                 </div>
-                                <div className="shrink-0 text-right">
-                                  <p className="font-bold text-primary">
+                                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                                  <p className="min-w-0 break-words font-bold text-primary">
                                     {formatCurrency(
                                       line.unit_price * line.quantity
                                     )}
                                   </p>
-                                  <div className="mt-2 flex items-center justify-end gap-1">
+                                  <div className="flex min-w-0 flex-wrap items-center gap-1">
                                     <Button
                                       type="button"
                                       size="icon"
@@ -793,45 +819,50 @@ export default function CreateBudgetModal({
                   </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="min-w-0 overflow-hidden">
                   <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-lg font-semibold tracking-normal sm:text-xl">
-                      <span className="flex items-center">
+                    <CardTitle className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-lg font-semibold tracking-normal sm:text-xl">
+                      <span className="flex min-w-0 items-center">
                         <Sparkles className="mr-2 h-4 w-4 text-muted-foreground" />
-                        Smart Fees
+                        <span className="min-w-0 truncate">Smart Fees</span>
                       </span>
-                      <Badge variant="outline" className="rounded-md text-[11px]">
-                        {vatStatus === "loading"
-                          ? "AI classifying"
-                          : vatStatus === "ai"
-                          ? vatModelName || "AI VAT"
-                          : vatStatus === "idle"
-                          ? "Add items"
-                          : "Fallback VAT"}
+                      <Badge
+                        variant="outline"
+                        className="max-w-full rounded-md text-[11px]"
+                      >
+                        <span className="truncate">
+                          {vatStatus === "loading"
+                            ? "AI classifying"
+                            : vatStatus === "ai"
+                            ? vatModelName || "AI alcohol check"
+                            : vatStatus === "idle"
+                            ? "Add items"
+                            : "Fallback check"}
+                        </span>
                       </Badge>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3 pt-0">
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      <div className="rounded-md border bg-muted/20 p-3">
-                        <div className="flex items-center justify-between gap-2">
+                  <CardContent className="min-w-0 space-y-3 pt-0">
+                    <div className="grid min-w-0 gap-2 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                      <div className="min-w-0 rounded-md border bg-muted/20 p-3">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
                           <span className="text-xs text-muted-foreground">
-                            Standard VAT 5%
+                            Tax 5%
                           </span>
-                          <span className="font-semibold">
-                            {formatCurrency(totals.standardVatAmount)}
+                          <span className="break-words text-right font-semibold">
+                            {formatCurrency(totals.taxAmount)}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          On {formatCurrency(totals.standardSubtotal)}
+                          On {formatCurrency(totals.taxableSubtotal)}
                         </p>
                       </div>
-                      <div className="rounded-md border bg-muted/20 p-3">
-                        <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0 rounded-md border bg-muted/20 p-3">
+                        <div className="flex min-w-0 items-center justify-between gap-2">
                           <span className="text-xs text-muted-foreground">
                             Alcohol VAT 10%
                           </span>
-                          <span className="font-semibold">
+                          <span className="break-words text-right font-semibold">
                             {formatCurrency(totals.alcoholVatAmount)}
                           </span>
                         </div>
@@ -841,8 +872,8 @@ export default function CreateBudgetModal({
                       </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div>
+                    <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+                      <div className="min-w-0">
                         <Label className="mb-1.5 block text-xs text-muted-foreground">
                           Other charge
                         </Label>
@@ -854,10 +885,10 @@ export default function CreateBudgetModal({
                             handleFeeChange("other_charge", event.target.value)
                           }
                           placeholder="0.00"
-                          className="text-right font-mono"
+                          className="min-w-0 text-right font-mono"
                         />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <Label className="mb-1.5 block text-xs text-muted-foreground">
                           Discount
                         </Label>
@@ -869,39 +900,51 @@ export default function CreateBudgetModal({
                             handleFeeChange("discount", event.target.value)
                           }
                           placeholder="0.00"
-                          className="text-right font-mono"
+                          className="min-w-0 text-right font-mono"
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="border-primary/20 bg-primary/5">
+                <Card className="min-w-0 overflow-hidden border-primary/20 bg-primary/5">
                   <CardContent className="space-y-2 p-4">
-                    <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span className="font-semibold">
+                      <span className="break-words text-right font-semibold">
                         {formatCurrency(totals.subtotal)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
+                      <span className="text-muted-foreground">Tax</span>
+                      <span className="break-words text-right">
+                        {formatCurrency(totals.taxAmount)}
+                      </span>
+                    </div>
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">VAT</span>
-                      <span>{formatCurrency(totals.vatAmount)}</span>
+                      <span className="break-words text-right">
+                        {formatCurrency(totals.alcoholVatAmount)}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">Other</span>
-                      <span>{formatCurrency(totals.otherCharge)}</span>
+                      <span className="break-words text-right">
+                        {formatCurrency(totals.otherCharge)}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between gap-3 text-sm">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">Discount</span>
-                      <span>-{formatCurrency(totals.discount)}</span>
+                      <span className="break-words text-right">
+                        -{formatCurrency(totals.discount)}
+                      </span>
                     </div>
                     <div className="border-t pt-3">
-                      <div className="flex items-baseline justify-between gap-3">
+                      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                         <span className="text-sm font-medium text-muted-foreground">
                           Rough final bill
                         </span>
-                        <span className="text-2xl font-bold text-primary">
+                        <span className="break-words text-2xl font-bold text-primary sm:text-right">
                           {formatCurrency(totals.finalTotal)}
                         </span>
                       </div>

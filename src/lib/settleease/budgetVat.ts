@@ -18,6 +18,9 @@ const VAT_CONFIDENCE_VALUES = new Set<BudgetVatConfidence>([
   "high",
 ]);
 
+export const BUDGET_ITEM_TAX_RATE = 0.05;
+export const BUDGET_ALCOHOL_VAT_RATE = 0.1;
+
 const ALCOHOL_PATTERN =
   /\b(alcohol|alcoholic|beer|lager|ale|stout|ipa|wine|sangria|champagne|prosecco|whisky|whiskey|vodka|gin|rum|tequila|brandy|cognac|scotch|bourbon|liquor|liqueur|cocktail|mocktail with alcohol|martini|margarita|mojito|negroni|old fashioned|daiquiri|cosmopolitan|pint|peg|shot|draught|draft|breezer|cider|sake|soju|absinthe|baileys|kahlua|aperol|campari|jager|jagermeister)\b/i;
 
@@ -41,7 +44,7 @@ export function classifyBudgetVatFallback(
       key,
       vat_class: "standard",
       confidence: "medium",
-      rationale: "Recognized as a non-alcoholic item.",
+      rationale: "Recognized as not requiring alcohol VAT.",
       source: "heuristic",
     };
   }
@@ -51,7 +54,7 @@ export function classifyBudgetVatFallback(
       key,
       vat_class: "alcohol",
       confidence: "high",
-      rationale: "Name or category indicates alcohol.",
+      rationale: "Name or category indicates alcohol VAT applies.",
       source: "heuristic",
     };
   }
@@ -60,7 +63,7 @@ export function classifyBudgetVatFallback(
     key,
     vat_class: "standard",
     confidence: "low",
-    rationale: "No alcohol signal found.",
+    rationale: "No alcohol VAT signal found.",
     source: "heuristic",
   };
 }
@@ -100,7 +103,8 @@ export function normalizeBudgetVatClassifications(
       key,
       vat_class: normalizeVatClass(item.vatClass ?? item.vat_class),
       confidence: normalizeConfidence(item.confidence),
-      rationale: normalizeText(item.rationale) || "Classified for VAT.",
+      rationale:
+        normalizeText(item.rationale) || "Classified for alcohol VAT.",
       source,
     });
   });
@@ -127,6 +131,6 @@ export function parseBudgetVatClassificationText(text: string): unknown | null {
   }
 }
 
-export function getBudgetVatRate(vatClass: BudgetVatClass) {
-  return vatClass === "alcohol" ? 0.1 : 0.05;
+export function getBudgetAlcoholVatRate(vatClass: BudgetVatClass) {
+  return vatClass === "alcohol" ? BUDGET_ALCOHOL_VAT_RATE : 0;
 }
