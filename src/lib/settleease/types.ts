@@ -73,9 +73,19 @@ export interface SelectedBudgetLine {
   source: 'catalog' | 'custom';
 }
 
+export type BudgetVatClass = 'standard' | 'alcohol';
+export type BudgetVatConfidence = 'low' | 'medium' | 'high';
+export type BudgetVatSource = 'ai' | 'heuristic';
+
+export interface BudgetVatClassification {
+  key: string;
+  vat_class: BudgetVatClass;
+  confidence: BudgetVatConfidence;
+  rationale: string;
+  source: BudgetVatSource;
+}
+
 export interface BudgetFees {
-  tax_percent: string;
-  service_percent: string;
   other_charge: string;
   discount: string;
 }

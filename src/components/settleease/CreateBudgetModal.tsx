@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useDeferredValue, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
@@ -13,7 +19,7 @@ import {
   Save,
   Search,
   Settings2,
-  SlidersHorizontal,
+  Sparkles,
   Trash2,
 } from "lucide-react";
 
@@ -43,10 +49,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
+import {
+  classifyBudgetVatFallback,
+  getBudgetVatRate,
+  type BudgetVatInputItem,
+} from "@/lib/settleease/budgetVat";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type {
   BudgetFees,
   BudgetItem,
+  BudgetVatClassification,
   Category,
   SelectedBudgetLine,
   UserRole,
@@ -95,9 +107,14 @@ export default function CreateBudgetModal({
   const [saveCustomToCatalog, setSaveCustomToCatalog] = useState(false);
   const [isSavingCustom, setIsSavingCustom] = useState(false);
   const [isBackfilling, setIsBackfilling] = useState(false);
+  const [vatClassifications, setVatClassifications] = useState<
+    Record<string, BudgetVatClassification>
+  >({});
+  const [vatStatus, setVatStatus] = useState<
+    "idle" | "loading" | "ai" | "heuristic" | "error"
+  >("idle");
+  const [vatModelName, setVatModelName] = useState("");
   const [fees, setFees] = useState<BudgetFees>({
-    tax_percent: "",
-    service_percent: "",
     other_charge: "",
     discount: "",
   });
@@ -139,34 +156,132 @@ export default function CreateBudgetModal({
     api.app.backfillBudgetItemsFromExpenses
   );
 
+  const vatInputSignature = useMemo(() => {
+    return JSON.stringify(
+      selectedLines.map((line) => ({
+        key: line.id,
+        name: line.name,
+        categoryName: line.category_name,
+      }))
+    );
+  }, [selectedLines]);
+
+  useEffect(() => {
+    const inputItems = JSON.parse(vatInputSignature) as BudgetVatInputItem[];
+
+    if (!isOpen || inputItems.length === 0) {
+      setVatClassifications({});
+      setVatStatus("idle");
+      setVatModelName("");
+      return;
+    }
+
+    const controller = new AbortController();
+    const fallbackRows = inputItems.map(classifyBudgetVatFallback);
+
+    setVatClassifications(
+      Object.fromEntries(fallbackRows.map((row) => [row.key, row]))
+    );
+    setVatStatus("loading");
+    setVatModelName("");
+
+    const timeoutId = window.setTimeout(() => {
+      void fetch("/api/classify-budget-vat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: inputItems }),
+        signal: controller.signal,
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error("Budget VAT classification failed.");
+          }
+          return response.json();
+        })
+        .then((data) => {
+          const rows = Array.isArray(data.classifications)
+            ? (data.classifications as BudgetVatClassification[])
+            : fallbackRows;
+          setVatClassifications(
+            Object.fromEntries(rows.map((row) => [row.key, row]))
+          );
+          setVatStatus(data.source === "ai" ? "ai" : "heuristic");
+          setVatModelName(data.modelDisplayName || "");
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          console.warn("Budget VAT classification fallback:", error);
+          setVatClassifications(
+            Object.fromEntries(fallbackRows.map((row) => [row.key, row]))
+          );
+          setVatStatus("error");
+          setVatModelName("");
+        });
+    }, 250);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [isOpen, vatInputSignature]);
+
+  const getLineVatClassification = useCallback(
+    (line: SelectedBudgetLine) =>
+      vatClassifications[line.id] ??
+      classifyBudgetVatFallback({
+        key: line.id,
+        name: line.name,
+        categoryName: line.category_name,
+      }),
+    [vatClassifications]
+  );
+
   const totals = useMemo(() => {
-    const subtotal = roundMoney(
-      selectedLines.reduce(
-        (sum, line) => sum + line.unit_price * line.quantity,
-        0
-      )
-    );
-    const taxAmount = roundMoney(
-      subtotal * (toNonNegativeNumber(fees.tax_percent) / 100)
-    );
-    const serviceAmount = roundMoney(
-      subtotal * (toNonNegativeNumber(fees.service_percent) / 100)
-    );
+    let subtotal = 0;
+    let standardSubtotal = 0;
+    let alcoholSubtotal = 0;
+    let standardVatAmount = 0;
+    let alcoholVatAmount = 0;
+
+    selectedLines.forEach((line) => {
+      const lineTotal = line.unit_price * line.quantity;
+      const classification = getLineVatClassification(line);
+      const vatAmount = lineTotal * getBudgetVatRate(classification.vat_class);
+
+      subtotal += lineTotal;
+      if (classification.vat_class === "alcohol") {
+        alcoholSubtotal += lineTotal;
+        alcoholVatAmount += vatAmount;
+      } else {
+        standardSubtotal += lineTotal;
+        standardVatAmount += vatAmount;
+      }
+    });
+
+    subtotal = roundMoney(subtotal);
+    standardSubtotal = roundMoney(standardSubtotal);
+    alcoholSubtotal = roundMoney(alcoholSubtotal);
+    standardVatAmount = roundMoney(standardVatAmount);
+    alcoholVatAmount = roundMoney(alcoholVatAmount);
+    const vatAmount = roundMoney(standardVatAmount + alcoholVatAmount);
     const otherCharge = roundMoney(toNonNegativeNumber(fees.other_charge));
     const discount = roundMoney(toNonNegativeNumber(fees.discount));
     const finalTotal = roundMoney(
-      Math.max(0, subtotal + taxAmount + serviceAmount + otherCharge - discount)
+      Math.max(0, subtotal + vatAmount + otherCharge - discount)
     );
 
     return {
       subtotal,
-      taxAmount,
-      serviceAmount,
+      standardSubtotal,
+      alcoholSubtotal,
+      standardVatAmount,
+      alcoholVatAmount,
+      vatAmount,
       otherCharge,
       discount,
       finalTotal,
     };
-  }, [fees, selectedLines]);
+  }, [fees, getLineVatClassification, selectedLines]);
 
   const getCategoryIcon = (categoryName: string) => {
     const category = categories.find((entry) => entry.name === categoryName);
@@ -216,8 +331,6 @@ export default function CreateBudgetModal({
   const clearEstimate = () => {
     setSelectedLines([]);
     setFees({
-      tax_percent: "",
-      service_percent: "",
       other_charge: "",
       discount: "",
     });
@@ -265,18 +378,33 @@ export default function CreateBudgetModal({
       setIsSavingCustom(false);
     }
 
-    setSelectedLines((current) => [
-      ...current,
-      {
-        id: savedItem ? `catalog-${savedItem.id}` : makeCustomLineId(),
-        budget_item_id: savedItem?.id,
-        name,
-        category_name: customCategory,
-        unit_price: price,
-        quantity: 1,
-        source: savedItem ? "catalog" : "custom",
-      },
-    ]);
+    setSelectedLines((current) => {
+      if (savedItem) {
+        const existingLine = current.find(
+          (line) => line.budget_item_id === savedItem.id
+        );
+        if (existingLine) {
+          return current.map((line) =>
+            line.id === existingLine.id
+              ? { ...line, quantity: line.quantity + 1 }
+              : line
+          );
+        }
+      }
+
+      return [
+        ...current,
+        {
+          id: savedItem ? `catalog-${savedItem.id}` : makeCustomLineId(),
+          budget_item_id: savedItem?.id,
+          name,
+          category_name: customCategory,
+          unit_price: price,
+          quantity: 1,
+          source: savedItem ? "catalog" : "custom",
+        },
+      ];
+    });
     setCustomName("");
     setCustomPrice("");
   };
@@ -570,6 +698,9 @@ export default function CreateBudgetModal({
                         )}
                         {selectedLines.map((line) => {
                           const CategoryIcon = getCategoryIcon(line.category_name);
+                          const vatClassification = getLineVatClassification(line);
+                          const vatRatePercent =
+                            getBudgetVatRate(vatClassification.vat_class) * 100;
                           return (
                             <div
                               key={line.id}
@@ -589,6 +720,26 @@ export default function CreateBudgetModal({
                                   <p className="mt-1 text-xs text-muted-foreground">
                                     {formatCurrency(line.unit_price)} each
                                   </p>
+                                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                    <Badge
+                                      variant={
+                                        vatClassification.vat_class === "alcohol"
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="rounded-md"
+                                    >
+                                      {vatClassification.vat_class === "alcohol"
+                                        ? "Alcohol"
+                                        : "Standard"}{" "}
+                                      VAT {vatRatePercent}%
+                                    </Badge>
+                                    <span className="text-[11px] text-muted-foreground">
+                                      {vatClassification.source === "ai"
+                                        ? "AI"
+                                        : "Fallback"}
+                                    </span>
+                                  </div>
                                 </div>
                                 <div className="shrink-0 text-right">
                                   <p className="font-bold text-primary">
@@ -644,71 +795,83 @@ export default function CreateBudgetModal({
 
                 <Card>
                   <CardHeader className="pb-3 pt-4">
-                    <CardTitle className="flex items-center text-lg font-semibold tracking-normal sm:text-xl">
-                      <SlidersHorizontal className="mr-2 h-4 w-4 text-muted-foreground" />
-                      Fees
+                    <CardTitle className="flex flex-wrap items-center justify-between gap-2 text-lg font-semibold tracking-normal sm:text-xl">
+                      <span className="flex items-center">
+                        <Sparkles className="mr-2 h-4 w-4 text-muted-foreground" />
+                        Smart Fees
+                      </span>
+                      <Badge variant="outline" className="rounded-md text-[11px]">
+                        {vatStatus === "loading"
+                          ? "AI classifying"
+                          : vatStatus === "ai"
+                          ? vatModelName || "AI VAT"
+                          : vatStatus === "idle"
+                          ? "Add items"
+                          : "Fallback VAT"}
+                      </Badge>
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid gap-3 pt-0 sm:grid-cols-2">
-                    <div>
-                      <Label className="mb-1.5 block text-xs text-muted-foreground">
-                        Tax %
-                      </Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={fees.tax_percent}
-                        onChange={(event) =>
-                          handleFeeChange("tax_percent", event.target.value)
-                        }
-                        placeholder="0"
-                        className="text-right font-mono"
-                      />
+                  <CardContent className="space-y-3 pt-0">
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <div className="rounded-md border bg-muted/20 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            Standard VAT 5%
+                          </span>
+                          <span className="font-semibold">
+                            {formatCurrency(totals.standardVatAmount)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          On {formatCurrency(totals.standardSubtotal)}
+                        </p>
+                      </div>
+                      <div className="rounded-md border bg-muted/20 p-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs text-muted-foreground">
+                            Alcohol VAT 10%
+                          </span>
+                          <span className="font-semibold">
+                            {formatCurrency(totals.alcoholVatAmount)}
+                          </span>
+                        </div>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          On {formatCurrency(totals.alcoholSubtotal)}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <Label className="mb-1.5 block text-xs text-muted-foreground">
-                        Service %
-                      </Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={fees.service_percent}
-                        onChange={(event) =>
-                          handleFeeChange("service_percent", event.target.value)
-                        }
-                        placeholder="0"
-                        className="text-right font-mono"
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block text-xs text-muted-foreground">
-                        Other charge
-                      </Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={fees.other_charge}
-                        onChange={(event) =>
-                          handleFeeChange("other_charge", event.target.value)
-                        }
-                        placeholder="0.00"
-                        className="text-right font-mono"
-                      />
-                    </div>
-                    <div>
-                      <Label className="mb-1.5 block text-xs text-muted-foreground">
-                        Discount
-                      </Label>
-                      <Input
-                        type="number"
-                        inputMode="decimal"
-                        value={fees.discount}
-                        onChange={(event) =>
-                          handleFeeChange("discount", event.target.value)
-                        }
-                        placeholder="0.00"
-                        className="text-right font-mono"
-                      />
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <Label className="mb-1.5 block text-xs text-muted-foreground">
+                          Other charge
+                        </Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={fees.other_charge}
+                          onChange={(event) =>
+                            handleFeeChange("other_charge", event.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right font-mono"
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-1.5 block text-xs text-muted-foreground">
+                          Discount
+                        </Label>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          value={fees.discount}
+                          onChange={(event) =>
+                            handleFeeChange("discount", event.target.value)
+                          }
+                          placeholder="0.00"
+                          className="text-right font-mono"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -722,12 +885,8 @@ export default function CreateBudgetModal({
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">Tax</span>
-                      <span>{formatCurrency(totals.taxAmount)}</span>
-                    </div>
-                    <div className="flex items-center justify-between gap-3 text-sm">
-                      <span className="text-muted-foreground">Service</span>
-                      <span>{formatCurrency(totals.serviceAmount)}</span>
+                      <span className="text-muted-foreground">VAT</span>
+                      <span>{formatCurrency(totals.vatAmount)}</span>
                     </div>
                     <div className="flex items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">Other</span>
