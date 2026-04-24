@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { formatCurrency } from "@/lib/settleease/utils";
 import { groupExpenseItemsForDisplay } from "@/lib/settleease/itemwiseDisplay";
+import { getItemLineTotal } from "@/lib/settleease/itemwiseCalculations";
 import type {
   Expense,
   PersonAggregatedItemShares,
@@ -275,7 +276,7 @@ export default function ExpenseSplitDetails({
                   Total of original items:{" "}
                   {formatCurrency(
                     expense.items.reduce(
-                      (sum, item) => sum + Number(item.price),
+                      (sum, item) => sum + getItemLineTotal(item),
                       0
                     )
                   )}
@@ -371,6 +372,9 @@ export default function ExpenseSplitDetails({
                                               title={itemDetail.itemName}
                                             >
                                               {itemDetail.itemName}
+                                              {itemDetail.quantityShared > 1
+                                                ? ` x${itemDetail.quantityShared}`
+                                                : ""}
                                             </span>
                                             <span className="font-medium ml-2 flex-shrink-0">
                                               {formatCurrency(

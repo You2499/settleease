@@ -147,6 +147,7 @@ function renderItemwiseDetails(expense: AuditExpenseProof): string {
           <tr>
             <th>Item</th>
             <th>Category</th>
+            <th>Qty</th>
             <th>Shared By</th>
             <th class="amount-col">Amount</th>
           </tr>
@@ -156,6 +157,7 @@ function renderItemwiseDetails(expense: AuditExpenseProof): string {
             <tr>
               <td>${h(item.name)}</td>
               <td>${h(item.category)}</td>
+              <td>${item.quantity && item.quantity > 1 ? h(String(item.quantity)) : "1"}</td>
               <td>${h(item.sharedBy.join(", ") || "Not available")}</td>
               <td class="amount-col money">${money(item.amount)}</td>
             </tr>

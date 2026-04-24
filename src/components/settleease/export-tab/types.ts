@@ -53,6 +53,8 @@ export interface AuditExpenseItemProof {
   category: string;
   sharedBy: string[];
   amount: number;
+  quantity?: number;
+  unitPrice?: number;
 }
 
 export interface AuditParticipantEffect {

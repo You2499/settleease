@@ -1,4 +1,9 @@
 import { calculateNetBalances } from "./settlementCalculations";
+import {
+  calculateItemwiseSplit,
+  getItemLineTotal,
+  getItemParticipantIds,
+} from "./itemwiseCalculations";
 import type { Expense, Person, SettlementPayment, Category } from "./types";
 
 export type AnalyticsMode = "group" | "personal";
@@ -413,22 +418,23 @@ function getCategoryAllocations(
   const celebrationAmount = toAmount(expense.celebration_contribution?.amount);
 
   if (expense.split_method === "itemwise" && Array.isArray(expense.items) && expense.items.length > 0) {
-    const itemTotal = expense.items.reduce((sum, item) => sum + toAmount(item.price), 0);
     const amountToSplit = Math.max(0, totalAmount - celebrationAmount);
-    const reductionFactor = itemTotal > EPSILON ? amountToSplit / itemTotal : amountToSplit === 0 ? 1 : 0;
+    const itemwiseCalculation = calculateItemwiseSplit(expense.items, amountToSplit);
 
-    expense.items.forEach((item) => {
-      const itemPrice = toAmount(item.price);
+    expense.items.forEach((item, index) => {
+      const itemPrice = getItemLineTotal(item);
       if (itemPrice <= EPSILON) return;
 
       const category = item.categoryName || fallbackCategory;
+      const itemId = item.id || `item-${index}`;
       let amount = 0;
 
       if (mode === "group") {
         amount = itemPrice;
-      } else if (selectedPersonId && (item.sharedBy || []).includes(selectedPersonId)) {
-        const sharedByCount = Math.max(item.sharedBy.length, 1);
-        amount = (itemPrice * reductionFactor) / sharedByCount;
+      } else if (selectedPersonId) {
+        amount = itemwiseCalculation.personBreakdown[selectedPersonId]?.items
+          .filter((detail) => detail.itemId === itemId)
+          .reduce((sum, detail) => sum + toAmount(detail.shareForPerson), 0) || 0;
       }
 
       if (amount > EPSILON) {
@@ -828,7 +834,7 @@ function buildDataQualityWarnings(
     }
 
     if (expense.split_method === "itemwise" && Array.isArray(expense.items)) {
-      const itemTotal = expense.items.reduce((sum, item) => sum + toAmount(item.price), 0);
+      const itemTotal = expense.items.reduce((sum, item) => sum + getItemLineTotal(item), 0);
       if (Math.abs(itemTotal - total) > EPSILON) {
         pushWarning({ expenseId: expense.id, message: `${label} has item totals that do not match the bill.` });
       }
@@ -857,10 +863,10 @@ function buildDataQualityWarnings(
     }
 
     (expense.items || []).forEach((item) => {
-      if (!Number.isFinite(Number(item.price)) || toAmount(item.price) < 0) {
+      if (!Number.isFinite(Number(getItemLineTotal(item))) || toAmount(getItemLineTotal(item)) < 0) {
         pushWarning({ expenseId: expense.id, severity: "error", message: `${label} has an invalid item amount.` });
       }
-      (item.sharedBy || []).forEach((personId) => {
+      getItemParticipantIds(item).forEach((personId) => {
         if (!knownPeople.has(personId)) {
           pushWarning({ expenseId: expense.id, message: `${label} has an item shared by an unknown participant.` });
         }

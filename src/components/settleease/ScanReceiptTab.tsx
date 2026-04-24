@@ -29,6 +29,15 @@ import type {
 import { formatCurrency } from '@/lib/settleease/utils';
 import { compressImage, formatFileSize, isSupportedImageType } from '@/lib/settleease/imageUtils';
 import {
+  createQuantitySplits,
+  dedupePersonIds,
+  getItemQuantity,
+  getItemUnitSharing,
+  normalizeItemQuantityValue,
+  resizeQuantitySplits,
+  toItemAmount,
+} from '@/lib/settleease/itemwiseCalculations';
+import {
   LoadingRegion,
   SkeletonSectionHeader,
   StepRailSkeleton,
@@ -83,8 +92,29 @@ const ANALYZING_STAGES = [
   { message: 'Finalizing...', progress: 98 },
 ];
 
+function normalizeCategoryLookup(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function findCategoryByName(name: string | null | undefined, categories: DynamicCategory[]): string {
+  if (!name) return "";
+  const normalizedName = normalizeCategoryLookup(name);
+  return categories.find(c => normalizeCategoryLookup(c.name) === normalizedName)?.name || "";
+}
+
+function findCategoryByKeywords(keywords: string[], categories: DynamicCategory[]): string {
+  for (const cat of categories) {
+    const catLower = normalizeCategoryLookup(cat.name);
+    if (keywords.some(keyword => catLower.includes(keyword) || keyword.includes(catLower))) {
+      return cat.name;
+    }
+  }
+
+  return "";
+}
+
 function fuzzyMatchCategory(hint: string, categories: DynamicCategory[]): string {
-  if (!hint || categories.length === 0) return categories[0]?.name || '';
+  if (!hint || categories.length === 0) return '';
 
   const hintLower = hint.toLowerCase();
 
@@ -102,16 +132,34 @@ function fuzzyMatchCategory(hint: string, categories: DynamicCategory[]): string
 
   const keywords = keywordMap[hintLower] || [hintLower];
 
-  for (const cat of categories) {
-    const catLower = cat.name.toLowerCase();
-    for (const kw of keywords) {
-      if (catLower.includes(kw) || kw.includes(catLower)) {
-        return cat.name;
-      }
-    }
+  return findCategoryByKeywords(keywords, categories);
+}
+
+function resolveScannedItemCategory(
+  item: ParsedReceiptData["items"][number],
+  categories: DynamicCategory[]
+): string {
+  const nameLower = item.name.toLowerCase();
+  if (/(packaged|mineral|bottled|sparkling)\s+water|water\s*(bottle|glass|can)?/.test(nameLower)) {
+    return findCategoryByKeywords(["water", "drink", "drinks", "beverage", "beverages"], categories);
   }
 
-  return categories[0]?.name || '';
+  const directCategory = findCategoryByName(item.category_name, categories);
+  if (directCategory) return directCategory;
+
+  return fuzzyMatchCategory(item.category_hint, categories);
+}
+
+function findTaxCategory(categories: DynamicCategory[]): string {
+  return (
+    findCategoryByName("Tax", categories) ||
+    findCategoryByName("Taxes", categories) ||
+    findCategoryByKeywords(["tax", "gst", "vat"], categories)
+  );
+}
+
+function findChargeCategory(categories: DynamicCategory[]): string {
+  return findCategoryByKeywords(["charge", "charges", "fee", "fees", "service"], categories);
 }
 
 function getStepIndex(step: WizardStep) {
@@ -207,7 +255,7 @@ export default function ScanReceiptTab({
   const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
-  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
+  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
   const [isLoading, setIsLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
@@ -326,7 +374,14 @@ export default function ScanReceiptTab({
       const response = await fetch('/api/scan-receipt', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: imageBase64, mimeType: imageMimeType }),
+        body: JSON.stringify({
+          image: imageBase64,
+          mimeType: imageMimeType,
+          categories: dynamicCategories.map(category => ({
+            name: category.name,
+            icon_name: category.icon_name,
+          })),
+        }),
         signal: abortControllerRef.current.signal,
       });
 
@@ -354,7 +409,7 @@ export default function ScanReceiptTab({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [imageBase64, imageMimeType]);
+  }, [imageBase64, imageMimeType, dynamicCategories]);
 
   const handleCancelScan = useCallback(() => {
     if (abortControllerRef.current) {
@@ -383,8 +438,8 @@ export default function ScanReceiptTab({
 
     // Pre-fill category from first item hint
     if (parsedData.items.length > 0 && dynamicCategories.length > 0) {
-      const primaryHint = parsedData.items[0].category_hint;
-      setCategory(fuzzyMatchCategory(primaryHint, dynamicCategories));
+      const primaryCategory = resolveScannedItemCategory(parsedData.items[0], dynamicCategories);
+      setCategory(primaryCategory || dynamicCategories[0].name);
     } else if (dynamicCategories.length > 0) {
       setCategory(dynamicCategories[0].name);
     }
@@ -400,45 +455,54 @@ export default function ScanReceiptTab({
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
     } else if (splitMethod === 'itemwise') {
       const allPeopleIds = people.map(p => p.id);
+      const taxCategory = findTaxCategory(dynamicCategories);
+      const chargeCategory = findChargeCategory(dynamicCategories) || taxCategory;
 
       // Convert parsed items to ExpenseItemDetail
       const expenseItems: ExpenseItemDetail[] = parsedData.items.map((item, idx) => ({
         id: `scan-item-${idx}-${Date.now()}`,
-        name: item.quantity > 1 ? `${item.name} (x${item.quantity})` : item.name,
+        name: item.name,
         price: item.total_price.toFixed(2),
+        unitPrice: item.unit_price.toFixed(2),
+        quantity: normalizeItemQuantityValue(item.quantity),
         sharedBy: [...allPeopleIds],
-        categoryName: fuzzyMatchCategory(item.category_hint, dynamicCategories) || defaultItemCategory,
+        categoryName: resolveScannedItemCategory(item, dynamicCategories),
       }));
 
-      // Add taxes as separate items
-      parsedData.taxes.forEach((tax, idx) => {
+      const taxesTotal = parsedData.taxes.reduce((sum, tax) => sum + Math.max(0, toItemAmount(tax.amount)), 0);
+      if (taxesTotal > 0.01) {
         expenseItems.push({
-          id: `scan-tax-${idx}-${Date.now()}`,
-          name: tax.label,
-          price: tax.amount.toFixed(2),
+          id: `scan-taxes-${Date.now()}`,
+          name: 'Taxes',
+          price: taxesTotal.toFixed(2),
+          unitPrice: taxesTotal.toFixed(2),
+          quantity: 1,
           sharedBy: [...allPeopleIds],
-          categoryName: defaultItemCategory,
+          categoryName: taxCategory,
         });
-      });
+      }
 
-      // Add additional charges
-      parsedData.additional_charges.forEach((charge, idx) => {
-        if (Math.abs(charge.amount) > 0.01) {
-          expenseItems.push({
-            id: `scan-charge-${idx}-${Date.now()}`,
-            name: charge.label,
-            price: charge.amount.toFixed(2),
-            sharedBy: [...allPeopleIds],
-            categoryName: defaultItemCategory,
-          });
-        }
-      });
+      const positiveChargesTotal = parsedData.additional_charges.reduce(
+        (sum, charge) => sum + Math.max(0, toItemAmount(charge.amount)),
+        0
+      );
+      if (positiveChargesTotal > 0.01) {
+        expenseItems.push({
+          id: `scan-charges-${Date.now()}`,
+          name: 'Other Charges',
+          price: positiveChargesTotal.toFixed(2),
+          unitPrice: positiveChargesTotal.toFixed(2),
+          quantity: 1,
+          sharedBy: [...allPeopleIds],
+          categoryName: chargeCategory,
+        });
+      }
 
       setItems(expenseItems);
     }
 
     setStep('form');
-  }, [parsedData, splitMethod, people, dynamicCategories, defaultPayerId, defaultItemCategory]);
+  }, [parsedData, splitMethod, people, dynamicCategories, defaultPayerId]);
 
   const handleReset = useCallback(() => {
     // Cancel any ongoing scan
@@ -462,7 +526,7 @@ export default function ScanReceiptTab({
     setCategory('');
     setExpenseDate(new Date());
     setSplitMethod('equal');
-    setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
+    setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
   }, []);
 
   // Form handlers (same as AddExpenseTab)
@@ -512,22 +576,83 @@ export default function ScanReceiptTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory, quantity: 1, unitPrice: '' }]);
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-    setItems(newItems);
+    setItems(prev => prev.map((item, itemIndex) => {
+      if (itemIndex !== index) return item;
+      const nextItem = { ...item, [field]: value };
+
+      if (field === 'quantitySplits') {
+        const aggregateSharedBy = dedupePersonIds(
+          getItemUnitSharing(nextItem).flatMap(unit => unit.sharedBy)
+        );
+        return { ...nextItem, sharedBy: aggregateSharedBy };
+      }
+
+      return nextItem;
+    }));
   };
 
   const handleItemSharedByChange = (itemIndex: number, personId: string) => {
-    const newItems = [...items];
-    const currentSharedBy = newItems[itemIndex].sharedBy;
-    newItems[itemIndex].sharedBy = currentSharedBy.includes(personId)
-      ? currentSharedBy.filter(id => id !== personId)
-      : [...currentSharedBy, personId];
-    setItems(newItems);
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+      const currentSharedBy = item.sharedBy || [];
+      return {
+        ...item,
+        sharedBy: currentSharedBy.includes(personId)
+          ? currentSharedBy.filter(id => id !== personId)
+          : [...currentSharedBy, personId],
+      };
+    }));
+  };
+
+  const handleToggleQuantitySplits = (itemIndex: number, enabled: boolean) => {
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+
+      if (enabled) {
+        const fallbackSharedBy = item.sharedBy.length > 0 ? item.sharedBy : people.map(p => p.id);
+        return {
+          ...item,
+          sharedBy: dedupePersonIds(fallbackSharedBy),
+          quantitySplits: createQuantitySplits(getItemQuantity(item), fallbackSharedBy),
+        };
+      }
+
+      const aggregateSharedBy = dedupePersonIds(
+        getItemUnitSharing(item).flatMap(unit => unit.sharedBy)
+      );
+      return {
+        ...item,
+        sharedBy: aggregateSharedBy.length > 0 ? aggregateSharedBy : item.sharedBy,
+        quantitySplits: undefined,
+      };
+    }));
+  };
+
+  const handleItemQuantitySplitChange = (itemIndex: number, unitIndex: number, personId: string) => {
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+
+      const quantity = getItemQuantity(item);
+      const splits = resizeQuantitySplits(item.quantitySplits, quantity, item.sharedBy)
+        ?? createQuantitySplits(quantity, item.sharedBy);
+      const nextSplits = splits.map(split => {
+        if (split.unitIndex !== unitIndex) return split;
+        const sharedBy = split.sharedBy.includes(personId)
+          ? split.sharedBy.filter(id => id !== personId)
+          : [...split.sharedBy, personId];
+        return { ...split, sharedBy };
+      });
+
+      return {
+        ...item,
+        quantitySplits: nextSplits,
+        sharedBy: dedupePersonIds(nextSplits.flatMap(split => split.sharedBy)),
+      };
+    }));
   };
 
   const removeItem = (index: number) => {
@@ -919,7 +1044,9 @@ export default function ScanReceiptTab({
                       <div className="min-w-0">
                         <p className="truncate font-medium">{item.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {item.quantity > 1 ? `Quantity ${item.quantity}` : item.category_hint}
+                          {item.quantity > 1
+                            ? `Quantity ${item.quantity}`
+                            : item.category_name || item.category_hint}
                         </p>
                       </div>
                       <span className="shrink-0 font-semibold">{formatCurrency(item.total_price)}</span>
@@ -1045,6 +1172,8 @@ export default function ScanReceiptTab({
                       dynamicCategories={dynamicCategories}
                       handleItemChange={handleItemChange}
                       handleItemSharedByChange={handleItemSharedByChange}
+                      handleToggleQuantitySplits={handleToggleQuantitySplits}
+                      handleItemQuantitySplitChange={handleItemQuantitySplitChange}
                       removeItem={removeItem}
                       addItem={handleAddItem}
                     />

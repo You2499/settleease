@@ -3,12 +3,20 @@ export interface PayerShare {
   amount: number;
 }
 
+export interface ItemQuantitySplit {
+  unitIndex: number;
+  sharedBy: string[];
+}
+
 export interface ExpenseItemDetail {
   id: string; // Can be a temporary ID during form input, or db ID if editing
   name: string;
   price: number | string; // Allow string for input, convert to number for storage/calculation
   sharedBy: string[]; // Array of person IDs
   categoryName?: string; // Optional: Category specific to this item
+  quantity?: number;
+  unitPrice?: number | string;
+  quantitySplits?: ItemQuantitySplit[];
 }
 
 export interface CelebrationContribution {
@@ -162,6 +170,7 @@ export interface ParsedReceiptData {
     unit_price: number;
     total_price: number;
     category_hint: 'food' | 'drinks' | 'alcohol' | 'other';
+    category_name?: string | null;
   }[];
   subtotals: { label: string; amount: number }[];
   taxes: { label: string; amount: number }[];
@@ -180,6 +189,10 @@ export interface PersonItemShareDetails {
   sharedByCount: number;
   itemId: string;
   itemCategoryName?: string; // Added for per-item category display
+  quantity?: number;
+  quantityShared?: number;
+  unitPrice?: number;
+  unitIndexes?: number[];
 }
 
 export interface PersonAggregatedItemShares {

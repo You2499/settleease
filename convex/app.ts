@@ -18,6 +18,16 @@ const expenseItem = v.object({
   price: v.number(),
   sharedBy: v.array(v.string()),
   categoryName: v.optional(v.string()),
+  quantity: v.optional(v.number()),
+  unitPrice: v.optional(v.number()),
+  quantitySplits: v.optional(
+    v.array(
+      v.object({
+        unitIndex: v.number(),
+        sharedBy: v.array(v.string()),
+      }),
+    ),
+  ),
 });
 
 const celebrationContribution = v.object({
@@ -638,7 +648,13 @@ export const removePerson = mutation({
         Array.isArray(expense.items) &&
         expense.items.some(
           (item: any) =>
-            Array.isArray(item.sharedBy) && item.sharedBy.includes(args.id),
+            (Array.isArray(item.sharedBy) && item.sharedBy.includes(args.id)) ||
+            (Array.isArray(item.quantitySplits) &&
+              item.quantitySplits.some(
+                (split: any) =>
+                  Array.isArray(split.sharedBy) &&
+                  split.sharedBy.includes(args.id),
+              )),
         );
       const isCelebrationContributor =
         expense.celebrationContribution?.personId === args.id;
@@ -947,7 +963,15 @@ export const backfillBudgetItemsFromExpenses = mutation({
         itemObservationCount += 1;
         const name = cleanBudgetItemName(String(item.name ?? ""));
         const normalizedName = normalizeBudgetItemName(name);
-        const price = toPositiveBudgetPrice(item.price);
+        const quantity =
+          Number.isFinite(Number(item.quantity)) && Number(item.quantity) > 0
+            ? Math.max(1, Math.floor(Number(item.quantity)))
+            : 1;
+        const unitPriceCandidate =
+          Number.isFinite(Number(item.unitPrice)) && Number(item.unitPrice) > 0
+            ? Number(item.unitPrice)
+            : Number(item.price) / quantity;
+        const price = toPositiveBudgetPrice(unitPriceCandidate);
 
         if (!normalizedName || price === null) {
           skippedObservationCount += 1;

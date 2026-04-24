@@ -1,4 +1,8 @@
 import { calculateNetBalances, calculateSimplifiedTransactions } from "@/lib/settleease/settlementCalculations";
+import {
+  getItemLineTotal,
+  getItemParticipantIds,
+} from "@/lib/settleease/itemwiseCalculations";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type {
   Expense,
@@ -263,8 +267,10 @@ function getItemRows(
           : shouldRedact
             ? "General"
             : item.categoryName || expense.category || UNCATEGORIZED,
-        sharedBy: [...(item.sharedBy || [])].map((id) => idToName(people, peopleMap, id)).sort(compareReportText),
-        amount: roundReportAmount(toReportAmount(item.price)),
+        sharedBy: getItemParticipantIds(item).map((id) => idToName(people, peopleMap, id)).sort(compareReportText),
+        amount: roundReportAmount(toReportAmount(getItemLineTotal(item))),
+        quantity: item.quantity,
+        unitPrice: item.unitPrice !== undefined ? roundReportAmount(toReportAmount(item.unitPrice)) : undefined,
       };
     })
     .sort(compareAmountDescThenName);
@@ -439,10 +445,10 @@ function buildDataQuality(
     }
 
     (expense.items || []).forEach((item) => {
-      if (!Number.isFinite(Number(item.price)) || toReportAmount(item.price) < 0) {
+      if (!Number.isFinite(Number(getItemLineTotal(item))) || toReportAmount(getItemLineTotal(item)) < 0) {
         warnings.push(`Expense "${label}" item "${item.name || "Untitled item"}" has an invalid amount.`);
       }
-      (item.sharedBy || []).forEach((personId) => {
+      getItemParticipantIds(item).forEach((personId) => {
         if (!knownPeople.has(personId)) {
           warnings.push(`Expense "${label}" item "${item.name || "Untitled item"}" references an unknown participant.`);
         }
@@ -499,7 +505,7 @@ function buildCategoryRows(
     if (expense.split_method === "itemwise" && expense.items?.length) {
       expense.items.forEach((item) => {
         const category = item.categoryName || expense.category || UNCATEGORIZED;
-        totals.set(category, (totals.get(category) || 0) + toReportAmount(item.price));
+        totals.set(category, (totals.get(category) || 0) + toReportAmount(getItemLineTotal(item)));
       });
       return;
     }

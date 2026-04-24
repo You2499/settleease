@@ -1,6 +1,10 @@
 import {
   calculateNetBalances,
 } from "./settlementCalculations";
+import {
+  getItemLineTotal,
+  getItemParticipantIds,
+} from "./itemwiseCalculations";
 import type {
   CalculatedTransaction,
   Expense,
@@ -220,7 +224,7 @@ export function buildSettlementSummaryPayload({
       expense.items.forEach((item) => {
         const categoryName = item.categoryName || expense.category || UNCATEGORIZED;
         categoryTotals[categoryName] = roundAmount(
-          (categoryTotals[categoryName] || 0) + toAmount(item.price)
+          (categoryTotals[categoryName] || 0) + toAmount(getItemLineTotal(item))
         );
       });
       return;
@@ -394,9 +398,9 @@ export function buildSettlementSummaryPayload({
           ? [...expense.items]
               .map((item) => ({
                 name: item.name,
-                price: roundAmount(toAmount(item.price)),
+                price: roundAmount(toAmount(getItemLineTotal(item))),
                 category_name: item.categoryName || expense.category || UNCATEGORIZED,
-                shared_by: [...item.sharedBy]
+                shared_by: getItemParticipantIds(item)
                   .map((personId) => idToName(personId))
                   .sort(compareStrings),
               }))
@@ -557,7 +561,7 @@ export function buildSettlementSummaryPayload({
     }
 
     (Array.isArray(expense.items) ? expense.items : []).forEach((item) => {
-      item.sharedBy.forEach((personId) => {
+      getItemParticipantIds(item).forEach((personId) => {
         if (!knownPersonIds.has(personId)) {
           integrityWarnings.push(
             `Expense "${label}" item "${item.name}" references an unknown participant.`

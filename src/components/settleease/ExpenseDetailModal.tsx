@@ -11,11 +11,12 @@ import {
 import { ArrowLeft } from "lucide-react";
 import type {
   Expense,
-  ExpenseItemDetail,
-
-  PersonAggregatedItemShares,
   Category,
 } from "@/lib/settleease/types";
+import {
+  calculateItemwiseSplit,
+  getItemParticipantIds,
+} from "@/lib/settleease/itemwiseCalculations";
 
 // Import the smaller components
 import ExpenseGeneralInfo from "./expense-detail/ExpenseGeneralInfo";
@@ -69,7 +70,9 @@ export default function ExpenseDetailModal({
       ids.add(celebrationContributionOpt.personId);
     }
     if (expense.split_method === "itemwise" && Array.isArray(expense.items)) {
-      expense.items.forEach((item) => item.sharedBy.forEach((id) => ids.add(id)));
+      expense.items.forEach((item) =>
+        getItemParticipantIds(item).forEach((id) => ids.add(id))
+      );
     }
     return Array.from(ids);
   }, [expense, celebrationContributionOpt]);
@@ -118,50 +121,10 @@ export default function ExpenseDetailModal({
       return null;
     }
 
-    const sumOfOriginalItemPrices = expense.items.reduce(
-      (sum, item) => sum + Number(item.price),
-      0
-    );
-
-    const reductionFactor =
-      sumOfOriginalItemPrices > 0.001 && amountEffectivelySplit >= 0
-        ? amountEffectivelySplit / sumOfOriginalItemPrices
-        : sumOfOriginalItemPrices === 0 && amountEffectivelySplit === 0
-        ? 1
-        : 0;
-
-    const aggregatedData: PersonAggregatedItemShares = {};
-
-    expense.items.forEach((item: ExpenseItemDetail) => {
-      const originalItemPriceNum = Number(item.price);
-      const adjustedItemPriceForSplit = Math.max(0, originalItemPriceNum * reductionFactor);
-
-      if (item.sharedBy && item.sharedBy.length > 0) {
-        const sharePerPersonForItem =
-          adjustedItemPriceForSplit > 0.001 && item.sharedBy.length > 0
-            ? adjustedItemPriceForSplit / item.sharedBy.length
-            : 0;
-
-        item.sharedBy.forEach((personId: string) => {
-          if (!aggregatedData[personId]) {
-            aggregatedData[personId] = {
-              items: [],
-              totalShareOfAdjustedItems: 0,
-            };
-          }
-          aggregatedData[personId].items.push({
-            itemId: item.id || `item-${Math.random()}`,
-            itemName: item.name,
-            originalItemPrice: originalItemPriceNum,
-            adjustedItemPriceForSplit: adjustedItemPriceForSplit,
-            shareForPerson: sharePerPersonForItem,
-            sharedByCount: item.sharedBy.length,
-            itemCategoryName: item.categoryName,
-          });
-          aggregatedData[personId].totalShareOfAdjustedItems += sharePerPersonForItem;
-        });
-      }
-    });
+    const aggregatedData = calculateItemwiseSplit(
+      expense.items,
+      amountEffectivelySplit
+    ).personBreakdown;
 
     // Sort each person's items by category, then by name
     Object.values(aggregatedData).forEach((personData) => {

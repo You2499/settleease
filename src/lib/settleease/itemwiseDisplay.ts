@@ -1,4 +1,10 @@
 import type { ExpenseItemDetail } from "./types";
+import {
+  getItemLineTotal,
+  getItemQuantity,
+  getItemUnitPrice,
+  getItemUnitSharing,
+} from "./itemwiseCalculations";
 
 export interface GroupedItemSharingVariant {
   quantity: number;
@@ -42,7 +48,10 @@ export function groupExpenseItemsForDisplay(
   items.forEach((item, index) => {
     const normalizedName = normalizeItemName(item.name);
     const normalizedCategory = normalizeCategoryName(item.categoryName);
-    const unitPriceCents = toPriceCents(item.price);
+    const itemQuantity = getItemQuantity(item);
+    const itemLineTotal = getItemLineTotal(item);
+    const itemUnitPrice = getItemUnitPrice(item);
+    const unitPriceCents = toPriceCents(itemUnitPrice);
     const groupKey = `${normalizedName}::${unitPriceCents}::${normalizedCategory}`;
 
     let groupedItem = groupedItems.get(groupKey);
@@ -61,25 +70,28 @@ export function groupExpenseItemsForDisplay(
       groupedItems.set(groupKey, groupedItem);
     }
 
-    groupedItem.quantity += 1;
-    groupedItem.totalPrice += unitPriceCents / 100;
+    groupedItem.quantity += itemQuantity;
+    groupedItem.totalPrice += itemLineTotal;
 
-    const sortedSharedBy = [...(item.sharedBy || [])].sort((a, b) =>
-      a.localeCompare(b)
-    );
-    const variantKey = sortedSharedBy.join("::");
-    const existingVariant = groupedItem.variantMap.get(variantKey);
+    getItemUnitSharing(item).forEach((unit) => {
+      if (unit.sharedBy.length === 0) return;
+      const sortedSharedBy = [...unit.sharedBy].sort((a, b) =>
+        a.localeCompare(b)
+      );
+      const variantKey = sortedSharedBy.join("::");
+      const existingVariant = groupedItem.variantMap.get(variantKey);
 
-    if (existingVariant) {
-      existingVariant.quantity += 1;
-    } else {
-      const newVariant: GroupedItemSharingVariant = {
-        quantity: 1,
-        sharedBy: sortedSharedBy,
-      };
-      groupedItem.variantMap.set(variantKey, newVariant);
-      groupedItem.sharingVariants.push(newVariant);
-    }
+      if (existingVariant) {
+        existingVariant.quantity += 1;
+      } else {
+        const newVariant: GroupedItemSharingVariant = {
+          quantity: 1,
+          sharedBy: sortedSharedBy,
+        };
+        groupedItem.variantMap.set(variantKey, newVariant);
+        groupedItem.sharingVariants.push(newVariant);
+      }
+    });
   });
 
   return Array.from(groupedItems.values())

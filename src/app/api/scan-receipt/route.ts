@@ -28,7 +28,8 @@ Return ONLY valid JSON (no markdown fences, no explanation, no extra text) match
       "quantity": 1,
       "unit_price": 0.00,
       "total_price": 0.00,
-      "category_hint": "food" | "drinks" | "alcohol" | "other"
+      "category_hint": "food" | "drinks" | "alcohol" | "other",
+      "category_name": "one allowed app category name or null"
     }
   ],
   "subtotals": [
@@ -52,16 +53,253 @@ Category hints (MUST be one of these):
 
 Parsing rules:
 1. Merge multi-line item names into single items - this is CRITICAL
-2. Include ALL tax lines individually (CGST, SGST, VAT, service charge, GST, etc.) in the "taxes" array
+2. Include ALL tax lines individually (CGST, SGST, IGST, VAT, GST, etc.) in the "taxes" array
 3. "total_amount" must be the FINAL grand total printed on the receipt (the amount the customer pays)
 4. Dates in DD/MM/YY or DD/MM/YYYY format must be converted to YYYY-MM-DD. Assume 2000s for 2-digit years
 5. Round all amounts to exactly 2 decimal places
 6. If a field genuinely cannot be determined from the image, use null for strings or omit the entry
 7. "subtotals" should capture intermediate totals like "Food Total", "Liquor Total", "Sub Total" etc.
-8. "additional_charges" captures rounding amounts, packaging, delivery fees, tips, etc.
+8. "additional_charges" captures service charge, rounding amounts, packaging, delivery fees, tips, etc.
 9. For quantity and unit_price: if only a total is visible (no qty/rate columns), set quantity=1 and unit_price=total_price
 10. Do NOT include tax lines or subtotal lines in the "items" array — they go in their own arrays
-11. Be intelligent about item categorization - use context clues from the restaurant type and item names`;
+11. Be intelligent about item categorization - use context clues from item names, not only the venue type
+12. Packaged water, mineral water, bottled water, soda, juice, tea, coffee, and soft drinks are "drinks", not hotel/restaurant/food by default
+13. If an item name includes a quantity marker such as "(x2)", "(2)", "x 2", or "2 x", remove it from "name" and put the count in "quantity"
+14. If you are not confident which allowed app category fits an item, set "category_name" to null`;
+
+type AllowedCategory = {
+  name: string;
+  icon_name?: string | null;
+};
+
+const VALID_CATEGORY_HINTS = new Set(["food", "drinks", "alcohol", "other"]);
+
+function toAmount(value: unknown): number {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return 0;
+  return Math.round(amount * 100) / 100;
+}
+
+function normalizeText(value: unknown): string {
+  return String(value || "").trim().replace(/\s+/g, " ");
+}
+
+function normalizeLookup(value: string): string {
+  return normalizeText(value).toLowerCase();
+}
+
+function normalizeQuantity(value: unknown): number {
+  const quantity = Number(value);
+  if (!Number.isFinite(quantity) || quantity <= 0) return 1;
+  return Math.max(1, Math.floor(quantity));
+}
+
+function buildReceiptPrompt(categories: AllowedCategory[]) {
+  const categoryNames = categories
+    .map((category) => category.name)
+    .filter(Boolean)
+    .join(", ");
+
+  return `${RECEIPT_PARSE_PROMPT}
+
+Allowed app categories for "category_name":
+${categoryNames || "No app categories were provided."}
+
+Rules for "category_name":
+- Use exactly one of the allowed app category names above, preserving spelling and casing.
+- Use "Tax" or an equivalent allowed tax category only for tax rows, but tax rows must still be in "taxes", not "items".
+- Do not use broad venue categories such as Hotel/Restaurant for packaged water or tax lines unless the item itself is truly that category.
+- If no allowed category clearly fits, return null for "category_name".`;
+}
+
+function sanitizeCategories(value: unknown): AllowedCategory[] {
+  if (!Array.isArray(value)) return [];
+
+  const seen = new Set<string>();
+  return value
+    .map((entry) => {
+      if (!entry || typeof entry !== "object") return null;
+      const name = normalizeText((entry as any).name);
+      if (!name) return null;
+      const normalized = normalizeLookup(name);
+      if (seen.has(normalized)) return null;
+      seen.add(normalized);
+      return {
+        name,
+        icon_name: normalizeText((entry as any).icon_name) || null,
+      };
+    })
+    .filter(Boolean) as AllowedCategory[];
+}
+
+function findAllowedCategoryByName(name: unknown, categories: AllowedCategory[]): string | null {
+  const normalized = normalizeLookup(String(name || ""));
+  if (!normalized) return null;
+  return categories.find((category) => normalizeLookup(category.name) === normalized)?.name || null;
+}
+
+function findAllowedCategoryByKeywords(keywords: string[], categories: AllowedCategory[]): string | null {
+  for (const category of categories) {
+    const normalizedName = normalizeLookup(category.name);
+    if (keywords.some((keyword) => normalizedName.includes(keyword) || keyword.includes(normalizedName))) {
+      return category.name;
+    }
+  }
+
+  return null;
+}
+
+function isWaterLikeItem(name: string) {
+  return /(packaged|mineral|bottled|sparkling)\s+water|water\s*(bottle|glass|can)?/.test(name.toLowerCase());
+}
+
+function isTaxLikeLabel(label: string) {
+  return /\b(cgst|sgst|igst|utgst|gst|vat|tax|taxes|cess)\b/i.test(label);
+}
+
+function isSubtotalLikeLabel(label: string) {
+  return /\b(sub\s*total|subtotal|grand\s*total|total\s*amount|net\s*amount|amount\s*due|balance\s*due)\b/i.test(label);
+}
+
+function isChargeLikeLabel(label: string) {
+  return /\b(service\s*charge|packing|packaging|delivery|tip|tips|round\s*off|rounding|convenience|charge|fee)\b/i.test(label);
+}
+
+function extractQuantityFromName(name: string, providedQuantity: number) {
+  let cleanName = normalizeText(name);
+  let quantity = providedQuantity;
+
+  const patterns = [
+    /\s*[\(\[]\s*[xX×]?\s*(\d{1,3})\s*[\)\]]\s*$/,
+    /\s+[xX×]\s*(\d{1,3})\s*$/,
+    /\s+qty\.?\s*(\d{1,3})\s*$/i,
+    /^\s*(\d{1,3})\s*[xX×]\s+/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = cleanName.match(pattern);
+    if (!match) continue;
+    const parsedQuantity = normalizeQuantity(match[1]);
+    if (quantity <= 1 && parsedQuantity > 1) {
+      quantity = parsedQuantity;
+    }
+    cleanName = normalizeText(cleanName.replace(pattern, ""));
+    break;
+  }
+
+  return { name: cleanName, quantity };
+}
+
+function normalizeCategoryNameForItem(item: any, categories: AllowedCategory[]): string | null {
+  const direct = findAllowedCategoryByName(item.category_name, categories);
+  const itemName = normalizeText(item.name);
+
+  if (isWaterLikeItem(itemName)) {
+    return findAllowedCategoryByKeywords(["water", "drink", "drinks", "beverage", "beverages"], categories);
+  }
+
+  if (direct) return direct;
+
+  const hint = normalizeLookup(item.category_hint);
+  const keywordMap: Record<string, string[]> = {
+    food: ["food", "meal", "dinner", "lunch", "breakfast", "restaurant", "dining", "eat"],
+    drinks: ["drink", "drinks", "beverage", "beverages", "water", "juice", "coffee", "tea", "soda"],
+    alcohol: ["alcohol", "bar", "liquor", "beer", "wine", "spirit", "cocktail"],
+    other: ["other", "misc", "miscellaneous", "general"],
+  };
+
+  return findAllowedCategoryByKeywords(keywordMap[hint] || [], categories);
+}
+
+function normalizeParsedReceiptData(parsedData: any, categories: AllowedCategory[]) {
+  const taxes = Array.isArray(parsedData.taxes) ? [...parsedData.taxes] : [];
+  const subtotals = Array.isArray(parsedData.subtotals) ? [...parsedData.subtotals] : [];
+  const additionalCharges = Array.isArray(parsedData.additional_charges)
+    ? [...parsedData.additional_charges]
+    : [];
+  const items = Array.isArray(parsedData.items) ? parsedData.items : [];
+
+  const normalizedItems = items.flatMap((rawItem: any) => {
+    const rawName = normalizeText(rawItem?.name);
+    const quantityFromModel = normalizeQuantity(rawItem?.quantity);
+    const unitPriceFromModel = toAmount(rawItem?.unit_price);
+    const rawTotal =
+      toAmount(rawItem?.total_price ?? rawItem?.price) ||
+      toAmount(unitPriceFromModel * quantityFromModel);
+    if (!rawName || rawTotal <= 0) return [];
+
+    if (isSubtotalLikeLabel(rawName)) {
+      subtotals.push({ label: rawName, amount: rawTotal });
+      return [];
+    }
+
+    if (isTaxLikeLabel(rawName)) {
+      taxes.push({ label: rawName, amount: rawTotal });
+      return [];
+    }
+
+    if (isChargeLikeLabel(rawName)) {
+      additionalCharges.push({ label: rawName, amount: rawTotal });
+      return [];
+    }
+
+    const cleaned = extractQuantityFromName(rawName, quantityFromModel);
+    const unitPrice =
+      unitPriceFromModel > 0 &&
+      Math.abs(unitPriceFromModel * cleaned.quantity - rawTotal) <= 0.05
+        ? unitPriceFromModel
+        : toAmount(rawTotal / cleaned.quantity);
+    const categoryHint = VALID_CATEGORY_HINTS.has(rawItem?.category_hint)
+      ? rawItem.category_hint
+      : isWaterLikeItem(cleaned.name)
+        ? "drinks"
+        : "other";
+
+    return [{
+      name: cleaned.name,
+      quantity: cleaned.quantity,
+      unit_price: unitPrice,
+      total_price: rawTotal,
+      category_hint: categoryHint,
+      category_name: normalizeCategoryNameForItem(
+        { ...rawItem, name: cleaned.name, category_hint: categoryHint },
+        categories
+      ),
+    }];
+  });
+
+  const normalizedTaxes = taxes
+    .map((tax: any) => ({
+      label: normalizeText(tax?.label),
+      amount: toAmount(tax?.amount),
+    }))
+    .filter((tax: any) => tax.label && Math.abs(tax.amount) > 0.01);
+
+  const normalizedCharges = additionalCharges
+    .map((charge: any) => ({
+      label: normalizeText(charge?.label),
+      amount: toAmount(charge?.amount),
+    }))
+    .filter((charge: any) => charge.label && Math.abs(charge.amount) > 0.01);
+
+  const normalizedSubtotals = subtotals
+    .map((subtotal: any) => ({
+      label: normalizeText(subtotal?.label),
+      amount: toAmount(subtotal?.amount),
+    }))
+    .filter((subtotal: any) => subtotal.label && Math.abs(subtotal.amount) > 0.01);
+
+  return {
+    restaurant_name: parsedData.restaurant_name ?? null,
+    date: parsedData.date ?? null,
+    items: normalizedItems,
+    subtotals: normalizedSubtotals,
+    taxes: normalizedTaxes,
+    total_amount: toAmount(parsedData.total_amount),
+    currency: parsedData.currency || "INR",
+    additional_charges: normalizedCharges,
+  };
+}
 
 export async function POST(request: NextRequest) {
   // Create abort controller for timeout
@@ -80,7 +318,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { image, mimeType } = await request.json();
+    const { image, mimeType, categories } = await request.json();
+    const allowedCategories = sanitizeCategories(categories);
 
     if (!image || !mimeType) {
       clearTimeout(timeoutId);
@@ -128,12 +367,12 @@ export async function POST(request: NextRequest) {
             temperature: 0.1, // Low temperature for consistent, deterministic parsing
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 2048, // Sufficient for receipt data
+            maxOutputTokens: 3072, // Sufficient for receipt data and categories
           },
         });
 
         result = await model.generateContent([
-          RECEIPT_PARSE_PROMPT,
+          buildReceiptPrompt(allowedCategories),
           {
             inlineData: {
               mimeType,
@@ -198,12 +437,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    parsedData = normalizeParsedReceiptData(parsedData, allowedCategories);
+
     // Validate required fields
     if (!parsedData.items || !Array.isArray(parsedData.items)) {
       throw new Error('AI response missing required "items" array');
     }
 
-    if (typeof parsedData.total_amount !== 'number') {
+    if (typeof parsedData.total_amount !== 'number' || parsedData.total_amount <= 0) {
       // Try to infer total from items + taxes
       const itemsTotal = parsedData.items.reduce((sum: number, item: any) => sum + (item.total_price || 0), 0);
       const taxesTotal = (parsedData.taxes || []).reduce((sum: number, tax: any) => sum + (tax.amount || 0), 0);

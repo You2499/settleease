@@ -4,6 +4,14 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "@/hooks/use-toast";
+import {
+  calculateItemwiseSplit,
+  getItemLineTotal,
+  getItemUnitSharing,
+  hasCustomQuantitySplits,
+  normalizeExpenseItemForStorage,
+  toItemAmount,
+} from "@/lib/settleease/itemwiseCalculations";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type {
   Expense,
@@ -183,14 +191,18 @@ export function useExpenseFormLogic({
           return false;
         }
         if (
-          items.some(
-            (item) =>
+          items.some((item) => {
+            const hasSharedParticipants = hasCustomQuantitySplits(item)
+              ? getItemUnitSharing(item).every((unit) => unit.sharedBy.length > 0)
+              : item.sharedBy.length > 0;
+
+            return (
               !item.name.trim() ||
-              isNaN(parseFloat(item.price as string)) ||
-              parseFloat(item.price as string) <= 0 ||
-              item.sharedBy.length === 0 ||
+              getItemLineTotal(item) <= 0 ||
+              !hasSharedParticipants ||
               !item.categoryName
-          ) &&
+            );
+          }) &&
           currentAmountToSplit > 0.001
         ) {
           toast({
@@ -202,7 +214,7 @@ export function useExpenseFormLogic({
           return false;
         }
         const sumItemsOriginalPrices = items.reduce(
-          (sum, item) => sum + (parseFloat(item.price as string) || 0),
+          (sum, item) => sum + getItemLineTotal(item),
           0
         );
 
@@ -302,42 +314,14 @@ export function useExpenseFormLogic({
           .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0)
           .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
       } else if (splitMethod === "itemwise") {
-        expenseItemsPayload = items.map((item) => ({
-          id: item.id,
-          name: item.name,
-          price: parseFloat(item.price as string),
-          sharedBy: item.sharedBy,
-          categoryName: item.categoryName || defaultItemCategory,
-        }));
-
-        const itemwiseSharesMap: Record<string, number> = {};
-        const sumOfOriginalItemPrices = expenseItemsPayload.reduce(
-          (sum, item) => sum + Number(item.price),
-          0
+        expenseItemsPayload = items.map((item) =>
+          normalizeExpenseItemForStorage(item, defaultItemCategory)
         );
 
-        const reductionFactor =
-          sumOfOriginalItemPrices > 0.001 && finalAmountEffectivelySplit >= 0
-            ? finalAmountEffectivelySplit / sumOfOriginalItemPrices
-            : sumOfOriginalItemPrices === 0 && finalAmountEffectivelySplit === 0
-            ? 1
-            : 0;
-
-        items.forEach((item) => {
-          const originalItemPrice = parseFloat(item.price as string);
-          const adjustedItemPriceToSplit = originalItemPrice * reductionFactor;
-
-          if (item.sharedBy.length > 0) {
-            const pricePerPersonForItem = adjustedItemPriceToSplit / item.sharedBy.length;
-            item.sharedBy.forEach((personId) => {
-              itemwiseSharesMap[personId] = (itemwiseSharesMap[personId] || 0) + pricePerPersonForItem;
-            });
-          }
-        });
-        calculatedShares = Object.entries(itemwiseSharesMap).map(([personId, amount]) => ({
-          personId,
-          amount: Math.max(0, amount),
-        }));
+        calculatedShares = calculateItemwiseSplit(
+          expenseItemsPayload,
+          finalAmountEffectivelySplit
+        ).shares;
       }
 
       try {
@@ -351,10 +335,27 @@ export function useExpenseFormLogic({
           items: splitMethod === "itemwise" ? expenseItemsPayload : null,
           celebration_contribution: celebrationContributionPayload,
         };
-        const convexItems = commonPayload.items?.map((item) => ({
-          ...item,
-          price: Number(item.price),
-        })) ?? null;
+        const convexItems = commonPayload.items?.map((item) => {
+          const convexItem: any = {
+            id: item.id,
+            name: item.name,
+            price: Number(item.price),
+            sharedBy: item.sharedBy,
+            categoryName: item.categoryName,
+          };
+
+          if (item.quantity !== undefined) {
+            convexItem.quantity = item.quantity;
+          }
+          if (item.unitPrice !== undefined) {
+            convexItem.unitPrice = toItemAmount(item.unitPrice);
+          }
+          if (item.quantitySplits !== undefined) {
+            convexItem.quantitySplits = item.quantitySplits;
+          }
+
+          return convexItem;
+        }) ?? null;
 
         if (expenseToEdit && expenseToEdit.id) {
           await saveExpense({

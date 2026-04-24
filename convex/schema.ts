@@ -12,6 +12,16 @@ const expenseItem = v.object({
   price: v.number(),
   sharedBy: v.array(v.string()),
   categoryName: v.optional(v.string()),
+  quantity: v.optional(v.number()),
+  unitPrice: v.optional(v.number()),
+  quantitySplits: v.optional(
+    v.array(
+      v.object({
+        unitIndex: v.number(),
+        sharedBy: v.array(v.string()),
+      }),
+    ),
+  ),
 });
 
 const celebrationContribution = v.object({

@@ -1,4 +1,9 @@
 import type { Expense, Person } from "./types";
+import {
+  calculateItemwiseSplit,
+  getItemLineTotal,
+  getItemParticipantIds,
+} from "./itemwiseCalculations";
 import type {
   HealthAllocationShare,
   HealthSourceAiPayloadRow,
@@ -99,11 +104,13 @@ export function buildHealthSourceRows({
 
     if (expense.split_method === "itemwise" && Array.isArray(expense.items) && expense.items.length > 0) {
       expense.items.forEach((item, index) => {
-        const amount = toAmount(item.price);
+        const amount = toAmount(getItemLineTotal(item));
         if (amount <= EPSILON) return;
 
-        const participantIds = dedupePersonIds(item.sharedBy || [], knownPersonIds);
+        const participantIds = dedupePersonIds(getItemParticipantIds(item), knownPersonIds);
         const effectiveParticipantIds = participantIds.length > 0 ? participantIds : expenseSharePersonIds;
+        const itemShares = calculateItemwiseSplit([item], amount).shares
+          .filter((share) => knownPersonIds.has(share.personId));
         const sourceKey = `expense:${expense.id}:item:${item.id || index}`;
 
         rows.push({
@@ -118,7 +125,7 @@ export function buildHealthSourceRows({
           amount,
           date: isoDate,
           participantIds: effectiveParticipantIds,
-          allocationShares: equalAllocation(effectiveParticipantIds),
+          allocationShares: normalizeAllocationShares(itemShares, effectiveParticipantIds),
         });
       });
       return;

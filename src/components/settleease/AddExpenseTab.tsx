@@ -22,6 +22,15 @@ import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
 import CelebrationSection from './addexpense/CelebrationSection';
 import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
+import {
+  createQuantitySplits,
+  dedupePersonIds,
+  getItemQuantity,
+  getItemUnitSharing,
+  resizeQuantitySplits,
+  roundItemAmount,
+  toItemAmount,
+} from '@/lib/settleease/itemwiseCalculations';
 
 import type { Expense, Person, PayerInputRow, ExpenseItemDetail, Category as DynamicCategory } from '@/lib/settleease/types';
 
@@ -64,7 +73,7 @@ export default function AddExpenseTab({
 
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
   const [unequalShares, setUnequalShares] = useState<Record<string, string>>({});
-  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '' }]);
+  const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -196,9 +205,14 @@ export default function AddExpenseTab({
           price: item.price.toString(),
           sharedBy: item.sharedBy || [],
           categoryName: item.categoryName || expenseToEdit.category || defaultItemCategory,
+          quantity: getItemQuantity(item),
+          unitPrice: item.unitPrice !== undefined
+            ? item.unitPrice.toString()
+            : roundItemAmount(toItemAmount(item.price) / getItemQuantity(item)).toString(),
+          quantitySplits: item.quantitySplits,
         })));
       } else {
-        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+        setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory, quantity: 1, unitPrice: '' }]);
       }
 
     } else if (isTransitioningToNewExpense || isInitialMount) {
@@ -218,7 +232,7 @@ export default function AddExpenseTab({
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
 
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory, quantity: 1, unitPrice: '' }]);
 
       // Logic for setting default selected people for equal split
       const currentPeopleIds = people.map(p => p.id);
@@ -307,7 +321,7 @@ export default function AddExpenseTab({
     }
 
     if (splitMethod === 'itemwise' && items.length === 0 && people.length > 0) {
-      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
+      setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory, quantity: 1, unitPrice: '' }]);
     }
   }, [splitMethod, people, expenseToEdit, items, unequalShares, category, defaultItemCategory]);
 
@@ -425,22 +439,83 @@ export default function AddExpenseTab({
   };
 
   const handleAddItem = () => {
-    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory }]);
+    setItems([...items, { id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory, quantity: 1, unitPrice: '' }]);
   };
 
   const handleItemChange = <K extends keyof ExpenseItemDetail>(index: number, field: K, value: ExpenseItemDetail[K]) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-    setItems(newItems);
+    setItems(prev => prev.map((item, itemIndex) => {
+      if (itemIndex !== index) return item;
+      const nextItem = { ...item, [field]: value };
+
+      if (field === 'quantitySplits') {
+        const aggregateSharedBy = dedupePersonIds(
+          getItemUnitSharing(nextItem).flatMap(unit => unit.sharedBy)
+        );
+        return { ...nextItem, sharedBy: aggregateSharedBy };
+      }
+
+      return nextItem;
+    }));
   };
 
   const handleItemSharedByChange = (itemIndex: number, personId: string) => {
-    const newItems = [...items];
-    const currentSharedBy = newItems[itemIndex].sharedBy;
-    newItems[itemIndex].sharedBy = currentSharedBy.includes(personId)
-      ? currentSharedBy.filter(id => id !== personId)
-      : [...currentSharedBy, personId];
-    setItems(newItems);
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+      const currentSharedBy = item.sharedBy || [];
+      return {
+        ...item,
+        sharedBy: currentSharedBy.includes(personId)
+          ? currentSharedBy.filter(id => id !== personId)
+          : [...currentSharedBy, personId],
+      };
+    }));
+  };
+
+  const handleToggleQuantitySplits = (itemIndex: number, enabled: boolean) => {
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+
+      if (enabled) {
+        const fallbackSharedBy = item.sharedBy.length > 0 ? item.sharedBy : people.map(p => p.id);
+        return {
+          ...item,
+          sharedBy: dedupePersonIds(fallbackSharedBy),
+          quantitySplits: createQuantitySplits(getItemQuantity(item), fallbackSharedBy),
+        };
+      }
+
+      const aggregateSharedBy = dedupePersonIds(
+        getItemUnitSharing(item).flatMap(unit => unit.sharedBy)
+      );
+      return {
+        ...item,
+        sharedBy: aggregateSharedBy.length > 0 ? aggregateSharedBy : item.sharedBy,
+        quantitySplits: undefined,
+      };
+    }));
+  };
+
+  const handleItemQuantitySplitChange = (itemIndex: number, unitIndex: number, personId: string) => {
+    setItems(prev => prev.map((item, index) => {
+      if (index !== itemIndex) return item;
+
+      const quantity = getItemQuantity(item);
+      const splits = resizeQuantitySplits(item.quantitySplits, quantity, item.sharedBy)
+        ?? createQuantitySplits(quantity, item.sharedBy);
+      const nextSplits = splits.map(split => {
+        if (split.unitIndex !== unitIndex) return split;
+        const sharedBy = split.sharedBy.includes(personId)
+          ? split.sharedBy.filter(id => id !== personId)
+          : [...split.sharedBy, personId];
+        return { ...split, sharedBy };
+      });
+
+      return {
+        ...item,
+        quantitySplits: nextSplits,
+        sharedBy: dedupePersonIds(nextSplits.flatMap(split => split.sharedBy)),
+      };
+    }));
   };
 
   const removeItem = (index: number) => {
@@ -644,6 +719,8 @@ export default function AddExpenseTab({
                     dynamicCategories={dynamicCategories}
                     handleItemChange={handleItemChange}
                     handleItemSharedByChange={handleItemSharedByChange}
+                    handleToggleQuantitySplits={handleToggleQuantitySplits}
+                    handleItemQuantitySplitChange={handleItemQuantitySplitChange}
                     removeItem={removeItem}
                     addItem={handleAddItem}
                   />
