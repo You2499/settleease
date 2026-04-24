@@ -198,53 +198,53 @@
 
   /* ========================================
      BETA DESIGN — ElevenLabs Design System
-     Dark Mode Overrides (Warm-Dark)
+     Dark Mode Overrides (Neutral Graphite)
      ======================================== */
   .dark.beta-design {
-    --background: 30 5% 10%;
-    /* Warm near-black */
-    --foreground: 30 10% 92%;
-    /* Warm off-white */
-    --card: 30 4% 14%;
-    /* Warm dark card */
-    --card-foreground: 30 10% 92%;
-    --popover: 30 4% 14%;
-    --popover-foreground: 30 10% 92%;
-    --primary: 30 10% 92%;
-    /* Off-white primary */
-    --primary-foreground: 30 5% 10%;
-    /* Dark on primary */
-    --secondary: 30 5% 18%;
-    /* Warm dark stone */
-    --secondary-foreground: 30 10% 92%;
-    --muted: 30 3% 18%;
-    /* Warm muted */
-    --muted-foreground: 30 5% 55%;
-    /* Warm gray text */
-    --accent: 37 5% 50%;
-    /* Warm gray accent */
-    --accent-foreground: 30 10% 92%;
+    --background: 0 0% 8%;
+    /* Neutral graphite canvas */
+    --foreground: 0 0% 94%;
+    /* Crisp off-white text */
+    --card: 0 0% 12%;
+    /* Distinct card surface */
+    --card-foreground: 0 0% 94%;
+    --popover: 0 0% 13%;
+    --popover-foreground: 0 0% 94%;
+    --primary: 0 0% 96%;
+    /* White primary controls */
+    --primary-foreground: 0 0% 8%;
+    /* Dark text on primary */
+    --secondary: 0 0% 16%;
+    /* Raised neutral controls */
+    --secondary-foreground: 0 0% 94%;
+    --muted: 0 0% 17%;
+    /* Structured panels and subtle fills */
+    --muted-foreground: 0 0% 68%;
+    /* Readable secondary text */
+    --accent: 0 0% 22%;
+    /* Neutral hover/focus fill */
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 30 3% 22%;
-    /* Warm dark border */
-    --input: 30 3% 20%;
-    --ring: 213 60% 60%;
+    --border: 0 0% 23%;
+    /* Sharper card and row boundaries */
+    --input: 0 0% 18%;
+    --ring: 213 82% 70%;
     --radius: 1rem;
-    --chart-1: 30 10% 92%;
-    --chart-2: 37 5% 50%;
-    --chart-3: 30 5% 65%;
-    --chart-4: 30 20% 60%;
-    --chart-5: 30 5% 45%;
-    --sidebar-background: 30 5% 12%;
-    /* Warm dark sidebar */
-    --sidebar-foreground: 30 10% 92%;
-    --sidebar-primary: 30 10% 92%;
-    --sidebar-primary-foreground: 30 5% 10%;
-    --sidebar-accent: 30 5% 18%;
-    --sidebar-accent-foreground: 30 10% 92%;
-    --sidebar-border: 30 3% 20%;
-    --sidebar-ring: 213 60% 60%;
+    --chart-1: 0 0% 92%;
+    --chart-2: 160 48% 52%;
+    --chart-3: 213 55% 66%;
+    --chart-4: 39 74% 60%;
+    --chart-5: 351 62% 66%;
+    --sidebar-background: 0 0% 9%;
+    /* Slightly deeper than cards */
+    --sidebar-foreground: 0 0% 92%;
+    --sidebar-primary: 0 0% 96%;
+    --sidebar-primary-foreground: 0 0% 8%;
+    --sidebar-accent: 0 0% 17%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 213 82% 70%;
   }
 }
 
@@ -446,16 +446,16 @@
 .dark.beta-design .shadow-lg,
 .dark.beta-design .shadow-xl {
   box-shadow:
-    rgba(255,255,255,0.03) 0px 0px 0px 0.5px inset,
-    rgba(0,0,0,0.15) 0px 0px 0px 1px,
-    rgba(0,0,0,0.12) 0px 1px 2px,
-    rgba(0,0,0,0.1) 0px 2px 4px !important;
+    rgba(255,255,255,0.08) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.5) 0px 0px 0px 1px,
+    rgba(0,0,0,0.42) 0px 1px 2px,
+    rgba(0,0,0,0.24) 0px 8px 22px -16px !important;
 }
 
 .dark.beta-design .shadow-sm {
   box-shadow:
-    rgba(255,255,255,0.03) 0px 0px 0px 0.5px inset,
-    rgba(0,0,0,0.1) 0px 1px 2px !important;
+    rgba(255,255,255,0.07) 0px 0px 0px 0.5px inset,
+    rgba(0,0,0,0.38) 0px 1px 2px !important;
 }
 
 /* Card radius enforcement */
@@ -470,7 +470,7 @@
 }
 
 .dark.beta-design .fixed.bottom-0 {
-  box-shadow: rgba(0,0,0,0.2) 0px -2px 8px;
+  box-shadow: rgba(0,0,0,0.35) 0px -2px 12px;
 }
 
 /* Mobile top header treatment */
@@ -480,7 +480,32 @@
 }
 
 .dark.beta-design header.sticky {
-  border-bottom: 1px solid rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+/* Keep older hard-coded dark gray utilities aligned with the beta graphite palette. */
+.dark.beta-design .dark\:bg-gray-900,
+.dark.beta-design .dark\:bg-neutral-800 {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark.beta-design .dark\:bg-gray-800,
+.dark.beta-design .dark\:bg-gray-800\/95 {
+  background-color: hsl(var(--card) / 0.96) !important;
+}
+
+.dark.beta-design .dark\:bg-gray-800\/90 {
+  background-color: hsl(var(--card) / 0.9) !important;
+}
+
+.dark.beta-design .dark\:bg-gray-900\/50,
+.dark.beta-design .dark\:bg-gray-700 {
+  background-color: hsl(var(--muted)) !important;
+}
+
+.dark.beta-design .dark\:border-gray-600,
+.dark.beta-design .dark\:border-neutral-700 {
+  border-color: hsl(var(--border)) !important;
 }
 
 /* Badge: warm stone style */
