@@ -21,57 +21,16 @@ const VAT_CONFIDENCE_VALUES = new Set<BudgetVatConfidence>([
 export const BUDGET_ITEM_TAX_RATE = 0.05;
 export const BUDGET_ALCOHOL_VAT_RATE = 0.1;
 
-const ALCOHOL_PATTERN =
-  /\b(alcohol|alcoholic|beer|lager|ale|stout|ipa|wine|sangria|champagne|prosecco|whisky|whiskey|vodka|gin|rum|tequila|brandy|cognac|scotch|bourbon|liquor|liqueur|cocktail|mocktail with alcohol|martini|margarita|mojito|negroni|old fashioned|daiquiri|cosmopolitan|pint|peg|shot|draught|draft|breezer|cider|sake|soju|absinthe|baileys|kahlua|aperol|campari|jager|jagermeister)\b/i;
-
-const NON_ALCOHOL_PATTERN =
-  /\b(mocktail|virgin|zero alcohol|non alcoholic|non-alcoholic|soft drink|soda|cola|juice|water|coffee|tea|lassi|shake|smoothie|lemonade|iced tea)\b/i;
-
 function normalizeText(value: unknown) {
   return String(value ?? "").trim().replace(/\s+/g, " ");
 }
 
-export function classifyBudgetVatFallback(
-  item: BudgetVatInputItem,
-): BudgetVatClassification {
-  const key = normalizeText(item.key);
-  const name = normalizeText(item.name);
-  const categoryName = normalizeText(item.categoryName);
-  const combined = `${name} ${categoryName}`;
-
-  if (NON_ALCOHOL_PATTERN.test(combined)) {
-    return {
-      key,
-      vat_class: "standard",
-      confidence: "medium",
-      rationale: "Recognized as not requiring alcohol VAT.",
-      source: "heuristic",
-    };
-  }
-
-  if (ALCOHOL_PATTERN.test(combined)) {
-    return {
-      key,
-      vat_class: "alcohol",
-      confidence: "high",
-      rationale: "Name or category indicates alcohol VAT applies.",
-      source: "heuristic",
-    };
-  }
-
-  return {
-    key,
-    vat_class: "standard",
-    confidence: "low",
-    rationale: "No alcohol VAT signal found.",
-    source: "heuristic",
-  };
-}
-
 function normalizeVatClass(value: unknown): BudgetVatClass {
-  return typeof value === "string" && VAT_CLASSES.has(value as BudgetVatClass)
-    ? (value as BudgetVatClass)
-    : "standard";
+  if (typeof value === "string" && VAT_CLASSES.has(value as BudgetVatClass)) {
+    return value as BudgetVatClass;
+  }
+
+  throw new Error("AI returned an invalid tax classification.");
 }
 
 function normalizeConfidence(value: unknown): BudgetVatConfidence {
@@ -86,6 +45,8 @@ export function normalizeBudgetVatClassifications(
   value: unknown,
   source: BudgetVatSource,
 ): BudgetVatClassification[] {
+  const expectedKeys = items.map((item) => normalizeText(item.key));
+  const expectedKeySet = new Set(expectedKeys);
   const response = typeof value === "object" && value !== null
     ? (value as Record<string, unknown>)
     : {};
@@ -98,6 +59,7 @@ export function normalizeBudgetVatClassifications(
       : {};
     const key = normalizeText(item.key);
     if (!key) return;
+    if (!expectedKeySet.has(key)) return;
 
     byKey.set(key, {
       key,
@@ -109,10 +71,12 @@ export function normalizeBudgetVatClassifications(
     });
   });
 
-  return items.map((item) => {
-    const key = normalizeText(item.key);
-    return byKey.get(key) ?? classifyBudgetVatFallback(item);
-  });
+  const missingKeys = expectedKeys.filter((key) => !byKey.has(key));
+  if (missingKeys.length > 0) {
+    throw new Error("AI did not classify every budget item.");
+  }
+
+  return expectedKeys.map((key) => byKey.get(key)!);
 }
 
 export function parseBudgetVatClassificationText(text: string): unknown | null {

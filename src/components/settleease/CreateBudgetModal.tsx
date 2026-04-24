@@ -52,7 +52,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import {
   BUDGET_ITEM_TAX_RATE,
-  classifyBudgetVatFallback,
   getBudgetAlcoholVatRate,
   type BudgetVatInputItem,
 } from "@/lib/settleease/budgetVat";
@@ -113,9 +112,10 @@ export default function CreateBudgetModal({
     Record<string, BudgetVatClassification>
   >({});
   const [vatStatus, setVatStatus] = useState<
-    "idle" | "loading" | "ai" | "heuristic" | "error"
+    "idle" | "loading" | "ai" | "error"
   >("idle");
   const [vatModelName, setVatModelName] = useState("");
+  const [vatClassifiedSignature, setVatClassifiedSignature] = useState("");
   const [fees, setFees] = useState<BudgetFees>({
     other_charge: "",
     discount: "",
@@ -158,83 +158,38 @@ export default function CreateBudgetModal({
     api.app.backfillBudgetItemsFromExpenses
   );
 
-  const vatInputSignature = useMemo(() => {
-    return JSON.stringify(
-      selectedLines.map((line) => ({
-        key: line.id,
-        name: line.name,
-        categoryName: line.category_name,
-      }))
-    );
+  const vatInputItems = useMemo<BudgetVatInputItem[]>(() => {
+    return selectedLines.map((line) => ({
+      key: line.id,
+      name: line.name,
+      categoryName: line.category_name,
+    }));
   }, [selectedLines]);
 
-  useEffect(() => {
-    const inputItems = JSON.parse(vatInputSignature) as BudgetVatInputItem[];
+  const vatInputSignature = useMemo(
+    () => JSON.stringify(vatInputItems),
+    [vatInputItems]
+  );
 
-    if (!isOpen || inputItems.length === 0) {
+  useEffect(() => {
+    if (!isOpen || selectedLines.length === 0) {
       setVatClassifications({});
       setVatStatus("idle");
       setVatModelName("");
-      return;
+      setVatClassifiedSignature("");
     }
+  }, [isOpen, selectedLines.length]);
 
-    const controller = new AbortController();
-    const fallbackRows = inputItems.map(classifyBudgetVatFallback);
+  const isTaxCalculationCurrent =
+    selectedLines.length > 0 &&
+    vatStatus === "ai" &&
+    vatClassifiedSignature === vatInputSignature;
 
-    setVatClassifications(
-      Object.fromEntries(fallbackRows.map((row) => [row.key, row]))
-    );
-    setVatStatus("loading");
-    setVatModelName("");
-
-    const timeoutId = window.setTimeout(() => {
-      void fetch("/api/classify-budget-vat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: inputItems }),
-        signal: controller.signal,
-      })
-        .then(async (response) => {
-          if (!response.ok) {
-            throw new Error("Budget VAT classification failed.");
-          }
-          return response.json();
-        })
-        .then((data) => {
-          const rows = Array.isArray(data.classifications)
-            ? (data.classifications as BudgetVatClassification[])
-            : fallbackRows;
-          setVatClassifications(
-            Object.fromEntries(rows.map((row) => [row.key, row]))
-          );
-          setVatStatus(data.source === "ai" ? "ai" : "heuristic");
-          setVatModelName(data.modelDisplayName || "");
-        })
-        .catch((error) => {
-          if (controller.signal.aborted) return;
-          console.warn("Budget VAT classification fallback:", error);
-          setVatClassifications(
-            Object.fromEntries(fallbackRows.map((row) => [row.key, row]))
-          );
-          setVatStatus("error");
-          setVatModelName("");
-        });
-    }, 250);
-
-    return () => {
-      controller.abort();
-      window.clearTimeout(timeoutId);
-    };
-  }, [isOpen, vatInputSignature]);
+  const needsTaxCalculation =
+    selectedLines.length > 0 && !isTaxCalculationCurrent;
 
   const getLineVatClassification = useCallback(
-    (line: SelectedBudgetLine) =>
-      vatClassifications[line.id] ??
-      classifyBudgetVatFallback({
-        key: line.id,
-        name: line.name,
-        categoryName: line.category_name,
-      }),
+    (line: SelectedBudgetLine) => vatClassifications[line.id] ?? null,
     [vatClassifications]
   );
 
@@ -246,11 +201,20 @@ export default function CreateBudgetModal({
 
     selectedLines.forEach((line) => {
       const lineTotal = line.unit_price * line.quantity;
+      subtotal += lineTotal;
+
+      if (!isTaxCalculationCurrent) {
+        return;
+      }
+
       const classification = getLineVatClassification(line);
+      if (!classification) {
+        return;
+      }
+
       const vatAmount =
         lineTotal * getBudgetAlcoholVatRate(classification.vat_class);
 
-      subtotal += lineTotal;
       if (classification.vat_class === "alcohol") {
         alcoholSubtotal += lineTotal;
         alcoholVatAmount += vatAmount;
@@ -283,7 +247,27 @@ export default function CreateBudgetModal({
       discount,
       finalTotal,
     };
-  }, [fees, getLineVatClassification, selectedLines]);
+  }, [fees, getLineVatClassification, isTaxCalculationCurrent, selectedLines]);
+
+  const taxStatusLabel =
+    selectedLines.length === 0
+      ? "Add items"
+      : vatStatus === "loading"
+      ? "AI calculating"
+      : isTaxCalculationCurrent
+      ? vatModelName || "AI taxes ready"
+      : vatStatus === "error"
+      ? "AI failed"
+      : vatStatus === "ai"
+      ? "Needs recalculation"
+      : "Calculate taxes";
+
+  const calculateTaxesButtonLabel =
+    vatStatus === "loading"
+      ? "Calculating"
+      : isTaxCalculationCurrent
+      ? "Recalculate Taxes"
+      : "Calculate Taxes";
 
   const getCategoryIcon = (categoryName: string) => {
     const category = categories.find((entry) => entry.name === categoryName);
@@ -341,6 +325,69 @@ export default function CreateBudgetModal({
   const handleFeeChange = (field: keyof BudgetFees, value: string) => {
     setFees((current) => ({ ...current, [field]: value }));
   };
+
+  const handleCalculateTaxes = useCallback(async () => {
+    if (selectedLines.length === 0) {
+      toast({
+        title: "Add items first",
+        description: "Select at least one item before calculating taxes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const currentSignature = vatInputSignature;
+    const currentItems = vatInputItems;
+
+    setVatStatus("loading");
+    setVatModelName("");
+    setVatClassifiedSignature("");
+
+    try {
+      const response = await fetch("/api/classify-budget-vat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: currentItems }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data.error || "AI tax calculation failed.");
+      }
+
+      const rows = Array.isArray(data.classifications)
+        ? (data.classifications as BudgetVatClassification[])
+        : [];
+      const expectedKeys = new Set(currentItems.map((item) => item.key));
+      const classifiedKeys = new Set(rows.map((row) => row.key));
+      const hasEveryItem = currentItems.every((item) =>
+        classifiedKeys.has(item.key)
+      );
+
+      if (rows.length !== expectedKeys.size || !hasEveryItem) {
+        throw new Error("AI did not classify every selected item.");
+      }
+
+      setVatClassifications(
+        Object.fromEntries(rows.map((row) => [row.key, row]))
+      );
+      setVatStatus("ai");
+      setVatClassifiedSignature(currentSignature);
+      setVatModelName(data.modelDisplayName || "");
+    } catch (error: any) {
+      console.warn("Budget tax calculation failed:", error);
+      setVatClassifications({});
+      setVatStatus("error");
+      setVatModelName("");
+      setVatClassifiedSignature("");
+      toast({
+        title: "Tax calculation failed",
+        description:
+          error?.message || "AI could not calculate tax and VAT for this estimate.",
+        variant: "destructive",
+      });
+    }
+  }, [selectedLines.length, vatInputItems, vatInputSignature]);
 
   const handleAddCustomItem = async () => {
     const name = customName.trim().replace(/\s+/g, " ");
@@ -506,19 +553,21 @@ export default function CreateBudgetModal({
           key={index}
           className="min-w-0 rounded-md border bg-background p-3 shadow-sm"
         >
-          <div className="flex min-w-0 items-start gap-3">
-            <Skeleton className="mt-0.5 h-4 w-4 shrink-0" />
+          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-4 w-3/4 max-w-[260px]" />
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                <Skeleton className="h-4 w-3/4 max-w-[260px]" />
+              </div>
               <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <Skeleton className="h-6 w-20" />
+                <Skeleton className="h-6 w-20 rounded-md" />
                 <Skeleton className="h-3 w-14" />
                 <Skeleton className="h-3 w-24" />
               </div>
             </div>
-            <div className="min-w-[76px] shrink-0 space-y-2">
-              <Skeleton className="ml-auto h-4 w-16" />
-              <Skeleton className="ml-auto h-8 w-14" />
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:block lg:shrink-0 lg:text-right">
+              <Skeleton className="h-5 w-20 lg:ml-auto" />
+              <Skeleton className="h-8 w-14 rounded-md lg:ml-auto lg:mt-2" />
             </div>
           </div>
         </div>
@@ -729,9 +778,11 @@ export default function CreateBudgetModal({
                         )}
                         {selectedLines.map((line) => {
                           const CategoryIcon = getCategoryIcon(line.category_name);
-                          const vatClassification = getLineVatClassification(line);
+                          const vatClassification = isTaxCalculationCurrent
+                            ? getLineVatClassification(line)
+                            : null;
                           const hasAlcoholVat =
-                            vatClassification.vat_class === "alcohol";
+                            vatClassification?.vat_class === "alcohol";
                           return (
                             <div
                               key={line.id}
@@ -756,14 +807,16 @@ export default function CreateBudgetModal({
                                       variant={hasAlcoholVat ? "default" : "outline"}
                                       className="rounded-md"
                                     >
-                                      {hasAlcoholVat
-                                        ? "VAT 10%"
-                                        : "Tax 5%"}
+                                      {vatClassification
+                                        ? hasAlcoholVat
+                                          ? "VAT 10%"
+                                          : "Tax 5%"
+                                        : "Tax pending"}
                                     </Badge>
                                     <span className="text-[11px] text-muted-foreground">
-                                      {vatClassification.source === "ai"
-                                        ? "AI alcohol check"
-                                        : "Fallback check"}
+                                      {vatClassification
+                                        ? "AI tax check"
+                                        : "Run Calculate Taxes"}
                                     </span>
                                   </div>
                                 </div>
@@ -826,23 +879,42 @@ export default function CreateBudgetModal({
                         <Sparkles className="mr-2 h-4 w-4 text-muted-foreground" />
                         <span className="min-w-0 truncate">Smart Fees</span>
                       </span>
-                      <Badge
-                        variant="outline"
-                        className="max-w-full rounded-md text-[11px]"
-                      >
-                        <span className="truncate">
-                          {vatStatus === "loading"
-                            ? "AI classifying"
-                            : vatStatus === "ai"
-                            ? vatModelName || "AI alcohol check"
-                            : vatStatus === "idle"
-                            ? "Add items"
-                            : "Fallback check"}
-                        </span>
-                      </Badge>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2">
+                        <Badge
+                          variant={isTaxCalculationCurrent ? "default" : "outline"}
+                          className="max-w-full rounded-md text-[11px]"
+                        >
+                          <span className="truncate">{taxStatusLabel}</span>
+                        </Badge>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-8 rounded-md px-2 text-xs"
+                          onClick={handleCalculateTaxes}
+                          disabled={
+                            selectedLines.length === 0 ||
+                            vatStatus === "loading"
+                          }
+                        >
+                          {vatStatus === "loading" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          {calculateTaxesButtonLabel}
+                        </Button>
+                      </span>
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="min-w-0 space-y-3 pt-0">
+                    {needsTaxCalculation && (
+                      <div className="rounded-md border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-muted-foreground">
+                        Run Calculate Taxes once your estimate items are ready.
+                        AI will apply 5% Tax to standard items and 10% VAT to
+                        alcohol items.
+                      </div>
+                    )}
                     <div className="grid min-w-0 gap-2 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                       <div className="min-w-0 rounded-md border bg-muted/20 p-3">
                         <div className="flex min-w-0 items-center justify-between gap-2">
@@ -850,11 +922,15 @@ export default function CreateBudgetModal({
                             Tax 5%
                           </span>
                           <span className="break-words text-right font-semibold">
-                            {formatCurrency(totals.taxAmount)}
+                            {isTaxCalculationCurrent
+                              ? formatCurrency(totals.taxAmount)
+                              : "Pending"}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          On {formatCurrency(totals.taxableSubtotal)}
+                          {isTaxCalculationCurrent
+                            ? `On ${formatCurrency(totals.taxableSubtotal)}`
+                            : "Calculated by AI"}
                         </p>
                       </div>
                       <div className="min-w-0 rounded-md border bg-muted/20 p-3">
@@ -863,11 +939,15 @@ export default function CreateBudgetModal({
                             Alcohol VAT 10%
                           </span>
                           <span className="break-words text-right font-semibold">
-                            {formatCurrency(totals.alcoholVatAmount)}
+                            {isTaxCalculationCurrent
+                              ? formatCurrency(totals.alcoholVatAmount)
+                              : "Pending"}
                           </span>
                         </div>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          On {formatCurrency(totals.alcoholSubtotal)}
+                          {isTaxCalculationCurrent
+                            ? `On ${formatCurrency(totals.alcoholSubtotal)}`
+                            : "Calculated by AI"}
                         </p>
                       </div>
                     </div>
@@ -918,13 +998,17 @@ export default function CreateBudgetModal({
                     <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">Tax</span>
                       <span className="break-words text-right">
-                        {formatCurrency(totals.taxAmount)}
+                        {isTaxCalculationCurrent
+                          ? formatCurrency(totals.taxAmount)
+                          : "Pending"}
                       </span>
                     </div>
                     <div className="flex min-w-0 items-center justify-between gap-3 text-sm">
                       <span className="text-muted-foreground">VAT</span>
                       <span className="break-words text-right">
-                        {formatCurrency(totals.alcoholVatAmount)}
+                        {isTaxCalculationCurrent
+                          ? formatCurrency(totals.alcoholVatAmount)
+                          : "Pending"}
                       </span>
                     </div>
                     <div className="flex min-w-0 items-center justify-between gap-3 text-sm">

@@ -6,14 +6,17 @@ import { cn } from "@/lib/utils";
 import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
 import { useSidebar } from "@/components/ui/sidebar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingRegion } from "./SkeletonLayouts";
 
 interface MobileBottomNavProps {
     activeView: ActiveView;
     setActiveView: (view: ActiveView) => void;
     userRole?: UserRole | null;
+    isLoading?: boolean;
 }
 
-export default function MobileBottomNav({ activeView, setActiveView, userRole }: MobileBottomNavProps) {
+export default function MobileBottomNav({ activeView, setActiveView, userRole, isLoading = false }: MobileBottomNavProps) {
     const { toggleSidebar } = useSidebar();
 
     const navItems = [
@@ -22,6 +25,24 @@ export default function MobileBottomNav({ activeView, setActiveView, userRole }:
         ...(userRole === 'admin' ? [{ view: 'scanReceipt', label: 'Smart Scan', icon: ScanLine }] : []),
         { view: 'analytics', label: 'Analytics', icon: BarChartBig },
     ];
+
+    if (isLoading) {
+        return (
+            <LoadingRegion
+                label="Loading mobile navigation"
+                className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]"
+            >
+                <div className="grid h-16 grid-cols-5 items-center px-1">
+                    {Array.from({ length: 5 }).map((_, index) => (
+                        <div key={index} className="flex min-w-0 flex-col items-center justify-center gap-1 px-1">
+                            <Skeleton className="h-5 w-5 rounded" />
+                            <Skeleton className="h-2.5 w-10" />
+                        </div>
+                    ))}
+                </div>
+            </LoadingRegion>
+        );
+    }
 
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50 pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">

@@ -38,6 +38,13 @@ import { cn } from "@/lib/utils";
 import CustomSettlementForm from './CustomSettlementForm';
 import ManualSettlementOverrideForm from './ManualSettlementOverrideForm';
 import { calculateNetBalances } from '@/lib/settleease/settlementCalculations';
+import {
+  LoadingRegion,
+  SettlementActivitySkeleton,
+  SkeletonCardHeader,
+  SkeletonPanel,
+  SkeletonSectionHeader,
+} from './SkeletonLayouts';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -237,61 +244,49 @@ export default function ManageSettlementsTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-            <div className="flex-1">
-              <Skeleton className="h-7 sm:h-8 w-full max-w-[200px] sm:w-64" />
-              <Skeleton className="h-4 w-full sm:w-96 mt-2" />
-            </div>
-            <Skeleton className="h-9 sm:h-10 w-full sm:w-40" />
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-2 flex-1 flex flex-col min-h-0">
-          <div className="space-y-4 sm:space-y-6">
-            {/* Outstanding Settlements Section Skeleton - Mobile Optimized */}
-            <div className="space-y-3">
-              <Skeleton className="h-5 sm:h-6 w-full max-w-[200px] sm:w-48" />
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="bg-card/70 rounded-md">
-                  <div className="p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <Skeleton className="h-5 w-16 sm:w-20 flex-shrink-0" />
-                        <Skeleton className="h-4 w-4 flex-shrink-0" />
-                        <Skeleton className="h-5 w-16 sm:w-20 flex-shrink-0" />
-                        <Skeleton className="h-6 w-20 sm:w-24 flex-shrink-0" />
-                      </div>
-                      <Skeleton className="h-9 w-full sm:w-32" />
-                    </div>
+      <LoadingRegion label="Loading settlements management" className="h-full">
+        <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
+          <SkeletonCardHeader
+            titleWidth="w-56"
+            descriptionWidth="w-full max-w-lg"
+            actions={["w-full sm:w-44", "w-full sm:w-40"]}
+            className="pb-4"
+          />
+          <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6 pt-4 flex-1 min-h-0 overflow-y-auto">
+            <div className="space-y-4 sm:space-y-6">
+              <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="flex gap-3">
+                  <Skeleton className="h-5 w-5 shrink-0 rounded" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-5 w-44" />
+                    <Skeleton className="h-3.5 w-full max-w-2xl" />
+                    <Skeleton className="h-3.5 w-full max-w-xl" />
                   </div>
-                </Card>
-              ))}
+                </div>
+              </div>
+
+              <SkeletonPanel titleWidth="w-56" descriptionWidth="w-full max-w-md">
+                <ul className="space-y-3">
+                  {[0, 1, 2].map((item) => (
+                    <SettlementActivitySkeleton key={item} actions={1} />
+                  ))}
+                </ul>
+              </SkeletonPanel>
+
+              <SkeletonPanel titleWidth="w-60" descriptionWidth="w-full max-w-md">
+                <div className="space-y-3">
+                  <SkeletonSectionHeader width="w-40" actionWidth="w-24" />
+                  <ul className="space-y-3">
+                    {[0, 1].map((item) => (
+                      <SettlementActivitySkeleton key={item} actions={2} />
+                    ))}
+                  </ul>
+                </div>
+              </SkeletonPanel>
             </div>
-            
-            {/* Payment History Section Skeleton - Mobile Optimized */}
-            <div className="space-y-3">
-              <Skeleton className="h-5 sm:h-6 w-full max-w-[180px] sm:w-48" />
-              {[1, 2].map((i) => (
-                <Card key={i} className="bg-card/70 rounded-md">
-                  <div className="p-3 sm:p-4">
-                    <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
-                      <div className="space-y-2 flex-1 min-w-0">
-                        <Skeleton className="h-5 w-full max-w-[180px] sm:w-48" />
-                        <Skeleton className="h-4 w-28 sm:w-32" />
-                      </div>
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Skeleton className="h-8 w-full sm:w-16" />
-                        <Skeleton className="h-8 w-full sm:w-16" />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </LoadingRegion>
     );
   }
   

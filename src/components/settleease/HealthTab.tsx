@@ -42,6 +42,14 @@ import type {
 } from "@/lib/settleease/healthTypes";
 import type { Category, Expense, Person } from "@/lib/settleease/types";
 import { useHealthSurface } from "@/hooks/useHealthSurface";
+import {
+  ExpenseActivitySkeleton,
+  LoadingRegion,
+  SkeletonChartPanel,
+  SkeletonMetricTile,
+  SkeletonSectionHeader,
+  SkeletonToolbar,
+} from "./SkeletonLayouts";
 
 const ExpenseDetailModal = dynamic(() => import("./ExpenseDetailModal"), {
   ssr: false,
@@ -229,10 +237,15 @@ function SurfaceBody<TPayload>({
 
 function MetricSkeleton({ large = false }: { large?: boolean }) {
   return (
-    <div className="space-y-4">
-      <Skeleton className={cn("h-14 w-40 rounded-full", large && "h-16 w-52")} />
-      <Skeleton className="h-5 w-full max-w-[280px] rounded-full" />
-      <Skeleton className="h-5 w-full max-w-[220px] rounded-full" />
+    <div className="space-y-3">
+      <Skeleton className={cn("h-10 w-40 rounded-lg", large && "h-12 w-52")} />
+      <Skeleton className="h-4 w-full max-w-[280px]" />
+      <Skeleton className="h-4 w-full max-w-[220px]" />
+      <div className="grid gap-2 sm:grid-cols-3">
+        {[0, 1, 2].map((item) => (
+          <Skeleton key={item} className="h-16 rounded-lg" />
+        ))}
+      </div>
     </div>
   );
 }
@@ -240,7 +253,10 @@ function MetricSkeleton({ large = false }: { large?: boolean }) {
 function ChartSkeleton({ tall = false }: { tall?: boolean }) {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-5 w-full max-w-[220px] rounded-full" />
+      <div className="flex items-center justify-between gap-3">
+        <Skeleton className="h-5 w-full max-w-[220px]" />
+        <Skeleton className="h-8 w-20 rounded-lg" />
+      </div>
       <Skeleton className={cn("h-[220px] w-full rounded-lg", tall && "h-[280px]")} />
     </div>
   );
@@ -377,7 +393,7 @@ function CoverageSection({
         skeleton={
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-20 rounded-lg" />
+              <SkeletonMetricTile key={index} className="min-h-[96px]" />
             ))}
           </div>
         }
@@ -814,7 +830,7 @@ function PeopleSection(props: {
         skeleton={
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 rounded-lg" />
+              <SkeletonMetricTile key={index} className="min-h-[112px]" />
             ))}
           </div>
         }
@@ -881,11 +897,11 @@ function LedgerSection({
         retry={retry}
         isRetrying={isRetrying}
         skeleton={
-          <div className="space-y-3">
+          <ul className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <Skeleton key={index} className="h-28 rounded-lg" />
+              <ExpenseActivitySkeleton key={index} />
             ))}
-          </div>
+          </ul>
         }
         emptyMessage="No AI-estimated health entries are ready for this range."
       >
@@ -999,6 +1015,7 @@ function HealthEmptyState() {
 
 function HealthSkeleton() {
   return (
+    <LoadingRegion label="Loading health dashboard" className="h-full">
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
       <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
         <div className="flex items-center gap-2">
@@ -1008,37 +1025,76 @@ function HealthSkeleton() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
         <div className="min-w-0 space-y-4 sm:space-y-5">
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-2">
-            <Skeleton className="h-14 rounded-lg" />
-            <Skeleton className="h-14 rounded-lg" />
-          </div>
+          <SkeletonToolbar count={2} className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-2" />
 
           <Separator />
 
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-28" />
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-28" />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               {Array.from({ length: 4 }).map((_, index) => (
-                <Skeleton key={index} className="h-20 rounded-lg" />
+                <SkeletonMetricTile key={index} className="min-h-[96px]" />
               ))}
             </div>
-          </div>
+          </section>
 
           <Separator />
 
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-24" />
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-24" />
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-              <Skeleton className="h-[260px] rounded-lg" />
+              <SkeletonChartPanel chartClassName="h-[260px]" />
               <div className="grid gap-4">
-                <Skeleton className="h-[180px] rounded-lg" />
-                <Skeleton className="h-[180px] rounded-lg" />
+                <SkeletonChartPanel chartClassName="h-[150px]" />
+                <SkeletonChartPanel chartClassName="h-[150px]" />
               </div>
             </div>
-          </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-20" />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <SkeletonChartPanel chartClassName="h-[260px]" />
+              <SkeletonChartPanel chartClassName="h-[260px]" />
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-24" />
+            <div className="grid gap-4 lg:grid-cols-2">
+              <SkeletonChartPanel chartClassName="h-[220px]" />
+              <SkeletonChartPanel chartClassName="h-[220px]" />
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-20" />
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <SkeletonMetricTile key={index} className="min-h-[96px]" />
+              ))}
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-20" />
+            <ul className="space-y-3">
+              <ExpenseActivitySkeleton />
+              <ExpenseActivitySkeleton />
+            </ul>
+          </section>
         </div>
       </CardContent>
     </Card>
+    </LoadingRegion>
   );
 }
 

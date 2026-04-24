@@ -9,6 +9,7 @@ import packageJson from '../../../package.json';
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingRegion } from "./SkeletonLayouts";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -130,19 +131,45 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
 
             {/* Admin Only Sections */}
             {isProfileLoading && (
-              <>
+              <LoadingRegion label="Loading navigation" className="space-y-1">
                 <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
-                  <Skeleton className="h-3 w-20" />
+                  <div className="flex items-center justify-between gap-2">
+                    <Skeleton className="h-3 w-20" />
+                    <Skeleton className="h-3 w-3 rounded" />
+                  </div>
                 </div>
                 {[0, 1, 2, 3].map((item) => (
-                  <SidebarMenuItem key={item}>
+                  <SidebarMenuItem key={`expenses-${item}`}>
                     <div className="flex h-8 items-center gap-2 px-2">
                       <Skeleton className="h-4 w-4 rounded" />
                       <Skeleton className="h-4 w-28 group-data-[state=collapsed]:hidden" />
                     </div>
                   </SidebarMenuItem>
                 ))}
-              </>
+                <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+                  <div className="flex items-center justify-between gap-2">
+                    <Skeleton className="h-3 w-12" />
+                    <Skeleton className="h-3 w-3 rounded" />
+                  </div>
+                </div>
+                {[0, 1].map((item) => (
+                  <SidebarMenuItem key={`data-${item}`}>
+                    <div className="flex h-8 items-center gap-2 px-2">
+                      <Skeleton className="h-4 w-4 rounded" />
+                      <Skeleton className="h-4 w-24 group-data-[state=collapsed]:hidden" />
+                    </div>
+                  </SidebarMenuItem>
+                ))}
+                <div className="px-2 py-1 mt-4 group-data-[state=collapsed]:hidden">
+                  <Skeleton className="h-3 w-16" />
+                </div>
+                <SidebarMenuItem>
+                  <div className="flex h-8 items-center gap-2 px-2">
+                    <Skeleton className="h-4 w-4 rounded" />
+                    <Skeleton className="h-4 w-20 group-data-[state=collapsed]:hidden" />
+                  </div>
+                </SidebarMenuItem>
+              </LoadingRegion>
             )}
 
             {shouldShowAdminNav && (
@@ -327,10 +354,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
         <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
           <div className="p-2">
             {isProfileLoading ? (
-              <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
-                <Skeleton className="h-4 w-36 mb-2" />
-                <Skeleton className="h-3 w-20" />
-              </div>
+              <LoadingRegion label="Loading profile" className="mb-2 rounded bg-sidebar-accent/50 p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton className="h-4 w-36 max-w-full" />
+                    <div className="flex items-center gap-1">
+                      <Skeleton className="h-3 w-3 rounded" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-6 rounded-md" />
+                </div>
+              </LoadingRegion>
             ) : (currentUserName || currentUserEmail) && (
               <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
                 <div className="flex items-center justify-between">

@@ -3,7 +3,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fetchAiModelAttemptOrder } from "@/lib/settleease/aiModelConfigServer";
 import { getAiModelOption } from "@/lib/settleease/aiModels";
 import {
-  classifyBudgetVatFallback,
   normalizeBudgetVatClassifications,
   parseBudgetVatClassificationText,
   type BudgetVatInputItem,
@@ -86,14 +85,6 @@ Required JSON fields:
 - items: one object per input item with key, vatClass, confidence, rationale`;
 }
 
-function fallbackResponse(items: BudgetVatInputItem[], reason?: string) {
-  return Response.json({
-    classifications: items.map(classifyBudgetVatFallback),
-    source: "heuristic",
-    reason,
-  });
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { items } = await request.json();
@@ -104,7 +95,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (!GEMINI_API_KEY) {
-      return fallbackResponse(budgetItems, "AI service is not configured.");
+      return Response.json(
+        { error: "AI tax classification is not configured." },
+        { status: 503 },
+      );
     }
 
     const modelAttemptOrder = await fetchAiModelAttemptOrder();
@@ -149,9 +143,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return fallbackResponse(
-      budgetItems,
-      `All AI VAT classifiers failed. ${errors.join("; ")}`,
+    return Response.json(
+      {
+        error: "AI tax classification failed.",
+        technicalDetails:
+          process.env.NODE_ENV === "development" ? errors.join("; ") : undefined,
+      },
+      { status: 502 },
     );
   } catch (error: any) {
     const message = error?.message || "Failed to classify budget VAT.";

@@ -19,6 +19,7 @@ import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { FixedCalendar } from "@/components/ui/fixed-calendar";
 import { cn } from "@/lib/utils";
@@ -47,6 +48,101 @@ import {
   type ExportReportModel,
 } from "./export-tab";
 import { renderExportReportHtml } from "./export-tab/utils/htmlReport";
+import {
+  LoadingRegion,
+  SkeletonFormField,
+  SkeletonMetricTile,
+} from "./SkeletonLayouts";
+
+export function ExportExpenseSkeleton() {
+  return (
+    <LoadingRegion label="Loading export report" className="h-full">
+      <Card className="flex h-full flex-col overflow-hidden rounded-lg border shadow-xl">
+        <CardHeader className="border-b p-4 sm:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-2">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                <Skeleton className="h-8 w-48" />
+              </div>
+              <Skeleton className="h-4 w-full max-w-2xl" />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+            <aside className="space-y-4">
+              <section className="rounded-lg border bg-background p-4">
+                <Skeleton className="h-5 w-24" />
+                <div className="mt-3 grid gap-2">
+                  {[0, 1].map((item) => (
+                    <div key={item} className="rounded-lg border p-3">
+                      <div className="flex gap-3">
+                        <Skeleton className="h-8 w-8 shrink-0 rounded-lg" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <Skeleton className="h-4 w-36" />
+                          <Skeleton className="h-3.5 w-full max-w-[240px]" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="rounded-lg border bg-background p-4">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-4 w-4 rounded" />
+                  <Skeleton className="h-5 w-24" />
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {[0, 1, 2, 3].map((item) => (
+                    <Skeleton key={item} className="h-12 rounded-lg" />
+                  ))}
+                </div>
+                <div className="mt-4 space-y-3">
+                  <SkeletonFormField labelWidth="w-10" />
+                  <Skeleton className="mx-auto hidden h-4 w-4 rounded sm:block" />
+                  <SkeletonFormField labelWidth="w-8" />
+                </div>
+              </section>
+
+              <section className="rounded-lg border bg-background p-4">
+                <Skeleton className="h-5 w-28" />
+                <div className="mt-3 space-y-3">
+                  <Skeleton className="h-11 w-full rounded-lg" />
+                  <Skeleton className="h-11 w-full rounded-lg" />
+                  <div className="flex flex-wrap gap-2">
+                    {[0, 1, 2].map((item) => (
+                      <Skeleton key={item} className="h-9 w-24 rounded-lg" />
+                    ))}
+                  </div>
+                </div>
+              </section>
+            </aside>
+
+            <main className="min-w-0 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                  <SkeletonMetricTile key={item} />
+                ))}
+              </div>
+              <div className="min-h-[420px] rounded-lg border bg-muted/20 p-6">
+                <div className="mx-auto flex h-full max-w-xl flex-col items-center justify-center text-center">
+                  <Skeleton className="h-10 w-10 rounded-lg" />
+                  <Skeleton className="mt-4 h-6 w-56" />
+                  <Skeleton className="mt-3 h-4 w-full max-w-sm" />
+                  <Skeleton className="mt-2 h-4 w-full max-w-xs" />
+                  <Skeleton className="mt-6 h-10 w-36 rounded-lg" />
+                </div>
+              </div>
+            </main>
+          </div>
+        </CardContent>
+      </Card>
+    </LoadingRegion>
+  );
+}
 
 function getReportFileName(model: ExportReportModel): string {
   const suffix = model.kind === "group" ? "Group_Summary" : "Personal_Statement";

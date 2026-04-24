@@ -5,7 +5,6 @@ import { useSearchParams } from 'next/navigation';
 import { Settings2, AlertTriangle, HandCoins } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import {
@@ -21,9 +20,9 @@ import ManageCategoriesTab from '@/components/settleease/ManageCategoriesTab';
 import ManageSettlementsTab from '@/components/settleease/ManageSettlementsTab';
 import AnalyticsTab from '@/components/settleease/AnalyticsTab';
 import HealthTab from '@/components/settleease/HealthTab';
-import ExportExpenseTab from '@/components/settleease/ExportExpenseTab';
+import ExportExpenseTab, { ExportExpenseSkeleton } from '@/components/settleease/ExportExpenseTab';
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
-import SettingsTab from '@/components/settleease/SettingsTab';
+import SettingsTab, { SettingsTabSkeleton } from '@/components/settleease/SettingsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
 import BetaDashboardView from '@/components/settleease/BetaDashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
@@ -46,93 +45,6 @@ import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
 import * as LucideIcons from 'lucide-react';
 import MobileBottomNav from '@/components/settleease/MobileBottomNav';
-
-function ExportExpenseSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-2">
-        <Skeleton className="h-8 w-full max-w-[220px] sm:w-72" />
-        <Skeleton className="h-4 w-full max-w-xl" />
-      </div>
-      <div className="grid gap-3 md:grid-cols-3">
-        {[0, 1, 2].map((item) => (
-          <Card key={item} className="rounded-lg">
-            <CardHeader className="pb-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-4 w-full max-w-[180px]" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-10 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
-        <Card className="rounded-lg">
-          <CardHeader>
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-full" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-10 w-full" />
-            <div className="grid grid-cols-2 gap-3">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-            <Skeleton className="h-10 w-full" />
-          </CardContent>
-        </Card>
-        <Card className="rounded-lg">
-          <CardHeader>
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-full max-w-md" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[0, 1, 2, 3].map((item) => (
-              <div key={item} className="rounded-lg border p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <Skeleton className="h-5 w-44" />
-                  <Skeleton className="h-8 w-24" />
-                </div>
-                <Skeleton className="mt-3 h-4 w-full max-w-lg" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
-}
-
-function SettingsTabSkeleton() {
-  return (
-    <div className="space-y-6">
-      <div>
-        <Skeleton className="mb-2 h-8 w-40" />
-        <Skeleton className="h-4 w-full max-w-md" />
-      </div>
-      <div className="grid gap-4 md:grid-cols-2">
-        {[0, 1].map((item) => (
-          <Card key={item} className="rounded-lg">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-10 w-10 rounded-lg" />
-                <div className="min-w-0 flex-1 space-y-2">
-                  <Skeleton className="h-5 w-36" />
-                  <Skeleton className="h-4 w-full max-w-[220px]" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="mb-4 h-4 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function SettleEasePageContent() {
   const searchParams = useSearchParams();
@@ -781,7 +693,12 @@ function SettleEasePageContent() {
                 )}
               </div>
             </main>
-            <MobileBottomNav activeView={activeView} setActiveView={handleSetActiveView} userRole={userRole} />
+            <MobileBottomNav
+              activeView={activeView}
+              setActiveView={handleSetActiveView}
+              userRole={userRole}
+              isLoading={shouldShowPageSkeleton || !isAppIdentityReady}
+            />
           </div>
         </SidebarInset>
       </SidebarProvider >

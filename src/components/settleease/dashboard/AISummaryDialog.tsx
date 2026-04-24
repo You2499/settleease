@@ -38,6 +38,11 @@ import {
   type SummaryMetricCard,
 } from "@/lib/settleease/aiSummaryViewModel";
 import { formatCurrency } from "@/lib/settleease/utils";
+import {
+  LoadingRegion,
+  SkeletonMetricTile,
+  SkeletonSectionHeader,
+} from "../SkeletonLayouts";
 
 export interface AISummaryActionResult {
   source: "cached" | "generated";
@@ -177,12 +182,85 @@ function buildCompactMarkdown({
 
 function LoadingState() {
   return (
-    <div className="space-y-4 pt-2">
-      <Skeleton className="h-28 rounded-lg" />
-      <Skeleton className="h-40 rounded-lg" />
-      <Skeleton className="h-52 rounded-lg" />
-      <Skeleton className="h-24 rounded-lg" />
-    </div>
+    <LoadingRegion label="Loading AI settlement summary" className="space-y-4 pt-2">
+      <section className="rounded-lg border bg-card p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-4 w-full max-w-sm" />
+          </div>
+          <Skeleton className="h-5 w-16 rounded" />
+        </div>
+        <ul className="mt-3 space-y-2">
+          {[0, 1].map((item) => (
+            <li key={item} className="flex gap-2">
+              <Skeleton className="mt-0.5 h-4 w-4 shrink-0 rounded" />
+              <Skeleton className="h-4 w-full max-w-lg" />
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="space-y-3">
+        <SkeletonSectionHeader width="w-28" />
+        <div className="divide-y rounded-lg border bg-background">
+          {[0, 1].map((item) => (
+            <div key={item} className="p-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <Skeleton className="h-3.5 w-32" />
+                </div>
+                <Skeleton className="h-5 w-20 shrink-0" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-2">
+        {[0, 1, 2, 3].map((item) => (
+          <SkeletonMetricTile key={item} />
+        ))}
+      </section>
+
+      <section className="rounded-lg border bg-background p-4">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-24 w-24 shrink-0 rounded-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-4 w-full max-w-sm" />
+          </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3">
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+        </div>
+        <div className="mt-5 space-y-4">
+          {[0, 1].map((group) => (
+            <div key={group} className="space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3.5 w-24" />
+              </div>
+              {[0, 1, 2].map((row) => (
+                <div key={row} className="space-y-1.5">
+                  <div className="flex justify-between gap-3">
+                    <Skeleton className="h-3.5 w-24" />
+                    <Skeleton className="h-3.5 w-20" />
+                  </div>
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </section>
+    </LoadingRegion>
   );
 }
 

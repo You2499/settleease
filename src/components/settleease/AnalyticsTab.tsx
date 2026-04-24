@@ -40,6 +40,14 @@ import {
   LineChart as VisxLineChart,
   StackedAreaChart,
 } from "./analytics/VisxPrimitives";
+import {
+  ExpenseActivitySkeleton,
+  LoadingRegion,
+  SkeletonChartPanel,
+  SkeletonMetricTile,
+  SkeletonSectionHeader,
+  SkeletonToolbar,
+} from "./SkeletonLayouts";
 
 interface AnalyticsTabProps {
   expenses: Expense[];
@@ -1008,6 +1016,7 @@ function AnalyticsEmptyState() {
 
 function AnalyticsSkeleton() {
   return (
+    <LoadingRegion label="Loading analytics" className="h-full">
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
       <CardHeader className="shrink-0 border-b px-4 sm:px-6 pt-4 sm:pt-6 pb-4">
         <div className="flex items-center gap-2">
@@ -1017,39 +1026,69 @@ function AnalyticsSkeleton() {
       </CardHeader>
       <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-3 sm:px-6 py-4 sm:py-6">
         <div className="min-w-0 space-y-4 sm:space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
-            <Skeleton className="h-14 rounded-lg" />
-            <Skeleton className="h-14 rounded-lg" />
-            <Skeleton className="h-14 rounded-lg" />
-          </div>
+          <SkeletonToolbar count={3} className="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" />
 
           <Separator />
 
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-28" />
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-28" />
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-              <Skeleton className="h-[250px] rounded-lg" />
+              <SkeletonChartPanel chartClassName="h-[250px]" />
               <div className="grid gap-3 sm:grid-cols-2">
-                <Skeleton className="h-[120px] rounded-lg" />
-                <Skeleton className="h-[120px] rounded-lg" />
-                <Skeleton className="h-[120px] rounded-lg" />
-                <Skeleton className="h-[120px] rounded-lg" />
+                {[0, 1, 2, 3].map((item) => (
+                  <SkeletonMetricTile key={item} className="min-h-[120px]" />
+                ))}
               </div>
             </div>
-          </div>
+          </section>
 
           <Separator />
 
-          <div className="space-y-4">
-            <Skeleton className="h-6 w-32" />
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-32" />
             <div className="grid gap-4 xl:grid-cols-2">
-              <Skeleton className="h-[320px] rounded-lg" />
-              <Skeleton className="h-[320px] rounded-lg" />
+              <SkeletonChartPanel chartClassName="h-[260px]" />
+              <SkeletonChartPanel chartClassName="h-[260px]" />
             </div>
-          </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-24" />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.85fr)]">
+              <SkeletonChartPanel chartClassName="h-[260px]" />
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <SkeletonMetricTile />
+                <SkeletonMetricTile />
+              </div>
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-28" />
+            <div className="grid gap-4 xl:grid-cols-2">
+              <SkeletonChartPanel chartClassName="h-[220px]" />
+              <SkeletonChartPanel chartClassName="h-[220px]" />
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="space-y-4 min-w-0">
+            <SkeletonSectionHeader width="w-24" />
+            <ul className="space-y-3">
+              <ExpenseActivitySkeleton />
+              <ExpenseActivitySkeleton />
+              <ExpenseActivitySkeleton />
+            </ul>
+          </section>
         </div>
       </CardContent>
     </Card>
+    </LoadingRegion>
   );
 }
 

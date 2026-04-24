@@ -5,9 +5,40 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { FileDown } from 'lucide-react';
 import type { ActiveView } from '@/lib/settleease';
+import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingRegion } from './SkeletonLayouts';
 
 interface SettingsTabProps {
   onNavigate: (view: ActiveView) => void;
+}
+
+export function SettingsTabSkeleton() {
+  return (
+    <LoadingRegion label="Loading settings" className="space-y-6">
+      <div>
+        <Skeleton className="mb-2 h-8 w-40" />
+        <Skeleton className="h-4 w-full max-w-md" />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="rounded-lg">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-lg" />
+              <div className="min-w-0 flex-1 space-y-2">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-4 w-full max-w-[260px]" />
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="mb-4 h-4 w-full max-w-lg" />
+            <Skeleton className="h-10 w-full rounded-lg" />
+          </CardContent>
+        </Card>
+      </div>
+    </LoadingRegion>
+  );
 }
 
 export default function SettingsTab({ onNavigate }: SettingsTabProps) {

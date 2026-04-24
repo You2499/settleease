@@ -5,10 +5,17 @@ import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { FileText, Sparkles } from 'lucide-react';
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import {
+  ExpenseActivitySkeleton,
+  LoadingRegion,
+  SettlementActivitySkeleton,
+  SkeletonCardHeader,
+  SkeletonSectionHeader,
+  SkeletonToolbar,
+} from './SkeletonLayouts';
 
 import dynamic from 'next/dynamic';
 
@@ -24,6 +31,83 @@ import ExpenseLog from './dashboard/ExpenseLog';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import ManualOverrideAlert from './ManualOverrideAlert';
+
+function SettlementSummarySkeleton() {
+  return (
+    <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg">
+      <SkeletonCardHeader
+        titleWidth="w-52"
+        descriptionWidth="w-full max-w-lg"
+        actions={["w-full sm:w-44", "w-full sm:w-32"]}
+      />
+      <CardContent className="space-y-4 px-4 py-4 sm:px-6 sm:py-6">
+        <div className="grid gap-2 rounded-lg bg-muted p-1 sm:grid-cols-2">
+          <Skeleton className="h-9 rounded-md" />
+          <Skeleton className="h-9 rounded-md" />
+        </div>
+        <div className="rounded-lg border bg-card/50 p-4">
+          <Skeleton className="h-4 w-full max-w-2xl" />
+          <Skeleton className="mt-2 h-4 w-full max-w-xl" />
+        </div>
+        <div className="flex flex-col gap-3 rounded-lg border bg-card/50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-3.5 w-64 max-w-full" />
+          </div>
+          <Skeleton className="h-6 w-11 rounded-full" />
+        </div>
+        <div className="space-y-3">
+          <SkeletonSectionHeader width="w-44" actionWidth="w-24" />
+          <ul className="space-y-3">
+            {[0, 1, 2].map((item) => (
+              <SettlementActivitySkeleton key={item} actions={1} />
+            ))}
+          </ul>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ExpenseLogSkeleton() {
+  return (
+    <Card className="flex min-h-0 w-full flex-1 flex-col overflow-hidden rounded-lg shadow-lg">
+      <SkeletonCardHeader
+        titleWidth="w-44"
+        descriptionWidth="w-full max-w-sm"
+        actions={["w-24"]}
+      />
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-6 sm:py-6">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <SkeletonToolbar count={2} className="grid-cols-1 sm:grid-cols-2" itemClassName="h-10 rounded-lg" />
+        <div className="min-h-0 flex-1 space-y-4">
+          {[0, 1].map((group) => (
+            <div key={group} className="space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-px flex-1" />
+                <Skeleton className="h-5 w-28" />
+                <Skeleton className="h-px flex-1" />
+              </div>
+              <ul className="space-y-3">
+                <ExpenseActivitySkeleton showBadge={group === 0} />
+                {group === 0 ? <SettlementActivitySkeleton /> : <ExpenseActivitySkeleton />}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <LoadingRegion label="Loading dashboard" className="flex h-full min-h-0 flex-1 flex-col space-y-6 py-2">
+      <SettlementSummarySkeleton />
+      <ExpenseLogSkeleton />
+    </LoadingRegion>
+  );
+}
 
 interface BetaDashboardViewProps {
   expenses: Expense[];
@@ -137,72 +221,8 @@ export default function BetaDashboardView({
 
   const isLoading = isLoadingPeople || isLoadingExpenses || isLoadingSettlements || !isDataFetchedAtLeastOnce;
 
-  // Beta skeleton with warm-toned ElevenLabs aesthetic
   if (isLoading) {
-    return (
-      <div className="h-full flex-1 flex flex-col space-y-8 min-h-0 py-2">
-        {/* Settlement Hub Skeleton */}
-        <div className="w-full flex flex-col shadow-lg rounded-lg bg-card overflow-hidden" style={{ borderRadius: '1rem' }}>
-          <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full">
-              <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-48 sm:w-64 rounded-full" style={{ opacity: 0.4 }} />
-              </div>
-              <Skeleton className="h-10 w-full sm:w-56 rounded-full" style={{ opacity: 0.3 }} />
-            </div>
-          </div>
-          <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-3 flex-1 flex flex-col min-h-0">
-            {/* Description area */}
-            <div className="px-4 py-3 rounded-2xl mb-4" style={{ background: 'rgba(245, 242, 239, 0.5)' }}>
-              <Skeleton className="h-4 w-full sm:w-96 rounded-full" style={{ opacity: 0.3 }} />
-            </div>
-            {/* Transaction cards */}
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-card px-5 py-4 rounded-2xl" style={{ boxShadow: 'rgba(0,0,0,0.06) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 4px' }}>
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <Skeleton className="h-4 w-20 rounded-full" style={{ opacity: 0.3 }} />
-                      <Skeleton className="h-3 w-3 rounded-full" style={{ opacity: 0.2 }} />
-                      <Skeleton className="h-4 w-20 rounded-full" style={{ opacity: 0.3 }} />
-                    </div>
-                    <Skeleton className="h-5 w-24 rounded-full" style={{ opacity: 0.3 }} />
-                  </div>
-                  <Skeleton className="h-9 w-32 rounded-full mt-3" style={{ opacity: 0.2 }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Activity Feed Skeleton */}
-        <div className="w-full flex-1 flex flex-col shadow-lg rounded-lg bg-card overflow-hidden min-h-0" style={{ borderRadius: '1rem' }}>
-          <div className="px-6 sm:px-8 pt-6 sm:pt-8 pb-3">
-            <Skeleton className="h-8 w-44 rounded-full" style={{ opacity: 0.4 }} />
-            <Skeleton className="h-3 w-36 mt-2 rounded-full" style={{ opacity: 0.2 }} />
-          </div>
-          <div className="px-6 sm:px-8 pb-6 sm:pb-8 pt-2 flex-1 flex flex-col min-h-0">
-            {/* Search bar */}
-            <Skeleton className="h-10 w-full rounded-full mb-4" style={{ opacity: 0.2 }} />
-            {/* Expense cards */}
-            <div className="space-y-3">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-card px-5 py-4 rounded-2xl" style={{ boxShadow: 'rgba(0,0,0,0.06) 0px 0px 0px 1px, rgba(0,0,0,0.04) 0px 2px 4px' }}>
-                  <div className="flex justify-between items-center">
-                    <Skeleton className="h-5 w-40 rounded-full" style={{ opacity: 0.3 }} />
-                    <Skeleton className="h-4 w-20 rounded-full" style={{ opacity: 0.3 }} />
-                  </div>
-                  <div className="flex justify-between items-center mt-2">
-                    <Skeleton className="h-3 w-24 rounded-full" style={{ opacity: 0.2 }} />
-                    <Skeleton className="h-3 w-28 rounded-full" style={{ opacity: 0.2 }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   // Empty state: no people or expenses

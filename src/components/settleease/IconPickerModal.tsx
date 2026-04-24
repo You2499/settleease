@@ -1,6 +1,7 @@
 import React, { useState, useMemo, Suspense } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import * as LucideIcons from 'lucide-react';
 import lucideMetadata from '@/lib/lucide-icons-metadata.json';
 
@@ -140,7 +141,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                           title={iconName}
                           type="button"
                         >
-                          <Suspense fallback={<div style={{ width: ICON_SIZE, height: ICON_SIZE }} />}>
+                          <Suspense fallback={<Skeleton className="rounded" style={{ width: ICON_SIZE, height: ICON_SIZE }} />}>
                             <Icon width={ICON_SIZE} height={ICON_SIZE} className="text-foreground group-hover:text-primary transition-colors" />
                           </Suspense>
                           <span className="mt-1 text-xs text-muted-foreground truncate w-full text-center">{iconName}</span>
@@ -158,7 +159,7 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                     <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center h-full justify-center">
                       {SelectedIconComp && (
                         <div className="flex flex-col items-center gap-2 w-full">
-                          <Suspense fallback={<div style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
+                          <Suspense fallback={<Skeleton className="rounded-lg" style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
                             <SelectedIconComp width={PREVIEW_SIZE} height={PREVIEW_SIZE} className="text-primary" />
                           </Suspense>
                           <div className="text-base font-bold mt-1 text-foreground dark:text-white text-center w-full truncate">{toKebabCase(selectedIcon)}</div>
@@ -202,4 +203,4 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
       `}</style>
     </Dialog>
   );
-} 
+}

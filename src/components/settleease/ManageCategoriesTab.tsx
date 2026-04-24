@@ -25,6 +25,12 @@ import { toast } from "@/hooks/use-toast";
 import type { Category } from '@/lib/settleease/types';
 import IconPickerModal from './IconPickerModal';
 import * as LucideIcons from 'lucide-react';
+import {
+  LoadingRegion,
+  SkeletonCardHeader,
+  SkeletonFormField,
+  SkeletonSectionHeader,
+} from './SkeletonLayouts';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -219,49 +225,44 @@ export default function ManageCategoriesTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
-          <Skeleton className="h-7 sm:h-8 w-full max-w-[180px] sm:w-56" />
-          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-          {/* Add New Category Section Skeleton - Mobile Optimized */}
-          <div className="p-4 sm:p-5 border rounded-lg space-y-3">
-            <Skeleton className="h-5 sm:h-6 w-36 sm:w-48" />
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Skeleton className="h-10 sm:h-11 flex-1" />
-              <Skeleton className="h-10 sm:h-11 w-full sm:w-24" />
-              <Skeleton className="h-10 sm:h-11 w-full sm:w-32" />
+      <LoadingRegion label="Loading category management" className="h-full">
+        <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
+          <SkeletonCardHeader titleWidth="w-52" descriptionWidth="w-full max-w-lg" />
+          <CardContent className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-3">
+              <SkeletonSectionHeader width="w-44" />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_120px_140px] sm:items-end sm:gap-3">
+                <SkeletonFormField labelWidth="w-28" />
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-3.5 w-16" />
+                  <Skeleton className="h-10 w-full rounded-lg sm:h-11" />
+                </div>
+                <Skeleton className="h-10 w-full rounded-lg sm:h-11" />
+              </div>
             </div>
-          </div>
-          
-          {/* Categories List Skeleton - Mobile Optimized */}
-          <div className="flex-1 min-h-0">
-            <div className="flex items-center justify-between mb-3">
-              <Skeleton className="h-5 sm:h-6 w-full max-w-[160px] sm:w-56" />
-              <Skeleton className="h-9 w-24 sm:w-28" />
-            </div>
-            <div className="space-y-2 sm:space-y-2.5">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <Card key={i} className="bg-card/70 rounded-md">
-                  <div className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                        <Skeleton className="h-5 w-5 flex-shrink-0" />
-                        <Skeleton className="h-5 w-28 sm:w-32" />
+
+            <div className="flex-1 min-h-0">
+              <SkeletonSectionHeader width="w-48" actionWidth="w-28" className="mb-3" />
+              <div className="space-y-2 sm:space-y-2.5">
+                {[0, 1, 2, 3, 4].map((item) => (
+                  <div key={item} className="rounded-md bg-card/70 border">
+                    <div className="flex items-center justify-between gap-3 p-3 sm:p-4">
+                      <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+                        <Skeleton className="h-5 w-5 shrink-0 rounded" />
+                        <Skeleton className="h-5 w-32 max-w-full" />
                       </div>
-                      <div className="flex gap-1 sm:gap-2">
-                        <Skeleton className="h-8 w-8" />
-                        <Skeleton className="h-8 w-8" />
+                      <div className="flex shrink-0 gap-1 sm:gap-2">
+                        <Skeleton className="h-8 w-8 rounded-md" />
+                        <Skeleton className="h-8 w-8 rounded-md" />
                       </div>
                     </div>
                   </div>
-                </Card>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </LoadingRegion>
     );
   }
   return (
@@ -299,7 +300,7 @@ export default function ManageCategoriesTab({
                   onClick={() => setShowAddIconModal(true)}
                   disabled={isLoading}
                 >
-                  <React.Suspense fallback={<span className="w-5 h-5" />}>
+                  <React.Suspense fallback={<Skeleton className="h-5 w-5 rounded" />}>
                     {DynamicIcon && <DynamicIcon className="h-5 w-5" />}
                   </React.Suspense>
                   {newCategoryIconKey || 'Choose Icon'}
@@ -357,9 +358,9 @@ export default function ManageCategoriesTab({
                                 disabled={isLoading}
                               />
                               <Button type="button" variant="outline" onClick={() => setShowEditIconModal(true)} disabled={isLoading} className="w-[220px] h-8 sm:h-9 text-xs sm:text-sm flex-shrink-0 flex items-center gap-2 mt-1">
-                                <React.Suspense fallback={<span className="w-5 h-5" />}>
-                                  {DynamicEditIcon && <DynamicEditIcon className="h-5 w-5" />}
-                                </React.Suspense>
+                              <React.Suspense fallback={<Skeleton className="h-5 w-5 rounded" />}>
+                                {DynamicEditIcon && <DynamicEditIcon className="h-5 w-5" />}
+                              </React.Suspense>
                                 {editingIconKey || 'Choose Icon'}
                               </Button>
                               <IconPickerModal

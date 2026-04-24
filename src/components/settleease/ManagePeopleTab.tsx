@@ -22,6 +22,13 @@ import {
 import { PlusCircle, Trash2, Pencil, Save, Ban, Users, AlertTriangle, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Person } from '@/lib/settleease';
+import {
+  LoadingRegion,
+  PersonRowSkeleton,
+  SkeletonCardHeader,
+  SkeletonFormField,
+  SkeletonSectionHeader,
+} from './SkeletonLayouts';
 
 interface ManagePeopleTabProps {
   people: Person[];
@@ -118,42 +125,29 @@ export default function ManagePeopleTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
-          <Skeleton className="h-7 sm:h-8 w-full max-w-[160px] sm:w-48" />
-          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
-        </CardHeader>
-        <CardContent className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-          {/* Add New Person Section Skeleton - Mobile Optimized */}
-          <div className="p-4 sm:p-5 border rounded-lg space-y-3">
-            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Skeleton className="h-10 sm:h-11 flex-1" />
-              <Skeleton className="h-10 sm:h-11 w-full sm:w-32" />
+      <LoadingRegion label="Loading people management" className="h-full">
+        <Card className="shadow-lg rounded-lg h-full flex flex-col bg-background">
+          <SkeletonCardHeader titleWidth="w-44" descriptionWidth="w-full max-w-lg" />
+          <CardContent className="flex-1 flex flex-col min-h-0 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-3">
+              <SkeletonSectionHeader width="w-36" />
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-3">
+                <SkeletonFormField className="flex-1" labelWidth="w-24" />
+                <Skeleton className="h-10 w-full rounded-lg sm:h-11 sm:w-32" />
+              </div>
             </div>
-          </div>
-          
-          {/* People List Skeleton - Mobile Optimized */}
-          <div className="flex-1 min-h-0">
-            <Skeleton className="h-5 sm:h-6 w-full max-w-[200px] sm:w-48 mb-3" />
-            <div className="space-y-2 sm:space-y-2.5">
-              {[1, 2, 3, 4].map((i) => (
-                <Card key={i} className="bg-card/70 rounded-md">
-                  <div className="p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
-                      <Skeleton className="h-5 w-28 sm:w-32" />
-                      <div className="flex gap-1 sm:gap-2">
-                        <Skeleton className="h-8 w-8" />
-                        <Skeleton className="h-8 w-8" />
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+
+            <div className="flex-1 min-h-0">
+              <SkeletonSectionHeader width="w-48" className="mb-3" />
+              <div className="space-y-2 sm:space-y-2.5">
+                {[0, 1, 2, 3].map((item) => (
+                  <PersonRowSkeleton key={item} actions={2} />
+                ))}
+              </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </LoadingRegion>
     );
   }
   

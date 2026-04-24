@@ -28,6 +28,11 @@ import type {
 } from '@/lib/settleease/types';
 import { formatCurrency } from '@/lib/settleease/utils';
 import { compressImage, formatFileSize, isSupportedImageType } from '@/lib/settleease/imageUtils';
+import {
+  LoadingRegion,
+  SkeletonSectionHeader,
+  StepRailSkeleton,
+} from './SkeletonLayouts';
 
 interface ScanReceiptTabProps {
   people: Person[];
@@ -553,25 +558,62 @@ export default function ScanReceiptTab({
 
   if (isLoadingData) {
     return (
-      <Card className="h-full overflow-hidden rounded-lg border shadow-xl">
-        <CardHeader className="border-b p-4 sm:p-6">
-          <Skeleton className="h-8 w-44" />
-          <Skeleton className="h-4 w-full max-w-md" />
-          <div className="grid grid-cols-4 gap-2 pt-3">
-            {[1, 2, 3, 4].map((item) => (
-              <Skeleton key={item} className="h-12 rounded-lg" />
-            ))}
-          </div>
-        </CardHeader>
-        <CardContent className="flex h-full flex-1 flex-col justify-center gap-4 p-4 sm:p-6">
-          <Skeleton className="h-64 rounded-lg" />
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Skeleton className="h-20 rounded-lg" />
-            <Skeleton className="h-20 rounded-lg" />
-            <Skeleton className="h-20 rounded-lg" />
-          </div>
-        </CardContent>
-      </Card>
+      <LoadingRegion label="Loading smart scan" className="h-full">
+        <Card className="flex h-full flex-col overflow-hidden rounded-lg border shadow-xl">
+          <CardHeader className="border-b p-4 sm:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0 space-y-2">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 shrink-0 rounded-lg" />
+                  <Skeleton className="h-8 w-44" />
+                </div>
+                <Skeleton className="h-4 w-full max-w-xl" />
+              </div>
+              <Skeleton className="h-7 w-28 rounded-full" />
+            </div>
+            <div className="pt-1">
+              <StepRailSkeleton />
+            </div>
+          </CardHeader>
+          <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+              <section className="overflow-hidden rounded-lg border bg-background">
+                <div className="flex min-h-[360px] flex-col items-center justify-center p-5 text-center sm:p-8">
+                  <Skeleton className="h-20 w-20 rounded-lg" />
+                  <Skeleton className="mt-5 h-7 w-56" />
+                  <Skeleton className="mt-3 h-4 w-full max-w-md" />
+                  <Skeleton className="mt-2 h-4 w-full max-w-sm" />
+                  <div className="mt-6 grid w-full max-w-sm gap-3 sm:grid-cols-2">
+                    <Skeleton className="h-12 rounded-lg" />
+                    <Skeleton className="h-12 rounded-lg" />
+                  </div>
+                </div>
+              </section>
+
+              <aside className="space-y-4">
+                <section className="rounded-lg border bg-background p-4">
+                  <SkeletonSectionHeader width="w-36" />
+                  <div className="mt-4 space-y-3">
+                    {[0, 1, 2].map((item) => (
+                      <div key={item} className="flex gap-2">
+                        <Skeleton className="mt-0.5 h-4 w-4 shrink-0 rounded" />
+                        <Skeleton className="h-4 w-full max-w-[260px]" />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                <Skeleton className="h-11 w-full rounded-lg" />
+              </aside>
+            </div>
+          </CardContent>
+          <CardFooter className="border-t p-4 sm:p-6">
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:justify-between">
+              <Skeleton className="h-10 w-full rounded-lg sm:w-28" />
+              <Skeleton className="h-10 w-full rounded-lg sm:w-36" />
+            </div>
+          </CardFooter>
+        </Card>
+      </LoadingRegion>
     );
   }
 

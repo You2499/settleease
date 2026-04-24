@@ -75,7 +75,7 @@ export interface SelectedBudgetLine {
 
 export type BudgetVatClass = 'standard' | 'alcohol';
 export type BudgetVatConfidence = 'low' | 'medium' | 'high';
-export type BudgetVatSource = 'ai' | 'heuristic';
+export type BudgetVatSource = 'ai';
 
 export interface BudgetVatClassification {
   key: string;

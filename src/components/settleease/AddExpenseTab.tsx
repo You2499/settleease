@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, AlertTriangle, Users, Wallet } from 'lucide-react';
+import {
+  LoadingRegion,
+  SkeletonCardHeader,
+  SkeletonFormField,
+  SkeletonSectionHeader,
+} from './SkeletonLayouts';
 
 import PayerInputSection from './addexpense/PayerInputSection';
 import SplitMethodSelector from './addexpense/SplitMethodSelector';
@@ -444,44 +450,75 @@ export default function AddExpenseTab({
   // Show skeleton loaders while data is loading
   if (isLoadingData) {
     return (
-      <Card className="shadow-xl rounded-lg h-full flex flex-col bg-background">
-        <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b">
-          <Skeleton className="h-7 sm:h-8 w-full max-w-[200px] sm:w-64" />
-          <Skeleton className="h-4 w-full sm:w-96 mt-2" />
-        </CardHeader>
-        <CardContent className="flex-1 px-4 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-          {/* Bill Information Skeleton - Mobile Optimized */}
-          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
-            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
-            <Skeleton className="h-10 sm:h-11 w-full" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-              <Skeleton className="h-10 sm:h-11 w-full" />
-              <Skeleton className="h-10 sm:h-11 w-full" />
+      <LoadingRegion label={expenseToEdit ? "Loading expense editor" : "Loading add expense form"} className="h-full">
+        <Card className="shadow-xl rounded-lg h-full flex flex-col bg-background">
+          <SkeletonCardHeader
+            titleWidth={expenseToEdit ? "w-44" : "w-52"}
+            descriptionWidth="w-full max-w-lg"
+          />
+          <CardContent className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-6 sm:space-y-8">
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-4">
+              <SkeletonSectionHeader width="w-36" />
+              <SkeletonFormField labelWidth="w-24" />
+              <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+                <SkeletonFormField labelWidth="w-20" />
+                <SkeletonFormField labelWidth="w-16" />
+              </div>
+              <SkeletonFormField labelWidth="w-20" />
             </div>
-            <Skeleton className="h-10 sm:h-11 w-full" />
-          </div>
-          
-          {/* Payment Details Skeleton - Mobile Optimized */}
-          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
-            <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
-            <Skeleton className="h-10 sm:h-11 w-full" />
-          </div>
-          
-          {/* Split Method Skeleton - Mobile Optimized */}
-          <div className="p-4 sm:p-5 border rounded-lg space-y-3 sm:space-y-4">
-            <Skeleton className="h-5 sm:h-6 w-24 sm:w-32" />
-            <Skeleton className="h-10 w-full sm:max-w-md" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-              {[1, 2, 3, 4].map((i) => (
-                <Skeleton key={i} className="h-14 sm:h-16 w-full" />
-              ))}
+
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <SkeletonSectionHeader width="w-40" className="flex-1" />
+                <Skeleton className="h-6 w-11 rounded-full" />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <SkeletonFormField labelWidth="w-32" />
+                <SkeletonFormField labelWidth="w-28" />
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-4">
+              <SkeletonSectionHeader width="w-36" />
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
+                <SkeletonFormField labelWidth="w-20" />
+                <SkeletonFormField labelWidth="w-16" />
+              </div>
+              <div className="flex items-center gap-2">
+                <Skeleton className="h-5 w-5 rounded" />
+                <Skeleton className="h-4 w-40" />
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-4">
+              <SkeletonSectionHeader width="w-32" />
+              <div className="grid gap-2 sm:grid-cols-3">
+                {[0, 1, 2].map((item) => (
+                  <Skeleton key={item} className="h-12 rounded-lg" />
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50 space-y-4">
+              <SkeletonSectionHeader width="w-48" actionWidth="w-24" />
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {[0, 1, 2, 3].map((item) => (
+                  <div key={item} className="flex items-center gap-2 rounded-lg border bg-background p-3">
+                    <Skeleton className="h-5 w-5 rounded" />
+                    <Skeleton className="h-4 w-28" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+          <div className="border-t px-4 py-3 sm:px-6 sm:py-4">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {expenseToEdit ? <Skeleton className="h-10 w-full rounded-lg sm:w-24" /> : null}
+              <Skeleton className="h-10 w-full rounded-lg sm:w-36" />
             </div>
           </div>
-        </CardContent>
-        <div className="border-t px-4 sm:px-6 py-3 sm:py-4">
-          <Skeleton className="h-9 sm:h-10 w-28 sm:w-32 ml-auto" />
-        </div>
-      </Card>
+        </Card>
+      </LoadingRegion>
     );
   }
   // Show empty state only when NOT loading and no people exist
