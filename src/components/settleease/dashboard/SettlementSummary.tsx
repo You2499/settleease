@@ -70,6 +70,7 @@ interface SettlementSummaryProps {
   onUnmarkSettlementPayment: (payment: SettlementPayment) => Promise<void>;
   onViewExpenseDetails: (expense: Expense) => void;
   onViewExpenseDetailsFromStep2?: (expense: Expense) => void;
+  onCreateBudget: () => void;
 
   getCategoryIconFromName: (categoryName: string) => React.FC<React.SVGProps<SVGSVGElement>>;
   categories: any[];
@@ -92,6 +93,7 @@ export default function SettlementSummary({
   onUnmarkSettlementPayment,
   onViewExpenseDetails,
   onViewExpenseDetailsFromStep2,
+  onCreateBudget,
   getCategoryIconFromName,
   categories,
   userRole,
@@ -308,11 +310,20 @@ export default function SettlementSummary({
       >
         <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-            <div className="flex items-center justify-between sm:justify-start gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 sm:justify-start">
               <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
                 <Handshake className="mr-2 h-5 w-5 text-primary" /> Settlement
                 Hub
               </CardTitle>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onCreateBudget}
+                className="gap-2 whitespace-nowrap"
+              >
+                <Calculator className="h-4 w-4" />
+                Create Your Budget
+              </Button>
               <Button
                 ref={summaryButtonRef}
                 size="sm"

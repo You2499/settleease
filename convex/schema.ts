@@ -69,6 +69,51 @@ export default defineSchema({
     updatedAt: v.optional(v.string()),
   }).index("by_created_at", ["createdAt"]),
 
+  budgetItems: defineTable({
+    name: v.string(),
+    normalizedName: v.string(),
+    categoryName: v.string(),
+    normalizedCategoryName: v.string(),
+    catalogKey: v.string(),
+    searchText: v.string(),
+    defaultPrice: v.number(),
+    averagePrice: v.number(),
+    latestPrice: v.number(),
+    minPrice: v.number(),
+    maxPrice: v.number(),
+    historicalAveragePrice: v.number(),
+    historicalLatestPrice: v.number(),
+    historicalMinPrice: v.number(),
+    historicalMaxPrice: v.number(),
+    historicalTotalPrice: v.number(),
+    historicalObservationCount: v.number(),
+    customAveragePrice: v.number(),
+    customLatestPrice: v.number(),
+    customMinPrice: v.number(),
+    customMaxPrice: v.number(),
+    customTotalPrice: v.number(),
+    customObservationCount: v.number(),
+    source: v.union(
+      v.literal("historical"),
+      v.literal("custom"),
+      v.literal("mixed"),
+    ),
+    isActive: v.boolean(),
+    createdByUserId: v.optional(v.union(v.string(), v.null())),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    lastObservedAt: v.optional(v.union(v.string(), v.null())),
+    lastCustomAt: v.optional(v.union(v.string(), v.null())),
+  })
+    .index("by_catalog_key", ["catalogKey"])
+    .index("by_active", ["isActive"])
+    .index("by_active_category", ["isActive", "categoryName"])
+    .index("by_updated_at", ["updatedAt"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["isActive", "categoryName"],
+    }),
+
   settlementPayments: defineTable({
     debtorId: v.string(),
     creditorId: v.string(),

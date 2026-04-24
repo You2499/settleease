@@ -138,6 +138,208 @@ function manualOverrideDto(override: any) {
   };
 }
 
+const UNCATEGORIZED_BUDGET_CATEGORY = "Uncategorized";
+
+function cleanBudgetItemName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizeBudgetItemName(value: string) {
+  return cleanBudgetItemName(value).toLowerCase();
+}
+
+function cleanBudgetCategoryName(value?: string | null) {
+  const category = String(value ?? "").trim().replace(/\s+/g, " ");
+  return category || UNCATEGORIZED_BUDGET_CATEGORY;
+}
+
+function normalizeBudgetCategoryName(value?: string | null) {
+  return cleanBudgetCategoryName(value).toLowerCase();
+}
+
+function buildBudgetCatalogKey(name: string, categoryName?: string | null) {
+  return `${normalizeBudgetItemName(name)}::${normalizeBudgetCategoryName(categoryName)}`;
+}
+
+function buildBudgetSearchText(name: string, categoryName: string) {
+  return `${name} ${categoryName}`.trim().toLowerCase();
+}
+
+function roundBudgetPrice(value: number) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(value * 100) / 100;
+}
+
+function toPositiveBudgetPrice(value: unknown) {
+  const price = Number(value);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  return roundBudgetPrice(price);
+}
+
+function budgetSource(
+  historicalObservationCount: number,
+  customObservationCount: number,
+): "historical" | "custom" | "mixed" {
+  if (historicalObservationCount > 0 && customObservationCount > 0) {
+    return "mixed";
+  }
+  if (customObservationCount > 0) return "custom";
+  return "historical";
+}
+
+function pickLatestBudgetPrice(args: {
+  historicalLatestPrice: number;
+  historicalLastObservedAt?: string | null;
+  customLatestPrice: number;
+  customLastObservedAt?: string | null;
+}) {
+  if (!args.customLastObservedAt) return args.historicalLatestPrice;
+  if (!args.historicalLastObservedAt) return args.customLatestPrice;
+
+  const historicalTime = new Date(args.historicalLastObservedAt).getTime();
+  const customTime = new Date(args.customLastObservedAt).getTime();
+  if (Number.isFinite(customTime) && customTime >= historicalTime) {
+    return args.customLatestPrice;
+  }
+  return args.historicalLatestPrice;
+}
+
+function combineBudgetStats(args: {
+  historicalObservationCount: number;
+  historicalTotalPrice: number;
+  historicalLatestPrice: number;
+  historicalMinPrice: number;
+  historicalMaxPrice: number;
+  lastObservedAt?: string | null;
+  customObservationCount: number;
+  customTotalPrice: number;
+  customLatestPrice: number;
+  customMinPrice: number;
+  customMaxPrice: number;
+  lastCustomAt?: string | null;
+}) {
+  const totalObservationCount =
+    args.historicalObservationCount + args.customObservationCount;
+  const averagePrice =
+    totalObservationCount > 0
+      ? roundBudgetPrice(
+          (args.historicalTotalPrice + args.customTotalPrice) /
+            totalObservationCount,
+        )
+      : 0;
+
+  const minCandidates = [
+    args.historicalObservationCount > 0 ? args.historicalMinPrice : null,
+    args.customObservationCount > 0 ? args.customMinPrice : null,
+  ].filter((value): value is number => typeof value === "number");
+
+  const maxCandidates = [
+    args.historicalObservationCount > 0 ? args.historicalMaxPrice : null,
+    args.customObservationCount > 0 ? args.customMaxPrice : null,
+  ].filter((value): value is number => typeof value === "number");
+
+  return {
+    averagePrice,
+    defaultPrice: averagePrice,
+    latestPrice: roundBudgetPrice(
+      pickLatestBudgetPrice({
+        historicalLatestPrice: args.historicalLatestPrice,
+        historicalLastObservedAt: args.lastObservedAt,
+        customLatestPrice: args.customLatestPrice,
+        customLastObservedAt: args.lastCustomAt,
+      }),
+    ),
+    minPrice:
+      minCandidates.length > 0
+        ? roundBudgetPrice(Math.min(...minCandidates))
+        : 0,
+    maxPrice:
+      maxCandidates.length > 0
+        ? roundBudgetPrice(Math.max(...maxCandidates))
+        : 0,
+    source: budgetSource(
+      args.historicalObservationCount,
+      args.customObservationCount,
+    ),
+  };
+}
+
+function getHistoricalBudgetStats(existing: any) {
+  const historicalObservationCount = Math.max(
+    0,
+    Math.floor(Number(existing?.historicalObservationCount) || 0),
+  );
+  const historicalTotalPrice =
+    Number(existing?.historicalTotalPrice) ||
+    roundBudgetPrice(Number(existing?.historicalAveragePrice) || 0) *
+      historicalObservationCount;
+
+  return {
+    historicalObservationCount,
+    historicalTotalPrice: roundBudgetPrice(historicalTotalPrice),
+    historicalLatestPrice:
+      historicalObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.historicalLatestPrice) || 0)
+        : 0,
+    historicalMinPrice:
+      historicalObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.historicalMinPrice) || 0)
+        : 0,
+    historicalMaxPrice:
+      historicalObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.historicalMaxPrice) || 0)
+        : 0,
+    lastObservedAt: existing?.lastObservedAt ?? null,
+  };
+}
+
+function getCustomBudgetStats(existing: any) {
+  const customObservationCount = Math.max(
+    0,
+    Math.floor(Number(existing?.customObservationCount) || 0),
+  );
+  const customTotalPrice =
+    Number(existing?.customTotalPrice) ||
+    roundBudgetPrice(Number(existing?.customAveragePrice) || 0) *
+      customObservationCount;
+
+  return {
+    customObservationCount,
+    customTotalPrice: roundBudgetPrice(customTotalPrice),
+    customLatestPrice:
+      customObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.customLatestPrice) || 0)
+        : 0,
+    customMinPrice:
+      customObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.customMinPrice) || 0)
+        : 0,
+    customMaxPrice:
+      customObservationCount > 0
+        ? roundBudgetPrice(Number(existing?.customMaxPrice) || 0)
+        : 0,
+    lastCustomAt: existing?.lastCustomAt ?? null,
+  };
+}
+
+function budgetItemDto(item: any) {
+  return {
+    id: item._id,
+    name: item.name,
+    category_name: item.categoryName,
+    default_price: item.defaultPrice,
+    average_price: item.averagePrice,
+    latest_price: item.latestPrice,
+    min_price: item.minPrice,
+    max_price: item.maxPrice,
+    historical_observation_count: item.historicalObservationCount,
+    custom_observation_count: item.customObservationCount,
+    source: item.source,
+    created_at: item.createdAt,
+    updated_at: item.updatedAt,
+  };
+}
+
 function aiPromptDto(prompt: any) {
   if (!prompt) return null;
   return {
@@ -579,6 +781,309 @@ export const listExpenses = query({
           new Date(b.created_at ?? 0).getTime() -
           new Date(a.created_at ?? 0).getTime(),
       );
+  },
+});
+
+export const listBudgetItems = query({
+  args: {
+    search: v.optional(v.string()),
+    categoryName: v.optional(v.union(v.string(), v.null())),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+
+    const limit = Math.min(Math.max(Math.floor(args.limit ?? 80), 1), 200);
+    const search = (args.search ?? "").trim();
+    const categoryName = args.categoryName
+      ? cleanBudgetCategoryName(args.categoryName)
+      : null;
+
+    if (search) {
+      const rows = await ctx.db
+        .query("budgetItems")
+        .withSearchIndex("search_text", (q) => {
+          const builder = q.search("searchText", search).eq("isActive", true);
+          return categoryName
+            ? builder.eq("categoryName", categoryName)
+            : builder;
+        })
+        .take(limit);
+      return rows.map(budgetItemDto);
+    }
+
+    const rows = categoryName
+      ? await ctx.db
+          .query("budgetItems")
+          .withIndex("by_active_category", (q) =>
+            q.eq("isActive", true).eq("categoryName", categoryName),
+          )
+          .collect()
+      : await ctx.db
+          .query("budgetItems")
+          .withIndex("by_active", (q) => q.eq("isActive", true))
+          .collect();
+
+    return rows
+      .map(budgetItemDto)
+      .sort(
+        (a, b) =>
+          a.category_name.localeCompare(b.category_name) ||
+          a.name.localeCompare(b.name),
+      )
+      .slice(0, limit);
+  },
+});
+
+export const upsertCustomBudgetItem = mutation({
+  args: {
+    name: v.string(),
+    categoryName: v.optional(v.union(v.string(), v.null())),
+    price: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireAdmin(ctx);
+    const name = cleanBudgetItemName(args.name);
+    const normalizedName = normalizeBudgetItemName(name);
+    const price = toPositiveBudgetPrice(args.price);
+
+    if (!normalizedName) {
+      throw new ConvexError("Budget item name cannot be empty.");
+    }
+    if (price === null) {
+      throw new ConvexError("Budget item price must be positive.");
+    }
+
+    const categoryName = cleanBudgetCategoryName(args.categoryName);
+    const normalizedCategoryName = normalizeBudgetCategoryName(categoryName);
+    const catalogKey = buildBudgetCatalogKey(name, categoryName);
+    const timestamp = nowIso();
+    const existing = await ctx.db
+      .query("budgetItems")
+      .withIndex("by_catalog_key", (q) => q.eq("catalogKey", catalogKey))
+      .first();
+
+    const historicalStats = getHistoricalBudgetStats(existing);
+    const customStats = getCustomBudgetStats(existing);
+    const nextCustomObservationCount = customStats.customObservationCount + 1;
+    const nextCustomTotalPrice = roundBudgetPrice(
+      customStats.customTotalPrice + price,
+    );
+    const nextCustomStats = {
+      customObservationCount: nextCustomObservationCount,
+      customTotalPrice: nextCustomTotalPrice,
+      customAveragePrice: roundBudgetPrice(
+        nextCustomTotalPrice / nextCustomObservationCount,
+      ),
+      customLatestPrice: price,
+      customMinPrice:
+        customStats.customObservationCount > 0
+          ? Math.min(customStats.customMinPrice, price)
+          : price,
+      customMaxPrice:
+        customStats.customObservationCount > 0
+          ? Math.max(customStats.customMaxPrice, price)
+          : price,
+      lastCustomAt: timestamp,
+    };
+    const combined = combineBudgetStats({
+      ...historicalStats,
+      ...nextCustomStats,
+    });
+
+    const payload = {
+      name,
+      normalizedName,
+      categoryName,
+      normalizedCategoryName,
+      catalogKey,
+      searchText: buildBudgetSearchText(name, categoryName),
+      ...combined,
+      ...historicalStats,
+      historicalAveragePrice:
+        historicalStats.historicalObservationCount > 0
+          ? roundBudgetPrice(
+              historicalStats.historicalTotalPrice /
+                historicalStats.historicalObservationCount,
+            )
+          : 0,
+      ...nextCustomStats,
+      isActive: true,
+      createdByUserId: existing?.createdByUserId ?? supabaseUserId,
+      updatedAt: timestamp,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+      return budgetItemDto(await ctx.db.get(existing._id));
+    }
+
+    const id = await ctx.db.insert("budgetItems", {
+      ...payload,
+      createdAt: timestamp,
+    });
+    return budgetItemDto(await ctx.db.get(id));
+  },
+});
+
+export const backfillBudgetItemsFromExpenses = mutation({
+  args: {
+    dryRun: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const dryRun = args.dryRun ?? false;
+    const timestamp = nowIso();
+    const expenses = await ctx.db.query("expenses").collect();
+    const historicalByKey = new Map<string, any>();
+    let itemObservationCount = 0;
+    let validObservationCount = 0;
+    let skippedObservationCount = 0;
+
+    for (const expense of expenses) {
+      if (!Array.isArray(expense.items)) continue;
+
+      for (const item of expense.items) {
+        itemObservationCount += 1;
+        const name = cleanBudgetItemName(String(item.name ?? ""));
+        const normalizedName = normalizeBudgetItemName(name);
+        const price = toPositiveBudgetPrice(item.price);
+
+        if (!normalizedName || price === null) {
+          skippedObservationCount += 1;
+          continue;
+        }
+
+        validObservationCount += 1;
+        const categoryName = cleanBudgetCategoryName(
+          item.categoryName || expense.category,
+        );
+        const normalizedCategoryName =
+          normalizeBudgetCategoryName(categoryName);
+        const catalogKey = buildBudgetCatalogKey(name, categoryName);
+        const observedAt = expense.updatedAt ?? expense.createdAt ?? timestamp;
+        const existing = historicalByKey.get(catalogKey);
+
+        if (!existing) {
+          historicalByKey.set(catalogKey, {
+            name,
+            normalizedName,
+            categoryName,
+            normalizedCategoryName,
+            catalogKey,
+            historicalObservationCount: 1,
+            historicalTotalPrice: price,
+            historicalLatestPrice: price,
+            historicalMinPrice: price,
+            historicalMaxPrice: price,
+            lastObservedAt: observedAt,
+          });
+          continue;
+        }
+
+        existing.historicalObservationCount += 1;
+        existing.historicalTotalPrice = roundBudgetPrice(
+          existing.historicalTotalPrice + price,
+        );
+        existing.historicalMinPrice = Math.min(
+          existing.historicalMinPrice,
+          price,
+        );
+        existing.historicalMaxPrice = Math.max(
+          existing.historicalMaxPrice,
+          price,
+        );
+
+        const existingTime = new Date(existing.lastObservedAt).getTime();
+        const observedTime = new Date(observedAt).getTime();
+        if (!Number.isFinite(existingTime) || observedTime >= existingTime) {
+          existing.name = name;
+          existing.historicalLatestPrice = price;
+          existing.lastObservedAt = observedAt;
+        }
+      }
+    }
+
+    const existingBudgetItems = await ctx.db.query("budgetItems").collect();
+    const existingByKey = new Map(
+      existingBudgetItems.map((item: any) => [item.catalogKey, item]),
+    );
+    let rowsToInsert = 0;
+    let rowsToUpdate = 0;
+
+    for (const historicalStats of historicalByKey.values()) {
+      const existing = existingByKey.get(historicalStats.catalogKey);
+      if (existing) rowsToUpdate += 1;
+      else rowsToInsert += 1;
+
+      if (dryRun) continue;
+
+      const customStats = getCustomBudgetStats(existing);
+      const historicalAveragePrice = roundBudgetPrice(
+        historicalStats.historicalTotalPrice /
+          historicalStats.historicalObservationCount,
+      );
+      const combined = combineBudgetStats({
+        ...historicalStats,
+        ...customStats,
+      });
+      const payload = {
+        name: historicalStats.name,
+        normalizedName: historicalStats.normalizedName,
+        categoryName: historicalStats.categoryName,
+        normalizedCategoryName: historicalStats.normalizedCategoryName,
+        catalogKey: historicalStats.catalogKey,
+        searchText: buildBudgetSearchText(
+          historicalStats.name,
+          historicalStats.categoryName,
+        ),
+        ...combined,
+        historicalAveragePrice,
+        historicalLatestPrice: historicalStats.historicalLatestPrice,
+        historicalMinPrice: historicalStats.historicalMinPrice,
+        historicalMaxPrice: historicalStats.historicalMaxPrice,
+        historicalTotalPrice: historicalStats.historicalTotalPrice,
+        historicalObservationCount:
+          historicalStats.historicalObservationCount,
+        customAveragePrice:
+          customStats.customObservationCount > 0
+            ? roundBudgetPrice(
+                customStats.customTotalPrice /
+                  customStats.customObservationCount,
+              )
+            : 0,
+        customLatestPrice: customStats.customLatestPrice,
+        customMinPrice: customStats.customMinPrice,
+        customMaxPrice: customStats.customMaxPrice,
+        customTotalPrice: customStats.customTotalPrice,
+        customObservationCount: customStats.customObservationCount,
+        isActive: true,
+        createdByUserId: existing?.createdByUserId ?? null,
+        updatedAt: timestamp,
+        lastObservedAt: historicalStats.lastObservedAt,
+        lastCustomAt: customStats.lastCustomAt,
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, payload);
+      } else {
+        await ctx.db.insert("budgetItems", {
+          ...payload,
+          createdAt: timestamp,
+        });
+      }
+    }
+
+    return {
+      dryRun,
+      expenseCount: expenses.length,
+      itemObservationCount,
+      validObservationCount,
+      skippedObservationCount,
+      mergedCatalogRowCount: historicalByKey.size,
+      rowsToInsert,
+      rowsToUpdate,
+    };
   },
 });
 

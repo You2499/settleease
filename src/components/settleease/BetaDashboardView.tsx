@@ -15,6 +15,9 @@ import dynamic from 'next/dynamic';
 const ExpenseDetailModal = dynamic(() => import('./ExpenseDetailModal'), {
   ssr: false,
 });
+const CreateBudgetModal = dynamic(() => import('./CreateBudgetModal'), {
+  ssr: false,
+});
 import SettlementSummary from './dashboard/SettlementSummary';
 import ExpenseLog from './dashboard/ExpenseLog';
 
@@ -62,6 +65,7 @@ export default function BetaDashboardView({
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const addSettlementPayment = useMutation(api.app.addSettlementPayment);
   const deleteSettlementPayment = useMutation(api.app.deleteSettlementPayment);
 
@@ -261,6 +265,7 @@ export default function BetaDashboardView({
         onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
         onViewExpenseDetails={handleExpenseCardClick}
         onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
+        onCreateBudget={() => setIsBudgetModalOpen(true)}
         getCategoryIconFromName={getCategoryIconFromName}
         categories={dynamicCategories}
         userRole={userRole}
@@ -293,6 +298,13 @@ export default function BetaDashboardView({
           onBack={handleBackFromExpenseModal}
         />
       )}
+      <CreateBudgetModal
+        isOpen={isBudgetModalOpen}
+        onOpenChange={setIsBudgetModalOpen}
+        categories={dynamicCategories}
+        getCategoryIconFromName={getCategoryIconFromName}
+        userRole={userRole}
+      />
     </div>
   );
 }

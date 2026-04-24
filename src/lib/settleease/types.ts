@@ -45,6 +45,41 @@ export interface Category {
   rank?: number; // For custom ordering
 }
 
+export type BudgetItemSource = 'historical' | 'custom' | 'mixed';
+
+export interface BudgetItem {
+  id: string;
+  name: string;
+  category_name: string;
+  default_price: number;
+  average_price: number;
+  latest_price: number;
+  min_price: number;
+  max_price: number;
+  historical_observation_count: number;
+  custom_observation_count: number;
+  source: BudgetItemSource;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SelectedBudgetLine {
+  id: string;
+  budget_item_id?: string;
+  name: string;
+  category_name: string;
+  unit_price: number;
+  quantity: number;
+  source: 'catalog' | 'custom';
+}
+
+export interface BudgetFees {
+  tax_percent: string;
+  service_percent: string;
+  other_charge: string;
+  discount: string;
+}
+
 // Used in AddExpenseTab for form state
 export interface PayerInputRow {
   id: string; // Temporary client-side ID for list rendering
