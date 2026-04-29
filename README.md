@@ -131,16 +131,30 @@ Open `http://localhost:3000`.
 
 Create `.env.local` from `.env.example` and fill in the values below.
 
+Local `npm run dev` intentionally bypasses Supabase auth and uses the shared
+Convex development deployment:
+
+```bash
+CONVEX_DEPLOYMENT=dev:shocking-panda-595
+NEXT_PUBLIC_CONVEX_URL=https://shocking-panda-595.convex.cloud
+```
+
+Supabase variables are not required for local `npm run dev`. They are still
+required for production, preview/staging, and any auth-backed API route usage.
+The dev Convex deployment must have `SETTLEEASE_DISABLE_AUTH=true` set through
+the Convex environment, not committed into `.env.local`.
+
 | Variable | Required | Purpose |
 | --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL used by the browser and API routes. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase public anon key. |
+| `NEXT_PUBLIC_SUPABASE_URL` | Outside local dev | Supabase project URL used by the browser and API routes. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Outside local dev | Supabase public anon key. |
 | `NEXT_PUBLIC_CONVEX_URL` | Yes | Convex deployment URL for the web app. |
 | `CONVEX_DEPLOYMENT` | Yes for Convex CLI | Convex deployment identifier. |
 | `CONVEX_DEPLOY_KEY` | Production deploy only | Lets Vercel deploy Convex before the production Next build. |
 | `CONVEX_JWT_PRIVATE_KEY` | Yes | RS256 private key used by `/api/convex-token`. |
 | `CONVEX_JWT_PRIVATE_KEY_BASE64` | Optional | Base64 alternative to `CONVEX_JWT_PRIVATE_KEY`. |
 | `GEMINI_API_KEY` | AI features | Enables summaries, receipt scanning, and report redaction. |
+| `SETTLEEASE_DISABLE_AUTH` | Dev Convex env only | Enables unauthenticated Convex calls only on the shared dev deployment. |
 
 New Supabase users are created as `user` profiles by default. Promote trusted users to `admin` in Convex when they should be able to add, edit, settle, export, scan, and manage app data.
 
@@ -299,6 +313,13 @@ Use the Convex CLI after configuring the project:
 ```bash
 npm run convex:dev
 npm run convex:deploy
+```
+
+To refresh the shared dev deployment from production:
+
+```bash
+npx convex export --prod --include-file-storage --path /tmp/settleease-prod-snapshot.zip
+npx convex import --deployment dev --replace-all -y /tmp/settleease-prod-snapshot.zip
 ```
 
 ### Supabase

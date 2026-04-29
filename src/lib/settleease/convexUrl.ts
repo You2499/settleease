@@ -1,4 +1,8 @@
-const DEFAULT_CONVEX_URL = "https://fortunate-fox-427.convex.cloud";
+import {
+  DEVELOPMENT_CONVEX_URL,
+  PRODUCTION_CONVEX_URL,
+  isLocalDevelopmentEnvironment,
+} from "./developmentAuth";
 
 function normalizeConvexUrl(url: string | undefined | null): string | undefined {
   const normalized = url?.trim().replace(/\/+$/, "");
@@ -6,5 +10,6 @@ function normalizeConvexUrl(url: string | undefined | null): string | undefined 
 }
 
 export function getConvexUrl(): string {
-  return normalizeConvexUrl(process.env.NEXT_PUBLIC_CONVEX_URL) || DEFAULT_CONVEX_URL;
+  return normalizeConvexUrl(process.env.NEXT_PUBLIC_CONVEX_URL) ||
+    (isLocalDevelopmentEnvironment() ? DEVELOPMENT_CONVEX_URL : PRODUCTION_CONVEX_URL);
 }

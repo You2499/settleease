@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "crypto";
 import { ConvexError } from "convex/values";
 import { action } from "./_generated/server";
 import { api as generatedApi, internal as generatedInternal } from "./_generated/api";
+import { requireAuthenticatedSupabaseUserId } from "./authGuards";
 import {
   DEFAULT_PRODUCTION_SUMMARY_PROMPT,
   SETTLEMENT_SUMMARY_PROMPT_NAME,
@@ -150,10 +151,7 @@ async function generateSummary({
 export const getOrGenerateSettlementSummary = action({
   args: {},
   handler: async (ctx): Promise<any> => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity?.subject) {
-      throw new ConvexError("Authentication required.");
-    }
+    await requireAuthenticatedSupabaseUserId(ctx);
 
     const [
       people,

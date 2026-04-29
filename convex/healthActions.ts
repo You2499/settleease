@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "crypto";
 import { ConvexError, v } from "convex/values";
 import { action } from "./_generated/server";
 import { api as generatedApi, internal as generatedInternal } from "./_generated/api";
+import { requireAuthenticatedSupabaseUserId } from "./authGuards";
 import { stableJsonStringify } from "../src/lib/settleease/stableJson";
 import {
   AI_CONFIG_KEY,
@@ -135,10 +136,7 @@ function buildHealthChunkDataHash({
 }
 
 async function loadHealthRequestContext(ctx: any, args: { startDate?: string; endDate?: string }) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.subject) {
-    throw new ConvexError("Authentication required.");
-  }
+  await requireAuthenticatedSupabaseUserId(ctx);
 
   const [people, allExpenses, activePrompt, rawAiConfig] = await Promise.all([
     ctx.runQuery(api.app.listPeople, {}),

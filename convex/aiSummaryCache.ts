@@ -1,21 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-
-function normalizeSupabaseUserId(value: string) {
-  return value.trim().toLowerCase();
-}
-
-async function requireAuthenticatedSupabaseUserId(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.subject) {
-    throw new ConvexError("Authentication required.");
-  }
-  const supabaseUserId = normalizeSupabaseUserId(identity.subject);
-  if (!supabaseUserId) {
-    throw new ConvexError("Authentication required.");
-  }
-  return supabaseUserId;
-}
+import { requireAuthenticatedSupabaseUserId } from "./authGuards";
 
 const GENERATION_STALE_AFTER_MS = 2 * 60 * 1000;
 const nowIso = () => new Date().toISOString();

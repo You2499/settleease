@@ -2,9 +2,10 @@
 
 import * as React from "react";
 import type { Session } from "@supabase/supabase-js";
-import { ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
+import { ConvexProvider, ConvexProviderWithAuth, ConvexReactClient } from "convex/react";
 import { getConvexUrl } from "@/lib/settleease/convexUrl";
 import { supabaseClient as supabase } from "@/lib/settleease/supabaseClient";
+import { isLocalDevelopmentEnvironment } from "@/lib/settleease/developmentAuth";
 
 const convex = new ConvexReactClient(getConvexUrl());
 
@@ -84,6 +85,10 @@ function useSupabaseMintedConvexAuth() {
 }
 
 export function ConvexClientProvider({ children }: { children: React.ReactNode }) {
+  if (isLocalDevelopmentEnvironment()) {
+    return <ConvexProvider client={convex}>{children}</ConvexProvider>;
+  }
+
   return (
     <ConvexProviderWithAuth client={convex} useAuth={useSupabaseMintedConvexAuth}>
       {children}

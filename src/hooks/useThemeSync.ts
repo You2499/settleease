@@ -5,11 +5,13 @@ import { useTheme } from 'next-themes';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { toast } from "@/hooks/use-toast";
+import { isLocalDevelopmentEnvironment } from '@/lib/settleease/developmentAuth';
 
 export function useThemeSync(
   userId: string | undefined,
   userProfile: any
 ) {
+  const isDevelopmentEnvironment = isLocalDevelopmentEnvironment();
   const { theme, setTheme } = useTheme();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -58,6 +60,7 @@ export function useThemeSync(
   }, [clearPendingLocalTheme, userId]);
 
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
+    if (isDevelopmentEnvironment) return;
     if (!userId) return;
 
     try {
@@ -73,7 +76,7 @@ export function useThemeSync(
         variant: "destructive",
       });
     }
-  }, [updateUserProfile, userId]);
+  }, [isDevelopmentEnvironment, updateUserProfile, userId]);
 
   useEffect(() => {
     if (!isMounted || !userId || !userProfile || isInitialized) return;

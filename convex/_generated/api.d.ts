@@ -11,6 +11,7 @@
 import type * as aiSummaryActions from "../aiSummaryActions.js";
 import type * as aiSummaryCache from "../aiSummaryCache.js";
 import type * as app from "../app.js";
+import type * as authGuards from "../authGuards.js";
 import type * as healthActions from "../healthActions.js";
 import type * as healthQueries from "../healthQueries.js";
 import type * as jwtConfig from "../jwtConfig.js";
@@ -25,6 +26,7 @@ declare const fullApi: ApiFromModules<{
   aiSummaryActions: typeof aiSummaryActions;
   aiSummaryCache: typeof aiSummaryCache;
   app: typeof app;
+  authGuards: typeof authGuards;
   healthActions: typeof healthActions;
   healthQueries: typeof healthQueries;
   jwtConfig: typeof jwtConfig;

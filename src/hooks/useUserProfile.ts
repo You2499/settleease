@@ -5,6 +5,10 @@ import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import type { UserProfile } from '@/lib/settleease';
+import {
+  developmentUserProfile,
+  isLocalDevelopmentEnvironment,
+} from '@/lib/settleease/developmentAuth';
 
 function getMetadataNames(user: SupabaseUser | null) {
   const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || '';
@@ -18,15 +22,16 @@ function getMetadataNames(user: SupabaseUser | null) {
 }
 
 export function useUserProfile(currentUser: SupabaseUser | null) {
+  const isDevelopmentEnvironment = isLocalDevelopmentEnvironment();
   const profile = useQuery(
     api.app.getUserProfile,
-    currentUser ? { supabaseUserId: currentUser.id } : 'skip',
+    currentUser && !isDevelopmentEnvironment ? { supabaseUserId: currentUser.id } : 'skip',
   ) as UserProfile | null | undefined;
   const upsertProfile = useMutation(api.app.upsertUserProfile);
   const updateProfile = useMutation(api.app.updateUserProfile);
 
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || isDevelopmentEnvironment) return;
 
     let isCancelled = false;
     const { firstName, lastName } = getMetadataNames(currentUser);
@@ -59,7 +64,7 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
     return () => {
       isCancelled = true;
     };
-  }, [currentUser, upsertProfile]);
+  }, [currentUser, isDevelopmentEnvironment, upsertProfile]);
 
   const refreshUserProfile = useCallback(async (_showLoading?: boolean) => {
     // Convex live queries refresh automatically.
@@ -68,6 +73,7 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
   const updateUserProfile = useCallback(
     async (updates: Partial<UserProfile>): Promise<boolean> => {
       if (!currentUser) return false;
+      if (isDevelopmentEnvironment) return true;
 
       try {
         await updateProfile({
@@ -86,14 +92,17 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
         return false;
       }
     },
-    [currentUser, updateProfile],
+    [currentUser, isDevelopmentEnvironment, updateProfile],
   );
 
   const hasCompleteName = useCallback(() => {
+    if (isDevelopmentEnvironment) return true;
     return !!(profile?.first_name && profile?.last_name);
-  }, [profile]);
+  }, [isDevelopmentEnvironment, profile]);
 
   const getDisplayName = useCallback(() => {
+    if (isDevelopmentEnvironment) return 'Development Admin';
+
     const profileName = [profile?.first_name, profile?.last_name]
       .filter(Boolean)
       .join(' ');
@@ -103,15 +112,19 @@ export function useUserProfile(currentUser: SupabaseUser | null) {
     }
 
     return currentUser?.email || 'User';
-  }, [profile, currentUser]);
+  }, [profile, currentUser, isDevelopmentEnvironment]);
+
+  const resolvedProfile = isDevelopmentEnvironment && currentUser
+    ? developmentUserProfile
+    : profile ?? null;
 
   return {
-    userProfile: profile ?? null,
-    isLoadingProfile: !!currentUser && (profile === undefined || profile === null),
+    userProfile: resolvedProfile,
+    isLoadingProfile: !isDevelopmentEnvironment && !!currentUser && (profile === undefined || profile === null),
     updateUserProfile,
     hasCompleteName,
     getDisplayName,
-    fetchUserProfile: async () => profile ?? null,
+    fetchUserProfile: async () => resolvedProfile,
     refreshUserProfile,
   };
 }

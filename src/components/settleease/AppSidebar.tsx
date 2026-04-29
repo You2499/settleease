@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import {
-  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, Home, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Heart
+  Users, CreditCard, FilePenLine, ListChecks, LogOut, UserCog, ShieldCheck, Home, Handshake, HandCoins, BarChartBig, Settings, Sun, Moon, Edit3, ScanLine, ChevronDown, ChevronRight, Keyboard, Heart, AlertTriangle
 } from 'lucide-react';
 import { useTheme } from "next-themes";
 import packageJson from '../../../package.json';
@@ -45,9 +45,10 @@ interface AppSidebarProps {
   userRole: UserRole;
   onEditName?: () => void;
   isProfileLoading?: boolean;
+  isDevelopmentEnvironment?: boolean;
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isProfileLoading = false }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isProfileLoading = false, isDevelopmentEnvironment = false }: AppSidebarProps) {
   const { isMobile, setOpenMobile, state } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
@@ -353,6 +354,21 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
         </SidebarContent>
         <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
           <div className="p-2">
+            {isDevelopmentEnvironment && (
+              <div className="mb-2 rounded-md border border-amber-500/70 bg-amber-100 px-2.5 py-2 text-amber-950 shadow-sm dark:border-amber-400/70 dark:bg-amber-950/60 dark:text-amber-100">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold uppercase tracking-wide">
+                      DEVELOPMENT ENVIRONMENT
+                    </p>
+                    <p className="text-[11px] leading-4 text-amber-900/80 dark:text-amber-100/80">
+                      No auth - Dev database
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
             {isProfileLoading ? (
               <LoadingRegion label="Loading profile" className="mb-2 rounded bg-sidebar-accent/50 p-2">
                 <div className="flex items-center justify-between gap-2">
@@ -406,20 +422,26 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={(e) => {
-                          e.preventDefault();
-                          handleLogoutClick(e as any);
-                        }}
-                        disabled={isLoggingOut}
-                        className={`transition-all duration-200 ${isLoggingOut
-                          ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                          : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                        }`}
-                      >
-                        <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
-                        {isLoggingOut ? 'Logging out...' : 'Logout'}
-                      </DropdownMenuItem>
+                      {isDevelopmentEnvironment ? (
+                        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                          Auth disabled locally
+                        </DropdownMenuLabel>
+                      ) : (
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            handleLogoutClick(e as any);
+                          }}
+                          disabled={isLoggingOut}
+                          className={`transition-all duration-200 ${isLoggingOut
+                            ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                            : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                          }`}
+                        >
+                          <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
+                          {isLoggingOut ? 'Logging out...' : 'Logout'}
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

@@ -119,6 +119,7 @@ function SettleEasePageContent() {
     currentUser,
     isLoadingAuth,
     handleLogout,
+    isDevelopmentEnvironment,
   } = useSupabaseAuth();
 
   const [isOAuthCallback, setIsOAuthCallback] = useState(false);
@@ -499,6 +500,7 @@ function SettleEasePageContent() {
           userRole={userRole}
           onEditName={handleEditName}
           isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady}
+          isDevelopmentEnvironment={isDevelopmentEnvironment}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <div className="flex h-full min-w-0 flex-col overflow-x-hidden">

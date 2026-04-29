@@ -7,6 +7,10 @@ import { api } from '@convex/_generated/api';
 import { toast } from "@/hooks/use-toast";
 import { supabaseClient, supabaseInitializationError } from '@/lib/settleease/supabaseClient';
 import {
+  developmentSupabaseUser,
+  isLocalDevelopmentEnvironment,
+} from '@/lib/settleease/developmentAuth';
+import {
   createLogoutMessage,
   parseLogoutMessage,
   SETTLEEASE_AUTH_LOGOUT_CHANNEL,
@@ -55,10 +59,19 @@ function clearAuthUrlState() {
 }
 
 export function useSupabaseAuth() {
-  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
-  const authStatusRef = useRef<AuthStatus>('checking');
-  const currentUserRef = useRef<SupabaseUser | null>(null);
+  const isDevelopmentEnvironment = isLocalDevelopmentEnvironment();
+  const [currentUser, setCurrentUser] = useState<SupabaseUser | null>(
+    isDevelopmentEnvironment ? developmentSupabaseUser : null,
+  );
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(
+    isDevelopmentEnvironment ? 'authenticated' : 'checking',
+  );
+  const authStatusRef = useRef<AuthStatus>(
+    isDevelopmentEnvironment ? 'authenticated' : 'checking',
+  );
+  const currentUserRef = useRef<SupabaseUser | null>(
+    isDevelopmentEnvironment ? developmentSupabaseUser : null,
+  );
   const hasShownLogoutToastRef = useRef(false);
   const lastHandledLogoutIssuedAtRef = useRef(0);
   const lastSessionKeyRef = useRef<string | null>(null);
@@ -226,6 +239,8 @@ export function useSupabaseAuth() {
   }, [applySignedOut]);
 
   const handleLogout = useCallback(async () => {
+    if (isDevelopmentEnvironment) return;
+
     if (!supabaseClient) return;
 
     const userId = currentUserRef.current?.id ?? null;
@@ -247,9 +262,10 @@ export function useSupabaseAuth() {
     } finally {
       applySignedOut({ clearStorage: true, showToast: true });
     }
-  }, [applySignedOut, broadcastLogout]);
+  }, [applySignedOut, broadcastLogout, isDevelopmentEnvironment]);
 
   useEffect(() => {
+    if (isDevelopmentEnvironment) return;
     if (typeof window === 'undefined') return;
 
     const channel = typeof BroadcastChannel !== 'undefined'
@@ -279,9 +295,16 @@ export function useSupabaseAuth() {
       }
       window.removeEventListener('storage', handleStorageMessage);
     };
-  }, [applyExternalLogout]);
+  }, [applyExternalLogout, isDevelopmentEnvironment]);
 
   useEffect(() => {
+    if (isDevelopmentEnvironment) {
+      currentUserRef.current = developmentSupabaseUser;
+      setCurrentUser(developmentSupabaseUser);
+      setAuthStatusAndRef('authenticated');
+      return;
+    }
+
     console.log("Auth effect: Starts. Supabase Client:", !!supabaseClient, "Supabase Init Error:", !!supabaseInitializationError);
     if (supabaseInitializationError || !supabaseClient) {
       console.log("Auth effect: Supabase init error or no auth client. Setting isLoadingAuth=false.");
@@ -328,14 +351,15 @@ export function useSupabaseAuth() {
       isMounted = false;
       authListener?.subscription.unsubscribe();
     };
-  }, [applySession, applySignedOut, maybeTrackSignIn, setAuthStatusAndRef]);
+  }, [applySession, applySignedOut, isDevelopmentEnvironment, maybeTrackSignIn, setAuthStatusAndRef]);
 
   return {
     authStatus,
-    supabaseClient,
-    supabaseInitializationError,
+    supabaseClient: isDevelopmentEnvironment ? undefined : supabaseClient,
+    supabaseInitializationError: isDevelopmentEnvironment ? null : supabaseInitializationError,
     currentUser,
     isLoadingAuth,
     handleLogout,
+    isDevelopmentEnvironment,
   };
 }

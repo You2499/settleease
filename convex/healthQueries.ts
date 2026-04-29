@@ -1,7 +1,8 @@
 "use strict";
 
-import { ConvexError, v } from "convex/values";
+import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { requireAuthenticatedSupabaseUserId } from "./authGuards";
 import {
   AI_CONFIG_KEY,
   resolveAiModelConfig,
@@ -56,22 +57,6 @@ type HealthChunkDefinition = {
 type ResolvedChunkAvailability = HealthChunkAvailability & {
   summary: StructuredHealthEstimate | null;
 };
-
-function normalizeSupabaseUserId(value: string) {
-  return value.trim().toLowerCase();
-}
-
-async function requireAuthenticatedSupabaseUserId(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.subject) {
-    throw new ConvexError("Authentication required.");
-  }
-  const supabaseUserId = normalizeSupabaseUserId(identity.subject);
-  if (!supabaseUserId) {
-    throw new ConvexError("Authentication required.");
-  }
-  return supabaseUserId;
-}
 
 function compareText(a: string, b: string): number {
   return a.localeCompare(b, undefined, { sensitivity: "base" });

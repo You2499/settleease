@@ -2,13 +2,18 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAnonKey, supabaseUrl } from "./constants";
+import { isLocalDevelopmentEnvironment } from "./developmentAuth";
 
 export let supabaseClient: SupabaseClient | undefined;
 export let supabaseInitializationError: string | null = null;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   supabaseInitializationError = "Supabase URL or Anon Key is missing. Check environment variables NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.";
-  console.error(supabaseInitializationError);
+  if (isLocalDevelopmentEnvironment()) {
+    supabaseInitializationError = null;
+  } else {
+    console.error(supabaseInitializationError);
+  }
 } else {
   try {
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {

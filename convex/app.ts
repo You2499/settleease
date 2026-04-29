@@ -1,5 +1,11 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import {
+  DEVELOPMENT_SUPABASE_USER_ID,
+  isConvexDevelopmentAuthDisabled,
+  requireAuthenticatedSupabaseUserId,
+  requireSelf,
+} from "./authGuards";
 
 function normalizeSupabaseUserId(value: string) {
   return value.trim().toLowerCase();
@@ -400,31 +406,15 @@ async function getProfileBySupabaseUserId(ctx: any, supabaseUserId: string) {
     .unique();
 }
 
-async function requireAuthenticatedSupabaseUserId(ctx: any) {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity?.subject) {
-    throw new ConvexError("Authentication required.");
-  }
-  const supabaseUserId = normalizeSupabaseUserId(identity.subject);
-  if (!supabaseUserId) {
-    throw new ConvexError("Authentication required.");
-  }
-  return supabaseUserId;
-}
-
-async function requireSelf(ctx: any, supabaseUserId: string) {
-  const authenticatedUserId = await requireAuthenticatedSupabaseUserId(ctx);
-  const requestedUserId = normalizeSupabaseUserId(supabaseUserId);
-
-  if (authenticatedUserId !== requestedUserId) {
-    throw new ConvexError("Cannot access another user's profile.");
-  }
-
-  return authenticatedUserId;
-}
-
 async function requireAdmin(ctx: any) {
   const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+  if (
+    isConvexDevelopmentAuthDisabled() &&
+    supabaseUserId === DEVELOPMENT_SUPABASE_USER_ID
+  ) {
+    return supabaseUserId;
+  }
+
   const profile = await getProfileBySupabaseUserId(ctx, supabaseUserId);
   if (profile?.role !== "admin") {
     throw new ConvexError("Admin access required.");
@@ -446,19 +436,32 @@ async function ensureUserProfile(
   const timestamp = nowIso();
 
   if (existing) {
-    await ctx.db.patch(existing._id, {
+    const updates: Record<string, any> = {
       email: args.email ?? existing.email,
       firstName: args.firstName || existing.firstName,
       lastName: args.lastName || existing.lastName,
       updatedAt: timestamp,
-    });
+    };
+
+    if (
+      isConvexDevelopmentAuthDisabled() &&
+      normalizedUserId === DEVELOPMENT_SUPABASE_USER_ID
+    ) {
+      updates.role = "admin";
+    }
+
+    await ctx.db.patch(existing._id, updates);
     return existing._id;
   }
 
   return await ctx.db.insert("userProfiles", {
     supabaseUserId: normalizedUserId,
     email: args.email,
-    role: "user",
+    role:
+      isConvexDevelopmentAuthDisabled() &&
+      normalizedUserId === DEVELOPMENT_SUPABASE_USER_ID
+        ? "admin"
+        : "user",
     firstName: args.firstName || undefined,
     lastName: args.lastName || undefined,
     fontPreference: "google-sans",
