@@ -29,6 +29,7 @@ import {
   LoadingRegion,
   SkeletonCardHeader,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -261,13 +262,12 @@ export default function EditExpensesTab({
               </div>
             </ScrollArea>
           ) : (
-            <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-8 flex-1">
-              <FilePenLine className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-              <p className="font-medium text-base sm:text-lg mb-2">No Expenses to Edit</p>
-              <p className="text-sm sm:text-base max-w-md">
-                Add some expenses first to see them here for editing or deletion.
-              </p>
-            </div>
+            <AppEmptyState
+              icon={FilePenLine}
+              title="No Expenses to Edit"
+              description="Add some expenses first to see them here for editing or deletion."
+              size="page"
+            />
           )}
         </CardContent>
       </Card>

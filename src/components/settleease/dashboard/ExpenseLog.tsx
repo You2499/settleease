@@ -13,6 +13,7 @@ import type { Category } from '@/lib/settleease/types';
 import { Separator } from '@/components/ui/separator';
 import ExpenseListItem from '../ExpenseListItem';
 import SettlementListItem from '../SettlementListItem';
+import AppEmptyState from '../AppEmptyState';
 
 interface ExpenseLogProps {
   expenses: Expense[];
@@ -267,15 +268,18 @@ export default function ExpenseLog({
             </div>
           </ScrollArea>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-4 text-center">
-            <Filter className="h-10 w-10 mb-2 opacity-20" />
-            <p>No transactions found.</p>
-            {hasActiveFilters && (
-              <Button variant="link" onClick={clearFilters} className="mt-2">
+          <AppEmptyState
+            icon={Filter}
+            title="No transactions found"
+            description={hasActiveFilters ? "No transactions match the current filters." : "Add expenses or record payments to see activity here."}
+            size="panel"
+          >
+            {hasActiveFilters ? (
+              <Button variant="link" onClick={clearFilters}>
                 Clear filters
               </Button>
-            )}
-          </div>
+            ) : null}
+          </AppEmptyState>
         )}
       </CardContent>
     </Card>

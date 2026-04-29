@@ -48,6 +48,7 @@ import {
   SkeletonSectionHeader,
   SkeletonToolbar,
 } from "./SkeletonLayouts";
+import AppEmptyState from "./AppEmptyState";
 
 interface AnalyticsTabProps {
   expenses: Expense[];
@@ -131,7 +132,6 @@ export default function AnalyticsTab({
   const selectedPersonName = model.selectedPersonName || "Selected person";
 
   if (isLoading) return <AnalyticsSkeleton />;
-  if (!expenses.length) return <AnalyticsEmptyState />;
 
   return (
     <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
@@ -175,35 +175,49 @@ export default function AnalyticsTab({
             isLoadingPeople={isLoadingPeople}
           />
 
-          <Separator />
+          {!expenses.length ? (
+            <>
+              <Separator />
+              <AppEmptyState
+                icon={BarChart4}
+                title="No analytics yet"
+                description="Add expenses to unlock the dashboard."
+                size="page"
+              />
+            </>
+          ) : (
+            <>
+              <Separator />
 
-          <AnalyticsSection id="overview" icon={BarChart4} title="Overview">
-            <OverviewSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
-          </AnalyticsSection>
+              <AnalyticsSection id="overview" icon={BarChart4} title="Overview">
+                <OverviewSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+              </AnalyticsSection>
 
-          <Separator />
+              <Separator />
 
-          <AnalyticsSection id="money-flow" icon={CircleDollarSign} title="Money Flow">
-            <MoneyFlowSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
-          </AnalyticsSection>
+              <AnalyticsSection id="money-flow" icon={CircleDollarSign} title="Money Flow">
+                <MoneyFlowSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+              </AnalyticsSection>
 
-          <Separator />
+              <Separator />
 
-          <AnalyticsSection id="trends" icon={LineChart} title="Trends">
-            <TrendsSection model={model} mode={mode} getCategoryIconFromName={getCategoryIconFromName} />
-          </AnalyticsSection>
+              <AnalyticsSection id="trends" icon={LineChart} title="Trends">
+                <TrendsSection model={model} mode={mode} getCategoryIconFromName={getCategoryIconFromName} />
+              </AnalyticsSection>
 
-          <Separator />
+              <Separator />
 
-          <AnalyticsSection id="activity" icon={Activity} title="Activity">
-            <ActivitySection model={model} />
-          </AnalyticsSection>
+              <AnalyticsSection id="activity" icon={Activity} title="Activity">
+                <ActivitySection model={model} />
+              </AnalyticsSection>
 
-          <Separator />
+              <Separator />
 
-          <AnalyticsSection id="records" icon={ReceiptText} title="Records">
-            <RecordsSection model={model} getCategoryIconFromName={getCategoryIconFromName} />
-          </AnalyticsSection>
+              <AnalyticsSection id="records" icon={ReceiptText} title="Records">
+                <RecordsSection model={model} getCategoryIconFromName={getCategoryIconFromName} />
+              </AnalyticsSection>
+            </>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -993,28 +1007,6 @@ function MiniValue({
 
 function EmptyPanel({ message }: { message: string }) {
   return <div className="rounded-lg border bg-secondary/20 px-4 py-5 text-sm text-muted-foreground">{message}</div>;
-}
-
-function AnalyticsEmptyState() {
-  return (
-    <Card className="w-full min-w-0 overflow-hidden rounded-lg shadow-lg h-full flex flex-col">
-      <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-2">
-        <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
-          <BarChart4 className="mr-2 h-5 w-5 text-primary" />
-          Analytics
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="flex-1 min-w-0 overflow-x-hidden flex items-center justify-center px-4 sm:px-6 pb-4 sm:pb-6 pt-2 text-center">
-        <div className="max-w-md">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/50">
-            <BarChart4 className="h-6 w-6 text-primary" />
-          </div>
-          <h2 className="mt-5 text-xl sm:text-2xl font-semibold text-foreground">No analytics yet</h2>
-          <p className="mt-3 text-sm text-muted-foreground">Add expenses to unlock the dashboard.</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
 }
 
 function AnalyticsSkeleton() {

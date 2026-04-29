@@ -45,6 +45,7 @@ import {
   SkeletonPanel,
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -383,14 +384,13 @@ export default function ManageSettlementsTab({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
-                    <Handshake className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
-                    <p className="font-medium text-sm sm:text-base">All Settled Up!</p>
-                    <p className="text-xs mb-4">No outstanding debts based on current data.</p>
-                    <p className="text-xs text-primary/70">
-                      Need to record a direct payment? Use the "Add Custom Payment" button above.
-                    </p>
-                  </div>
+                  <AppEmptyState
+                    icon={Handshake}
+                    title="All Settled Up!"
+                    description="No outstanding debts based on current data."
+                    secondaryDescription='Need to record a direct payment? Use the "Add Custom Payment" button above.'
+                    size="compact"
+                  />
                 )}
               </div>
 
@@ -455,11 +455,12 @@ export default function ManageSettlementsTab({
                     ))}
                   </ul>
                 ) : (
-                   <div className="flex flex-col items-center justify-center text-center text-muted-foreground p-6">
-                    <History className="h-10 w-10 sm:h-12 sm:w-12 mb-3 text-primary/30" />
-                    <p className="font-medium text-sm sm:text-base">No Payments Recorded</p>
-                    <p className="text-xs">Manually mark debts as paid to see them here.</p>
-                  </div>
+                  <AppEmptyState
+                    icon={History}
+                    title="No Payments Recorded"
+                    description="Manually mark debts as paid to see them here."
+                    size="compact"
+                  />
                 )}
               </div>
             </div>

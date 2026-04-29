@@ -12,6 +12,7 @@ import {
   ExpenseActivitySkeleton,
   LoadingRegion,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 import dynamic from 'next/dynamic';
 
@@ -240,38 +241,24 @@ export default function BetaDashboardView({
   // Empty state: no people or expenses
   if (!isLoading && people.length === 0 && expenses.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full py-16">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(245, 242, 239, 0.8)' }}>
-            <Sparkles className="h-8 w-8" style={{ color: '#777169' }} />
-          </div>
-          <h2 className="text-2xl mb-3" style={{ fontWeight: 300, letterSpacing: '-0.02em' }}>Welcome to SettleEase</h2>
-          <p className="text-base mb-6" style={{ color: '#4e4e4e', letterSpacing: '0.01em' }}>
-            Navigate to &quot;Manage People&quot; to add participants, then to &quot;Add Expense&quot; to start managing your group finances.
-          </p>
-        </div>
-      </div>
+      <AppEmptyState
+        icon={Sparkles}
+        title="Welcome to SettleEase"
+        description='Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.'
+        size="page"
+      />
     );
   }
 
   if (!isLoading && expenses.length === 0 && settlementPayments.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full py-16">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-full flex items-center justify-center" style={{ background: 'rgba(245, 242, 239, 0.8)' }}>
-            <FileText className="h-8 w-8" style={{ color: '#777169' }} />
-          </div>
-          <h2 className="text-2xl mb-3" style={{ fontWeight: 300, letterSpacing: '-0.02em' }}>Ready to Settle?</h2>
-          <p className="text-base mb-2" style={{ color: '#4e4e4e', letterSpacing: '0.01em' }}>
-            Navigate to &quot;Add Expense&quot; to start managing your group finances.
-          </p>
-          {people.length === 0 && (
-            <p className="text-sm" style={{ color: '#777169' }}>
-              First, go to &quot;Manage People&quot; to add participants to your group.
-            </p>
-          )}
-        </div>
-      </div>
+      <AppEmptyState
+        icon={FileText}
+        title="Ready to Settle?"
+        description='Navigate to "Add Expense" to start managing your group finances.'
+        secondaryDescription={people.length === 0 ? 'First, go to "Manage People" to add participants to your group.' : undefined}
+        size="page"
+      />
     );
   }
 

@@ -31,6 +31,7 @@ import {
   SkeletonFormField,
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 interface ManageCategoriesTabProps {
   categories: Category[];
@@ -413,11 +414,12 @@ export default function ManageCategoriesTab({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
-                <ListChecks className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                <p className="text-md sm:text-lg font-medium">No Categories Yet</p>
-                <p className="text-xs sm:text-sm">Add some categories using the form above to organize your expenses.</p>
-              </div>
+              <AppEmptyState
+                icon={ListChecks}
+                title="No Categories Yet"
+                description="Add some categories using the form above to organize your expenses."
+                size="panel"
+              />
             )}
           </div>
         </CardContent>

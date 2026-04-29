@@ -50,6 +50,7 @@ import {
   SkeletonSectionHeader,
   SkeletonToolbar,
 } from "./SkeletonLayouts";
+import AppEmptyState from "./AppEmptyState";
 
 const ExpenseDetailModal = dynamic(() => import("./ExpenseDetailModal"), {
   ssr: false,
@@ -990,15 +991,12 @@ function RankedList({
 
 function HealthEmptyState() {
   return (
-    <div className="flex items-center justify-center px-4 py-10 text-center">
-        <div className="max-w-md">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-secondary/50">
-            <Heart className="h-6 w-6 text-primary" />
-          </div>
-          <h2 className="mt-5 text-xl sm:text-2xl font-semibold text-foreground">No health estimates yet</h2>
-          <p className="mt-3 text-sm text-muted-foreground">Add Food or Alcohol expenses to unlock Health estimates.</p>
-      </div>
-    </div>
+    <AppEmptyState
+      icon={Heart}
+      title="No health estimates yet"
+      description="Add Food or Alcohol expenses to unlock Health estimates."
+      size="page"
+    />
   );
 }
 

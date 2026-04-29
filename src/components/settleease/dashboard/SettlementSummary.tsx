@@ -57,6 +57,7 @@ import PerPersonSettlementDetails from "./PerPersonSettlementDetails";
 import Step1BalanceOverview from "./settlement-steps/Step1BalanceOverview";
 import Step2DirectDebtAnalysis from "./settlement-steps/Step2DirectDebtAnalysis";
 import Step3SimplificationProcess from "./settlement-steps/Step3SimplificationProcess";
+import AppEmptyState from "../AppEmptyState";
 
 interface SettlementSummaryProps {
   simplifiedTransactions: CalculatedTransaction[];
@@ -418,16 +419,13 @@ export default function SettlementSummary({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-center text-muted-foreground mt-2">
-                <div>
-                  <FileText className="h-12 w-12 mx-auto mb-3 text-primary/30" />
-                  <p className="font-medium text-sm sm:text-base">
-                    All Settled Up!
-                  </p>
-                  <p className="text-xs">
-                    All debts are settled, or no expenses to settle yet!
-                  </p>
-                </div>
+              <div className="mt-2 flex flex-1">
+                <AppEmptyState
+                  icon={FileText}
+                  title="All Settled Up!"
+                  description="All debts are settled, or no expenses to settle yet."
+                  size="panel"
+                />
               </div>
             )}
           </TabsContent>

@@ -42,6 +42,7 @@ import {
   SkeletonSectionHeader,
   StepRailSkeleton,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 interface ScanReceiptTabProps {
   people: Person[];
@@ -744,16 +745,13 @@ export default function ScanReceiptTab({
 
   if (!isLoadingData && people.length === 0) {
     return (
-      <Card className="flex h-full flex-col items-center justify-center rounded-lg border p-4 text-center shadow-xl">
-        <div className="grid h-14 w-14 place-items-center rounded-lg bg-primary/10 text-primary">
-          <Users className="h-7 w-7" />
-        </div>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-xl font-semibold text-primary">Add People First</CardTitle>
-          <CardDescription>
-            Smart Scan needs participants before it can prepare a split.
-          </CardDescription>
-        </CardHeader>
+      <Card className="flex h-full flex-col rounded-lg border shadow-xl">
+        <AppEmptyState
+          icon={Users}
+          title="Add People First"
+          description="Smart Scan needs participants before it can prepare a split."
+          size="page"
+        />
       </Card>
     );
   }

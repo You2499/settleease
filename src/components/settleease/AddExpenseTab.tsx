@@ -12,6 +12,7 @@ import {
   SkeletonFormField,
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 import PayerInputSection from './addexpense/PayerInputSection';
 import SplitMethodSelector from './addexpense/SplitMethodSelector';
@@ -599,16 +600,14 @@ export default function AddExpenseTab({
   // Show empty state only when NOT loading and no people exist
   if (!isLoadingData && people.length === 0 && !expenseToEdit) {
     return (
-      <Card className="text-center py-8 sm:py-10 shadow-xl rounded-lg h-full flex flex-col items-center justify-center p-4">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg sm:text-xl font-semibold text-primary flex items-center justify-center">
-            <Users className="mr-2 sm:mr-3 h-6 w-6 sm:h-7 sm:w-7" /> Add People First
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 sm:space-y-3 p-4 sm:p-6 pt-0">
-          <p className="text-sm sm:text-md text-muted-foreground">You need to add people to your group before you can add expenses.</p>
-          <p className="text-xs sm:text-sm">Please go to the "Manage People" tab to add participants.</p>
-        </CardContent>
+      <Card className="shadow-xl rounded-lg h-full flex flex-col">
+        <AppEmptyState
+          icon={Users}
+          title="Add People First"
+          description="You need to add people to your group before you can add expenses."
+          secondaryDescription='Please go to the "Manage People" tab to add participants.'
+          size="page"
+        />
       </Card>
     );
   }

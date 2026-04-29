@@ -29,6 +29,7 @@ import {
   SkeletonFormField,
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
+import AppEmptyState from './AppEmptyState';
 
 interface ManagePeopleTabProps {
   people: Person[];
@@ -227,11 +228,12 @@ export default function ManagePeopleTab({
                 </ul>
               </ScrollArea>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-6 border rounded-md bg-card/30">
-                <Users className="h-12 w-12 sm:h-16 sm:w-16 mb-4 text-primary/30" />
-                <p className="text-md sm:text-lg font-medium">No People Yet</p>
-                <p className="text-xs sm:text-sm">Add people to your group using the form above.</p>
-              </div>
+              <AppEmptyState
+                icon={Users}
+                title="No People Yet"
+                description="Add people to your group using the form above."
+                size="panel"
+              />
             )}
           </div>
         </CardContent>
