@@ -48,6 +48,24 @@ interface AppSidebarProps {
   isDevelopmentEnvironment?: boolean;
 }
 
+function getUserInitials(name?: string | null, email?: string | null) {
+  const source = (name || email || 'SettleEase').trim();
+  if (!source) return 'SE';
+
+  if (source.includes('@')) {
+    return source.charAt(0).toUpperCase();
+  }
+
+  const initials = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join('');
+
+  return initials || 'SE';
+}
+
 const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isProfileLoading = false, isDevelopmentEnvironment = false }: AppSidebarProps) {
   const { isMobile, setOpenMobile, state } = useSidebar();
   const { setTheme } = useTheme();
@@ -62,6 +80,9 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
 
   const isCollapsed = state === 'collapsed';
   const shouldShowAdminNav = userRole === 'admin' && !isProfileLoading;
+  const displayUserName = currentUserName || currentUserEmail || '';
+  const userInitials = getUserInitials(currentUserName, currentUserEmail);
+  const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Member';
 
   const handleLogoutClick = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -352,104 +373,106 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
             )}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="border-t group-data-[state=collapsed]:hidden">
-          <div className="p-2">
+        <SidebarFooter className="border-t border-sidebar-border bg-sidebar/95 px-2 py-2 group-data-[state=collapsed]:hidden">
+          <div className="space-y-2">
             {isDevelopmentEnvironment && (
-              <div className="mb-2 rounded-md border border-amber-500/70 bg-amber-100 px-2.5 py-2 text-amber-950 shadow-sm dark:border-amber-400/70 dark:bg-amber-950/60 dark:text-amber-100">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-50">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wide">
-                      DEVELOPMENT ENVIRONMENT
+                    <p className="truncate text-xs font-medium">
+                      Development
                     </p>
-                    <p className="text-[11px] leading-4 text-amber-900/80 dark:text-amber-100/80">
-                      No auth - Dev database
+                    <p className="truncate text-[11px] leading-4 text-amber-900/70 dark:text-amber-50/70">
+                      Dev database - Auth disabled
                     </p>
                   </div>
                 </div>
               </div>
             )}
             {isProfileLoading ? (
-              <LoadingRegion label="Loading profile" className="mb-2 rounded bg-sidebar-accent/50 p-2">
+              <LoadingRegion label="Loading profile" className="rounded-md border border-sidebar-border bg-sidebar-accent/35 px-2.5 py-2">
                 <div className="flex items-center justify-between gap-2">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-md" />
                   <div className="min-w-0 flex-1 space-y-2">
-                    <Skeleton className="h-4 w-36 max-w-full" />
+                    <Skeleton className="h-3.5 w-32 max-w-full" />
                     <div className="flex items-center gap-1">
                       <Skeleton className="h-3 w-3 rounded" />
-                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-16" />
                     </div>
                   </div>
-                  <Skeleton className="h-6 w-6 rounded-md" />
+                  <Skeleton className="h-4 w-4 rounded" />
                 </div>
               </LoadingRegion>
-            ) : (currentUserName || currentUserEmail) && (
-              <div className="bg-sidebar-accent/50 rounded p-2 mb-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex-grow overflow-hidden">
-                    <p className="text-sm font-medium truncate" title={currentUserName || currentUserEmail || ''}>
-                      {currentUserName || currentUserEmail}
-                    </p>
-                    {userRole && (
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <RoleIcon className="h-3 w-3" />
-                        <span>{userRole.charAt(0).toUpperCase() + userRole.slice(1)}</span>
-                      </div>
-                    )}
-                  </div>
-                  <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 ml-1">
-                        <Settings className="h-3 w-3" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuLabel>Profile</DropdownMenuLabel>
-                      {onEditName && (
-                        <DropdownMenuItem onClick={onEditName}>
-                          <Edit3 className="mr-2 h-4 w-4" /> Edit Name
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuLabel>Theme</DropdownMenuLabel>
-                      <DropdownMenuItem onClick={() => setTheme("light")}>
-                        <Sun className="mr-2 h-4 w-4" /> Light
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setTheme("dark")}>
-                        <Moon className="mr-2 h-4 w-4" /> Dark
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowShortcuts(true)}>
-                        <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      {isDevelopmentEnvironment ? (
-                        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                          Auth disabled locally
-                        </DropdownMenuLabel>
-                      ) : (
-                        <DropdownMenuItem
-                          onSelect={(e) => {
-                            e.preventDefault();
-                            handleLogoutClick(e as any);
-                          }}
-                          disabled={isLoggingOut}
-                          className={`transition-all duration-200 ${isLoggingOut
-                            ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                            : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                          }`}
-                        >
-                          <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
-                          {isLoggingOut ? 'Logging out...' : 'Logout'}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+            ) : displayUserName && (
+              <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-auto w-full justify-start overflow-hidden rounded-md border border-sidebar-border bg-sidebar-accent/35 px-2.5 py-2 text-left shadow-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring"
+                    aria-label="Open profile menu"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground text-xs font-medium text-sidebar">
+                      {userInitials}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium leading-5" title={displayUserName}>
+                        {displayUserName}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs leading-4 text-muted-foreground">
+                        <RoleIcon className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{roleLabel}</span>
+                      </span>
+                    </span>
+                    <Settings className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Profile</DropdownMenuLabel>
+                  {onEditName && (
+                    <DropdownMenuItem onClick={onEditName}>
+                      <Edit3 className="mr-2 h-4 w-4" /> Edit Name
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setTheme("light")}>
+                    <Sun className="mr-2 h-4 w-4" /> Light
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")}>
+                    <Moon className="mr-2 h-4 w-4" /> Dark
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowShortcuts(true)}>
+                    <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  {isDevelopmentEnvironment ? (
+                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+                      Auth disabled locally
+                    </DropdownMenuLabel>
+                  ) : (
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        handleLogoutClick(e as any);
+                      }}
+                      disabled={isLoggingOut}
+                      className={`transition-all duration-200 ${isLoggingOut
+                        ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+                        : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+                      }`}
+                    >
+                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
+                      {isLoggingOut ? 'Logging out...' : 'Logout'}
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            <div className="text-center border-t pt-2">
-              <p className="text-xs text-muted-foreground">Made by Gagan Gupta</p>
-              <p className="text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
+            <div className="flex items-center justify-between border-t border-sidebar-border/70 pt-2 text-[11px] leading-4 text-muted-foreground">
+              <span>SettleEase</span>
+              <span>v{packageJson.version}</span>
             </div>
           </div>
         </SidebarFooter>
