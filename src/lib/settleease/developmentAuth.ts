@@ -58,7 +58,7 @@ export const developmentUserProfile: UserProfile = {
   role: "admin",
   first_name: "Development",
   last_name: "Admin",
-  font_preference: "google-sans",
+  font_preference: "inter",
   theme_preference: "light",
   last_active_view: "dashboard",
   has_seen_welcome_toast: true,

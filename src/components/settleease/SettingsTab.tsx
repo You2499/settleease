@@ -97,7 +97,7 @@ type AdminSettingsSnapshot = {
     configuredEnvironment: string | null;
     authMode: "disabled" | "supabase-jwt";
     authDisabled: boolean;
-    allowProductionDangerActions: boolean;
+    requiresDangerZoneUnlock: boolean;
     destructiveActionsEnabled: boolean;
     destructiveActionsReason: string;
     expectedConvexHost: string;
@@ -197,6 +197,8 @@ const FONT_OPTIONS: Array<{ value: FontPreference; label: string }> = [
   { value: "geist", label: "Geist" },
   { value: "system", label: "System" },
 ];
+
+const PRODUCTION_DANGER_UNLOCK_CONFIRMATION = "UNLOCK PRODUCTION DANGER ZONE";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light" },
@@ -474,6 +476,108 @@ function DangerActionDialog({
   );
 }
 
+function ProductionDangerUnlockDialog({
+  open,
+  onOpenChange,
+  onUnlock,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onUnlock: () => void;
+}) {
+  const [confirmation, setConfirmation] = useState("");
+  const [understandsProduction, setUnderstandsProduction] = useState(false);
+  const [understandsIrreversible, setUnderstandsIrreversible] = useState(false);
+  const [understandsNoCrossEnv, setUnderstandsNoCrossEnv] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setConfirmation("");
+      setUnderstandsProduction(false);
+      setUnderstandsIrreversible(false);
+      setUnderstandsNoCrossEnv(false);
+    }
+  }, [open]);
+
+  const canUnlock =
+    confirmation === PRODUCTION_DANGER_UNLOCK_CONFIRMATION &&
+    understandsProduction &&
+    understandsIrreversible &&
+    understandsNoCrossEnv;
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-lg">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+            <ShieldAlert className="h-5 w-5" />
+            Unlock Production Danger Zone
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm leading-6">
+            This unlocks production-only destructive controls for this browser session. Each destructive action will still require its own exact confirmation phrase.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-3 rounded-lg border bg-destructive/5 p-3">
+            <label className="flex items-start gap-3 text-sm leading-6">
+              <Checkbox
+                checked={understandsProduction}
+                onCheckedChange={(value) => setUnderstandsProduction(value === true)}
+              />
+              <span>I understand this targets the live production database.</span>
+            </label>
+            <label className="flex items-start gap-3 text-sm leading-6">
+              <Checkbox
+                checked={understandsIrreversible}
+                onCheckedChange={(value) => setUnderstandsIrreversible(value === true)}
+              />
+              <span>I understand destructive actions can permanently delete production data.</span>
+            </label>
+            <label className="flex items-start gap-3 text-sm leading-6">
+              <Checkbox
+                checked={understandsNoCrossEnv}
+                onCheckedChange={(value) => setUnderstandsNoCrossEnv(value === true)}
+              />
+              <span>I have confirmed I am not trying to manage the development database from production.</span>
+            </label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="production-danger-unlock">Unlock phrase</Label>
+            <div className="rounded-md bg-muted px-3 py-2 font-mono text-xs text-foreground">
+              {PRODUCTION_DANGER_UNLOCK_CONFIRMATION}
+            </div>
+            <Input
+              id="production-danger-unlock"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              placeholder={PRODUCTION_DANGER_UNLOCK_CONFIRMATION}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            disabled={!canUnlock}
+            onClick={() => {
+              if (!canUnlock) return;
+              onUnlock();
+              onOpenChange(false);
+            }}
+          >
+            <Unlock className="mr-2 h-4 w-4" />
+            Unlock Production Danger Zone
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function SettingsTabSkeleton() {
   return (
     <LoadingRegion label="Loading settings" className="flex h-full min-h-0">
@@ -562,6 +666,8 @@ export default function SettingsTab({
   const [includeRedactions, setIncludeRedactions] = useState(true);
   const [workingAction, setWorkingAction] = useState<string | null>(null);
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null);
+  const [productionDangerUnlocked, setProductionDangerUnlocked] = useState(false);
+  const [productionUnlockDialogOpen, setProductionUnlockDialogOpen] = useState(false);
 
   useEffect(() => {
     setSelectedTheme(userProfile?.theme_preference || theme || "light");
@@ -581,6 +687,12 @@ export default function SettingsTab({
     setFallbackOne(snapshot.aiConfig.fallbackModelCodes?.[0] || "none");
     setFallbackTwo(snapshot.aiConfig.fallbackModelCodes?.[1] || "none");
   }, [snapshot?.aiConfig]);
+
+  useEffect(() => {
+    if (clientEnvironment !== "production" || !environmentSafe) {
+      setProductionDangerUnlocked(false);
+    }
+  }, [clientEnvironment, environmentSafe]);
 
   const fallbackCounts = useMemo(() => {
     const activeManualOverrides = manualOverrides.filter((override) => override.is_active).length;
@@ -608,7 +720,18 @@ export default function SettingsTab({
     clientEnvironment !== "development" || snapshot?.environment.authDisabled === true;
   const environmentSafe = !!snapshot && hostMatches && serverMatches && devAuthMatches;
   const canMutate = environmentSafe && !workingAction;
-  const dangerAllowed = canMutate && !!snapshot?.environment.destructiveActionsEnabled;
+  const productionDangerRequiresUnlock =
+    clientEnvironment === "production" &&
+    snapshot?.environment.requiresDangerZoneUnlock === true;
+  const dangerServerAvailable =
+    canMutate && !!snapshot?.environment.destructiveActionsEnabled;
+  const dangerAllowed =
+    dangerServerAvailable &&
+    (!productionDangerRequiresUnlock || productionDangerUnlocked);
+  const dangerZoneUnlockConfirmation =
+    clientEnvironment === "production" && productionDangerUnlocked
+      ? PRODUCTION_DANGER_UNLOCK_CONFIRMATION
+      : undefined;
 
   const mismatchReasons = useMemo(() => {
     const reasons: string[] = [];
@@ -694,6 +817,10 @@ export default function SettingsTab({
   );
 
   const openDangerAction = (action: DangerAction) => {
+    if (productionDangerRequiresUnlock && !productionDangerUnlocked) {
+      setProductionUnlockDialogOpen(true);
+      return;
+    }
     if (!dangerAllowed) return;
     setDangerAction(action);
   };

@@ -49,6 +49,8 @@ const DEFAULT_AI_FALLBACK_MODEL_CODES = [
 ];
 const DEVELOPMENT_CONVEX_HOST = "shocking-panda-595.convex.cloud";
 const PRODUCTION_CONVEX_HOST = "fortunate-fox-427.convex.cloud";
+const PRODUCTION_DANGER_UNLOCK_CONFIRMATION =
+  "UNLOCK PRODUCTION DANGER ZONE";
 
 type SettleEaseEnvironment = "development" | "production";
 
@@ -447,10 +449,9 @@ function getSettleEaseServerEnvironment(): SettleEaseEnvironment {
 function getEnvironmentDetails() {
   const environment = getSettleEaseServerEnvironment();
   const authDisabled = isConvexDevelopmentAuthDisabled();
-  const allowProductionDangerActions =
-    process.env.SETTLEEASE_ALLOW_PROD_DANGER === "true";
   const destructiveActionsEnabled =
-    environment === "development" ? authDisabled : allowProductionDangerActions;
+    environment === "development" ? authDisabled : true;
+  const requiresDangerZoneUnlock = environment === "production";
   const expectedConvexHost =
     environment === "development"
       ? DEVELOPMENT_CONVEX_HOST
@@ -466,13 +467,13 @@ function getEnvironmentDetails() {
     configuredEnvironment,
     authMode: authDisabled ? "disabled" : "supabase-jwt",
     authDisabled,
-    allowProductionDangerActions,
+    requiresDangerZoneUnlock,
     destructiveActionsEnabled,
     destructiveActionsReason: destructiveActionsEnabled
-      ? "Danger actions are enabled for this deployment."
-      : environment === "production"
-        ? "Production danger actions require SETTLEEASE_ALLOW_PROD_DANGER=true."
-        : "Development danger actions require SETTLEEASE_DISABLE_AUTH=true.",
+      ? environment === "production"
+        ? "Production danger actions require unlocking the danger zone and confirming each action."
+        : "Danger actions are enabled for this deployment."
+      : "Development danger actions require SETTLEEASE_DISABLE_AUTH=true.",
     expectedConvexHost,
     deploymentLabel,
   };
@@ -524,11 +525,19 @@ function requireDangerAction(
   expectedEnvironment: SettleEaseEnvironment,
   confirmation: string,
   expectedConfirmation: string,
+  dangerZoneUnlockConfirmation?: string,
 ) {
   const details = requireExpectedEnvironment(expectedEnvironment);
 
   if (confirmation !== expectedConfirmation) {
     throw new ConvexError("Confirmation phrase did not match.");
+  }
+
+  if (
+    details.environment === "production" &&
+    dangerZoneUnlockConfirmation !== PRODUCTION_DANGER_UNLOCK_CONFIRMATION
+  ) {
+    throw new ConvexError("Production danger zone has not been unlocked.");
   }
 
   if (!details.destructiveActionsEnabled) {
@@ -631,7 +640,7 @@ async function ensureUserProfile(
         : "user",
     firstName: args.firstName || undefined,
     lastName: args.lastName || undefined,
-    fontPreference: "google-sans",
+    fontPreference: "inter",
     themePreference: "light",
     lastActiveView: "dashboard",
     hasSeenWelcomeToast: false,
@@ -1914,6 +1923,7 @@ export const clearReportGenerationEvents = mutation({
   args: {
     expectedEnvironment: settleEaseEnvironment,
     confirmation: v.string(),
+    dangerZoneUnlockConfirmation: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -1924,6 +1934,7 @@ export const clearReportGenerationEvents = mutation({
         args.expectedEnvironment,
         "clearReportLogs",
       ),
+      args.dangerZoneUnlockConfirmation,
     );
 
     const deletedCount = await deleteAllFromTable(
@@ -1938,6 +1949,7 @@ export const clearAiCaches = mutation({
   args: {
     expectedEnvironment: settleEaseEnvironment,
     confirmation: v.string(),
+    dangerZoneUnlockConfirmation: v.optional(v.string()),
     includeSummaries: v.optional(v.boolean()),
     includeRedactions: v.optional(v.boolean()),
   },
@@ -1947,6 +1959,7 @@ export const clearAiCaches = mutation({
       args.expectedEnvironment,
       args.confirmation,
       getDangerConfirmationPhrase(args.expectedEnvironment, "clearAiCaches"),
+      args.dangerZoneUnlockConfirmation,
     );
 
     const includeSummaries = args.includeSummaries ?? true;
@@ -1966,6 +1979,7 @@ export const clearSettlementRecords = mutation({
   args: {
     expectedEnvironment: settleEaseEnvironment,
     confirmation: v.string(),
+    dangerZoneUnlockConfirmation: v.optional(v.string()),
     scope: settlementClearScope,
   },
   handler: async (ctx, args) => {
@@ -1985,6 +1999,7 @@ export const clearSettlementRecords = mutation({
       args.expectedEnvironment,
       args.confirmation,
       expectedConfirmation,
+      args.dangerZoneUnlockConfirmation,
     );
 
     if (args.scope === "activeManualOverrides") {
@@ -2022,6 +2037,7 @@ export const resetSettleEaseData = mutation({
   args: {
     expectedEnvironment: settleEaseEnvironment,
     confirmation: v.string(),
+    dangerZoneUnlockConfirmation: v.optional(v.string()),
     mode: resetDataMode,
   },
   handler: async (ctx, args) => {
@@ -2033,6 +2049,7 @@ export const resetSettleEaseData = mutation({
         args.expectedEnvironment,
         args.mode === "factory" ? "factoryReset" : "resetOperational",
       ),
+      args.dangerZoneUnlockConfirmation,
     );
 
     const deleted = {
