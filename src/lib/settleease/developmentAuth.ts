@@ -3,13 +3,34 @@ import type { UserProfile } from "./types";
 
 export const DEVELOPMENT_CONVEX_URL = "https://shocking-panda-595.convex.cloud";
 export const PRODUCTION_CONVEX_URL = "https://fortunate-fox-427.convex.cloud";
+export const DEVELOPMENT_CONVEX_HOST = "shocking-panda-595.convex.cloud";
+export const PRODUCTION_CONVEX_HOST = "fortunate-fox-427.convex.cloud";
 
 export const DEVELOPMENT_SUPABASE_USER_ID = "settleease-development-admin";
 export const DEVELOPMENT_USER_EMAIL = "development@settleease.local";
 export const DEVELOPMENT_USER_NAME = "Development Admin";
 
+export type SettleEaseEnvironment = "development" | "production";
+
 export function isLocalDevelopmentEnvironment() {
   return process.env.NODE_ENV === "development";
+}
+
+export function getClientSettleEaseEnvironment(): SettleEaseEnvironment {
+  const configuredEnvironment = process.env.NEXT_PUBLIC_SETTLEEASE_ENV
+    ?.trim()
+    .toLowerCase();
+
+  if (configuredEnvironment === "development") return "development";
+  if (configuredEnvironment === "production") return "production";
+
+  return isLocalDevelopmentEnvironment() ? "development" : "production";
+}
+
+export function getExpectedConvexHost(environment: SettleEaseEnvironment) {
+  return environment === "development"
+    ? DEVELOPMENT_CONVEX_HOST
+    : PRODUCTION_CONVEX_HOST;
 }
 
 export const developmentSupabaseUser = {

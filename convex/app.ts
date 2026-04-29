@@ -47,6 +47,31 @@ const DEFAULT_AI_FALLBACK_MODEL_CODES = [
   "gemini-3-flash-preview",
   "gemini-2.5-flash",
 ];
+const DEVELOPMENT_CONVEX_HOST = "shocking-panda-595.convex.cloud";
+const PRODUCTION_CONVEX_HOST = "fortunate-fox-427.convex.cloud";
+
+type SettleEaseEnvironment = "development" | "production";
+
+const settleEaseEnvironment = v.union(
+  v.literal("development"),
+  v.literal("production"),
+);
+
+const aiModelCode = v.union(
+  v.literal("gemini-3.1-flash-lite-preview"),
+  v.literal("gemini-3-flash-preview"),
+  v.literal("gemini-2.5-flash"),
+);
+
+const resetDataMode = v.union(
+  v.literal("operational"),
+  v.literal("factory"),
+);
+
+const settlementClearScope = v.union(
+  v.literal("activeManualOverrides"),
+  v.literal("allSettlementRecords"),
+);
 
 const activeView = v.union(
   v.literal("dashboard"),
@@ -72,6 +97,18 @@ const reportGenerationEventType = v.union(
 );
 
 const exportReportMode = v.union(v.literal("group"), v.literal("personal"));
+
+const DEFAULT_CATEGORY_SEEDS = [
+  { name: "Food", iconName: "Utensils" },
+  { name: "Groceries", iconName: "ShoppingCart" },
+  { name: "Travel", iconName: "Car" },
+  { name: "Entertainment", iconName: "Film" },
+  { name: "Utilities", iconName: "Zap" },
+  { name: "Rent", iconName: "Home" },
+  { name: "Health", iconName: "HeartPulse" },
+  { name: "Shopping", iconName: "ShoppingBag" },
+  { name: "Other", iconName: "CircleHelp" },
+];
 
 function profileDto(profile: any) {
   if (!profile) return null;
@@ -396,6 +433,136 @@ function aiConfigDto(config: any, key = DEFAULT_AI_CONFIG_KEY) {
   };
 }
 
+function getSettleEaseServerEnvironment(): SettleEaseEnvironment {
+  const configuredEnvironment = String(process.env.SETTLEEASE_ENV ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (configuredEnvironment === "development") return "development";
+  if (configuredEnvironment === "production") return "production";
+
+  return isConvexDevelopmentAuthDisabled() ? "development" : "production";
+}
+
+function getEnvironmentDetails() {
+  const environment = getSettleEaseServerEnvironment();
+  const authDisabled = isConvexDevelopmentAuthDisabled();
+  const allowProductionDangerActions =
+    process.env.SETTLEEASE_ALLOW_PROD_DANGER === "true";
+  const destructiveActionsEnabled =
+    environment === "development" ? authDisabled : allowProductionDangerActions;
+  const expectedConvexHost =
+    environment === "development"
+      ? DEVELOPMENT_CONVEX_HOST
+      : PRODUCTION_CONVEX_HOST;
+  const deploymentLabel =
+    process.env.SETTLEEASE_DEPLOYMENT_LABEL ||
+    expectedConvexHost.replace(".convex.cloud", "");
+  const configuredEnvironment = process.env.SETTLEEASE_ENV ?? null;
+
+  return {
+    environment,
+    environmentSource: configuredEnvironment ? "explicit" : "inferred",
+    configuredEnvironment,
+    authMode: authDisabled ? "disabled" : "supabase-jwt",
+    authDisabled,
+    allowProductionDangerActions,
+    destructiveActionsEnabled,
+    destructiveActionsReason: destructiveActionsEnabled
+      ? "Danger actions are enabled for this deployment."
+      : environment === "production"
+        ? "Production danger actions require SETTLEEASE_ALLOW_PROD_DANGER=true."
+        : "Development danger actions require SETTLEEASE_DISABLE_AUTH=true.",
+    expectedConvexHost,
+    deploymentLabel,
+  };
+}
+
+function requireExpectedEnvironment(expectedEnvironment: SettleEaseEnvironment) {
+  const details = getEnvironmentDetails();
+  if (details.environment !== expectedEnvironment) {
+    throw new ConvexError(
+      `Environment mismatch. This deployment is ${details.environment}, but the request targeted ${expectedEnvironment}.`,
+    );
+  }
+  return details;
+}
+
+function getEnvironmentName(environment: SettleEaseEnvironment) {
+  return environment === "development" ? "DEVELOPMENT" : "PRODUCTION";
+}
+
+function getDangerConfirmationPhrase(
+  environment: SettleEaseEnvironment,
+  action:
+    | "clearReportLogs"
+    | "clearAiCaches"
+    | "clearActiveOverrides"
+    | "clearSettlementRecords"
+    | "resetOperational"
+    | "factoryReset",
+) {
+  const name = getEnvironmentName(environment);
+
+  switch (action) {
+    case "clearReportLogs":
+      return `CLEAR ${name} REPORT LOGS`;
+    case "clearAiCaches":
+      return `CLEAR ${name} AI CACHES`;
+    case "clearActiveOverrides":
+      return `CLEAR ${name} ACTIVE OVERRIDES`;
+    case "clearSettlementRecords":
+      return `CLEAR ${name} SETTLEMENT RECORDS`;
+    case "resetOperational":
+      return `RESET ${name} DATA`;
+    case "factoryReset":
+      return `FACTORY RESET ${name}`;
+  }
+}
+
+function requireDangerAction(
+  expectedEnvironment: SettleEaseEnvironment,
+  confirmation: string,
+  expectedConfirmation: string,
+) {
+  const details = requireExpectedEnvironment(expectedEnvironment);
+
+  if (confirmation !== expectedConfirmation) {
+    throw new ConvexError("Confirmation phrase did not match.");
+  }
+
+  if (!details.destructiveActionsEnabled) {
+    throw new ConvexError(details.destructiveActionsReason);
+  }
+
+  return details;
+}
+
+async function deleteAllFromTable(
+  ctx: any,
+  tableName: string,
+  predicate?: (doc: any) => boolean,
+) {
+  const docs = await ctx.db.query(tableName).collect();
+  const docsToDelete = predicate ? docs.filter(predicate) : docs;
+  await Promise.all(docsToDelete.map((doc: any) => ctx.db.delete(doc._id)));
+  return docsToDelete.length;
+}
+
+async function patchAllFromTable(
+  ctx: any,
+  tableName: string,
+  patch: Record<string, any>,
+  predicate?: (doc: any) => boolean,
+) {
+  const docs = await ctx.db.query(tableName).collect();
+  const docsToPatch = predicate ? docs.filter(predicate) : docs;
+  await Promise.all(
+    docsToPatch.map((doc: any) => ctx.db.patch(doc._id, patch)),
+  );
+  return docsToPatch.length;
+}
+
 async function getProfileBySupabaseUserId(ctx: any, supabaseUserId: string) {
   const normalizedUserId = normalizeSupabaseUserId(supabaseUserId);
   return await ctx.db
@@ -479,6 +646,68 @@ export const health = query({
   handler: async (ctx) => {
     await ctx.db.query("people").take(1);
     return { ok: true, checkedAt: nowIso() };
+  },
+});
+
+export const getAdminSettingsSnapshot = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+
+    const [
+      people,
+      categories,
+      expenses,
+      settlementPayments,
+      manualOverrides,
+      budgetItems,
+      userProfiles,
+      reportGenerationEvents,
+      aiSummaries,
+      aiRedactions,
+      aiPrompts,
+      aiConfig,
+    ] = await Promise.all([
+      ctx.db.query("people").collect(),
+      ctx.db.query("categories").collect(),
+      ctx.db.query("expenses").collect(),
+      ctx.db.query("settlementPayments").collect(),
+      ctx.db.query("manualSettlementOverrides").collect(),
+      ctx.db.query("budgetItems").collect(),
+      ctx.db.query("userProfiles").collect(),
+      ctx.db.query("reportGenerationEvents").collect(),
+      ctx.db.query("aiSummaries").collect(),
+      ctx.db.query("aiRedactions").collect(),
+      ctx.db.query("aiPrompts").collect(),
+      ctx.db
+        .query("aiConfigs")
+        .withIndex("by_key", (q: any) => q.eq("key", DEFAULT_AI_CONFIG_KEY))
+        .first(),
+    ]);
+
+    const activeManualOverrideCount = manualOverrides.filter(
+      (override: any) => override.isActive,
+    ).length;
+
+    return {
+      environment: getEnvironmentDetails(),
+      counts: {
+        people: people.length,
+        categories: categories.length,
+        expenses: expenses.length,
+        settlementPayments: settlementPayments.length,
+        manualOverrides: manualOverrides.length,
+        activeManualOverrides: activeManualOverrideCount,
+        budgetItems: budgetItems.length,
+        userProfiles: userProfiles.length,
+        reportGenerationEvents: reportGenerationEvents.length,
+        aiSummaries: aiSummaries.length,
+        aiRedactions: aiRedactions.length,
+        aiPrompts: aiPrompts.length,
+      },
+      aiConfig: aiConfigDto(aiConfig),
+      checkedAt: nowIso(),
+    };
   },
 });
 
@@ -674,9 +903,14 @@ export const removePerson = mutation({
 });
 
 export const ensureDefaultPeople = mutation({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    expectedEnvironment: v.optional(settleEaseEnvironment),
+  },
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    if (args.expectedEnvironment) {
+      requireExpectedEnvironment(args.expectedEnvironment);
+    }
     const existing = await ctx.db.query("people").take(1);
     if (existing.length > 0) return false;
     await Promise.all(
@@ -785,6 +1019,51 @@ export const reorderCategories = mutation({
         if (category) await ctx.db.patch(category._id, { rank: index + 1 });
       }),
     );
+  },
+});
+
+export const seedDefaultCategories = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    requireExpectedEnvironment(args.expectedEnvironment);
+
+    const categories = await ctx.db.query("categories").collect();
+    const existingNames = new Set(
+      categories.map((category: any) =>
+        category.name.trim().toLowerCase(),
+      ),
+    );
+    let nextRank =
+      categories.length > 0
+        ? Math.max(...categories.map((category: any) => category.rank ?? 0))
+        : 0;
+    let inserted = 0;
+    let skipped = 0;
+
+    for (const seed of DEFAULT_CATEGORY_SEEDS) {
+      if (existingNames.has(seed.name.toLowerCase())) {
+        skipped += 1;
+        continue;
+      }
+
+      nextRank += 1;
+      await ctx.db.insert("categories", {
+        ...seed,
+        rank: nextRank,
+        createdAt: nowIso(),
+      });
+      existingNames.add(seed.name.toLowerCase());
+      inserted += 1;
+    }
+
+    return {
+      inserted,
+      skipped,
+      totalCategoryCount: categories.length + inserted,
+    };
   },
 });
 
@@ -948,9 +1227,13 @@ export const upsertCustomBudgetItem = mutation({
 export const backfillBudgetItemsFromExpenses = mutation({
   args: {
     dryRun: v.optional(v.boolean()),
+    expectedEnvironment: v.optional(settleEaseEnvironment),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
+    if (args.expectedEnvironment) {
+      requireExpectedEnvironment(args.expectedEnvironment);
+    }
     const dryRun = args.dryRun ?? false;
     const timestamp = nowIso();
     const expenses = await ctx.db.query("expenses").collect();
@@ -1362,6 +1645,50 @@ export const getActiveAiConfig = query({
   },
 });
 
+export const updateAiConfig = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    modelCode: aiModelCode,
+    fallbackModelCodes: v.array(aiModelCode),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireAdmin(ctx);
+    requireExpectedEnvironment(args.expectedEnvironment);
+
+    const fallbackModelCodes = [
+      ...new Set(
+        args.fallbackModelCodes.filter((code) => code !== args.modelCode),
+      ),
+    ];
+    const normalizedFallbacks =
+      fallbackModelCodes.length > 0
+        ? fallbackModelCodes
+        : DEFAULT_AI_FALLBACK_MODEL_CODES.filter(
+            (code) => code !== args.modelCode,
+          );
+    const timestamp = nowIso();
+    const payload = {
+      key: DEFAULT_AI_CONFIG_KEY,
+      modelCode: args.modelCode,
+      fallbackModelCodes: normalizedFallbacks,
+      updatedAt: timestamp,
+      updatedByUserId: supabaseUserId,
+    };
+    const existing = await ctx.db
+      .query("aiConfigs")
+      .withIndex("by_key", (q: any) => q.eq("key", DEFAULT_AI_CONFIG_KEY))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+      return aiConfigDto(await ctx.db.get(existing._id));
+    }
+
+    const id = await ctx.db.insert("aiConfigs", payload);
+    return aiConfigDto(await ctx.db.get(id));
+  },
+});
+
 export const getAiSummaryByHash = query({
   args: { dataHash: v.string() },
   handler: async (ctx, args) => {
@@ -1579,6 +1906,161 @@ export const getReportGenerationAnalytics = query({
         manualOverrideCount: event.manualOverrideCount,
         createdAt: event.createdAt,
       })),
+    };
+  },
+});
+
+export const clearReportGenerationEvents = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    confirmation: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    requireDangerAction(
+      args.expectedEnvironment,
+      args.confirmation,
+      getDangerConfirmationPhrase(
+        args.expectedEnvironment,
+        "clearReportLogs",
+      ),
+    );
+
+    const deletedCount = await deleteAllFromTable(
+      ctx,
+      "reportGenerationEvents",
+    );
+    return { deletedCount };
+  },
+});
+
+export const clearAiCaches = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    confirmation: v.string(),
+    includeSummaries: v.optional(v.boolean()),
+    includeRedactions: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    requireDangerAction(
+      args.expectedEnvironment,
+      args.confirmation,
+      getDangerConfirmationPhrase(args.expectedEnvironment, "clearAiCaches"),
+    );
+
+    const includeSummaries = args.includeSummaries ?? true;
+    const includeRedactions = args.includeRedactions ?? true;
+    const deletedSummaries = includeSummaries
+      ? await deleteAllFromTable(ctx, "aiSummaries")
+      : 0;
+    const deletedRedactions = includeRedactions
+      ? await deleteAllFromTable(ctx, "aiRedactions")
+      : 0;
+
+    return { deletedSummaries, deletedRedactions };
+  },
+});
+
+export const clearSettlementRecords = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    confirmation: v.string(),
+    scope: settlementClearScope,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const expectedConfirmation =
+      args.scope === "activeManualOverrides"
+        ? getDangerConfirmationPhrase(
+            args.expectedEnvironment,
+            "clearActiveOverrides",
+          )
+        : getDangerConfirmationPhrase(
+            args.expectedEnvironment,
+            "clearSettlementRecords",
+          );
+
+    requireDangerAction(
+      args.expectedEnvironment,
+      args.confirmation,
+      expectedConfirmation,
+    );
+
+    if (args.scope === "activeManualOverrides") {
+      const clearedManualOverrides = await patchAllFromTable(
+        ctx,
+        "manualSettlementOverrides",
+        { isActive: false, updatedAt: nowIso() },
+        (override) => override.isActive,
+      );
+      return {
+        clearedManualOverrides,
+        deletedSettlementPayments: 0,
+        deletedManualOverrides: 0,
+      };
+    }
+
+    const deletedSettlementPayments = await deleteAllFromTable(
+      ctx,
+      "settlementPayments",
+    );
+    const deletedManualOverrides = await deleteAllFromTable(
+      ctx,
+      "manualSettlementOverrides",
+    );
+
+    return {
+      clearedManualOverrides: 0,
+      deletedSettlementPayments,
+      deletedManualOverrides,
+    };
+  },
+});
+
+export const resetSettleEaseData = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    confirmation: v.string(),
+    mode: resetDataMode,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    requireDangerAction(
+      args.expectedEnvironment,
+      args.confirmation,
+      getDangerConfirmationPhrase(
+        args.expectedEnvironment,
+        args.mode === "factory" ? "factoryReset" : "resetOperational",
+      ),
+    );
+
+    const deleted = {
+      expenses: await deleteAllFromTable(ctx, "expenses"),
+      settlementPayments: await deleteAllFromTable(ctx, "settlementPayments"),
+      manualOverrides: await deleteAllFromTable(
+        ctx,
+        "manualSettlementOverrides",
+      ),
+      budgetItems: await deleteAllFromTable(ctx, "budgetItems"),
+      reportGenerationEvents: await deleteAllFromTable(
+        ctx,
+        "reportGenerationEvents",
+      ),
+      aiSummaries: await deleteAllFromTable(ctx, "aiSummaries"),
+      aiRedactions: await deleteAllFromTable(ctx, "aiRedactions"),
+      people: 0,
+      categories: 0,
+    };
+
+    if (args.mode === "factory") {
+      deleted.people = await deleteAllFromTable(ctx, "people");
+      deleted.categories = await deleteAllFromTable(ctx, "categories");
+    }
+
+    return {
+      mode: args.mode,
+      deleted,
     };
   },
 });

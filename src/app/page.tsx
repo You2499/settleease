@@ -33,6 +33,7 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useConvexData } from '@/hooks/useConvexData';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
+import { useFontSync } from '@/hooks/useFontSync';
 
 import {
   buildWelcomeToastModel,
@@ -150,6 +151,7 @@ function SettleEasePageContent() {
 
   // Sync theme through the live Convex profile.
   useThemeSync(currentUser?.id, userProfile);
+  useFontSync(userProfile?.font_preference);
 
   // Helper function to detect Google OAuth users and parse their names
   const getGoogleUserInfo = useCallback(() => {
@@ -707,7 +709,25 @@ function SettleEasePageContent() {
                     {shouldShowPageSkeleton ? (
                       <SettingsTabSkeleton />
                     ) : (
-                      <SettingsTab onNavigate={handleSetActiveView} />
+                      <SettingsTab
+                        onNavigate={handleSetActiveView}
+                        onEditProfileName={() => {
+                          setIsNameModalEditMode(true);
+                          setShowNameModal(true);
+                        }}
+                        onUpdateUserProfile={updateUserProfile}
+                        people={people}
+                        expenses={expenses}
+                        categories={categories}
+                        settlementPayments={settlementPayments}
+                        manualOverrides={manualOverrides}
+                        currentUserId={currentUser?.id}
+                        currentUserEmail={currentUser?.email ?? null}
+                        displayName={getDisplayName()}
+                        userRole={userRole}
+                        userProfile={userProfile}
+                        isDevelopmentEnvironment={isDevelopmentEnvironment}
+                      />
                     )}
                   </SettleEaseErrorBoundary>
                 )}

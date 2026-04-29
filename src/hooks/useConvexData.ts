@@ -59,7 +59,7 @@ export function useConvexData(
     }
 
     initialDefaultPeopleSetupAttemptedOrCompleted = true;
-    void ensureDefaultPeople()
+    void ensureDefaultPeople({})
       .then((added) => {
         if (added) {
           toast({ title: "Welcome!", description: "Added Alice, Bob, and Charlie to your group." });

@@ -25,7 +25,7 @@ export interface AiModelConfig {
   updatedByUserId?: string | null;
 }
 
-const AI_MODEL_OPTIONS: AiModelOption[] = [
+export const AI_MODEL_OPTIONS: AiModelOption[] = [
   {
     code: "gemini-3.1-flash-lite-preview",
     displayName: "Gemini 3.1 Flash-Lite Preview",
