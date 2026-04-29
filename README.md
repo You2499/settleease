@@ -12,8 +12,6 @@
     ·
     <a href="#quick-start">Quick Start</a>
     ·
-    <a href="#ios-app">iOS App</a>
-    ·
     <a href="#deployment">Deployment</a>
   </p>
 
@@ -23,7 +21,6 @@
     <img alt="React" src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=111" />
     <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white" />
     <img alt="Convex" src="https://img.shields.io/badge/Convex-realtime-ff5a1f?style=for-the-badge" />
-    <img alt="SwiftUI" src="https://img.shields.io/badge/SwiftUI-iOS_26-f05138?style=for-the-badge&logo=swift&logoColor=white" />
   </p>
 </div>
 
@@ -33,7 +30,7 @@
 
 SettleEase is a full-stack expense sharing app built around one goal: make group money simple, auditable, and a little less awkward.
 
-This repository is the final cleaned snapshot of the project. The long-running development history has been trimmed down for one last GitHub push: tests, debug surfaces, stale assistant/tooling folders, local credentials, old previews, unused files, and unused packages were removed. What remains is the app itself, its deployment path, the Lucide icon generation flow, and the native iOS source.
+This repository is the final cleaned snapshot of the project. The long-running development history has been trimmed down for one last GitHub push: tests, debug surfaces, stale assistant/tooling folders, local credentials, old previews, unused files, and unused packages were removed. What remains is the web app, its Convex backend, the deployment path, and the Lucide icon generation flow.
 
 ## What It Does
 
@@ -48,7 +45,6 @@ It is designed for real group workflows:
 - Explore group and personal analytics with interactive charts.
 - Generate group summaries or personal statements with optional AI label redaction.
 - Sync live data through Convex while using Supabase for authentication.
-- Run a companion SwiftUI iOS app against the same backend.
 
 ## Highlights
 
@@ -61,7 +57,6 @@ It is designed for real group workflows:
 | AI summaries | Structured Gemini settlement summaries with Convex caching and deterministic dashboard cards. |
 | Export reports | Printable/downloadable HTML reports for group summaries and personal statements, with optional AI redaction. |
 | Auth and roles | Supabase email/password, Google OAuth, Convex JWT bridge, admin/user access gates, and profile preferences. |
-| iOS | SwiftUI shell with core models, backend services, receipt scanning, dashboard, analytics, manage, and settings views. |
 
 ## Architecture
 
@@ -74,9 +69,6 @@ flowchart LR
   Api --> Jwt["Convex JWT Bridge"]
   Jwt --> Convex["Convex Functions + Database"]
   ConvexClient --> Convex
-  IOS["SwiftUI iOS App"] --> Supabase
-  IOS --> Convex
-  IOS --> Api
 ```
 
 ### Core Flow
@@ -85,7 +77,6 @@ flowchart LR
 2. The web app exchanges the Supabase session for a short-lived Convex JWT.
 3. Convex stores app data and serves realtime queries/mutations.
 4. API routes call Gemini for summaries, receipt parsing, and report redaction.
-5. The iOS app shares the same Supabase, Convex, and web API backend.
 
 ## Tech Stack
 
@@ -97,7 +88,6 @@ flowchart LR
 | AI | Google Gemini via `@google/generative-ai` |
 | Charts | Visx primitives |
 | Icons | `lucide-react` plus generated searchable Lucide metadata |
-| Native app | Swift 6, SwiftUI, Supabase Swift, Convex Swift |
 | Deployment | Vercel for web, Convex deploy for backend functions |
 
 ## Quick Start
@@ -109,7 +99,6 @@ flowchart LR
 - Convex account/project
 - Supabase project
 - Google Gemini API key for AI features
-- Xcode 26 for the iOS app
 
 ### Web App
 
@@ -243,7 +232,6 @@ Settings keeps the final app focused: profile preferences, theme/font preference
 ```text
 .
 ├── convex/                         # Convex schema, functions, auth config, generated client bindings
-├── ios/SettleEase/                 # Native SwiftUI app, Swift package, Xcode project, iOS docs
 ├── public/                         # App icon and bundled fonts
 ├── scripts/                        # Vercel build and Lucide metadata generation
 ├── src/app/                        # Next.js app router and API routes
@@ -251,45 +239,6 @@ Settings keeps the final app focused: profile preferences, theme/font preference
 ├── src/components/ui/              # Reusable Radix/shadcn-style primitives
 ├── src/hooks/                      # Auth, Convex data, profile, theme, toast hooks
 └── src/lib/settleease/             # Models, calculations, AI helpers, analytics, export helpers
-```
-
-## iOS App
-
-The native app lives in `ios/SettleEase` and is split into three Swift modules:
-
-| Module | Purpose |
-| --- | --- |
-| `SettleEaseCore` | Portable models, formatting, dashboard helpers, sample data, and settlement math. |
-| `SettleEaseServices` | Supabase auth, Convex realtime, Convex token bridge, AI routes, receipt images, and haptics. |
-| `SettleEaseApp` | SwiftUI shell, auth, dashboard, analytics, manage, scan, and settings views. |
-
-Create the local iOS secrets file before running the app:
-
-```bash
-cd ios/SettleEase
-cp XcodeApp/Secrets.xcconfig.example XcodeApp/Secrets.xcconfig
-```
-
-Then configure:
-
-- `SETTLEEASE_SUPABASE_URL`
-- `SETTLEEASE_SUPABASE_ANON_KEY`
-- `SETTLEEASE_CONVEX_URL`
-- `SETTLEEASE_WEB_BASE_URL`
-- `SETTLEEASE_OAUTH_REDIRECT_URL`
-
-Useful verification command:
-
-```bash
-cd ios/SettleEase
-swift package describe
-```
-
-Full app builds require Xcode rather than CommandLineTools:
-
-```bash
-cd ios/SettleEase
-xcodebuild -quiet -project SettleEase.xcodeproj -scheme SettleEase -sdk iphonesimulator26.4 -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.4' build
 ```
 
 ## Deployment
@@ -328,7 +277,6 @@ Configure Supabase Auth providers and redirect URLs for:
 
 - The web origin, for example `https://settleease-navy.vercel.app`
 - Local development, for example `http://localhost:3000`
-- The iOS callback URL, `settleease://auth-callback`
 
 ## Production Checks
 
@@ -339,14 +287,12 @@ npm run prebuild
 npm run lint
 npm run typecheck
 npm run build
-cd ios/SettleEase && swift package describe
 ```
 
 Known verification notes for this final snapshot:
 
 - `npm run lint` passes with warnings from generated Convex files and a few existing React hook/image lint warnings.
 - `npm run build` may log a Supabase environment warning during prerender if local env vars are missing, but the production build completes when configured.
-- The iOS `xcodebuild` command requires a full Xcode install and an iOS simulator SDK matching the command.
 
 ## Generated And Local Files
 
@@ -358,14 +304,12 @@ The following are intentionally not committed:
 - `.next/`
 - `lucide-icons/`
 - `src/lib/lucide-icons-metadata.json`
-- `ios/SettleEase/.build/`
-- `ios/SettleEase/XcodeApp/Secrets.xcconfig`
-- local editor, Xcode, OS, and assistant/tooling state
+- local editor, OS, and assistant/tooling state
 
 Run `npm run prebuild` whenever a fresh checkout needs Lucide search metadata.
 
 ## Final Note
 
-SettleEase reached its final wrap-up as a working, cleaned, production-oriented snapshot. The repo now carries the parts that matter: the app, the backend, the native iOS source, the build path, and enough documentation for someone to understand and run it without digging through years of leftovers.
+SettleEase reached its final wrap-up as a working, cleaned, production-oriented snapshot. The repo now carries the parts that matter: the web app, the backend, the build path, and enough documentation for someone to understand and run it without digging through years of leftovers.
 
 Thanks for the ride.

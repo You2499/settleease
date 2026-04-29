@@ -12,7 +12,6 @@
 
 # Production
 /build
-ios/SettleEase/.build/
 tsconfig.tsbuildinfo
 
 # Environment variables
@@ -20,7 +19,6 @@ tsconfig.tsbuildinfo
 .env.development.local
 .env.test.local
 .env.production.local
-ios/SettleEase/XcodeApp/Secrets.xcconfig
 
 # Log files
 npm-debug.log*
@@ -54,10 +52,6 @@ Thumbs.db
 skills/
 skills-lock.json
 settings.json
-
-# Xcode local user state
-**/xcuserdata/
-*.xcuserstate
 
 # Lucide Icons (downloaded during build)
 /lucide-icons/
