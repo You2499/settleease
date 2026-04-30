@@ -46,8 +46,25 @@ interface AuthFormProps {
 
 type AuthDesign = 'beta' | 'classic';
 type AuthSurface = 'beta' | 'classic';
+type EmailAccountStatus = 'new' | 'confirmed' | 'unconfirmed' | 'pending' | 'unknown';
+type AuthToastConfig = {
+  title: string;
+  description: string;
+  variant?: 'default' | 'destructive';
+};
+type EmailStatusLookup = {
+  status: EmailAccountStatus;
+  isGoogleAccount: boolean;
+};
+type EmailStatusCheckResult = {
+  shouldProceed: boolean;
+  toastConfig?: AuthToastConfig;
+  showResendOption?: boolean;
+  errorType?: string;
+};
 
 const AUTH_DESIGN_STORAGE_KEY = 'settleease-auth-design';
+const AUTH_REDIRECT_URL = "https://settleease-navy.vercel.app/";
 
 const betaBenefits = [
   {
@@ -102,6 +119,65 @@ const classicBenefits = [
 
 function isAuthDesign(value: string | null): value is AuthDesign {
   return value === 'beta' || value === 'classic';
+}
+
+function getAuthErrorCode(error: unknown) {
+  return typeof error === 'object' && error !== null && 'code' in error
+    ? String((error as { code?: unknown }).code || '')
+    : '';
+}
+
+function getAuthErrorMessageText(error: unknown) {
+  return typeof error === 'object' && error !== null && 'message' in error
+    ? String((error as { message?: unknown }).message || '')
+    : '';
+}
+
+function isEmailNotConfirmedError(error: unknown) {
+  const code = getAuthErrorCode(error);
+  const message = getAuthErrorMessageText(error).toLowerCase();
+  return code === 'email_not_confirmed' || message.includes('email not confirmed');
+}
+
+function isInvalidCredentialsError(error: unknown) {
+  const code = getAuthErrorCode(error);
+  const message = getAuthErrorMessageText(error).toLowerCase();
+  return (
+    code === 'invalid_credentials' ||
+    code === 'invalid_login_credentials' ||
+    (message.includes('invalid') && message.includes('credentials'))
+  );
+}
+
+function isExistingUserError(error: unknown) {
+  const code = getAuthErrorCode(error);
+  const message = getAuthErrorMessageText(error).toLowerCase();
+  return (
+    code === 'user_already_exists' ||
+    code === 'email_exists' ||
+    message.includes('already')
+  );
+}
+
+function normalizeEmailStatus(rawStatus: unknown): EmailAccountStatus {
+  if (
+    rawStatus === 'new' ||
+    rawStatus === 'confirmed' ||
+    rawStatus === 'unconfirmed' ||
+    rawStatus === 'pending'
+  ) {
+    return rawStatus;
+  }
+
+  return 'unknown';
+}
+
+function getAccountStatusUnavailableToast(): AuthToastConfig {
+  return {
+    title: "Account Check Unavailable",
+    description: "We could not verify whether this email already uses Google or needs confirmation. Please try again in a moment.",
+    variant: "destructive",
+  };
 }
 
 export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
@@ -201,15 +277,175 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     setIsGoogleLoading(false);
   };
 
+  const lookupEmailStatus = async (emailAddress: string): Promise<EmailStatusLookup> => {
+    if (!supabase) {
+      throw new Error("Supabase auth is not available.");
+    }
+
+    const { data, error } = await supabase.rpc('check_email_status', {
+      email_to_check: emailAddress,
+    });
+
+    if (error) {
+      console.warn('Email status check RPC error:', error);
+      throw error;
+    }
+
+    const result = Array.isArray(data) ? data[0] : data;
+
+    return {
+      status: normalizeEmailStatus((result as { status?: unknown } | null | undefined)?.status),
+      isGoogleAccount: (result as { is_google_account?: unknown } | null | undefined)?.is_google_account === true,
+    };
+  };
+
+  const verifyExistingAccountPassword = async (emailAddress: string, candidatePassword: string): Promise<boolean> => {
+    if (!supabase) return false;
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: emailAddress,
+        password: candidatePassword,
+      });
+
+      if (!error) {
+        await supabase.auth.signOut();
+        return true;
+      }
+
+      return isEmailNotConfirmedError(error);
+    } catch (err) {
+      console.warn('Password verification failed:', err);
+      return false;
+    }
+  };
+
+  const checkIfGoogleAccount = async (emailAddress: string): Promise<{ isGoogleAccount: boolean; lookupFailed: boolean }> => {
+    try {
+      const accountStatus = await lookupEmailStatus(emailAddress);
+      return {
+        isGoogleAccount: accountStatus.isGoogleAccount,
+        lookupFailed: false,
+      };
+    } catch (err) {
+      console.warn('Google account check failed:', err);
+      return {
+        isGoogleAccount: false,
+        lookupFailed: true,
+      };
+    }
+  };
+
+  const checkEmailStatusSecure = async (
+    emailAddress: string,
+    candidatePassword: string,
+  ): Promise<EmailStatusCheckResult> => {
+    let accountStatus: EmailStatusLookup;
+
+    try {
+      accountStatus = await lookupEmailStatus(emailAddress);
+    } catch {
+      return {
+        shouldProceed: false,
+        toastConfig: getAccountStatusUnavailableToast(),
+        errorType: 'account_status_unavailable',
+      };
+    }
+
+    console.log('Email status check result:', accountStatus);
+
+    if (accountStatus.status === 'new') {
+      return { shouldProceed: true };
+    }
+
+    if (accountStatus.isGoogleAccount) {
+      return {
+        shouldProceed: false,
+        toastConfig: {
+          title: "Detected Google Account",
+          description: "This email is already associated with a Google account. Please use Continue with Google to sign in.",
+          variant: "destructive",
+        },
+        showResendOption: false,
+        errorType: 'google_account_detected',
+      };
+    }
+
+    if (accountStatus.status === 'confirmed') {
+      return {
+        shouldProceed: false,
+        toastConfig: {
+          title: "Account Already Exists",
+          description: "An account with this email already exists. Please sign in instead, or use Forgot Password if you need to reset your password.",
+          variant: "destructive",
+        },
+        showResendOption: false,
+        errorType: 'account_exists',
+      };
+    }
+
+    if (accountStatus.status === 'unconfirmed') {
+      const isPasswordCorrect = await verifyExistingAccountPassword(emailAddress, candidatePassword);
+
+      if (isPasswordCorrect) {
+        return {
+          shouldProceed: false,
+          toastConfig: {
+            title: "Email Already Sent",
+            description: "Your account exists but has not been verified yet. Check your inbox or resend the confirmation email below.",
+            variant: "destructive",
+          },
+          showResendOption: true,
+          errorType: 'unconfirmed',
+        };
+      }
+
+      return {
+        shouldProceed: false,
+        toastConfig: {
+          title: "Email Already in Use",
+          description: "This email address is already associated with an account. If this is your email, check your inbox for a confirmation link or try signing in.",
+          variant: "destructive",
+        },
+        showResendOption: false,
+        errorType: 'account_exists',
+      };
+    }
+
+    if (accountStatus.status === 'pending') {
+      return {
+        shouldProceed: false,
+        toastConfig: {
+          title: "Account Already Exists",
+          description: "An account with this email already exists. Please sign in instead, or use Forgot Password if you need help.",
+          variant: "destructive",
+        },
+        showResendOption: false,
+        errorType: 'account_exists',
+      };
+    }
+
+    return {
+      shouldProceed: false,
+      toastConfig: getAccountStatusUnavailableToast(),
+      errorType: 'account_status_unavailable',
+    };
+  };
+
   const handleResendConfirmation = async () => {
     if (!supabase || !resendEmail || !password) return;
 
     setIsLoading(true);
     try {
-      await supabase.auth.signUp({
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
         email: resendEmail,
-        password: password,
+        options: {
+          emailRedirectTo: AUTH_REDIRECT_URL,
+        },
       });
+
+      if (error) throw error;
 
       toast({
         title: "Confirmation Email Sent",
@@ -220,16 +456,17 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
       setShowResendConfirmation(false);
       setHasAuthError(false);
       setAuthErrorType('');
-    } catch (err) {
-      toast({
-        title: "Confirmation Email Sent",
-        description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
-        variant: "default"
-      });
+    } catch (err: any) {
+      console.error("Confirmation resend error:", err);
+      const { title, description } = getAuthErrorMessage(err, false);
 
-      setShowResendConfirmation(false);
-      setHasAuthError(false);
-      setAuthErrorType('');
+      toast({
+        title: title === "Authentication Error" ? "Unable to Resend Email" : title,
+        description,
+        variant: "destructive",
+      });
+      setHasAuthError(true);
+      setAuthErrorType(err?.code || 'resend_failed');
     } finally {
       setIsLoading(false);
     }
@@ -237,11 +474,13 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const normalizedEmail = email.trim();
+
     if (!supabase) {
       toast({ title: "Authentication Error", description: "Supabase auth is not available. Please try again later.", variant: "destructive" });
       return;
     }
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       toast({
         title: "Missing Information",
         description: "Please enter both your email address and password.",
@@ -261,14 +500,15 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
     setIsLoading(true);
 
-    const productionSiteUrl = "https://settleease-navy.vercel.app/";
-
     try {
       if (isLoginView) {
-        const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        });
 
         if (signInError) {
-          if (signInError.code === 'email_not_confirmed' || signInError.message.toLowerCase().includes('email not confirmed')) {
+          if (isEmailNotConfirmedError(signInError)) {
             toast({
               title: "Email Not Verified",
               description: "Your account exists but hasn't been verified yet. Please check your email and click the verification link to activate your account before signing in.",
@@ -277,9 +517,33 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             setHasAuthError(true);
             setAuthErrorType('email_not_confirmed');
             setShowResendConfirmation(true);
-            setResendEmail(email);
+            setResendEmail(normalizedEmail);
             setIsLoading(false);
             return;
+          }
+
+          if (isInvalidCredentialsError(signInError)) {
+            const { isGoogleAccount, lookupFailed } = await checkIfGoogleAccount(normalizedEmail);
+
+            if (lookupFailed) {
+              toast(getAccountStatusUnavailableToast());
+              setHasAuthError(true);
+              setAuthErrorType('account_status_unavailable');
+              setIsLoading(false);
+              return;
+            }
+
+            if (isGoogleAccount) {
+              toast({
+                title: "Detected Google Account",
+                description: "This email is associated with a Google account. Please use Continue with Google to sign in instead of entering a password.",
+                variant: "destructive",
+              });
+              setHasAuthError(true);
+              setAuthErrorType('google_account_detected');
+              setIsLoading(false);
+              return;
+            }
           }
 
           throw signInError;
@@ -289,11 +553,28 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
       } else {
+        const { shouldProceed, toastConfig, showResendOption, errorType } = await checkEmailStatusSecure(
+          normalizedEmail,
+          password,
+        );
+
+        if (!shouldProceed) {
+          if (toastConfig) {
+            toast(toastConfig);
+          }
+          setHasAuthError(true);
+          setAuthErrorType(errorType || '');
+          setShowResendConfirmation(!!showResendOption);
+          setResendEmail(showResendOption ? normalizedEmail : '');
+          setIsLoading(false);
+          return;
+        }
+
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: normalizedEmail,
           password,
           options: {
-            emailRedirectTo: productionSiteUrl,
+            emailRedirectTo: AUTH_REDIRECT_URL,
             data: {
               first_name: firstName.trim(),
               last_name: lastName.trim(),
@@ -310,9 +591,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             userConfirmed: data.user ? (data.user as any).email_confirmed_at : null
           });
 
-          if (signUpError.message?.toLowerCase().includes('already') ||
-            signUpError.code === 'user_already_exists' ||
-            signUpError.code === 'email_exists') {
+          if (isExistingUserError(signUpError)) {
 
             toast({
               title: "Account Already Exists",
@@ -349,7 +628,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           try {
             await upsertUserProfile({
               supabaseUserId: data.user.id,
-              email: data.user.email || undefined,
+              email: data.user.email || normalizedEmail,
               firstName: firstName.trim(),
               lastName: lastName.trim(),
             });
@@ -362,7 +641,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           try {
             await markSignIn({
               supabaseUserId: data.user.id,
-              email: data.user.email || undefined,
+              email: data.user.email || normalizedEmail,
               firstName: firstName.trim(),
               lastName: lastName.trim(),
             });
@@ -411,14 +690,12 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
 
-    const productionSiteUrl = "https://settleease-navy.vercel.app/";
-
     try {
       console.log("Google OAuth: Calling signInWithOAuth");
       const { error: googleError } = await supabase!.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: productionSiteUrl,
+          redirectTo: AUTH_REDIRECT_URL,
           queryParams: getGoogleOAuthParams(isLoginView),
         },
       });

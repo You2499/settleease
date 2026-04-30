@@ -175,6 +175,18 @@ export function getAuthErrorMessage(error: any, isSignIn: boolean): { title: str
  */
 export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorType?: string): { icon: string; text: string } | null {
   if (hasError && isSignIn) {
+    if (errorType === 'google_account_detected') {
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Use Continue with Google for this email instead of a password."
+      };
+    }
+    if (errorType === 'account_status_unavailable') {
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Account verification is temporarily unavailable. Please try again in a moment."
+      };
+    }
     if (errorType === 'email_not_confirmed') {
       return {
         icon: "Lightbulb",
@@ -193,6 +205,24 @@ export function getAuthSuggestion(isSignIn: boolean, hasError: boolean, errorTyp
     };
   }
   if (hasError && !isSignIn) {
+    if (errorType === 'google_account_detected') {
+      return {
+        icon: "Lightbulb",
+        text: "Tip: This email uses Google sign-in. Click Sign In, then Continue with Google."
+      };
+    }
+    if (errorType === 'account_status_unavailable') {
+      return {
+        icon: "Lightbulb",
+        text: "Tip: Account verification is temporarily unavailable. Please try again in a moment."
+      };
+    }
+    if (errorType === 'account_exists') {
+      return {
+        icon: "Lightbulb",
+        text: "Tip: If this is your email, switch to Sign In or use your existing sign-in method."
+      };
+    }
     // Check if this is an unconfirmed account error
     if (errorType === 'unconfirmed') {
       return {
