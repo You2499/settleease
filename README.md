@@ -1,315 +1,381 @@
-<div align="center">
-  <img src="public/icon.svg" width="72" height="72" alt="SettleEase logo" />
+# SettleEase
 
-  <h1>SettleEase</h1>
+SettleEase is a full-stack web application for managing shared expenses, settlement payments, receipt scans, analytics, health estimates, and audit-ready reports for a group.
 
-  <p>
-    <strong>A polished group expense, settlement, analytics, and reporting app for people who want the math to disappear.</strong>
-  </p>
-
-  <p>
-    <a href="https://settleease-navy.vercel.app">Production URL</a>
-    ·
-    <a href="#quick-start">Quick Start</a>
-    ·
-    <a href="#deployment">Deployment</a>
-  </p>
-
-  <p>
-    <img alt="Version" src="https://img.shields.io/badge/version-7.7.1-10b981?style=for-the-badge" />
-    <img alt="Next.js" src="https://img.shields.io/badge/Next.js-16-black?style=for-the-badge&logo=nextdotjs" />
-    <img alt="React" src="https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=111" />
-    <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-6-3178c6?style=for-the-badge&logo=typescript&logoColor=white" />
-    <img alt="Convex" src="https://img.shields.io/badge/Convex-realtime-ff5a1f?style=for-the-badge" />
-  </p>
-</div>
-
----
-
-## Final Snapshot
-
-SettleEase is a full-stack expense sharing app built around one goal: make group money simple, auditable, and a little less awkward.
-
-This repository is the final cleaned snapshot of the project. The long-running development history has been trimmed down for one last GitHub push: tests, debug surfaces, stale assistant/tooling folders, local credentials, old previews, unused files, and unused packages were removed. What remains is the web app, its Convex backend, the deployment path, and the Lucide icon generation flow.
-
-## What It Does
-
-SettleEase tracks shared expenses for a group, supports flexible split logic, calculates who owes whom, explains the settlement picture with AI, and produces clean audit-style reports.
-
-It is designed for real group workflows:
-
-- Add expenses with equal, unequal, or itemwise splits.
-- Handle multiple payers, celebration contributions, and settlement exclusions.
-- Calculate optimized settlements and preserve manual payment preferences.
-- Scan receipts with Gemini, review extracted items, and turn them into expenses.
-- Explore group and personal analytics with interactive charts.
-- Generate group summaries or personal statements with optional AI label redaction.
-- Sync live data through Convex while using Supabase for authentication.
+The app is built around a real-time Convex data model, Supabase authentication in production, a local development no-auth mode, and Gemini-powered workflows for receipt parsing, settlement summaries, health estimates, and report redaction.
 
 ## Highlights
 
-| Area | What SettleEase Includes |
+| Area | What It Does |
 | --- | --- |
-| Expense entry | Equal, unequal, itemwise, multiple payers, item categories, date selection, validation, and edit flows. |
-| Smart Scan | Receipt image compression, Gemini extraction, item review, category matching, and expense creation. |
-| Settlements | Net balance calculation, simplified transaction paths, manual settlement overrides, recorded payments, and audit trails. |
-| Analytics | Group and personal dashboards for trends, categories, heatmaps, balances, participant rows, velocity, and data quality. |
-| AI summaries | Structured Gemini settlement summaries with Convex caching and deterministic dashboard cards. |
-| Export reports | Printable/downloadable HTML reports for group summaries and personal statements, with optional AI redaction. |
-| Auth and roles | Supabase email/password, Google OAuth, Convex JWT bridge, admin/user access gates, and profile preferences. |
+| Auth Landing | Provides the production sign-in/sign-up landing page with Supabase email/password, Google OAuth, confirmation resend handling, and account-status guidance. |
+| Dashboard | Shows the permanent settlement dashboard, outstanding balances, settlement actions, manual override warnings, budget simulation, and transaction history. |
+| Expenses | Supports equal, unequal, itemwise, multi-payer, quantity-based, and celebration-contribution splits. |
+| Smart Scan | Parses receipt images with Gemini, maps receipt items to categories, and turns reviewed scans into expenses. |
+| Settlements | Tracks paid settlements, manual overrides, outstanding payments, and per-person settlement details. |
+| Analytics | Provides spending trends, participant balances, category breakdowns, activity views, top expenses, and data-quality warnings. |
+| Health | Estimates calories, macros, alcohol servings, and health trends from qualifying food/alcohol expenses. |
+| Reports | Generates printable/downloadable group and personal reports with optional AI label redaction and event analytics. |
+| Admin Console | Manages environment-safe settings, AI model configuration, maintenance tasks, data counts, seeds, backfills, and danger-zone operations. |
+| Shortcuts | Provides app-wide keyboard navigation, shortcut hints, dashboard search focus, and a shortcuts modal. |
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  Web["Next.js Web App"] --> Supabase["Supabase Auth"]
-  Web --> Api["Next.js API Routes"]
-  Web --> ConvexClient["Convex React Client"]
-  Api --> Gemini["Google Gemini"]
-  Api --> Jwt["Convex JWT Bridge"]
-  Jwt --> Convex["Convex Functions + Database"]
-  ConvexClient --> Convex
+  Browser["Next.js App Router UI"] --> Supabase["Supabase Auth"]
+  Browser --> ConvexClient["Convex React Client"]
+  Supabase --> TokenRoute["/api/convex-token"]
+  TokenRoute --> ConvexJwt["Convex customJwt"]
+  ConvexClient --> Convex["Convex queries, mutations, actions"]
+  Convex --> Tables["Convex tables"]
+  Browser --> ApiRoutes["Next.js API routes"]
+  ApiRoutes --> Gemini["Gemini API"]
+  Convex --> Gemini
+  Convex --> Tables
 ```
 
-### Core Flow
+Production authentication is handled by Supabase. The browser sends the Supabase session token to `/api/convex-token`, which validates the user with Supabase and returns a short-lived Convex JWT signed with the app's JWT private key. Convex then uses that identity for authorization.
 
-1. Supabase owns user authentication.
-2. The web app exchanges the Supabase session for a short-lived Convex JWT.
-3. Convex stores app data and serves realtime queries/mutations.
-4. API routes call Gemini for summaries, receipt parsing, and report redaction.
+Local development intentionally bypasses Supabase auth. In `NODE_ENV=development`, the app uses plain `ConvexProvider`, a synthetic admin user, and the development Convex deployment.
 
 ## Tech Stack
 
 | Layer | Technology |
 | --- | --- |
-| Web app | Next.js 16, React 19, TypeScript 6, Tailwind CSS, Radix UI |
-| Data and realtime | Convex |
-| Auth | Supabase Auth with email/password and Google OAuth |
+| Framework | Next.js 16 App Router, React 19, TypeScript |
+| Data/backend | Convex queries, mutations, actions, schema, file-storage export/import support |
+| Auth | Supabase email/password and Google OAuth, bridged into Convex custom JWT auth |
 | AI | Google Gemini via `@google/generative-ai` |
-| Charts | Visx primitives |
-| Icons | `lucide-react` plus generated searchable Lucide metadata |
-| Deployment | Vercel for web, Convex deploy for backend functions |
+| UI | Tailwind CSS, shadcn/Radix primitives, Lucide icons, custom SettleEase components |
+| Charts | Custom analytics models with Visx primitives |
+| Theming | `next-themes`, Convex-backed user preferences, Inter default typography |
+| Deployment | Vercel + Convex deploy flow |
 
-## Quick Start
-
-### Prerequisites
-
-- Node.js 20 or newer
-- npm
-- Convex account/project
-- Supabase project
-- Google Gemini API key for AI features
-
-### Web App
-
-```bash
-git clone <repository-url>
-cd settleease
-
-npm install
-cp .env.example .env.local
-npm run prebuild
-npm run dev
-```
-
-Open `http://localhost:3000`.
-
-`npm run prebuild` is required on a fresh checkout because Lucide icon metadata is generated locally and intentionally ignored by git.
-
-### Environment
-
-Create `.env.local` from `.env.example` and fill in the values below.
-
-Local `npm run dev` intentionally bypasses Supabase auth and uses the shared
-Convex development deployment:
-
-```bash
-CONVEX_DEPLOYMENT=dev:shocking-panda-595
-NEXT_PUBLIC_CONVEX_URL=https://shocking-panda-595.convex.cloud
-```
-
-Supabase variables are not required for local `npm run dev`. They are still
-required for production, preview/staging, and any auth-backed API route usage.
-The dev Convex deployment must have `SETTLEEASE_DISABLE_AUTH=true` set through
-the Convex environment, not committed into `.env.local`.
-
-| Variable | Required | Purpose |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Outside local dev | Supabase project URL used by the browser and API routes. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Outside local dev | Supabase public anon key. |
-| `NEXT_PUBLIC_CONVEX_URL` | Yes | Convex deployment URL for the web app. |
-| `CONVEX_DEPLOYMENT` | Yes for Convex CLI | Convex deployment identifier. |
-| `CONVEX_DEPLOY_KEY` | Production deploy only | Lets Vercel deploy Convex before the production Next build. |
-| `CONVEX_JWT_PRIVATE_KEY` | Yes | RS256 private key used by `/api/convex-token`. |
-| `CONVEX_JWT_PRIVATE_KEY_BASE64` | Optional | Base64 alternative to `CONVEX_JWT_PRIVATE_KEY`. |
-| `GEMINI_API_KEY` | AI features | Enables summaries, receipt scanning, and report redaction. |
-| `SETTLEEASE_DISABLE_AUTH` | Dev Convex env only | Enables unauthenticated Convex calls only on the shared dev deployment. |
-
-New Supabase users are created as `user` profiles by default. Promote trusted users to `admin` in Convex when they should be able to add, edit, settle, export, scan, and manage app data.
-
-## Scripts
-
-| Command | Description |
-| --- | --- |
-| `npm run dev` | Start the Next.js dev server on port 3000. |
-| `npm run prebuild` | Download Lucide icon JSON and generate searchable metadata. |
-| `npm run build` | Run the Lucide prebuild and build the production web app. |
-| `npm run build:vercel` | Production Vercel build that deploys Convex first when `CONVEX_DEPLOY_KEY` is set. |
-| `npm run convex:dev` | Run Convex code generation/development setup once. |
-| `npm run convex:deploy` | Deploy Convex functions. |
-| `npm run start` | Start the production Next.js server. |
-| `npm run lint` | Run ESLint. |
-| `npm run typecheck` | Run TypeScript without emitting files. |
-
-There is no test suite in this final snapshot. The project was intentionally cleaned down to app code and production verification commands.
-
-## Feature Tour
+## Core Features
 
 ### Dashboard
 
-The dashboard shows the current settlement state, recent expenses, settlement summaries, manual override alerts, and AI-assisted settlement explanations. Convex live queries keep the page current across sessions.
+The dashboard is the primary operating surface. It combines simplified settlement recommendations, pairwise transaction tracing, settlement payment actions, manual override visibility, budget simulation entry points, and the expense activity log.
+
+The dashboard route is:
+
+```text
+/?view=dashboard
+```
 
 ### Expense Management
 
 Admins can add and edit expenses with:
 
-- Equal splits across selected people.
-- Unequal split amounts.
-- Itemwise splits with per-item sharing and per-item categories.
-- Multiple payers for a single expense.
-- Celebration contributions for treat-style payments.
-- Optional exclusion from settlement calculations.
+- multiple payers
+- equal, unequal, and itemwise split methods
+- item-level category labels
+- quantity-based item sharing
+- celebration contributions
+- settlement exclusion for non-settling records
+- category-aware Lucide icon rendering
 
-### Smart Scan
+People and categories are managed as first-class data tabs. Categories support custom icons and ordering.
 
-Smart Scan turns a receipt image into a reviewable expense draft. The client compresses supported image types, sends them to the scan API, and lets the admin review extracted items, totals, taxes, categories, payers, and split choices before saving.
+### Smart Receipt Scan
+
+Smart Scan accepts receipt images, sends them to the Gemini receipt parser, and returns structured receipt data:
+
+- restaurant name
+- receipt date
+- line items
+- quantities and unit prices
+- taxes, subtotals, additional charges
+- category hints
+
+The scan result is reviewed by the admin before becoming a saved expense.
 
 ### Settlements
 
-SettleEase calculates net balances and simplified payment paths, then layers in recorded payments and active manual settlement overrides. This keeps the optimized math available while still supporting real-world preferences like "A should pay B directly."
+SettleEase calculates settlement balances from expenses, recorded payments, and active manual overrides. Admins can:
+
+- mark recommended payments as paid
+- unmark or edit settlement records
+- create manual settlement paths
+- clear active overrides from the admin console
+- inspect relevant expenses behind settlement recommendations
 
 ### Analytics
 
-Analytics supports group and personal modes, date filters, weekly/monthly granularity, trend charts, category breakdowns, activity heatmaps, participant tables, balance timelines, top expenses, and data-quality warnings.
+Analytics are built from local model helpers, not ad hoc UI calculations. The analytics model supports:
 
-### Export Center
+- group and personal modes
+- date presets and custom ranges
+- weekly/monthly granularity
+- category breakdowns
+- paid-vs-share analysis
+- balance timelines
+- activity heatmaps
+- top expenses and participant rows
+- data-quality warnings
 
-The export flow builds printable reports from the same calculation model used by the app. Reports can be generated for:
+### Health Estimates
 
-- Group summaries
-- Personal statements
-- Custom date ranges
-- Redacted or non-redacted labels
+The Health tab uses Gemini-backed ledger estimates for qualifying food and alcohol expenses. It tracks:
 
-Generated report events are stored in Convex for lightweight audit visibility.
+- calories
+- protein, carbs, and fat
+- alcohol servings and alcohol calories
+- confidence labels
+- category and participant summaries
+- cache coverage and generation status
 
-### AI Summaries
+Health estimates are informational and depend on the available expense descriptions/items.
 
-Gemini summaries use a structured schema so the UI can render stable summary cards instead of free-form blobs. Convex caches summaries by payload and model fingerprint to avoid repeated generation for unchanged data.
+### Reports And Exports
 
-### Settings
+The Export tab builds printable and downloadable HTML reports for group and personal statements. Reports can include:
 
-Settings keeps the final app focused: profile preferences, theme/font preferences, and export access. Runtime debug and prompt editor surfaces were removed during the final cleanup.
+- settlement summaries
+- participant balances
+- expense details
+- manual override context
+- settlement payments
+- optional AI label redaction
+
+Report generation events are tracked in Convex for admin analytics, including preview, print, download, redaction generation, redaction cache hit, and fallback events.
+
+### Admin Settings
+
+Settings is an admin-only console with environment-aware controls. It shows:
+
+- admin identity and role
+- client/server environment status
+- Convex deployment target
+- table counts
+- AI model and fallback configuration
+- report analytics
+- maintenance actions
+- danger-zone actions with server-side safeguards
+
+If the client environment, Convex URL, and server environment do not match, Settings becomes read-only and mutations are disabled.
 
 ## Data Model
 
-| Convex Table | Purpose |
+Convex is the source of truth for application data.
+
+| Table | Purpose |
 | --- | --- |
-| `userProfiles` | Supabase-linked profile data, role, theme/font preferences, welcome state, and last active view. |
+| `userProfiles` | Supabase user mapping, role, name, theme/font preferences, welcome state, and last active view. |
 | `people` | Group participants. |
-| `categories` | Expense categories with Lucide icon names and rank ordering. |
-| `expenses` | Expense records, split method, payers, shares, items, celebration contribution, and settlement exclusion flag. |
+| `categories` | Expense categories with Lucide icon names and ordering. |
+| `expenses` | Shared expense records, split method data, itemwise splits, payers, shares, exclusions, and timestamps. |
+| `budgetItems` | Budget catalog entries derived from historical and custom observations. |
 | `settlementPayments` | Recorded payments between debtors and creditors. |
-| `manualSettlementOverrides` | Admin-defined settlement paths that override or supplement optimized payment flows. |
-| `aiPrompts` | Active production AI prompt records used by runtime summary generation. |
-| `aiConfigs` | Runtime AI model selection and fallback model order. |
-| `aiSummaries` | Cached structured settlement summaries. |
+| `manualSettlementOverrides` | Admin-defined settlement paths that can override simplified settlement output. |
+| `aiPrompts` | Active prompt templates for AI workflows. |
+| `aiConfigs` | Active Gemini model and fallback order. |
+| `aiSummaries` | Cached settlement and health AI outputs. |
 | `aiRedactions` | Cached report label redactions. |
-| `reportGenerationEvents` | Export preview, print, download, redaction, and cache-hit events. |
+| `reportGenerationEvents` | Report preview, print, download, redaction, and cache analytics. |
+
+## Auth And Authorization
+
+Production and hosted environments use Supabase Auth. Convex authorization is enforced server-side through auth guard helpers:
+
+- unauthenticated Convex calls are rejected unless the development deployment explicitly disables auth
+- profile queries/mutations require the requesting user to match the target Supabase user id
+- admin mutations require a Convex `userProfiles.role` of `admin`
+- destructive admin mutations also require expected environment and confirmation phrase validation
+
+Local development uses a synthetic admin identity:
+
+```text
+settleease-development-admin
+development@settleease.local
+```
+
+This is only intended for local development against the development Convex deployment.
+
+The production auth page is the official SettleEase landing/auth surface. It preserves the full Supabase flow, including email/password sign-in, signup confirmation, Google OAuth, resend confirmation handling, and account-status messaging for Google-backed or unconfirmed accounts.
+
+## Environment Separation
+
+SettleEase is designed so local development and production cannot accidentally target each other.
+
+| Environment | Convex URL | Auth Mode |
+| --- | --- | --- |
+| Development | `https://shocking-panda-595.convex.cloud` | Local no-auth synthetic admin when `SETTLEEASE_DISABLE_AUTH=true` |
+| Production | `https://fortunate-fox-427.convex.cloud` | Supabase session bridged to Convex JWT |
+
+Client and server environments are checked independently:
+
+- client: `NEXT_PUBLIC_SETTLEEASE_ENV`
+- Convex server: `SETTLEEASE_ENV`
+- Convex auth bypass: `SETTLEEASE_DISABLE_AUTH`
+- expected Convex host: derived from the environment
+
+Danger-zone mutations require:
+
+- admin role
+- matching `expectedEnvironment`
+- exact typed confirmation phrase
+- production danger-zone unlock confirmation when targeting production
+
+## Local Development
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Create `.env.local` from `.env.example` and use the development Convex deployment:
+
+```bash
+NEXT_PUBLIC_SETTLEEASE_ENV=development
+NEXT_PUBLIC_CONVEX_URL=https://shocking-panda-595.convex.cloud
+CONVEX_DEPLOYMENT=dev:shocking-panda-595
+```
+
+Supabase values are not required for local `npm run dev` because local development bypasses auth.
+
+Set the matching Convex environment variables on the development deployment:
+
+```bash
+npx convex env set --deployment dev SETTLEEASE_ENV development
+npx convex env set --deployment dev SETTLEEASE_DISABLE_AUTH true
+```
+
+Start the app:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+Deploy current Convex functions/schema to development:
+
+```bash
+npm run convex:dev
+```
+
+## Production Setup
+
+Production requires Supabase, Convex, Gemini, and JWT signing configuration.
+
+Required public app variables:
+
+```bash
+NEXT_PUBLIC_SETTLEEASE_ENV=production
+NEXT_PUBLIC_CONVEX_URL=https://fortunate-fox-427.convex.cloud
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Required server variables:
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=...
+CONVEX_JWT_PRIVATE_KEY=...
+CONVEX_JWT_PUBLIC_KEY=...
+CONVEX_JWT_KEY_ID=...
+GEMINI_API_KEY=...
+```
+
+Required Convex production variables:
+
+```bash
+SETTLEEASE_ENV=production
+GEMINI_API_KEY=...
+```
+
+Production should not set `SETTLEEASE_DISABLE_AUTH=true`.
+
+## AI Configuration
+
+The active AI model configuration is stored in Convex under `aiConfigs`.
+
+Default model:
+
+```text
+gemini-3.1-flash-lite-preview
+```
+
+Supported fallback models:
+
+```text
+gemini-3-flash-preview
+gemini-2.5-flash
+```
+
+AI model order is used by:
+
+- settlement summary generation
+- health ledger estimates
+- receipt scanning
+- report label redaction
+- budget VAT classification
+
+If a model fails, the app attempts configured fallbacks before returning an error.
+
+## Scripts
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Starts Next.js on port 3000. |
+| `npm run build` | Runs the production Next.js build. |
+| `npm run build:vercel` | Production Vercel build with Convex deploy integration; preview builds skip Convex deploy. |
+| `npm run start` | Starts the built Next.js app. |
+| `npm run lint` | Runs ESLint. |
+| `npm run typecheck` | Runs TypeScript without emitting files. |
+| `npm run convex:dev` | Deploys Convex functions/schema once to the configured development deployment. |
+| `npm run convex:deploy` | Deploys Convex through the Convex CLI. |
+
+The build pipeline downloads/generates Lucide metadata before production builds. Local dev ensures the metadata exists before starting.
 
 ## Project Structure
 
 ```text
-.
-├── convex/                         # Convex schema, functions, auth config, generated client bindings
-├── public/                         # App icon and bundled fonts
-├── scripts/                        # Vercel build and Lucide metadata generation
-├── src/app/                        # Next.js app router and API routes
-├── src/components/settleease/      # Product features and screens
-├── src/components/ui/              # Reusable Radix/shadcn-style primitives
-├── src/hooks/                      # Auth, Convex data, profile, theme, toast hooks
-└── src/lib/settleease/             # Models, calculations, AI helpers, analytics, export helpers
+src/app/                  Next.js app shell and API routes
+src/components/settleease SettleEase feature tabs and domain components
+src/components/ui         Shared shadcn/Radix UI primitives
+src/hooks                 Auth, Convex data, theme/font, shortcuts, and health hooks
+src/lib/settleease        Domain models, calculations, AI helpers, auth helpers, and utilities
+convex/                   Convex schema, queries, mutations, actions, auth config, and guards
+scripts/                  Lucide metadata and Vercel build helpers
+public/                   Static assets and local fonts
 ```
 
-## Deployment
+## Quality Gates
 
-### Vercel
-
-The repository includes `vercel.json` with:
-
-```json
-{
-  "buildCommand": "npm run build:vercel"
-}
-```
-
-For production builds, set `CONVEX_DEPLOY_KEY` so `scripts/vercel-build.js` can deploy Convex and pass the deployment URL into the Next build. For preview/local Vercel builds, the script skips Convex deploy and runs `npm run build`.
-
-### Convex
-
-Use the Convex CLI after configuring the project:
+Before shipping changes, run:
 
 ```bash
-npm run convex:dev
-npm run convex:deploy
-```
-
-To refresh the shared dev deployment from production:
-
-```bash
-npx convex export --prod --include-file-storage --path /tmp/settleease-prod-snapshot.zip
-npx convex import --deployment dev --replace-all -y /tmp/settleease-prod-snapshot.zip
-```
-
-### Supabase
-
-Configure Supabase Auth providers and redirect URLs for:
-
-- The web origin, for example `https://settleease-navy.vercel.app`
-- Local development, for example `http://localhost:3000`
-
-## Production Checks
-
-Use these commands before a final push or deploy:
-
-```bash
-npm run prebuild
-npm run lint
 npm run typecheck
+npm run lint
 npm run build
 ```
 
-Known verification notes for this final snapshot:
+`next.config.ts` currently allows Next.js builds to continue with TypeScript build errors, so `npm run typecheck` is the authoritative TypeScript gate.
 
-- `npm run lint` passes with warnings from generated Convex files and a few existing React hook/image lint warnings.
-- `npm run build` may log a Supabase environment warning during prerender if local env vars are missing, but the production build completes when configured.
+## Deployment Notes
 
-## Generated And Local Files
+Vercel production deploys use `scripts/vercel-build.js`, which runs Convex deploy with the Next.js build command when `VERCEL_ENV=production`.
 
-The following are intentionally not committed:
+Preview/staging Vercel builds intentionally skip Convex deploy. This keeps preview builds from mutating the production Convex deployment.
 
-- `.env.local`
-- `.convex/`
-- `.vercel/`
-- `.next/`
-- `lucide-icons/`
-- `src/lib/lucide-icons-metadata.json`
-- local editor, OS, and assistant/tooling state
+Use Convex export/import carefully when syncing data between deployments. Development resets and production danger-zone actions are intentionally guarded by environment checks and confirmation phrases.
 
-Run `npm run prebuild` whenever a fresh checkout needs Lucide search metadata.
+## Security Notes
 
-## Final Note
+- Local no-auth mode is only for local development.
+- Production auth is Supabase-backed and Convex-enforced.
+- Admin-only routes are protected in the UI and in Convex mutations.
+- Destructive actions validate environment and confirmation phrases on the Convex server, not only in the browser.
+- Secrets must remain in environment providers and must not be committed.
 
-SettleEase reached its final wrap-up as a working, cleaned, production-oriented snapshot. The repo now carries the parts that matter: the web app, the backend, the build path, and enough documentation for someone to understand and run it without digging through years of leftovers.
+## License
 
-Thanks for the ride.
+Private application. All rights reserved.

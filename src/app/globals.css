@@ -140,10 +140,10 @@
   }
 
   /* ========================================
-     BETA DESIGN — ElevenLabs Design System
+     SETTLEEASE APP DESIGN — ElevenLabs Design System
      Light Mode Overrides
      ======================================== */
-  .beta-design {
+  .settleease-app-design {
     --background: 0 0% 100%;
     /* Pure white canvas */
     --foreground: 0 0% 0%;
@@ -197,10 +197,10 @@
   }
 
   /* ========================================
-     BETA DESIGN — ElevenLabs Design System
+     SETTLEEASE APP DESIGN — ElevenLabs Design System
      Dark Mode Overrides (Neutral Graphite)
      ======================================== */
-  .dark.beta-design {
+  .dark.settleease-app-design {
     --background: 0 0% 8%;
     /* Neutral graphite canvas */
     --foreground: 0 0% 94%;
@@ -423,13 +423,13 @@
 }
 
 /* ========================================
-   BETA DESIGN — ElevenLabs Refinements
+   SETTLEEASE APP DESIGN — ElevenLabs Refinements
    Styles that CSS variables alone can't achieve
    ======================================== */
 
 /* Multi-layer shadow system for cards */
-.beta-design .shadow-lg,
-.beta-design .shadow-xl {
+.settleease-app-design .shadow-lg,
+.settleease-app-design .shadow-xl {
   box-shadow:
     rgba(0,0,0,0.075) 0px 0px 0px 0.5px inset,
     rgba(0,0,0,0.06) 0px 0px 0px 1px,
@@ -437,14 +437,14 @@
     rgba(0,0,0,0.04) 0px 2px 4px !important;
 }
 
-.beta-design .shadow-sm {
+.settleease-app-design .shadow-sm {
   box-shadow:
     rgba(0,0,0,0.075) 0px 0px 0px 0.5px inset,
     rgba(0,0,0,0.04) 0px 1px 2px !important;
 }
 
-.dark.beta-design .shadow-lg,
-.dark.beta-design .shadow-xl {
+.dark.settleease-app-design .shadow-lg,
+.dark.settleease-app-design .shadow-xl {
   box-shadow:
     rgba(255,255,255,0.08) 0px 0px 0px 0.5px inset,
     rgba(0,0,0,0.5) 0px 0px 0px 1px,
@@ -452,148 +452,148 @@
     rgba(0,0,0,0.24) 0px 8px 22px -16px !important;
 }
 
-.dark.beta-design .shadow-sm {
+.dark.settleease-app-design .shadow-sm {
   box-shadow:
     rgba(255,255,255,0.07) 0px 0px 0px 0.5px inset,
     rgba(0,0,0,0.38) 0px 1px 2px !important;
 }
 
 /* Card radius enforcement */
-.beta-design .rounded-lg,
-.beta-design .rounded-xl {
+.settleease-app-design .rounded-lg,
+.settleease-app-design .rounded-xl {
   border-radius: 1rem !important;
 }
 
 /* Mobile bottom nav treatment */
-.beta-design .fixed.bottom-0 {
+.settleease-app-design .fixed.bottom-0 {
   box-shadow: rgba(0,0,0,0.04) 0px -2px 8px;
 }
 
-.dark.beta-design .fixed.bottom-0 {
+.dark.settleease-app-design .fixed.bottom-0 {
   box-shadow: rgba(0,0,0,0.35) 0px -2px 12px;
 }
 
 /* Mobile top header treatment */
-.beta-design header.sticky {
+.settleease-app-design header.sticky {
   box-shadow: none !important;
   border-bottom: 1px solid rgba(0,0,0,0.05);
 }
 
-.dark.beta-design header.sticky {
+.dark.settleease-app-design header.sticky {
   border-bottom: 1px solid rgba(255,255,255,0.08);
 }
 
-/* Keep older hard-coded dark gray utilities aligned with the beta graphite palette. */
-.dark.beta-design .dark\:bg-gray-900,
-.dark.beta-design .dark\:bg-neutral-800 {
+/* Keep older hard-coded dark gray utilities aligned with the app graphite palette. */
+.dark.settleease-app-design .dark\:bg-gray-900,
+.dark.settleease-app-design .dark\:bg-neutral-800 {
   background-color: hsl(var(--background)) !important;
 }
 
-.dark.beta-design .dark\:bg-gray-800,
-.dark.beta-design .dark\:bg-gray-800\/95 {
+.dark.settleease-app-design .dark\:bg-gray-800,
+.dark.settleease-app-design .dark\:bg-gray-800\/95 {
   background-color: hsl(var(--card) / 0.96) !important;
 }
 
-.dark.beta-design .dark\:bg-gray-800\/90 {
+.dark.settleease-app-design .dark\:bg-gray-800\/90 {
   background-color: hsl(var(--card) / 0.9) !important;
 }
 
-.dark.beta-design .dark\:bg-gray-900\/50,
-.dark.beta-design .dark\:bg-gray-700 {
+.dark.settleease-app-design .dark\:bg-gray-900\/50,
+.dark.settleease-app-design .dark\:bg-gray-700 {
   background-color: hsl(var(--muted)) !important;
 }
 
-.dark.beta-design .dark\:border-gray-600,
-.dark.beta-design .dark\:border-neutral-700 {
+.dark.settleease-app-design .dark\:border-gray-600,
+.dark.settleease-app-design .dark\:border-neutral-700 {
   border-color: hsl(var(--border)) !important;
 }
 
 /* Badge: warm stone style */
-.beta-design .bg-green-50,
-.beta-design .bg-green-100 {
+.settleease-app-design .bg-green-50,
+.settleease-app-design .bg-green-100 {
   background-color: rgba(245, 242, 239, 0.8) !important;
   color: #000 !important;
 }
 
-.dark.beta-design .bg-green-50,
-.dark.beta-design .bg-green-100 {
+.dark.settleease-app-design .bg-green-50,
+.dark.settleease-app-design .bg-green-100 {
   background-color: rgba(255, 255, 255, 0.06) !important;
   color: hsl(30 10% 92%) !important;
 }
 
-/* Green text → black/white in beta */
-.beta-design .text-green-600,
-.beta-design .text-green-700 {
+/* Green text → black/white in the app design */
+.settleease-app-design .text-green-600,
+.settleease-app-design .text-green-700 {
   color: hsl(var(--foreground)) !important;
 }
 
-.dark.beta-design .text-green-600,
-.dark.beta-design .text-green-700,
-.dark.beta-design .text-green-400 {
+.dark.settleease-app-design .text-green-600,
+.dark.settleease-app-design .text-green-700,
+.dark.settleease-app-design .text-green-400 {
   color: hsl(var(--foreground)) !important;
 }
 
 /* Smooth transition for theme switching */
-.beta-design,
-.beta-design *,
-.dark.beta-design,
-.dark.beta-design * {
+.settleease-app-design,
+.settleease-app-design *,
+.dark.settleease-app-design,
+.dark.settleease-app-design * {
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Override gradient backgrounds in beta */
-.beta-design .bg-gradient-to-br {
+/* Override gradient backgrounds in the app design */
+.settleease-app-design .bg-gradient-to-br {
   background: hsl(var(--background)) !important;
 }
 
-.dark.beta-design .bg-gradient-to-br {
+.dark.settleease-app-design .bg-gradient-to-br {
   background: hsl(var(--background)) !important;
 }
 
 /* ========================================
-   Auth beta landing page motion and surfaces
+   Auth page motion and surfaces
    ======================================== */
-.auth-beta-shell {
+.auth-page-shell {
   isolation: isolate;
 }
 
-.auth-beta-shell {
-  --auth-beta-shell-bg: #f7f6f3;
-  --auth-beta-card-bg: rgba(255, 255, 255, 0.95);
-  --auth-beta-card-border: rgba(0, 0, 0, 0.08);
-  --auth-beta-mode-accent: #141414;
-  --auth-beta-mode-accent-foreground: #ffffff;
-  --auth-beta-mark-bg: rgba(245, 242, 239, 0.9);
-  background: var(--auth-beta-shell-bg);
+.auth-page-shell {
+  --auth-page-shell-bg: #f7f6f3;
+  --auth-page-card-bg: rgba(255, 255, 255, 0.95);
+  --auth-page-card-border: rgba(0, 0, 0, 0.08);
+  --auth-page-mode-accent: #141414;
+  --auth-page-mode-accent-foreground: #ffffff;
+  --auth-page-mark-bg: rgba(245, 242, 239, 0.9);
+  background: var(--auth-page-shell-bg);
 }
 
-.auth-beta-shell[data-auth-mode="signup"] {
-  --auth-beta-shell-bg: #f4f7f1;
-  --auth-beta-card-bg: rgba(250, 253, 249, 0.96);
-  --auth-beta-card-border: rgba(27, 94, 63, 0.2);
-  --auth-beta-mode-accent: #166534;
-  --auth-beta-mode-accent-foreground: #ffffff;
-  --auth-beta-mark-bg: rgba(226, 244, 232, 0.92);
+.auth-page-shell[data-auth-mode="signup"] {
+  --auth-page-shell-bg: #f4f7f1;
+  --auth-page-card-bg: rgba(250, 253, 249, 0.96);
+  --auth-page-card-border: rgba(27, 94, 63, 0.2);
+  --auth-page-mode-accent: #166534;
+  --auth-page-mode-accent-foreground: #ffffff;
+  --auth-page-mark-bg: rgba(226, 244, 232, 0.92);
 }
 
-.dark .auth-beta-shell {
-  --auth-beta-shell-bg: hsl(var(--background));
-  --auth-beta-card-bg: rgba(24, 24, 24, 0.94);
-  --auth-beta-card-border: rgba(255, 255, 255, 0.12);
-  --auth-beta-mode-accent: #f5f5f4;
-  --auth-beta-mode-accent-foreground: #111111;
-  --auth-beta-mark-bg: rgba(255, 255, 255, 0.08);
+.dark .auth-page-shell {
+  --auth-page-shell-bg: hsl(var(--background));
+  --auth-page-card-bg: rgba(24, 24, 24, 0.94);
+  --auth-page-card-border: rgba(255, 255, 255, 0.12);
+  --auth-page-mode-accent: #f5f5f4;
+  --auth-page-mode-accent-foreground: #111111;
+  --auth-page-mark-bg: rgba(255, 255, 255, 0.08);
 }
 
-.dark .auth-beta-shell[data-auth-mode="signup"] {
-  --auth-beta-card-bg: rgba(16, 29, 22, 0.94);
-  --auth-beta-card-border: rgba(110, 231, 183, 0.22);
-  --auth-beta-mode-accent: #86efac;
-  --auth-beta-mode-accent-foreground: #052e16;
-  --auth-beta-mark-bg: rgba(34, 197, 94, 0.14);
+.dark .auth-page-shell[data-auth-mode="signup"] {
+  --auth-page-card-bg: rgba(16, 29, 22, 0.94);
+  --auth-page-card-border: rgba(110, 231, 183, 0.22);
+  --auth-page-mode-accent: #86efac;
+  --auth-page-mode-accent-foreground: #052e16;
+  --auth-page-mark-bg: rgba(34, 197, 94, 0.14);
 }
 
-.auth-beta-shell::before {
+.auth-page-shell::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -606,13 +606,13 @@
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.78), transparent 82%);
 }
 
-.dark .auth-beta-shell::before {
+.dark .auth-page-shell::before {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
 }
 
-.auth-beta-atmosphere {
+.auth-page-atmosphere {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -620,7 +620,7 @@
   pointer-events: none;
 }
 
-.auth-beta-lines {
+.auth-page-lines {
   position: absolute;
   inset: 8% -4% auto -4%;
   width: 108%;
@@ -629,19 +629,19 @@
   z-index: 0;
 }
 
-.auth-beta-lines path {
+.auth-page-lines path {
   stroke: rgba(78, 50, 23, 0.2);
   stroke-width: 1;
   stroke-linecap: round;
   stroke-dasharray: 12 18;
-  animation: auth-beta-line-flow 18s linear infinite;
+  animation: auth-page-line-flow 18s linear infinite;
 }
 
-.dark .auth-beta-lines path {
+.dark .auth-page-lines path {
   stroke: rgba(255, 255, 255, 0.18);
 }
 
-.auth-beta-orbit {
+.auth-page-orbit {
   position: absolute;
   z-index: 1;
   display: flex;
@@ -656,7 +656,7 @@
   backdrop-filter: blur(14px);
 }
 
-.dark .auth-beta-orbit {
+.dark .auth-page-orbit {
   border-color: rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.06);
   color: rgba(255, 255, 255, 0.72);
@@ -665,105 +665,105 @@
     rgba(0, 0, 0, 0.32) 0px 14px 32px;
 }
 
-.auth-beta-orbit {
+.auth-page-orbit {
   width: 58px;
   height: 58px;
   border-radius: 9999px;
-  animation: auth-beta-float 9s ease-in-out infinite;
+  animation: auth-page-float 9s ease-in-out infinite;
 }
 
-.auth-beta-orbit svg {
+.auth-page-orbit svg {
   width: 1.4rem;
   height: 1.4rem;
 }
 
-.auth-beta-orbit-1 {
+.auth-page-orbit-1 {
   left: 2%;
   top: 58%;
   animation-delay: -1.4s;
 }
 
-.auth-beta-orbit-2 {
+.auth-page-orbit-2 {
   left: 44%;
   top: 9%;
   animation-delay: -4s;
 }
 
-.auth-beta-orbit-3 {
+.auth-page-orbit-3 {
   right: 2.5%;
   top: 21%;
   animation-delay: -6.3s;
 }
 
-.auth-beta-orbit-4 {
+.auth-page-orbit-4 {
   right: 2.5%;
   bottom: 12%;
   animation-delay: -2.2s;
 }
 
-.auth-beta-orbit-5 {
+.auth-page-orbit-5 {
   left: 23%;
   top: 9%;
   animation-delay: -7.1s;
 }
 
-.auth-beta-card {
+.auth-page-card {
   height: min(760px, calc(100svh - 96px));
   min-height: 0;
-  border-color: var(--auth-beta-card-border) !important;
-  background: var(--auth-beta-card-bg) !important;
+  border-color: var(--auth-page-card-border) !important;
+  background: var(--auth-page-card-bg) !important;
 }
 
-.auth-beta-card-mark {
-  background: var(--auth-beta-mark-bg) !important;
-  color: var(--auth-beta-mode-accent);
+.auth-page-card-mark {
+  background: var(--auth-page-mark-bg) !important;
+  color: var(--auth-page-mode-accent);
 }
 
-.auth-beta-card-copy {
+.auth-page-card-copy {
   min-height: 3rem;
 }
 
-.auth-beta-primary-button {
-  background: var(--auth-beta-mode-accent);
-  color: var(--auth-beta-mode-accent-foreground);
+.auth-page-primary-button {
+  background: var(--auth-page-mode-accent);
+  color: var(--auth-page-mode-accent-foreground);
 }
 
-.auth-beta-primary-button:hover {
-  background: var(--auth-beta-mode-accent);
-  color: var(--auth-beta-mode-accent-foreground);
+.auth-page-primary-button:hover {
+  background: var(--auth-page-mode-accent);
+  color: var(--auth-page-mode-accent-foreground);
   filter: brightness(0.94);
 }
 
-.auth-beta-name-slot {
+.auth-page-name-slot {
   min-height: 4.5rem;
 }
 
-.auth-beta-action-slot {
+.auth-page-action-slot {
   display: flex;
   min-height: 2.75rem;
   align-items: center;
 }
 
-.auth-beta-action-slot > * {
+.auth-page-action-slot > * {
   width: 100%;
 }
 
-.auth-beta-status-slot {
+.auth-page-status-slot {
   min-height: 2.75rem;
   padding-top: 0.5rem;
 }
 
-.auth-beta-switch-slot {
+.auth-page-switch-slot {
   display: flex;
   min-height: 2.5rem;
   align-items: center;
   justify-content: center;
 }
 
-.auth-beta-mobile-story {
-  border: 1px solid var(--auth-beta-card-border);
+.auth-page-mobile-story {
+  border: 1px solid var(--auth-page-card-border);
   border-radius: 1.25rem;
-  background: color-mix(in srgb, var(--auth-beta-card-bg) 86%, transparent);
+  background: color-mix(in srgb, var(--auth-page-card-bg) 86%, transparent);
   padding: 1rem;
   box-shadow:
     rgba(0, 0, 0, 0.05) 0px 0px 0px 0.5px inset,
@@ -771,7 +771,7 @@
   backdrop-filter: blur(16px);
 }
 
-.auth-beta-mobile-benefit {
+.auth-page-mobile-benefit {
   display: flex;
   min-width: 0;
   align-items: flex-start;
@@ -782,13 +782,13 @@
   padding: 0.75rem;
 }
 
-.dark .auth-beta-mobile-benefit {
+.dark .auth-page-mobile-benefit {
   border-color: rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.06);
 }
 
-.auth-beta-card,
-.auth-beta-benefit {
+.auth-page-card,
+.auth-page-benefit {
   box-shadow:
     rgba(0, 0, 0, 0.075) 0px 0px 0px 0.5px inset,
     rgba(0, 0, 0, 0.06) 0px 0px 0px 1px,
@@ -796,15 +796,15 @@
     rgba(0, 0, 0, 0.035) 0px 4px 10px -6px !important;
 }
 
-.dark .auth-beta-card,
-.dark .auth-beta-benefit {
+.dark .auth-page-card,
+.dark .auth-page-benefit {
   box-shadow:
     rgba(255, 255, 255, 0.08) 0px 0px 0px 0.5px inset,
     rgba(0, 0, 0, 0.45) 0px 0px 0px 1px,
     rgba(0, 0, 0, 0.42) 0px 18px 44px -24px !important;
 }
 
-@keyframes auth-beta-line-flow {
+@keyframes auth-page-line-flow {
   from {
     stroke-dashoffset: 0;
   }
@@ -813,7 +813,7 @@
   }
 }
 
-@keyframes auth-beta-float {
+@keyframes auth-page-float {
   0%, 100% {
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
@@ -826,131 +826,131 @@
 }
 
 @media (max-width: 767px) {
-  .auth-beta-lines {
+  .auth-page-lines {
     inset: 4% -40% auto -40%;
     width: 180%;
     height: 48%;
     opacity: 0.25;
   }
 
-  .auth-beta-orbit {
+  .auth-page-orbit {
     width: 50px;
     height: 50px;
   }
 
-  .auth-beta-orbit svg {
+  .auth-page-orbit svg {
     width: 1.25rem;
     height: 1.25rem;
   }
 
-  .auth-beta-orbit-1 {
+  .auth-page-orbit-1 {
     left: 4%;
     top: 12%;
   }
 
-  .auth-beta-orbit-2 {
+  .auth-page-orbit-2 {
     right: 5%;
     left: auto;
     top: 16%;
   }
 
-  .auth-beta-orbit-4 {
+  .auth-page-orbit-4 {
     left: 8%;
     bottom: 9%;
   }
 
-  .auth-beta-orbit-3,
-  .auth-beta-orbit-4,
-  .auth-beta-orbit-5 {
+  .auth-page-orbit-3,
+  .auth-page-orbit-4,
+  .auth-page-orbit-5 {
     display: none;
   }
 
-  .auth-beta-card {
+  .auth-page-card {
     height: auto;
     min-height: min(664px, calc(100svh - 96px));
   }
 
-  .auth-beta-card-copy {
+  .auth-page-card-copy {
     display: none;
   }
 }
 
 @media (min-width: 640px) {
-  .auth-beta-name-slot {
+  .auth-page-name-slot {
     min-height: 4.5rem;
   }
 
-  .auth-beta-action-slot {
+  .auth-page-action-slot {
     min-height: 5.25rem;
   }
 }
 
 @media (max-height: 760px) {
-  .auth-beta-card {
+  .auth-page-card {
     height: auto;
     min-height: calc(100svh - 80px);
   }
 
-  .auth-beta-card-header {
+  .auth-page-card-header {
     padding: 1rem 1.25rem 0.5rem !important;
   }
 
-  .auth-beta-card-mark {
+  .auth-page-card-mark {
     width: 2.5rem;
     height: 2.5rem;
   }
 
-  .auth-beta-card-mark svg {
+  .auth-page-card-mark svg {
     width: 1.25rem;
     height: 1.25rem;
   }
 
-  .auth-beta-card-title {
+  .auth-page-card-title {
     font-size: 1.75rem;
     line-height: 1.08;
   }
 
-  .auth-beta-card-copy {
+  .auth-page-card-copy {
     display: none;
   }
 
-  .auth-beta-card-content {
+  .auth-page-card-content {
     padding-right: 1.25rem !important;
     padding-bottom: 1rem !important;
     padding-left: 1.25rem !important;
   }
 
-  .auth-beta-form > :not([hidden]) ~ :not([hidden]) {
+  .auth-page-form > :not([hidden]) ~ :not([hidden]) {
     margin-top: 0.625rem;
   }
 
-  .auth-beta-action-slot {
+  .auth-page-action-slot {
     min-height: 2.5rem;
   }
 
-  .auth-beta-status-slot {
+  .auth-page-status-slot {
     min-height: 1.75rem;
     padding-top: 0.25rem;
   }
 
-  .auth-beta-switch-slot {
+  .auth-page-switch-slot {
     min-height: 2.25rem;
   }
 }
 
 @media (min-width: 1024px) and (max-height: 920px) {
-  .auth-beta-proof-row {
+  .auth-page-proof-row {
     display: none;
   }
 
-  .auth-beta-hero-title {
+  .auth-page-hero-title {
     font-size: clamp(2.45rem, 5vw, 4.2rem);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-beta-lines path,
-  .auth-beta-orbit {
+  .auth-page-lines path,
+  .auth-page-orbit {
     animation: none !important;
   }
 }

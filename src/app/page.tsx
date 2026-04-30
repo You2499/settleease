@@ -25,7 +25,7 @@ import ExportExpenseTab, { ExportExpenseSkeleton } from '@/components/settleease
 import ScanReceiptTab from '@/components/settleease/ScanReceiptTab';
 import SettingsTab, { SettingsTabSkeleton } from '@/components/settleease/SettingsTab';
 import AppSidebar from '@/components/settleease/AppSidebar';
-import BetaDashboardView from '@/components/settleease/BetaDashboardView';
+import DashboardView from '@/components/settleease/DashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 import KeyboardShortcutsModal from '@/components/settleease/KeyboardShortcutsModal';
@@ -499,7 +499,7 @@ function SettleEasePageContent() {
                     size="large"
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <BetaDashboardView
+                    <DashboardView
                       expenses={expenses}
                       people={people}
                       peopleMap={peopleMap}

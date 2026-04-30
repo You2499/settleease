@@ -122,7 +122,7 @@ function DashboardSkeleton() {
   );
 }
 
-interface BetaDashboardViewProps {
+interface DashboardViewProps {
   expenses: Expense[];
   people: Person[];
   peopleMap: Record<string, string>;
@@ -141,7 +141,7 @@ interface BetaDashboardViewProps {
   isDataFetchedAtLeastOnce?: boolean;
 }
 
-export default function BetaDashboardView({
+export default function DashboardView({
   expenses,
   people,
   peopleMap,
@@ -158,7 +158,7 @@ export default function BetaDashboardView({
   isLoadingSettlements = false,
   isLoadingOverrides = false,
   isDataFetchedAtLeastOnce = false,
-}: BetaDashboardViewProps) {
+}: DashboardViewProps) {
   const [selectedExpenseForModal, setSelectedExpenseForModal] = useState<Expense | null>(null);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalOpenedFromStep2, setExpenseModalOpenedFromStep2] = useState(false);
