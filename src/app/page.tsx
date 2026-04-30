@@ -28,12 +28,14 @@ import AppSidebar from '@/components/settleease/AppSidebar';
 import BetaDashboardView from '@/components/settleease/BetaDashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
+import KeyboardShortcutsModal from '@/components/settleease/KeyboardShortcutsModal';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useConvexData } from '@/hooks/useConvexData';
 import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
 import { useFontSync } from '@/hooks/useFontSync';
+import { useSettleEaseShortcuts } from '@/hooks/useSettleEaseShortcuts';
 
 import {
   buildWelcomeToastModel,
@@ -87,6 +89,7 @@ function SettleEasePageContent() {
   const [activeView, setActiveView] = useState<ActiveView>(initialView);
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const [hasResolvedInitialView, setHasResolvedInitialView] = useState(false);
   const [hasHandledWelcomeToast, setHasHandledWelcomeToast] = useState(false);
   const [restoredInitialView, setRestoredInitialView] = useState<ActiveView | null>(null);
@@ -382,43 +385,6 @@ function SettleEasePageContent() {
     return () => clearTimeout(timeoutId);
   }, [activeView, currentUser, hasResolvedInitialView, isAppIdentityReady, updateUserProfile, userRole]);
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + E: Add Expense
-      if ((e.metaKey || e.ctrlKey) && e.key === 'e') {
-        e.preventDefault();
-        if (userRole === 'admin') {
-          setActiveView('addExpense');
-        } else if (userRole === 'user') {
-          showAccessDeniedToast('addExpense', "You need admin permissions to add expenses.");
-        }
-      }
-
-      // Cmd/Ctrl + F: Focus Search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
-        e.preventDefault();
-        // If not on dashboard, go there first
-        if (activeView !== 'dashboard') {
-          setActiveView('dashboard');
-          // Wait for render then focus
-          setTimeout(() => {
-            const input = document.getElementById('expense-search-input');
-            input?.focus();
-          }, 100);
-        } else {
-          const input = document.getElementById('expense-search-input');
-          input?.focus();
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [userRole, activeView, setActiveView, showAccessDeniedToast]);
-
-  const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
-
   const handleSetActiveView = useCallback((view: ActiveView) => {
     if (!isAppIdentityReady || !userRole) return;
 
@@ -431,6 +397,20 @@ function SettleEasePageContent() {
     lastAccessDeniedViewRef.current = null;
     setActiveView(view);
   }, [isAppIdentityReady, showAccessDeniedToast, userRole]);
+
+  const handleOpenProfileMenu = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("settleease:open-profile-menu"));
+  }, []);
+
+  useSettleEaseShortcuts({
+    activeView,
+    isReady: isAppIdentityReady && hasResolvedInitialView,
+    onNavigate: handleSetActiveView,
+    onShowShortcuts: () => setShowShortcuts(true),
+    onOpenProfileMenu: handleOpenProfileMenu,
+  });
+
+  const peopleMap = useMemo(() => people.reduce((acc, person) => { acc[person.id] = person.name; return acc; }, {} as Record<string, string>), [people]);
 
   const getCategoryIconFromName = useCallback((iconName: string = ""): React.FC<React.SVGProps<SVGSVGElement>> => {
     return (LucideIcons as any)[iconName] || Settings2;
@@ -501,6 +481,7 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
+          onShowShortcuts={() => setShowShortcuts(true)}
           isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady}
           isDevelopmentEnvironment={isDevelopmentEnvironment}
         />
@@ -742,6 +723,7 @@ function SettleEasePageContent() {
           </div>
         </SidebarInset>
       </SidebarProvider >
+      <KeyboardShortcutsModal isOpen={showShortcuts} onOpenChange={setShowShortcuts} />
     </>
   );
 }

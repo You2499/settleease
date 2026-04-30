@@ -9,6 +9,13 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Keyboard } from 'lucide-react';
+import {
+  SETTLEEASE_SHORTCUTS,
+  formatShortcut,
+  isMacPlatform,
+  type ShortcutDefinition,
+  type ShortcutGroup,
+} from '@/lib/settleease/shortcuts';
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -16,20 +23,38 @@ interface KeyboardShortcutsModalProps {
 }
 
 export default function KeyboardShortcutsModal({ isOpen, onOpenChange }: KeyboardShortcutsModalProps) {
-  const shortcuts = [
-    { keys: ['⌘', 'E'], description: 'Add new expense (Admin only)', mac: true },
-    { keys: ['Ctrl', 'E'], description: 'Add new expense (Admin only)', mac: false },
-    { keys: ['⌘', 'F'], description: 'Focus search in dashboard', mac: true },
-    { keys: ['Ctrl', 'F'], description: 'Focus search in dashboard', mac: false },
-    { keys: ['?'], description: 'Show this shortcuts menu', mac: null },
-  ];
+  const isMac = isMacPlatform();
+  const groupedShortcuts = React.useMemo(() => {
+    const merged = SETTLEEASE_SHORTCUTS.reduce((acc, shortcut) => {
+      const existing = acc.get(shortcut.id);
+      if (existing) {
+        existing.keys.push(formatShortcut(shortcut, isMac));
+        return acc;
+      }
 
-  const isMac = typeof window !== 'undefined' && navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const relevantShortcuts = shortcuts.filter(s => s.mac === null || s.mac === isMac);
+      acc.set(shortcut.id, {
+        shortcut,
+        keys: [formatShortcut(shortcut, isMac)],
+      });
+      return acc;
+    }, new Map<string, { shortcut: ShortcutDefinition; keys: string[][] }>());
+
+    return {
+      navigation: Array.from(merged.values()).filter((item) => item.shortcut.group === "navigation"),
+      actions: Array.from(merged.values()).filter((item) => item.shortcut.group === "actions"),
+      focus: Array.from(merged.values()).filter((item) => item.shortcut.group === "focus"),
+    } satisfies Record<ShortcutGroup, Array<{ shortcut: ShortcutDefinition; keys: string[][] }>>;
+  }, [isMac]);
+
+  const sectionLabels: Record<ShortcutGroup, string> = {
+    navigation: "Navigation",
+    actions: "Actions",
+    focus: "Focus",
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-display-card">
             <Keyboard className="h-5 w-5" />
@@ -39,21 +64,43 @@ export default function KeyboardShortcutsModal({ isOpen, onOpenChange }: Keyboar
             Speed up your workflow with these shortcuts
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-3 py-4">
-          {relevantShortcuts.map((shortcut, index) => (
-            <div key={index} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-              <span className="text-body-standard text-muted-foreground">{shortcut.description}</span>
-              <div className="flex items-center gap-1">
-                {shortcut.keys.map((key, i) => (
-                  <React.Fragment key={i}>
-                    <kbd className="px-2 py-1 text-small font-medium bg-muted text-muted-foreground rounded border border-border shadow-sm">
-                      {key}
-                    </kbd>
-                    {i < shortcut.keys.length - 1 && <span className="text-muted-foreground">+</span>}
-                  </React.Fragment>
+        <div className="max-h-[65vh] space-y-5 overflow-y-auto py-4 pr-1">
+          {(["navigation", "actions", "focus"] as ShortcutGroup[]).map((group) => (
+            <section key={group} className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {sectionLabels[group]}
+              </h3>
+              <div className="overflow-hidden rounded-lg border border-border">
+                {groupedShortcuts[group].map(({ shortcut, keys }) => (
+                  <div
+                    key={shortcut.id}
+                    className="flex items-center justify-between gap-4 border-b border-border px-3 py-2.5 last:border-0"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{shortcut.label}</p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {shortcut.description}
+                        {shortcut.adminOnly ? " (Admin only)" : ""}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                      {keys.map((keySet, shortcutIndex) => (
+                        <div key={`${shortcut.id}-${shortcutIndex}`} className="flex items-center gap-1">
+                          {keySet.map((key, keyIndex) => (
+                            <React.Fragment key={`${key}-${keyIndex}`}>
+                              {keyIndex > 0 ? <span className="text-xs text-muted-foreground">+</span> : null}
+                              <kbd className="rounded border border-border bg-muted px-2 py-1 text-xs font-medium text-muted-foreground shadow-sm">
+                                {key}
+                              </kbd>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       </DialogContent>

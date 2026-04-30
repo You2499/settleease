@@ -14,6 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import ExpenseListItem from '../ExpenseListItem';
 import SettlementListItem from '../SettlementListItem';
 import AppEmptyState from '../AppEmptyState';
+import ShortcutHint from '../ShortcutHint';
 
 interface ExpenseLogProps {
   expenses: Expense[];
@@ -189,9 +190,13 @@ export default function ExpenseLog({
               id="expense-search-input"
               ref={searchInputRef}
               placeholder="Search..."
-              className="pl-9 h-9"
+              className="h-9 pl-9 pr-20"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <ShortcutHint
+              shortcutId="focus.dashboardSearch"
+              className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2"
             />
           </div>
           <div className="grid grid-cols-2 gap-2 sm:col-span-6 md:col-span-7">

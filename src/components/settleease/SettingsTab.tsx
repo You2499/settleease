@@ -88,6 +88,7 @@ import {
   SkeletonPanel,
   SkeletonToolbar,
 } from "./SkeletonLayouts";
+import ShortcutHint from "./ShortcutHint";
 import AppEmptyState from "./AppEmptyState";
 
 type AdminSettingsSnapshot = {
@@ -972,21 +973,25 @@ export default function SettingsTab({
               description="Jump to the operational areas that Settings supervises."
             >
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                <Button variant="outline" onClick={() => onNavigate("exportExpense")}>
+                <Button variant="outline" onClick={() => onNavigate("exportExpense")} className="justify-between gap-2">
                   <FileDown className="mr-2 h-4 w-4" />
-                  Export
+                  <span className="mr-auto">Export</span>
+                  <ShortcutHint shortcutId="action.exportExpense" />
                 </Button>
-                <Button variant="outline" onClick={() => onNavigate("managePeople")}>
+                <Button variant="outline" onClick={() => onNavigate("managePeople")} className="justify-between gap-2">
                   <Users className="mr-2 h-4 w-4" />
-                  People
+                  <span className="mr-auto">People</span>
+                  <ShortcutHint shortcutId="nav.managePeople" />
                 </Button>
-                <Button variant="outline" onClick={() => onNavigate("manageCategories")}>
+                <Button variant="outline" onClick={() => onNavigate("manageCategories")} className="justify-between gap-2">
                   <Tags className="mr-2 h-4 w-4" />
-                  Categories
+                  <span className="mr-auto">Categories</span>
+                  <ShortcutHint shortcutId="nav.manageCategories" />
                 </Button>
-                <Button variant="outline" onClick={() => onNavigate("manageSettlements")}>
+                <Button variant="outline" onClick={() => onNavigate("manageSettlements")} className="justify-between gap-2">
                   <HandCoins className="mr-2 h-4 w-4" />
-                  Settlements
+                  <span className="mr-auto">Settlements</span>
+                  <ShortcutHint shortcutId="nav.manageSettlements" />
                 </Button>
               </div>
             </SettingsSection>

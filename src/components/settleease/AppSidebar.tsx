@@ -16,6 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -34,7 +35,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import type { ActiveView, UserRole } from '@/lib/settleease';
-import KeyboardShortcutsModal from './KeyboardShortcutsModal';
+import ShortcutHint from './ShortcutHint';
 
 interface AppSidebarProps {
   activeView: ActiveView;
@@ -44,9 +45,13 @@ interface AppSidebarProps {
   currentUserName?: string;
   userRole: UserRole;
   onEditName?: () => void;
+  onShowShortcuts?: () => void;
   isProfileLoading?: boolean;
   isDevelopmentEnvironment?: boolean;
 }
+
+const sidebarShortcutHintClass =
+  "ml-auto !overflow-visible group-data-[state=collapsed]:absolute group-data-[state=collapsed]:right-0.5 group-data-[state=collapsed]:top-0.5 group-data-[state=collapsed]:ml-0 group-data-[state=collapsed]:scale-75 group-data-[state=collapsed]:px-1";
 
 function getUserInitials(name?: string | null, email?: string | null) {
   const source = (name || email || 'SettleEase').trim();
@@ -66,13 +71,12 @@ function getUserInitials(name?: string | null, email?: string | null) {
   return initials || 'SE';
 }
 
-const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, isProfileLoading = false, isDevelopmentEnvironment = false }: AppSidebarProps) {
+const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, handleLogout, currentUserEmail, currentUserName, userRole, onEditName, onShowShortcuts, isProfileLoading = false, isDevelopmentEnvironment = false }: AppSidebarProps) {
   const { isMobile, setOpenMobile, state } = useSidebar();
   const { setTheme } = useTheme();
   const RoleIcon = userRole === 'admin' ? UserCog : ShieldCheck;
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
   const [dropdownOpen, setDropdownOpen] = React.useState(false);
-  const [showShortcuts, setShowShortcuts] = React.useState(false);
   
   // Collapsible section states
   const [expensesOpen, setExpensesOpen] = useState(true);
@@ -84,8 +88,18 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
   const userInitials = getUserInitials(currentUserName, currentUserEmail);
   const roleLabel = userRole ? userRole.charAt(0).toUpperCase() + userRole.slice(1) : 'Member';
 
-  const handleLogoutClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
+  React.useEffect(() => {
+    const handleOpenProfileMenu = () => {
+      if (!isProfileLoading && displayUserName && !isLoggingOut) {
+        setDropdownOpen(true);
+      }
+    };
+
+    window.addEventListener("settleease:open-profile-menu", handleOpenProfileMenu);
+    return () => window.removeEventListener("settleease:open-profile-menu", handleOpenProfileMenu);
+  }, [displayUserName, isLoggingOut, isProfileLoading]);
+
+  const handleLogoutClick = async () => {
     setIsLoggingOut(true);
     await handleLogout();
   };
@@ -117,10 +131,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                 onClick={() => handleNavigation('dashboard')}
                 isActive={activeView === 'dashboard'}
                 tooltip={{ content: "Home", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                className="justify-start h-8"
+                className="relative justify-start h-8"
               >
                 <Home className="h-4 w-4" />
-                <span className="group-data-[state=collapsed]:hidden">Home</span>
+                <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Home</span>
+                <ShortcutHint shortcutId="nav.dashboard" className={sidebarShortcutHintClass} />
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -133,10 +148,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                 onClick={() => handleNavigation('health')}
                 isActive={activeView === 'health'}
                 tooltip={{ content: "Health", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                className="justify-start h-8"
+                className="relative justify-start h-8"
               >
                 <Heart className="h-4 w-4" />
-                <span className="group-data-[state=collapsed]:hidden">Health</span>
+                <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Health</span>
+                <ShortcutHint shortcutId="nav.health" className={sidebarShortcutHintClass} />
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -144,10 +160,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                 onClick={() => handleNavigation('analytics')}
                 isActive={activeView === 'analytics'}
                 tooltip={{ content: "Analytics", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                className="justify-start h-8"
+                className="relative justify-start h-8"
               >
                 <BarChartBig className="h-4 w-4" />
-                <span className="group-data-[state=collapsed]:hidden">Analytics</span>
+                <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Analytics</span>
+                <ShortcutHint shortcutId="nav.analytics" className={sidebarShortcutHintClass} />
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -210,40 +227,44 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         <SidebarMenuButton
                           onClick={() => handleNavigation('addExpense')}
                           isActive={activeView === 'addExpense'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <CreditCard className="h-4 w-4" />
-                          <span>Add Expense</span>
+                          <span className="min-w-0 flex-1">Add Expense</span>
+                          <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('scanReceipt')}
                           isActive={activeView === 'scanReceipt'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <ScanLine className="h-4 w-4" />
-                          <span>Smart Scan</span>
+                          <span className="min-w-0 flex-1">Smart Scan</span>
+                          <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('editExpenses')}
                           isActive={activeView === 'editExpenses'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <FilePenLine className="h-4 w-4" />
-                          <span>Edit Expenses</span>
+                          <span className="min-w-0 flex-1">Edit Expenses</span>
+                          <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('manageSettlements')}
                           isActive={activeView === 'manageSettlements'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <Handshake className="h-4 w-4" />
-                          <span>Settlements</span>
+                          <span className="min-w-0 flex-1">Settlements</span>
+                          <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </CollapsibleContent>
@@ -257,9 +278,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('addExpense')}
                         isActive={activeView === 'addExpense'}
                         tooltip={{ content: "Add Expense", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <CreditCard className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -267,9 +289,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('scanReceipt')}
                         isActive={activeView === 'scanReceipt'}
                         tooltip={{ content: "Smart Scan", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <ScanLine className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -277,9 +300,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('editExpenses')}
                         isActive={activeView === 'editExpenses'}
                         tooltip={{ content: "Edit Expenses", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <FilePenLine className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -287,9 +311,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('manageSettlements')}
                         isActive={activeView === 'manageSettlements'}
                         tooltip={{ content: "Settlements", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <Handshake className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </>
@@ -309,20 +334,22 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         <SidebarMenuButton
                           onClick={() => handleNavigation('managePeople')}
                           isActive={activeView === 'managePeople'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <Users className="h-4 w-4" />
-                          <span>People</span>
+                          <span className="min-w-0 flex-1">People</span>
+                          <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
                         <SidebarMenuButton
                           onClick={() => handleNavigation('manageCategories')}
                           isActive={activeView === 'manageCategories'}
-                          className="justify-start h-8"
+                          className="relative justify-start h-8"
                         >
                           <ListChecks className="h-4 w-4" />
-                          <span>Categories</span>
+                          <span className="min-w-0 flex-1">Categories</span>
+                          <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </CollapsibleContent>
@@ -336,9 +363,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('managePeople')}
                         isActive={activeView === 'managePeople'}
                         tooltip={{ content: "People", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <Users className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -346,9 +374,10 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         onClick={() => handleNavigation('manageCategories')}
                         isActive={activeView === 'manageCategories'}
                         tooltip={{ content: "Categories", side: "right", align: "center" }}
-                        className="justify-start h-8"
+                        className="relative justify-start h-8"
                       >
                         <ListChecks className="h-4 w-4" />
+                        <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </>
@@ -363,10 +392,11 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     onClick={() => handleNavigation('settings')}
                     isActive={activeView === 'settings'}
                     tooltip={{ content: "Settings", side: "right", align: "center", className: "group-data-[state=expanded]:hidden" }}
-                    className="justify-start h-8"
+                    className="relative justify-start h-8"
                   >
                     <Settings className="h-4 w-4" />
-                    <span className="group-data-[state=collapsed]:hidden">Settings</span>
+                    <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Settings</span>
+                    <ShortcutHint shortcutId="nav.settings" className={sidebarShortcutHintClass} />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </>
@@ -406,27 +436,35 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               </LoadingRegion>
             ) : displayUserName && (
               <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="h-auto w-full justify-start overflow-hidden rounded-md border border-sidebar-border bg-sidebar-accent/35 px-2.5 py-2 text-left shadow-sm hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring"
-                    aria-label="Open profile menu"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground text-xs font-medium text-sidebar">
-                      {userInitials}
+                <div className="flex w-full items-center gap-2 overflow-hidden rounded-md border border-sidebar-border bg-sidebar-accent/35 px-2.5 py-2 text-left shadow-sm">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-sidebar-foreground text-xs font-medium text-sidebar">
+                    {userInitials}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium leading-5" title={displayUserName}>
+                      {displayUserName}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium leading-5" title={displayUserName}>
-                        {displayUserName}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs leading-4 text-muted-foreground">
-                        <RoleIcon className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{roleLabel}</span>
-                      </span>
+                    <span className="flex items-center gap-1 text-xs leading-4 text-muted-foreground">
+                      <RoleIcon className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{roleLabel}</span>
                     </span>
-                    <Settings className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  </Button>
-                </DropdownMenuTrigger>
+                  </span>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="relative h-7 w-7 shrink-0 rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring"
+                      aria-label="Open profile menu"
+                      disabled={isLoggingOut}
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                      <ShortcutHint
+                        shortcutId="action.profileMenu"
+                        className="pointer-events-none absolute -right-1 -top-1 scale-75 border-sidebar-border bg-sidebar px-1"
+                      />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </div>
                 <DropdownMenuContent align="end" className="w-52">
                   <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Profile</DropdownMenuLabel>
                   {onEditName && (
@@ -443,8 +481,15 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     <Moon className="mr-2 h-4 w-4" /> Dark
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setShowShortcuts(true)}>
+                  <DropdownMenuItem onSelect={() => onShowShortcuts?.()}>
                     <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
+                    <DropdownMenuShortcut>
+                      <ShortcutHint
+                        shortcutId="action.shortcuts"
+                        alwaysVisible
+                        className="border-0 bg-transparent px-0 py-0 shadow-none"
+                      />
+                    </DropdownMenuShortcut>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {isDevelopmentEnvironment ? (
@@ -455,7 +500,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                     <DropdownMenuItem
                       onSelect={(e) => {
                         e.preventDefault();
-                        handleLogoutClick(e as any);
+                        void handleLogoutClick();
                       }}
                       disabled={isLoggingOut}
                       className={`transition-all duration-200 ${isLoggingOut
@@ -477,7 +522,6 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
           </div>
         </SidebarFooter>
       </Sidebar>
-      <KeyboardShortcutsModal isOpen={showShortcuts} onOpenChange={setShowShortcuts} />
     </>
   );
 });
