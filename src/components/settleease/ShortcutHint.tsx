@@ -14,19 +14,21 @@ interface ShortcutHintProps {
   shortcutId: ShortcutId;
   className?: string;
   alwaysVisible?: boolean;
+  compact?: boolean;
 }
 
 export default function ShortcutHint({
   shortcutId,
   className,
   alwaysVisible = false,
+  compact = false,
 }: ShortcutHintProps) {
   const shortcut = getShortcutById(shortcutId);
   const { isHoldingModifier, isMac } = useShortcutModifier();
 
   if (!shortcut) return null;
 
-  const keys = formatShortcut(shortcut, isMac);
+  const keys = compact ? formatShortcut(shortcut, isMac).slice(-1) : formatShortcut(shortcut, isMac);
   const shouldShow = alwaysVisible || isHoldingModifier;
 
   return (

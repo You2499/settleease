@@ -7,7 +7,6 @@ import { api } from '@convex/_generated/api';
 import {
   BadgeCheck,
   ChartNoAxesCombined,
-  CircleDollarSign,
   Eye,
   EyeOff,
   HandCoins,
@@ -490,7 +489,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             <div className="auth-beta-name-slot">
               <div
                 className={cn(
-                  "grid grid-cols-1 gap-3 transition-all duration-200 sm:grid-cols-2",
+                  "grid grid-cols-2 gap-3 transition-all duration-200",
                   isLoginView && "pointer-events-none -translate-y-1 opacity-0",
                 )}
                 aria-hidden={isLoginView}
@@ -610,7 +609,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               ) : (
                 <Button
                   type="submit"
-                  className="h-11 w-full rounded-full bg-black text-sm font-semibold text-white shadow-[rgba(78,50,23,0.08)_0px_10px_24px] hover:bg-black/90 dark:bg-primary dark:text-primary-foreground sm:text-base"
+                  className="auth-beta-primary-button h-11 w-full rounded-full text-sm font-semibold shadow-[rgba(78,50,23,0.08)_0px_10px_24px] sm:text-base"
                   disabled={isLoading || isGoogleLoading}
                 >
                   {isLoading ? (
@@ -665,18 +664,20 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             ) : null}
           </div>
 
-          <Button
-            type="button"
-            variant="link"
-            onClick={() => {
-              setIsLoginView(!isLoginView);
-              resetAuthModeState();
-            }}
-            disabled={isLoading || isGoogleLoading}
-            className="mt-1 h-auto rounded-full px-3 py-2 text-sm text-foreground underline-offset-8 hover:text-primary/80"
-          >
-            {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-          </Button>
+          <div className="auth-beta-switch-slot">
+            <Button
+              type="button"
+              variant="link"
+              onClick={() => {
+                setIsLoginView(!isLoginView);
+                resetAuthModeState();
+              }}
+              disabled={isLoading || isGoogleLoading}
+              className="h-auto rounded-full px-3 py-2 text-sm text-foreground underline-offset-8 hover:text-primary/80"
+            >
+              {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+            </Button>
+          </div>
         </>
       );
     }
@@ -976,25 +977,19 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         <ChartNoAxesCombined />
       </div>
       <div className="auth-beta-orbit auth-beta-orbit-4">
-        <CircleDollarSign />
-      </div>
-      <div className="auth-beta-orbit auth-beta-orbit-5">
-        <WalletCards />
-      </div>
-      <div className="auth-beta-orbit auth-beta-orbit-6">
-        <ScanLine />
-      </div>
-      <div className="auth-beta-orbit auth-beta-orbit-7">
         <ShieldCheck />
       </div>
-      <div className="auth-beta-orbit auth-beta-orbit-8">
+      <div className="auth-beta-orbit auth-beta-orbit-5">
         <Sparkles />
       </div>
     </div>
   );
 
   const renderBetaLayout = () => (
-    <div className="auth-beta-shell relative h-svh max-h-svh w-full overflow-hidden bg-[#f7f6f3] px-4 py-3 text-foreground dark:bg-background sm:px-6 lg:px-8">
+    <div
+      className="auth-beta-shell relative min-h-svh w-full overflow-x-hidden px-4 py-3 text-foreground sm:px-6 lg:h-svh lg:max-h-svh lg:overflow-hidden lg:px-8"
+      data-auth-mode={isLoginView ? "signin" : "signup"}
+    >
       {renderBetaAtmosphere()}
 
       <div className="relative z-10 mx-auto flex h-12 w-full max-w-7xl items-center justify-between gap-4">
@@ -1010,7 +1005,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         {renderDesignToggle()}
       </div>
 
-      <main className="relative z-10 mx-auto grid h-[calc(100svh-72px)] w-full max-w-7xl items-center overflow-hidden py-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:gap-8">
+      <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-4 py-3 lg:h-[calc(100svh-72px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:overflow-hidden">
         <section className="hidden min-w-0 space-y-4 lg:block">
           <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
@@ -1083,6 +1078,33 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               </div>
             </CardContent>
           </Card>
+        </section>
+
+        <section className="auth-beta-mobile-story lg:hidden" aria-label="SettleEase highlights">
+          <div className="space-y-1.5">
+            <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+              Why SettleEase
+            </p>
+            <h2 className="text-2xl font-light tracking-tight">
+              Shared money without the after-trip math.
+            </h2>
+            <p className="text-sm leading-6 text-muted-foreground">
+              Add people, scan receipts, split precisely, and leave with a clean settlement plan.
+            </p>
+          </div>
+          <div className="mt-4 grid gap-3">
+            {betaBenefits.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="auth-beta-mobile-benefit">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 shadow-sm">
+                  <Icon className="h-4 w-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold leading-5">{title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </section>
       </main>
     </div>

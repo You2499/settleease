@@ -51,7 +51,7 @@ interface AppSidebarProps {
 }
 
 const sidebarShortcutHintClass =
-  "ml-auto !overflow-visible group-data-[state=collapsed]:absolute group-data-[state=collapsed]:right-0.5 group-data-[state=collapsed]:top-0.5 group-data-[state=collapsed]:ml-0 group-data-[state=collapsed]:scale-75 group-data-[state=collapsed]:px-1";
+  "ml-auto !overflow-visible group-data-[state=collapsed]:absolute group-data-[state=collapsed]:left-4 group-data-[state=collapsed]:top-[-0.35rem] group-data-[state=collapsed]:z-50 group-data-[state=collapsed]:ml-0 group-data-[state=collapsed]:scale-[0.68] group-data-[state=collapsed]:border-foreground/15 group-data-[state=collapsed]:bg-background group-data-[state=collapsed]:px-1 group-data-[state=collapsed]:shadow-md";
 
 function getUserInitials(name?: string | null, email?: string | null) {
   const source = (name || email || 'SettleEase').trim();
@@ -112,6 +112,57 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
     }
   };
 
+  const renderProfileMenuContent = (side: "top" | "right" = "top") => (
+    <DropdownMenuContent side={side} align="end" className="w-52">
+      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Profile</DropdownMenuLabel>
+      {onEditName && (
+        <DropdownMenuItem onClick={onEditName}>
+          <Edit3 className="mr-2 h-4 w-4" /> Edit Name
+        </DropdownMenuItem>
+      )}
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
+      <DropdownMenuItem onClick={() => setTheme("light")}>
+        <Sun className="mr-2 h-4 w-4" /> Light
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={() => setTheme("dark")}>
+        <Moon className="mr-2 h-4 w-4" /> Dark
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem onSelect={() => onShowShortcuts?.()}>
+        <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
+        <DropdownMenuShortcut>
+          <ShortcutHint
+            shortcutId="action.shortcuts"
+            alwaysVisible
+            className="border-0 bg-transparent px-0 py-0 shadow-none"
+          />
+        </DropdownMenuShortcut>
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      {isDevelopmentEnvironment ? (
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          Auth disabled locally
+        </DropdownMenuLabel>
+      ) : (
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            void handleLogoutClick();
+          }}
+          disabled={isLoggingOut}
+          className={`transition-all duration-200 ${isLoggingOut
+            ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
+            : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
+          }`}
+        >
+          <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
+          {isLoggingOut ? 'Logging out...' : 'Logout'}
+        </DropdownMenuItem>
+      )}
+    </DropdownMenuContent>
+  );
+
   return (
     <>
       <Sidebar collapsible={isMobile ? "offcanvas" : "icon"} side="left" variant="sidebar">
@@ -135,7 +186,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               >
                 <Home className="h-4 w-4" />
                 <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Home</span>
-                <ShortcutHint shortcutId="nav.dashboard" className={sidebarShortcutHintClass} />
+                <ShortcutHint shortcutId="nav.dashboard" className={sidebarShortcutHintClass} compact />
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -152,7 +203,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               >
                 <Heart className="h-4 w-4" />
                 <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Health</span>
-                <ShortcutHint shortcutId="nav.health" className={sidebarShortcutHintClass} />
+                <ShortcutHint shortcutId="nav.health" className={sidebarShortcutHintClass} compact />
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
@@ -164,7 +215,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               >
                 <BarChartBig className="h-4 w-4" />
                 <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Analytics</span>
-                <ShortcutHint shortcutId="nav.analytics" className={sidebarShortcutHintClass} />
+                <ShortcutHint shortcutId="nav.analytics" className={sidebarShortcutHintClass} compact />
               </SidebarMenuButton>
             </SidebarMenuItem>
 
@@ -231,7 +282,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <CreditCard className="h-4 w-4" />
                           <span className="min-w-0 flex-1">Add Expense</span>
-                          <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -242,7 +293,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <ScanLine className="h-4 w-4" />
                           <span className="min-w-0 flex-1">Smart Scan</span>
-                          <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -253,7 +304,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <FilePenLine className="h-4 w-4" />
                           <span className="min-w-0 flex-1">Edit Expenses</span>
-                          <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -264,7 +315,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <Handshake className="h-4 w-4" />
                           <span className="min-w-0 flex-1">Settlements</span>
-                          <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </CollapsibleContent>
@@ -281,7 +332,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <CreditCard className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.addExpense" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -292,7 +343,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <ScanLine className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.scanReceipt" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -303,7 +354,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <FilePenLine className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.editExpenses" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -314,7 +365,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <Handshake className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.manageSettlements" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </>
@@ -338,7 +389,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <Users className="h-4 w-4" />
                           <span className="min-w-0 flex-1">People</span>
-                          <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                       <SidebarMenuItem>
@@ -349,7 +400,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         >
                           <ListChecks className="h-4 w-4" />
                           <span className="min-w-0 flex-1">Categories</span>
-                          <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} />
+                          <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} compact />
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </CollapsibleContent>
@@ -366,7 +417,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <Users className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.managePeople" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                     <SidebarMenuItem>
@@ -377,7 +428,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                         className="relative justify-start h-8"
                       >
                         <ListChecks className="h-4 w-4" />
-                        <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} />
+                        <ShortcutHint shortcutId="nav.manageCategories" className={sidebarShortcutHintClass} compact />
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   </>
@@ -396,14 +447,59 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                   >
                     <Settings className="h-4 w-4" />
                     <span className="min-w-0 flex-1 group-data-[state=collapsed]:hidden">Settings</span>
-                    <ShortcutHint shortcutId="nav.settings" className={sidebarShortcutHintClass} />
+                    <ShortcutHint shortcutId="nav.settings" className={sidebarShortcutHintClass} compact />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </>
             )}
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter className="border-t border-sidebar-border bg-sidebar/95 px-2 py-2 group-data-[state=collapsed]:hidden">
+        <SidebarFooter className="border-t border-sidebar-border bg-sidebar/95 px-2 py-2">
+          {isCollapsed ? (
+            <div className="flex flex-col items-center gap-2">
+              {isDevelopmentEnvironment && (
+                <div
+                  className="flex h-8 w-8 items-center justify-center rounded-md border border-amber-500/25 bg-amber-500/10 text-amber-700 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200"
+                  title="Development environment"
+                >
+                  <AlertTriangle className="h-4 w-4" />
+                </div>
+              )}
+              {isProfileLoading ? (
+                <Skeleton className="h-8 w-8 rounded-md" />
+              ) : displayUserName ? (
+                <>
+                  <div
+                    className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-foreground text-xs font-medium text-sidebar"
+                    title={displayUserName}
+                    aria-label={`${displayUserName}, ${roleLabel}`}
+                  >
+                    {userInitials}
+                  </div>
+                  <DropdownMenu open={dropdownOpen} onOpenChange={(open) => !isLoggingOut && setDropdownOpen(open)}>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="relative h-8 w-8 rounded-md text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-sidebar-ring"
+                        aria-label="Open profile menu"
+                        disabled={isLoggingOut}
+                      >
+                        <Settings className="h-4 w-4" />
+                        <ShortcutHint
+                          shortcutId="action.profileMenu"
+                          className="pointer-events-none absolute -right-2 -top-1 scale-75 border-sidebar-border bg-sidebar px-1"
+                          compact
+                        />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    {renderProfileMenuContent("right")}
+                  </DropdownMenu>
+                </>
+              ) : null}
+              <span className="text-[10px] leading-none text-muted-foreground">v{packageJson.version}</span>
+            </div>
+          ) : (
           <div className="space-y-2">
             {isDevelopmentEnvironment && (
               <div className="rounded-md border border-amber-500/20 bg-amber-500/10 px-2.5 py-2 text-amber-950 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-50">
@@ -461,58 +557,12 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
                       <ShortcutHint
                         shortcutId="action.profileMenu"
                         className="pointer-events-none absolute -right-1 -top-1 scale-75 border-sidebar-border bg-sidebar px-1"
+                        compact
                       />
                     </Button>
                   </DropdownMenuTrigger>
                 </div>
-                <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Profile</DropdownMenuLabel>
-                  {onEditName && (
-                    <DropdownMenuItem onClick={onEditName}>
-                      <Edit3 className="mr-2 h-4 w-4" /> Edit Name
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel className="text-xs font-medium text-muted-foreground">Theme</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setTheme("light")}>
-                    <Sun className="mr-2 h-4 w-4" /> Light
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setTheme("dark")}>
-                    <Moon className="mr-2 h-4 w-4" /> Dark
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => onShowShortcuts?.()}>
-                    <Keyboard className="mr-2 h-4 w-4" /> Shortcuts
-                    <DropdownMenuShortcut>
-                      <ShortcutHint
-                        shortcutId="action.shortcuts"
-                        alwaysVisible
-                        className="border-0 bg-transparent px-0 py-0 shadow-none"
-                      />
-                    </DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {isDevelopmentEnvironment ? (
-                    <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-                      Auth disabled locally
-                    </DropdownMenuLabel>
-                  ) : (
-                    <DropdownMenuItem
-                      onSelect={(e) => {
-                        e.preventDefault();
-                        void handleLogoutClick();
-                      }}
-                      disabled={isLoggingOut}
-                      className={`transition-all duration-200 ${isLoggingOut
-                        ? 'bg-gray-100 hover:bg-gray-100 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400'
-                        : 'text-destructive focus:bg-destructive/10 focus:text-destructive'
-                      }`}
-                    >
-                      <LogOut className={`mr-2 h-4 w-4 transition-opacity duration-200 ${isLoggingOut ? 'opacity-50' : 'opacity-100'}`} />
-                      {isLoggingOut ? 'Logging out...' : 'Logout'}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
+                {renderProfileMenuContent()}
               </DropdownMenu>
             )}
             <div className="flex items-center justify-between border-t border-sidebar-border/70 pt-2 text-[11px] leading-4 text-muted-foreground">
@@ -520,6 +570,7 @@ const AppSidebar = React.memo(function AppSidebar({ activeView, setActiveView, h
               <span>v{packageJson.version}</span>
             </div>
           </div>
+          )}
         </SidebarFooter>
       </Sidebar>
     </>

@@ -557,6 +557,42 @@
   isolation: isolate;
 }
 
+.auth-beta-shell {
+  --auth-beta-shell-bg: #f7f6f3;
+  --auth-beta-card-bg: rgba(255, 255, 255, 0.95);
+  --auth-beta-card-border: rgba(0, 0, 0, 0.08);
+  --auth-beta-mode-accent: #141414;
+  --auth-beta-mode-accent-foreground: #ffffff;
+  --auth-beta-mark-bg: rgba(245, 242, 239, 0.9);
+  background: var(--auth-beta-shell-bg);
+}
+
+.auth-beta-shell[data-auth-mode="signup"] {
+  --auth-beta-shell-bg: #f4f7f1;
+  --auth-beta-card-bg: rgba(250, 253, 249, 0.96);
+  --auth-beta-card-border: rgba(27, 94, 63, 0.2);
+  --auth-beta-mode-accent: #166534;
+  --auth-beta-mode-accent-foreground: #ffffff;
+  --auth-beta-mark-bg: rgba(226, 244, 232, 0.92);
+}
+
+.dark .auth-beta-shell {
+  --auth-beta-shell-bg: hsl(var(--background));
+  --auth-beta-card-bg: rgba(24, 24, 24, 0.94);
+  --auth-beta-card-border: rgba(255, 255, 255, 0.12);
+  --auth-beta-mode-accent: #f5f5f4;
+  --auth-beta-mode-accent-foreground: #111111;
+  --auth-beta-mark-bg: rgba(255, 255, 255, 0.08);
+}
+
+.dark .auth-beta-shell[data-auth-mode="signup"] {
+  --auth-beta-card-bg: rgba(16, 29, 22, 0.94);
+  --auth-beta-card-border: rgba(110, 231, 183, 0.22);
+  --auth-beta-mode-accent: #86efac;
+  --auth-beta-mode-accent-foreground: #052e16;
+  --auth-beta-mark-bg: rgba(34, 197, 94, 0.14);
+}
+
 .auth-beta-shell::before {
   content: "";
   position: absolute;
@@ -589,7 +625,7 @@
   inset: 8% -4% auto -4%;
   width: 108%;
   height: 72%;
-  opacity: 0.38;
+  opacity: 0.3;
   z-index: 0;
 }
 
@@ -630,20 +666,20 @@
 }
 
 .auth-beta-orbit {
-  width: 68px;
-  height: 68px;
+  width: 58px;
+  height: 58px;
   border-radius: 9999px;
   animation: auth-beta-float 9s ease-in-out infinite;
 }
 
 .auth-beta-orbit svg {
-  width: 1.65rem;
-  height: 1.65rem;
+  width: 1.4rem;
+  height: 1.4rem;
 }
 
 .auth-beta-orbit-1 {
-  left: 0.5%;
-  top: 56%;
+  left: 2%;
+  top: 58%;
   animation-delay: -1.4s;
 }
 
@@ -660,42 +696,46 @@
 }
 
 .auth-beta-orbit-4 {
-  left: 0.25%;
-  bottom: 17%;
+  right: 2.5%;
+  bottom: 12%;
   animation-delay: -2.2s;
 }
 
 .auth-beta-orbit-5 {
-  right: 2.5%;
-  bottom: 10%;
-  animation-delay: -7.1s;
-}
-
-.auth-beta-orbit-6 {
-  left: 36%;
-  bottom: 5.5%;
-  animation-delay: -5.2s;
-}
-
-.auth-beta-orbit-7 {
-  left: 54.5%;
-  top: 26%;
-  animation-delay: -3.3s;
-}
-
-.auth-beta-orbit-8 {
   left: 23%;
   top: 9%;
-  animation-delay: -8.4s;
+  animation-delay: -7.1s;
 }
 
 .auth-beta-card {
   height: min(760px, calc(100svh - 96px));
   min-height: 0;
+  border-color: var(--auth-beta-card-border) !important;
+  background: var(--auth-beta-card-bg) !important;
+}
+
+.auth-beta-card-mark {
+  background: var(--auth-beta-mark-bg) !important;
+  color: var(--auth-beta-mode-accent);
+}
+
+.auth-beta-card-copy {
+  min-height: 3rem;
+}
+
+.auth-beta-primary-button {
+  background: var(--auth-beta-mode-accent);
+  color: var(--auth-beta-mode-accent-foreground);
+}
+
+.auth-beta-primary-button:hover {
+  background: var(--auth-beta-mode-accent);
+  color: var(--auth-beta-mode-accent-foreground);
+  filter: brightness(0.94);
 }
 
 .auth-beta-name-slot {
-  min-height: 0;
+  min-height: 4.5rem;
 }
 
 .auth-beta-action-slot {
@@ -711,6 +751,40 @@
 .auth-beta-status-slot {
   min-height: 2.75rem;
   padding-top: 0.5rem;
+}
+
+.auth-beta-switch-slot {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-beta-mobile-story {
+  border: 1px solid var(--auth-beta-card-border);
+  border-radius: 1.25rem;
+  background: color-mix(in srgb, var(--auth-beta-card-bg) 86%, transparent);
+  padding: 1rem;
+  box-shadow:
+    rgba(0, 0, 0, 0.05) 0px 0px 0px 0.5px inset,
+    rgba(78, 50, 23, 0.04) 0px 12px 24px -18px;
+  backdrop-filter: blur(16px);
+}
+
+.auth-beta-mobile-benefit {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 0.75rem;
+}
+
+.dark .auth-beta-mobile-benefit {
+  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .auth-beta-card,
@@ -744,10 +818,10 @@
     transform: translate3d(0, 0, 0) rotate(0deg);
   }
   35% {
-    transform: translate3d(18px, -22px, 0) rotate(6deg);
+    transform: translate3d(10px, -14px, 0) rotate(4deg);
   }
   70% {
-    transform: translate3d(-14px, 16px, 0) rotate(-5deg);
+    transform: translate3d(-8px, 10px, 0) rotate(-4deg);
   }
 }
 
@@ -786,15 +860,18 @@
   }
 
   .auth-beta-orbit-3,
-  .auth-beta-orbit-5,
-  .auth-beta-orbit-6,
-  .auth-beta-orbit-7,
-  .auth-beta-orbit-8 {
+  .auth-beta-orbit-4,
+  .auth-beta-orbit-5 {
     display: none;
   }
 
   .auth-beta-card {
-    height: min(700px, calc(100svh - 88px));
+    height: auto;
+    min-height: min(664px, calc(100svh - 96px));
+  }
+
+  .auth-beta-card-copy {
+    display: none;
   }
 }
 
@@ -810,7 +887,8 @@
 
 @media (max-height: 760px) {
   .auth-beta-card {
-    height: calc(100svh - 80px);
+    height: auto;
+    min-height: calc(100svh - 80px);
   }
 
   .auth-beta-card-header {
@@ -853,6 +931,10 @@
   .auth-beta-status-slot {
     min-height: 1.75rem;
     padding-top: 0.25rem;
+  }
+
+  .auth-beta-switch-slot {
+    min-height: 2.25rem;
   }
 }
 
