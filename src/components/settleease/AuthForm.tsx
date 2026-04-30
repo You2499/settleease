@@ -1,25 +1,108 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
+import {
+  BadgeCheck,
+  ChartNoAxesCombined,
+  CircleDollarSign,
+  Eye,
+  EyeOff,
+  HandCoins,
+  Lightbulb,
+  LogIn,
+  PartyPopper,
+  PieChart,
+  ReceiptText,
+  ScanLine,
+  Settings2,
+  Shield,
+  ShieldCheck,
+  Sparkles,
+  Split,
+  UserPlus,
+  Users,
+  WalletCards,
+  Zap,
+} from 'lucide-react';
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "@/hooks/use-toast";
-import { LogIn, UserPlus, HandCoins, Zap, Users, PieChart, PartyPopper, Settings2, AlertTriangle, Lightbulb, Shield, Eye, EyeOff } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from '@/components/ui/separator';
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { getGoogleButtonText, getGoogleOAuthParams, getAuthErrorMessage, getAuthSuggestion } from '@/lib/settleease/authUtils';
 import GoogleOAuthModal from './GoogleOAuthModal';
 import packageJson from '../../../package.json';
 import { GoogleMark } from './BrandAssets';
 
-
 interface AuthFormProps {
   supabase: SupabaseClient | undefined;
   onAuthSuccess?: (user: SupabaseUser) => void;
+}
+
+type AuthDesign = 'beta' | 'classic';
+type AuthSurface = 'beta' | 'classic';
+
+const AUTH_DESIGN_STORAGE_KEY = 'settleease-auth-design';
+
+const betaBenefits = [
+  {
+    icon: Split,
+    title: "Split with precision",
+    description: "Equal, unequal, and item-wise splits stay readable as the bill grows.",
+  },
+  {
+    icon: ReceiptText,
+    title: "Receipts become records",
+    description: "Smart Scan turns messy receipts into editable expense drafts.",
+  },
+  {
+    icon: ChartNoAxesCombined,
+    title: "Know the group pulse",
+    description: "Analytics, health estimates, and reports surface the patterns that matter.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Admin-safe controls",
+    description: "Production and development controls stay separated where it counts.",
+  },
+];
+
+const classicBenefits = [
+  {
+    icon: Zap,
+    label: "AI-Powered Insights:",
+    copy: "Get intelligent summaries of your spending patterns.",
+  },
+  {
+    icon: Users,
+    label: "Flexible Splitting:",
+    copy: "Equal, unequal, or item-by-item splits with ease.",
+  },
+  {
+    icon: PieChart,
+    label: "Advanced Analytics:",
+    copy: "Visualize spending with charts, heatmaps, and trends.",
+  },
+  {
+    icon: PartyPopper,
+    label: "Smart Settlements:",
+    copy: "Optimized payment plans that minimize transactions.",
+  },
+  {
+    icon: Settings2,
+    label: "Customizable:",
+    copy: "Choose from 1000+ icons and personalize categories.",
+  },
+];
+
+function isAuthDesign(value: string | null): value is AuthDesign {
+  return value === 'beta' || value === 'classic';
 }
 
 export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
@@ -27,7 +110,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [isLoginView, setIsLoginView] = useState(true); // Changed default to true (Sign In)
+  const [isLoginView, setIsLoginView] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [hasAuthError, setHasAuthError] = useState(false);
@@ -36,13 +119,16 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   const [resendEmail, setResendEmail] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [authDesign, setAuthDesign] = useState<AuthDesign>('beta');
+
   const upsertUserProfile = useMutation(api.app.upsertUserProfile);
   const markSignIn = useMutation(api.app.markSignIn);
-  // Refs for auto-focus
   const firstNameRef = useRef<HTMLInputElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
 
-  // Helper function to properly capitalize names (first letter uppercase, rest lowercase)
+  const isBetaDesign = authDesign === 'beta';
+  const authSuggestion = getAuthSuggestion(isLoginView, hasAuthError, authErrorType);
+
   const capitalizeFirstLetter = (str: string): string => {
     return str
       .toLowerCase()
@@ -51,71 +137,81 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
       .join(' ');
   };
 
-  // Auto-focus effect when view changes
+  useEffect(() => {
+    const storedDesign = window.localStorage.getItem(AUTH_DESIGN_STORAGE_KEY);
+    if (isAuthDesign(storedDesign)) {
+      setAuthDesign(storedDesign);
+    }
+  }, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       if (isLoginView) {
-        // Focus on email for sign in
         emailRef.current?.focus();
       } else {
-        // Focus on first name for sign up
         firstNameRef.current?.focus();
       }
-    }, 100); // Small delay to ensure DOM is ready
+    }, 100);
 
     return () => clearTimeout(timer);
-  }, [isLoginView]);
+  }, [isLoginView, authDesign]);
 
-  // Reset Google loading state on component mount and when user navigates back
   useEffect(() => {
-    // Listen for page visibility changes (when user returns from OAuth)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && isGoogleLoading) {
-        // User returned to the page, reset the loading state
         console.log("Visibility change detected, resetting Google loading state");
         setIsGoogleLoading(false);
       }
     };
 
-    // Listen for focus events (when user returns to the tab/window)
     const handleWindowFocus = () => {
       if (isGoogleLoading) {
-        // User returned to the window, reset the loading state
         console.log("Window focus detected, resetting Google loading state");
         setIsGoogleLoading(false);
       }
     };
 
-    // Add event listeners
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleWindowFocus);
 
-    // Cleanup event listeners
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('focus', handleWindowFocus);
     };
   }, [isGoogleLoading]);
 
-  // Reset Google loading state only on initial mount
   useEffect(() => {
     console.log("Component mounted, resetting Google loading state");
     setIsGoogleLoading(false);
-  }, []); // Empty dependency array means this only runs once on mount
+  }, []);
 
-  // Handle resending confirmation email (only for verified accounts)
+  const updateAuthDesign = (nextDesign: AuthDesign) => {
+    setAuthDesign(nextDesign);
+    window.localStorage.setItem(AUTH_DESIGN_STORAGE_KEY, nextDesign);
+  };
+
+  const resetAuthModeState = () => {
+    setFirstName('');
+    setLastName('');
+    setEmail('');
+    setPassword('');
+    setHasAuthError(false);
+    setAuthErrorType('');
+    setShowResendConfirmation(false);
+    setResendEmail('');
+    setIsGoogleLoading(false);
+  };
+
   const handleResendConfirmation = async () => {
     if (!supabase || !resendEmail || !password) return;
 
     setIsLoading(true);
     try {
-      // Use the original password that was verified to trigger email resend
-      const { error } = await supabase.auth.signUp({
+      await supabase.auth.signUp({
         email: resendEmail,
-        password: password, // Use the actual password that was verified
+        password: password,
       });
 
-      // Show success toast
       toast({
         title: "Confirmation Email Sent",
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
@@ -125,9 +221,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
       setShowResendConfirmation(false);
       setHasAuthError(false);
       setAuthErrorType('');
-
     } catch (err) {
-      // Show success toast (email likely sent even if API "fails")
       toast({
         title: "Confirmation Email Sent",
         description: "We've sent a new confirmation link to your email. Please check your inbox and spam folder.",
@@ -175,11 +269,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
 
         if (signInError) {
-          // Check if this is an unconfirmed email error
           if (signInError.code === 'email_not_confirmed' || signInError.message.toLowerCase().includes('email not confirmed')) {
-            // SECURITY NOTE: Supabase only returns 'email_not_confirmed' when BOTH email and password are correct
-            // If password was wrong, Supabase would return 'invalid_credentials' instead
-            // Therefore, it's safe to show resend option here - user has proven they own the account
             toast({
               title: "Email Not Verified",
               description: "Your account exists but hasn't been verified yet. Please check your email and click the verification link to activate your account before signing in.",
@@ -196,8 +286,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           throw signInError;
         }
 
-        // Don't show toast here for returning users
-        // Let page.tsx handle the "Welcome back!" toast so it can show the appropriate message.
         setHasAuthError(false);
         setAuthErrorType('');
         if (data.user && onAuthSuccess) onAuthSuccess(data.user);
@@ -214,7 +302,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           },
         });
 
-        // Handle specific signup errors
         if (signUpError) {
           console.log('Signup error details:', {
             code: signUpError.code,
@@ -224,7 +311,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             userConfirmed: data.user ? (data.user as any).email_confirmed_at : null
           });
 
-          // For existing user errors, always show "account exists" message
           if (signUpError.message?.toLowerCase().includes('already') ||
             signUpError.code === 'user_already_exists' ||
             signUpError.code === 'email_exists') {
@@ -238,7 +324,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             return;
           }
 
-          // For other errors, throw them to be handled by the catch block
           throw signUpError;
         }
 
@@ -251,9 +336,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           confirmationSent: data.user ? (data.user as any).confirmation_sent_at : null
         });
 
-        // Handle the case where user exists but no session is created
         if (data.user && !data.session) {
-          // This should now only happen for legitimate new signups requiring email confirmation
           toast({
             title: "Check Your Email",
             description: "We've sent a confirmation link to your email. Please check your inbox and click the link to activate your account.",
@@ -263,7 +346,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           return;
         }
 
-        // If signup successful and we have a user, update their profile with names
         if (data.user && data.session) {
           try {
             await upsertUserProfile({
@@ -277,10 +359,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           }
         }
 
-        // Handle successful signup with immediate session
         if (data.session && data.user) {
-          // NO toast here - page.tsx handles all welcome toasts centrally
-          // Set flag to show welcome toast
           try {
             await markSignIn({
               supabaseUserId: data.user.id,
@@ -296,7 +375,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           setAuthErrorType('');
           if (onAuthSuccess) onAuthSuccess(data.user);
         } else {
-          // This case should be handled above, but keeping as fallback
           toast({
             title: "Check Your Email",
             description: "Please check your email and click the confirmation link to activate your account.",
@@ -324,7 +402,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
       return;
     }
 
-    // Show confirmation modal
     setShowGoogleModal(true);
   };
 
@@ -332,7 +409,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     console.log("Google OAuth: Starting authentication process");
     setIsGoogleLoading(true);
 
-    // Add a small delay to ensure the loading state is rendered before redirect
     await new Promise(resolve => setTimeout(resolve, 100));
     console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
 
@@ -355,14 +431,11 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
       console.log("Google OAuth: signInWithOAuth successful, user should be redirected");
 
-      // Set a timeout to reset states if OAuth doesn't complete
-      // This handles cases where user closes the OAuth popup or navigates back
       setTimeout(() => {
         console.log("Google OAuth: Timeout reached, resetting loading states");
         setIsGoogleLoading(false);
         setShowGoogleModal(false);
-      }, 10000); // Reset after 10 seconds
-
+      }, 10000);
     } catch (err: any) {
       console.error("Google OAuth: Caught error:", err);
       const { title, description } = getAuthErrorMessage(err, isLoginView);
@@ -377,257 +450,445 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     }
   };
 
-  return (
+  const renderDesignToggle = (className?: string) => (
+    <div className={cn("inline-flex items-center rounded-full border border-border/70 bg-background/85 p-1 shadow-sm backdrop-blur-md", className)} aria-label="Auth design preference">
+      {(['beta', 'classic'] as AuthDesign[]).map((design) => (
+        <Button
+          key={design}
+          type="button"
+          size="sm"
+          variant={authDesign === design ? "default" : "ghost"}
+          className={cn(
+            "h-8 rounded-full px-3 text-xs capitalize",
+            authDesign === design ? "shadow-sm" : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => updateAuthDesign(design)}
+          aria-pressed={authDesign === design}
+        >
+          {design === 'beta' ? 'Beta' : 'Classic'}
+        </Button>
+      ))}
+    </div>
+  );
+
+  const renderAuthControls = (surface: AuthSurface) => {
+    const isBetaSurface = surface === 'beta';
+    const inputClassName = isBetaSurface
+      ? "h-11 rounded-full border-border/80 bg-background/95 px-4 shadow-sm focus-visible:ring-ring"
+      : "h-10 sm:h-11";
+    const passwordInputClassName = isBetaSurface
+      ? "h-11 rounded-full border-border/80 bg-background/95 pl-4 pr-12 shadow-sm focus-visible:ring-ring"
+      : "h-10 sm:h-11 pr-10";
+    const labelClassName = isBetaSurface
+      ? "text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground"
+      : "text-sm";
+
+    return (
+      <>
+        <form onSubmit={handleSubmit} className={cn("space-y-3 sm:space-y-4", isBetaSurface && "space-y-4")}>
+          {!isLoginView && (
+            <div className={cn("grid gap-3", isBetaSurface ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2")}>
+              <div className="space-y-1.5">
+                <Label htmlFor="firstName" className={labelClassName}>First Name</Label>
+                <Input
+                  ref={firstNameRef}
+                  id="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
+                  disabled={isLoading || isGoogleLoading}
+                  required
+                  className={inputClassName}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="lastName" className={labelClassName}>Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
+                  disabled={isLoading || isGoogleLoading}
+                  required
+                  className={inputClassName}
+                />
+              </div>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className={labelClassName}>Email Address</Label>
+            <Input
+              ref={emailRef}
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (showResendConfirmation) {
+                  setShowResendConfirmation(false);
+                  setResendEmail('');
+                }
+              }}
+              disabled={isLoading || isGoogleLoading}
+              required
+              className={inputClassName}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className={labelClassName}>Password</Label>
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete={isLoginView ? "current-password" : "new-password"}
+                placeholder={isLoginView ? "Password" : "Password - min. 6 characters"}
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (showResendConfirmation) {
+                    setShowResendConfirmation(false);
+                    setResendEmail('');
+                  }
+                }}
+                disabled={isLoading || isGoogleLoading}
+                required
+                minLength={6}
+                className={passwordInputClassName}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn("absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent", isBetaSurface && "right-1 rounded-full")}
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading || isGoogleLoading}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <Eye className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {showResendConfirmation ? (
+            <div className={cn(
+              "space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20",
+              isBetaSurface && "rounded-2xl border-amber-300/60 bg-[#fff8e7] shadow-sm dark:bg-amber-950/20",
+            )}>
+              <div className="text-center">
+                <h3 className="mb-1 text-sm font-semibold text-amber-800 dark:text-amber-200">
+                  {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
+                </h3>
+                <p className="text-xs text-amber-700 dark:text-amber-300">
+                  Your account exists but hasn't been verified yet. Please check your email for the confirmation link, or resend it below.
+                </p>
+              </div>
+              <Button
+                type="button"
+                onClick={handleResendConfirmation}
+                disabled={isLoading}
+                className={cn(
+                  "h-10 w-full text-sm font-semibold sm:h-11 sm:text-base",
+                  isBetaSurface ? "rounded-full bg-black text-white hover:bg-black/90 dark:bg-primary dark:text-primary-foreground" : "bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800",
+                )}
+              >
+                {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="submit"
+              className={cn(
+                "h-10 w-full text-sm font-semibold sm:h-11 sm:text-base",
+                isBetaSurface && "rounded-full bg-black text-white shadow-[rgba(78,50,23,0.08)_0px_10px_24px] hover:bg-black/90 dark:bg-primary dark:text-primary-foreground",
+              )}
+              disabled={isLoading || isGoogleLoading}
+            >
+              {isLoading ? (
+                isLoginView ? 'Logging in...' : 'Creating Account...'
+              ) : isLoginView ? (
+                <>
+                  <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Sign In
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                  Create Account
+                </>
+              )}
+            </Button>
+          )}
+        </form>
+
+        <div className="relative my-3 sm:my-4">
+          <div className="absolute inset-0 flex items-center">
+            <Separator />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className={cn("bg-background px-2 text-muted-foreground", isBetaSurface && "bg-card tracking-[0.16em]")}>
+              Or
+            </span>
+          </div>
+        </div>
+
+        <Button
+          type="button"
+          className={cn(
+            "h-10 w-full border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 sm:h-11 sm:text-base",
+            isBetaSurface && "rounded-full border-border/80 bg-white/95 text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground",
+          )}
+          onClick={handleGoogleSignIn}
+          disabled={isLoading || isGoogleLoading}
+        >
+          <GoogleMark size={18} />
+          <span className="ml-2.5">
+            {getGoogleButtonText(isLoginView, isGoogleLoading)}
+          </span>
+        </Button>
+
+        {hasAuthError && !showResendConfirmation && authSuggestion && (
+          <div className={cn(
+            "mt-3 rounded-md border border-blue-200 bg-blue-50 p-2 text-center text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/20 dark:text-blue-300",
+            isBetaSurface && "rounded-2xl border-border/70 bg-muted/60 text-muted-foreground",
+          )}>
+            <div className="flex items-center justify-center space-x-2">
+              <Lightbulb className="h-4 w-4 shrink-0" />
+              <span>{authSuggestion.text}</span>
+            </div>
+          </div>
+        )}
+
+        <Button
+          type="button"
+          variant="link"
+          onClick={() => {
+            setIsLoginView(!isLoginView);
+            resetAuthModeState();
+          }}
+          disabled={isLoading || isGoogleLoading}
+          className={cn("text-sm text-primary hover:text-primary/80", isBetaSurface && "mt-1 h-auto rounded-full px-3 py-2 text-foreground underline-offset-8")}
+        >
+          {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+        </Button>
+      </>
+    );
+  };
+
+  const renderClassicLayout = () => (
     <>
-
-
-      <Card className="w-full max-w-4xl shadow-xl rounded-lg overflow-hidden min-h-screen md:min-h-[680px] md:h-[680px]">
-        <div className="md:flex h-full md:min-h-[680px] md:h-[680px]"> {/* Fixed height for modal and flex container on md+ */}
-          {/* Left Pane: Branding & Features */}
-          <div className={`md:w-2/5 flex flex-col px-6 py-8 sm:px-10 sm:py-10 transition-colors duration-300 ease-in-out min-h-[400px] md:min-h-[680px] md:h-[680px] h-full` + (isLoginView ? ' bg-secondary/20 text-primary' : ' bg-primary text-primary-foreground')}>
-            <div className="flex flex-col flex-1 justify-center min-h-0 h-full">
+      <div className="fixed right-4 top-4 z-50">
+        {renderDesignToggle()}
+      </div>
+      <Card className="w-full max-w-4xl overflow-hidden rounded-lg shadow-xl md:h-[680px] md:min-h-[680px]">
+        <div className="h-full md:flex md:h-[680px] md:min-h-[680px]">
+          <div className={cn(
+            "flex h-full min-h-[400px] flex-col px-6 py-8 transition-colors duration-300 ease-in-out sm:px-10 sm:py-10 md:h-[680px] md:min-h-[680px] md:w-2/5",
+            isLoginView ? "bg-secondary/20 text-primary" : "bg-primary text-primary-foreground",
+          )}>
+            <div className="flex h-full min-h-0 flex-1 flex-col justify-center">
               {isLoginView ? (
-                <div className="flex flex-col flex-1 items-center justify-center text-center h-full px-2">
-                  <HandCoins className="h-16 sm:h-20 w-16 sm:w-20 mx-auto mb-4 sm:mb-6 text-primary" />
-                  <h1 className="text-2xl sm:text-3xl font-bold font-headline text-primary">Welcome Back!</h1>
-                  <p className="mt-2 sm:mt-3 text-sm sm:text-base text-muted-foreground">
+                <div className="flex h-full flex-1 flex-col items-center justify-center px-2 text-center">
+                  <HandCoins className="mx-auto mb-4 h-16 w-16 text-primary sm:mb-6 sm:h-20 sm:w-20" />
+                  <h1 className="font-headline text-2xl font-bold text-primary sm:text-3xl">Welcome Back!</h1>
+                  <p className="mt-2 text-sm text-muted-foreground sm:mt-3 sm:text-base">
                     Sign in to continue simplifying your group expenses.
                   </p>
 
-                  {/* Mobile Security Badge - Only show on mobile for login view */}
-                  <div className="md:hidden mt-6 space-y-2">
-                    <div className="flex items-center justify-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+                  <div className="mt-6 space-y-2 md:hidden">
+                    <div className="flex items-center justify-center space-x-2 rounded-full border border-border/50 bg-background/80 px-3 py-2 shadow-sm backdrop-blur-sm">
                       <Shield className="h-4 w-4 text-primary" />
-                      <span className="text-xs text-muted-foreground font-medium">
-                        Protected by <span className="text-primary font-semibold">SettleSecure</span>
+                      <span className="text-xs font-medium text-muted-foreground">
+                        Protected by <span className="font-semibold text-primary">SettleSecure</span>
                       </span>
                     </div>
-                    <p className="text-xs text-muted-foreground/70 text-center">SettleEase v{packageJson.version}</p>
+                    <p className="text-center text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
                   </div>
                 </div>
               ) : (
                 <>
-                  <div className="mb-6 sm:mb-7 text-center md:text-left">
-                    <HandCoins className="h-12 sm:h-16 w-12 sm:w-16 mx-auto md:mx-0 mb-3 sm:mb-4 text-primary-foreground/90" />
-                    <h1 className="text-3xl sm:text-4xl font-bold font-headline">SettleEase</h1>
-                    <p className="mt-1 sm:mt-2 text-md sm:text-lg text-primary-foreground/90">
+                  <div className="mb-6 text-center sm:mb-7 md:text-left">
+                    <HandCoins className="mx-auto mb-3 h-12 w-12 text-primary-foreground/90 sm:mb-4 sm:h-16 sm:w-16 md:mx-0" />
+                    <h1 className="font-headline text-3xl font-bold sm:text-4xl">SettleEase</h1>
+                    <p className="mt-1 text-md text-primary-foreground/90 sm:mt-2 sm:text-lg">
                       The smartest way to manage shared expenses.
                     </p>
                   </div>
-                  <h3 className="text-lg sm:text-xl font-semibold mb-4 sm:mb-5 text-center md:text-left">Why SettleEase?</h3>
-                  <ul className="space-y-3 sm:space-y-3.5 text-xs sm:text-sm">
-                    <li className="flex items-start"><Zap className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>AI-Powered Insights:</strong> Get intelligent summaries of your spending patterns.</span></li>
-                    <li className="flex items-start"><Users className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Flexible Splitting:</strong> Equal, unequal, or item-by-item splits with ease.</span></li>
-                    <li className="flex items-start"><PieChart className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Advanced Analytics:</strong> Visualize spending with charts, heatmaps, and trends.</span></li>
-                    <li className="flex items-start"><PartyPopper className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Smart Settlements:</strong> Optimized payment plans that minimize transactions.</span></li>
-                    <li className="flex items-start"><Settings2 className="h-4 w-4 sm:h-5 sm:w-5 mr-3 sm:mr-3.5 mt-0.5 text-primary-foreground/80 shrink-0" /> <span><strong>Customizable:</strong> Choose from 1000+ icons and personalize categories.</span></li>
+                  <h3 className="mb-4 text-center text-lg font-semibold sm:mb-5 sm:text-xl md:text-left">Why SettleEase?</h3>
+                  <ul className="space-y-3 text-xs sm:space-y-3.5 sm:text-sm">
+                    {classicBenefits.map(({ icon: Icon, label, copy }) => (
+                      <li key={label} className="flex items-start">
+                        <Icon className="mr-3 mt-0.5 h-4 w-4 shrink-0 text-primary-foreground/80 sm:mr-3.5 sm:h-5 sm:w-5" />
+                        <span><strong>{label}</strong> {copy}</span>
+                      </li>
+                    ))}
                   </ul>
                 </>
               )}
             </div>
           </div>
 
-          {/* Right Pane: Form */}
-          <div className="md:w-3/5 px-6 py-8 sm:px-10 sm:py-10 flex flex-col justify-center min-h-0 md:min-h-[680px] md:h-[680px] h-full">
-            <div className="flex flex-col justify-center flex-1 min-h-0 h-full">
-              <CardHeader className="px-0 pt-0 pb-4 text-center">
-                <CardTitle className="flex items-center text-xl sm:text-2xl font-bold">
+          <div className="flex h-full min-h-0 flex-col justify-center px-6 py-8 sm:px-10 sm:py-10 md:h-[680px] md:min-h-[680px] md:w-3/5">
+            <div className="flex h-full min-h-0 flex-1 flex-col justify-center">
+              <CardHeader className="px-0 pb-4 pt-0 text-center">
+                <CardTitle className="flex items-center text-xl font-bold sm:text-2xl">
                   {isLoginView ? 'Sign In' : 'Create your Account'}
                 </CardTitle>
               </CardHeader>
 
-              <CardContent className="px-0 pb-0 space-y-3 sm:space-y-4">
-                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-                  {!isLoginView && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1 sm:space-y-1.5">
-                        <Label htmlFor="firstName" className="text-sm">First Name</Label>
-                        <Input
-                          ref={firstNameRef}
-                          id="firstName"
-                          type="text"
-                          autoComplete="given-name"
-                          placeholder="John"
-                          value={firstName}
-                          onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
-                          disabled={isLoading || isGoogleLoading}
-                          required
-                          className="h-10 sm:h-11"
-                        />
-                      </div>
-                      <div className="space-y-1 sm:space-y-1.5">
-                        <Label htmlFor="lastName" className="text-sm">Last Name</Label>
-                        <Input
-                          id="lastName"
-                          type="text"
-                          autoComplete="family-name"
-                          placeholder="Doe"
-                          value={lastName}
-                          onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
-                          disabled={isLoading || isGoogleLoading}
-                          required
-                          className="h-10 sm:h-11"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <Label htmlFor="email" className="text-sm">Email Address</Label>
-                    <Input
-                      ref={emailRef}
-                      id="email"
-                      type="email"
-                      autoComplete="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        // Reset resend confirmation when email changes
-                        if (showResendConfirmation) {
-                          setShowResendConfirmation(false);
-                          setResendEmail('');
-                        }
-                      }}
-                      disabled={isLoading || isGoogleLoading}
-                      required
-                      className="h-10 sm:h-11"
-                    />
-                  </div>
-                  <div className="space-y-1 sm:space-y-1.5">
-                    <Label htmlFor="password" className="text-sm">Password</Label>
-                    <div className="relative">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete={isLoginView ? "current-password" : "new-password"}
-                        placeholder={isLoginView ? "••••••••" : "•••••••• (min. 6 characters)"}
-                        value={password}
-                        onChange={(e) => {
-                          setPassword(e.target.value);
-                          // Reset resend confirmation when password changes
-                          if (showResendConfirmation) {
-                            setShowResendConfirmation(false);
-                            setResendEmail('');
-                          }
-                        }}
-                        disabled={isLoading || isGoogleLoading}
-                        required
-                        minLength={6}
-                        className="h-10 sm:h-11 pr-10"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                        onClick={() => setShowPassword(!showPassword)}
-                        disabled={isLoading || isGoogleLoading}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  {/* Conditional button/resend section */}
-                  {showResendConfirmation ? (
-                    // Show resend section instead of Sign In/Create Account button
-                    <div className="space-y-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-md">
-                      <div className="text-center">
-                        <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1">
-                          {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
-                        </h3>
-                        <p className="text-xs text-amber-700 dark:text-amber-300">
-                          Your account exists but hasn't been verified yet. Please check your email for the confirmation link, or resend it below.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={handleResendConfirmation}
-                        disabled={isLoading}
-                        className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800"
-                      >
-                        {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-                      </Button>
-                    </div>
-                  ) : (
-                    // Show normal submit button
-                    <Button type="submit" className="w-full h-10 text-sm sm:h-11 sm:text-base font-semibold" disabled={isLoading || isGoogleLoading}>
-                      {isLoading ? (isLoginView ? 'Logging in...' : 'Creating Account...') : (isLoginView ? <><LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Sign In</> : <><UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Create Account</>)}
-                    </Button>
-                  )}
-                </form>
-
-                <div className="relative my-3 sm:my-4">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Or
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
-                  onClick={handleGoogleSignIn}
-                  disabled={isLoading || isGoogleLoading}
-                >
-                  <GoogleMark size={18} />
-                  <span className="ml-2.5">
-                    {getGoogleButtonText(isLoginView, isGoogleLoading)}
-                  </span>
-                </Button>
-
-
+              <CardContent className="space-y-3 px-0 pb-0 sm:space-y-4">
+                {renderAuthControls('classic')}
               </CardContent>
-
-              <CardFooter className="px-0 pt-3 sm:pt-4 pb-0 flex-col items-center">
-
-
-                {hasAuthError && !showResendConfirmation && getAuthSuggestion(isLoginView, hasAuthError, authErrorType) && (
-                  <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-md text-xs text-blue-700 dark:text-blue-300 text-center">
-                    <div className="flex items-center justify-center space-x-2">
-                      <Lightbulb className="h-4 w-4 shrink-0" />
-                      <span>{getAuthSuggestion(isLoginView, hasAuthError, authErrorType)?.text}</span>
-                    </div>
-                  </div>
-                )}
-                <Button variant="link" onClick={() => {
-                  setIsLoginView(!isLoginView);
-                  // Clear form fields when switching views
-                  setFirstName('');
-                  setLastName('');
-                  setEmail('');
-                  setPassword('');
-                  setHasAuthError(false); // Reset error state
-                  setAuthErrorType(''); // Reset error type
-                  setShowResendConfirmation(false); // Reset resend state
-                  setResendEmail('');
-                  setIsGoogleLoading(false); // Reset Google loading state
-                }} disabled={isLoading || isGoogleLoading} className="text-sm text-primary hover:text-primary/80">
-                  {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-                </Button>
-              </CardFooter>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Security Branding Footer - Hidden on mobile */}
-      <div className="hidden md:block fixed bottom-4 left-1/2 transform -translate-x-1/2 z-40 space-y-2">
-        <div className="flex items-center space-x-2 px-3 py-2 bg-background/80 backdrop-blur-sm border border-border/50 rounded-full shadow-sm">
+      <div className="fixed bottom-4 left-1/2 z-40 hidden -translate-x-1/2 transform space-y-2 md:block">
+        <div className="flex items-center space-x-2 rounded-full border border-border/50 bg-background/80 px-3 py-2 shadow-sm backdrop-blur-sm">
           <Shield className="h-4 w-4 text-primary" />
-          <span className="text-xs text-muted-foreground font-medium">
-            Protected by <span className="text-primary font-semibold">SettleSecure</span>
+          <span className="text-xs font-medium text-muted-foreground">
+            Protected by <span className="font-semibold text-primary">SettleSecure</span>
           </span>
         </div>
-        <p className="text-xs text-muted-foreground/70 text-center">SettleEase v{packageJson.version}</p>
+        <p className="text-center text-xs text-muted-foreground/70">SettleEase v{packageJson.version}</p>
+      </div>
+    </>
+  );
+
+  const renderBetaAtmosphere = () => (
+    <div className="auth-beta-atmosphere" aria-hidden="true">
+      <svg className="auth-beta-lines" viewBox="0 0 1200 720" fill="none" preserveAspectRatio="none">
+        <path d="M90 520 C250 380 365 620 520 470 C690 305 790 418 930 265 C1020 167 1100 186 1160 92" />
+        <path d="M44 178 C210 116 314 240 452 170 C612 90 720 194 858 140 C996 86 1080 98 1176 46" />
+        <path d="M170 660 C300 594 420 640 552 572 C700 496 800 552 938 468 C1044 404 1114 412 1190 360" />
+      </svg>
+      <div className="auth-beta-orbit auth-beta-orbit-1">
+        <ReceiptText className="h-5 w-5" />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-2">
+        <Split className="h-5 w-5" />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-3">
+        <ChartNoAxesCombined className="h-5 w-5" />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-4">
+        <CircleDollarSign className="h-5 w-5" />
+      </div>
+      <div className="auth-beta-token auth-beta-token-1" />
+      <div className="auth-beta-token auth-beta-token-2" />
+      <div className="auth-beta-token auth-beta-token-3" />
+    </div>
+  );
+
+  const renderBetaLayout = () => (
+    <div className="auth-beta-shell relative min-h-svh w-full overflow-hidden bg-[#f7f6f3] px-4 py-4 text-foreground dark:bg-background sm:px-6 lg:px-8">
+      {renderBetaAtmosphere()}
+
+      <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 py-2">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/85 shadow-sm backdrop-blur-md">
+            <HandCoins className="h-5 w-5 text-foreground" />
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold leading-5">SettleEase</p>
+            <p className="truncate text-xs text-muted-foreground">v{packageJson.version}</p>
+          </div>
+        </div>
+        {renderDesignToggle()}
       </div>
 
-      {/* Google OAuth Confirmation Modal */}
+      <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-6 py-6 lg:min-h-[calc(100svh-96px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:py-8">
+        <section className="order-2 min-w-0 space-y-6 lg:order-1">
+          <div className="max-w-3xl space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
+              <Sparkles className="h-3.5 w-3.5 text-foreground" />
+              Built for shared money without the awkward follow-up
+            </div>
+            <div className="space-y-4">
+              <h1 className="max-w-3xl text-[clamp(2.45rem,7vw,5.7rem)] font-light leading-[0.96] tracking-tight text-foreground">
+                Settle shared expenses without the after-trip math.
+              </h1>
+              <p className="max-w-2xl text-base leading-7 tracking-[0.01em] text-muted-foreground sm:text-lg">
+                Add people, scan receipts, split precisely, and leave with a clean settlement plan. The form is right here when you are ready.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {betaBenefits.map(({ icon: Icon, title, description }) => (
+              <div key={title} className="auth-beta-benefit rounded-2xl border border-border/70 bg-background/72 p-4 shadow-sm backdrop-blur-md">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted">
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h2 className="text-base font-semibold tracking-[0.01em]">{title}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
+              <BadgeCheck className="h-4 w-4 text-foreground" />
+              Admin controls
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
+              <ScanLine className="h-4 w-4 text-foreground" />
+              Smart receipts
+            </div>
+            <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
+              <WalletCards className="h-4 w-4 text-foreground" />
+              Clear settlements
+            </div>
+          </div>
+        </section>
+
+        <section className="order-1 lg:order-2">
+          <Card className="auth-beta-card mx-auto w-full max-w-[460px] overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl">
+            <CardHeader className="space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
+                  <HandCoins className="h-6 w-6" />
+                </div>
+                <div className="rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
+                  {isLoginView ? "Returning" : "New account"}
+                </div>
+              </div>
+              <div>
+                <CardTitle className="text-3xl font-light leading-tight tracking-tight sm:text-4xl">
+                  {isLoginView ? "Welcome back." : "Create your account."}
+                </CardTitle>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {isLoginView
+                    ? "Sign in to manage expenses, settlements, and reports."
+                    : "Start with your name, then invite the group once you are inside."}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent className="px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
+              <div className="flex flex-col">
+                {renderAuthControls('beta')}
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+      </main>
+    </div>
+  );
+
+  return (
+    <>
+      {isBetaDesign ? renderBetaLayout() : renderClassicLayout()}
+
       <GoogleOAuthModal
         isOpen={showGoogleModal}
         onClose={() => setShowGoogleModal(false)}

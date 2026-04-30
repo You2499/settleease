@@ -26,138 +26,124 @@ export default function GoogleOAuthModal({
     isSignIn,
     isLoading = false
 }: GoogleOAuthModalProps) {
-    // Debug logging
-    console.log("GoogleOAuthModal render:", { isOpen, isLoading, isSignIn });
-    
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden" hideCloseButton={true}>
-                <div className={`bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6 transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
-                    <div>
-                        <DialogHeader className="pb-4">
-                            <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
-                                <HandCoins className="h-6 w-6 text-primary" />
-                                <GoogleMark size={24} />
-                            </DialogTitle>
-                        </DialogHeader>
+            <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto overflow-x-hidden sm:max-w-md" hideCloseButton={true}>
+                <div className={`relative -m-6 rounded-[1.35rem] border border-border bg-card p-6 shadow-xl transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
+                    <DialogHeader className="pb-5">
+                        <DialogTitle className="flex items-center justify-center gap-3 text-xl font-light tracking-tight">
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/60">
+                                <HandCoins className="h-5 w-5 text-foreground" />
+                            </span>
+                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background">
+                                <GoogleMark size={22} />
+                            </span>
+                        </DialogTitle>
+                    </DialogHeader>
 
-                        <div className="space-y-3">
-                            {/* Warning Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            Important Notice
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                                        Google Sign-In will automatically create a new account if you don't already have one with SettleEase.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* What Happens Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <CheckCircle className="h-4 w-4 text-[#4285F4]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            What happens next?
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90 space-y-2">
-                                    {isSignIn ? (
-                                        <>
-                                            <div className="flex items-center space-x-2 py-2">
-                                                <LogIn className="h-4 w-4 text-[#34A853]" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                        If you have an account
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        You'll be signed in immediately
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 py-2">
-                                                <UserPlus className="h-4 w-4 text-[#4285F4]" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                        If you don't have an account
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        A new account will be created automatically
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <div className="flex items-center space-x-2 py-2">
-                                                <UserPlus className="h-4 w-4 text-[#4285F4]" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                        Create new account
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        Sign up with your Google account
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center space-x-2 py-2">
-                                                <LogIn className="h-4 w-4 text-[#34A853]" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                        If account exists
-                                                    </p>
-                                                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                        You'll be signed in instead
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </div>
-
-
-                        </div>
-
-                        {/* Action Buttons */}
-                        <div className="flex flex-col space-y-2 pt-4">
-                            <Button
-                                className={`w-full h-10 text-sm sm:h-11 sm:text-base transition-all duration-200 ${
-                                    isLoading 
-                                        ? 'bg-gray-100 hover:bg-gray-100 border border-gray-200 text-gray-500 cursor-not-allowed dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-700 dark:border-gray-600' 
-                                        : 'bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600'
-                                }`}
-                                onClick={onConfirm}
-                                disabled={isLoading}
-                            >
-                                <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
-                                    <GoogleMark size={24} />
-                                </div>
-                                <span className="ml-2.5">
-                                    {(() => {
-                                        const text = isLoading ? "Redirecting to Google..." : "Continue with Google";
-                                        console.log("Button text should be:", text, "isLoading:", isLoading);
-                                        return text;
-                                    })()}
+                    <div className="space-y-3">
+                        <div className="overflow-hidden rounded-2xl border border-border bg-muted/35">
+                            <div className="flex items-center gap-2 border-b border-border/70 bg-background/70 px-4 py-3">
+                                <AlertTriangle className="h-4 w-4 text-foreground" />
+                                <span className="text-sm font-medium text-foreground">
+                                    Important notice
                                 </span>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="w-full h-10 text-sm sm:h-11 sm:text-base"
-                                onClick={onClose}
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </Button>
+                            </div>
+                            <div className="px-4 py-3">
+                                <p className="text-sm leading-6 text-muted-foreground">
+                                    Google Sign-In will automatically create a new account if you do not already have one with SettleEase.
+                                </p>
+                            </div>
                         </div>
+
+                        <div className="overflow-hidden rounded-2xl border border-border bg-background/80">
+                            <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-3">
+                                <CheckCircle className="h-4 w-4 text-foreground" />
+                                <span className="text-sm font-medium text-foreground">
+                                    What happens next?
+                                </span>
+                            </div>
+                            <div className="space-y-1 px-4 py-3">
+                                {isSignIn ? (
+                                    <>
+                                        <div className="flex items-center gap-3 rounded-xl py-2">
+                                            <LogIn className="h-4 w-4 text-muted-foreground" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-foreground">
+                                                    If you have an account
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    You will be signed in immediately
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 rounded-xl py-2">
+                                            <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-foreground">
+                                                    If you do not have an account
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    A new account will be created automatically
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="flex items-center gap-3 rounded-xl py-2">
+                                            <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-foreground">
+                                                    Create new account
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    Sign up with your Google account
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 rounded-xl py-2">
+                                            <LogIn className="h-4 w-4 text-muted-foreground" />
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-sm font-medium text-foreground">
+                                                    If account exists
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    You will be signed in instead
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col space-y-2 pt-4">
+                        <Button
+                            className={`h-11 w-full rounded-full border text-sm transition-all duration-200 sm:text-base ${
+                                isLoading
+                                    ? 'cursor-not-allowed border-border bg-muted text-muted-foreground hover:bg-muted'
+                                    : 'border-border bg-background text-foreground hover:bg-muted'
+                            }`}
+                            onClick={onConfirm}
+                            disabled={isLoading}
+                        >
+                            <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-50' : 'opacity-100'}`}>
+                                <GoogleMark size={22} />
+                            </div>
+                            <span className="ml-2.5">
+                                {isLoading ? "Redirecting to Google..." : "Continue with Google"}
+                            </span>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="h-11 w-full rounded-full text-sm sm:text-base"
+                            onClick={onClose}
+                            disabled={isLoading}
+                        >
+                            Cancel
+                        </Button>
                     </div>
                 </div>
             </DialogContent>
