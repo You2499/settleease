@@ -648,7 +648,7 @@ export default function SettingsTab({
   const expectedConvexHost = getExpectedConvexHost(clientEnvironment);
 
   const [selectedTheme, setSelectedTheme] = useState(
-    userProfile?.theme_preference || theme || "light",
+    theme || userProfile?.theme_preference || "light",
   );
   const [selectedFont, setSelectedFont] = useState<FontPreference>(
     userProfile?.font_preference || "inter",
@@ -670,7 +670,7 @@ export default function SettingsTab({
   const [productionUnlockDialogOpen, setProductionUnlockDialogOpen] = useState(false);
 
   useEffect(() => {
-    setSelectedTheme(userProfile?.theme_preference || theme || "light");
+    setSelectedTheme(theme || userProfile?.theme_preference || "light");
   }, [theme, userProfile?.theme_preference]);
 
   useEffect(() => {
@@ -687,12 +687,6 @@ export default function SettingsTab({
     setFallbackOne(snapshot.aiConfig.fallbackModelCodes?.[0] || "none");
     setFallbackTwo(snapshot.aiConfig.fallbackModelCodes?.[1] || "none");
   }, [snapshot?.aiConfig]);
-
-  useEffect(() => {
-    if (clientEnvironment !== "production" || !environmentSafe) {
-      setProductionDangerUnlocked(false);
-    }
-  }, [clientEnvironment, environmentSafe]);
 
   const fallbackCounts = useMemo(() => {
     const activeManualOverrides = manualOverrides.filter((override) => override.is_active).length;
@@ -728,10 +722,23 @@ export default function SettingsTab({
   const dangerAllowed =
     dangerServerAvailable &&
     (!productionDangerRequiresUnlock || productionDangerUnlocked);
+  const dangerControlDisabled = !dangerServerAvailable;
   const dangerZoneUnlockConfirmation =
     clientEnvironment === "production" && productionDangerUnlocked
       ? PRODUCTION_DANGER_UNLOCK_CONFIRMATION
       : undefined;
+
+  const buildDangerMutationArgs = (confirmation: string) => ({
+    expectedEnvironment: clientEnvironment,
+    confirmation,
+    ...(dangerZoneUnlockConfirmation ? { dangerZoneUnlockConfirmation } : {}),
+  });
+
+  useEffect(() => {
+    if (clientEnvironment !== "production" || !environmentSafe) {
+      setProductionDangerUnlocked(false);
+    }
+  }, [clientEnvironment, environmentSafe]);
 
   const mismatchReasons = useMemo(() => {
     const reasons: string[] = [];
@@ -945,8 +952,14 @@ export default function SettingsTab({
                   </div>
                   <div className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2">
                     <span className="text-muted-foreground">Danger actions</span>
-                    <Badge variant={snapshot?.environment.destructiveActionsEnabled ? "destructive" : "outline"}>
-                      {snapshot?.environment.destructiveActionsEnabled ? "Enabled" : "Locked"}
+                    <Badge variant={dangerAllowed ? "destructive" : "outline"}>
+                      {dangerAllowed
+                        ? "Unlocked"
+                        : productionDangerRequiresUnlock && dangerServerAvailable
+                          ? "Unlock required"
+                          : snapshot?.environment.destructiveActionsEnabled
+                            ? "Available"
+                            : "Locked"}
                     </Badge>
                   </div>
                 </div>
@@ -1279,7 +1292,7 @@ export default function SettingsTab({
                 >
                   <Button
                     variant="destructive"
-                    disabled={!dangerAllowed}
+                    disabled={dangerControlDisabled}
                     onClick={() =>
                       openDangerAction({
                         id: "clear-report-logs",
@@ -1296,10 +1309,7 @@ export default function SettingsTab({
                             "clear-report-logs",
                             "Report logs cleared",
                             (phrase) =>
-                              clearReportGenerationEvents({
-                                expectedEnvironment: clientEnvironment,
-                                confirmation: phrase,
-                              }),
+                              clearReportGenerationEvents(buildDangerMutationArgs(phrase)),
                             "Report generation logs were deleted.",
                             confirmation,
                           ),
@@ -1321,7 +1331,7 @@ export default function SettingsTab({
                       id="include-summaries"
                       checked={includeSummaries}
                       onCheckedChange={(value) => setIncludeSummaries(value === true)}
-                      disabled={!dangerAllowed}
+                      disabled={dangerControlDisabled}
                     />
                     <Label htmlFor="include-summaries" className="text-xs">Summaries</Label>
                   </div>
@@ -1330,13 +1340,13 @@ export default function SettingsTab({
                       id="include-redactions"
                       checked={includeRedactions}
                       onCheckedChange={(value) => setIncludeRedactions(value === true)}
-                      disabled={!dangerAllowed}
+                      disabled={dangerControlDisabled}
                     />
                     <Label htmlFor="include-redactions" className="text-xs">Redactions</Label>
                   </div>
                   <Button
                     variant="destructive"
-                    disabled={!dangerAllowed || (!includeSummaries && !includeRedactions)}
+                    disabled={dangerControlDisabled || (!includeSummaries && !includeRedactions)}
                     onClick={() =>
                       openDangerAction({
                         id: "clear-ai-caches",
@@ -1355,8 +1365,7 @@ export default function SettingsTab({
                             "AI caches cleared",
                             (phrase) =>
                               clearAiCaches({
-                                expectedEnvironment: clientEnvironment,
-                                confirmation: phrase,
+                                ...buildDangerMutationArgs(phrase),
                                 includeSummaries,
                                 includeRedactions,
                               }),
@@ -1492,7 +1501,7 @@ export default function SettingsTab({
                 >
                   <Button
                     variant="destructive"
-                    disabled={!dangerAllowed}
+                    disabled={dangerControlDisabled}
                     onClick={() =>
                       openDangerAction({
                         id: "clear-active-overrides",
@@ -1510,8 +1519,7 @@ export default function SettingsTab({
                             "Active overrides cleared",
                             (phrase) =>
                               clearSettlementRecords({
-                                expectedEnvironment: clientEnvironment,
-                                confirmation: phrase,
+                                ...buildDangerMutationArgs(phrase),
                                 scope: "activeManualOverrides",
                               }),
                             "Active manual settlement overrides were deactivated.",
@@ -1532,7 +1540,7 @@ export default function SettingsTab({
                 >
                   <Button
                     variant="destructive"
-                    disabled={!dangerAllowed}
+                    disabled={dangerControlDisabled}
                     onClick={() =>
                       openDangerAction({
                         id: "clear-settlement-records",
@@ -1551,8 +1559,7 @@ export default function SettingsTab({
                             "Settlement records cleared",
                             (phrase) =>
                               clearSettlementRecords({
-                                expectedEnvironment: clientEnvironment,
-                                confirmation: phrase,
+                                ...buildDangerMutationArgs(phrase),
                                 scope: "allSettlementRecords",
                               }),
                             "Settlement payment and manual override records were deleted.",
@@ -1576,7 +1583,11 @@ export default function SettingsTab({
               description="High-impact controls are isolated to the connected environment and require server-side confirmation."
               action={
                 <Badge variant={dangerAllowed ? "destructive" : "outline"}>
-                  {dangerAllowed ? "Danger enabled" : "Danger locked"}
+                  {dangerAllowed
+                    ? "Danger unlocked"
+                    : productionDangerRequiresUnlock && dangerServerAvailable
+                      ? "Unlock required"
+                      : "Danger locked"}
                 </Badge>
               }
               className="border-destructive/30"
@@ -1590,6 +1601,34 @@ export default function SettingsTab({
                     {snapshot?.environment.destructiveActionsReason ||
                       "Waiting for the Convex environment snapshot."}
                   </p>
+                  {productionDangerRequiresUnlock && dangerServerAvailable ? (
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <Button
+                        variant={productionDangerUnlocked ? "outline" : "destructive"}
+                        onClick={() => {
+                          if (productionDangerUnlocked) {
+                            setProductionDangerUnlocked(false);
+                            toast({
+                              title: "Production danger zone locked",
+                              description: "Production destructive controls are locked again for this session.",
+                            });
+                            return;
+                          }
+                          setProductionUnlockDialogOpen(true);
+                        }}
+                      >
+                        {productionDangerUnlocked ? (
+                          <Lock className="mr-2 h-4 w-4" />
+                        ) : (
+                          <Unlock className="mr-2 h-4 w-4" />
+                        )}
+                        {productionDangerUnlocked ? "Lock Production Danger Zone" : "Unlock Production Danger Zone"}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Unlocking is session-only. Each destructive action still requires its own phrase.
+                      </p>
+                    </div>
+                  ) : null}
                   {clientEnvironment === "development" && configuredConvexHost !== DEVELOPMENT_CONVEX_HOST ? (
                     <p className="mt-2 text-destructive">
                       Development reset controls only unlock for {DEVELOPMENT_CONVEX_HOST}.
@@ -1605,7 +1644,7 @@ export default function SettingsTab({
                   >
                     <Button
                       variant="destructive"
-                      disabled={!dangerAllowed}
+                      disabled={dangerControlDisabled}
                       onClick={() =>
                         openDangerAction({
                           id: "reset-operational",
@@ -1628,8 +1667,7 @@ export default function SettingsTab({
                               "Operational data reset",
                               (phrase) =>
                                 resetSettleEaseData({
-                                  expectedEnvironment: clientEnvironment,
-                                  confirmation: phrase,
+                                  ...buildDangerMutationArgs(phrase),
                                   mode: "operational",
                                 }),
                               "Operational data was deleted for the connected deployment.",
@@ -1650,7 +1688,7 @@ export default function SettingsTab({
                   >
                     <Button
                       variant="destructive"
-                      disabled={!dangerAllowed}
+                      disabled={dangerControlDisabled}
                       onClick={() =>
                         openDangerAction({
                           id: "factory-reset",
@@ -1673,8 +1711,7 @@ export default function SettingsTab({
                               "Factory reset complete",
                               (phrase) =>
                                 resetSettleEaseData({
-                                  expectedEnvironment: clientEnvironment,
-                                  confirmation: phrase,
+                                  ...buildDangerMutationArgs(phrase),
                                   mode: "factory",
                                 }),
                               "Factory reset finished for the connected deployment.",
@@ -1706,6 +1743,18 @@ export default function SettingsTab({
         working={!!workingAction}
         onOpenChange={(open) => {
           if (!open && !workingAction) setDangerAction(null);
+        }}
+      />
+      <ProductionDangerUnlockDialog
+        open={productionUnlockDialogOpen}
+        onOpenChange={setProductionUnlockDialogOpen}
+        onUnlock={() => {
+          setProductionDangerUnlocked(true);
+          toast({
+            title: "Production danger zone unlocked",
+            description: "Destructive production controls are unlocked for this browser session.",
+            variant: "destructive",
+          });
         }}
       />
     </Card>

@@ -121,7 +121,7 @@ function profileDto(profile: any) {
     role: profile.role ?? "user",
     first_name: profile.firstName ?? null,
     last_name: profile.lastName ?? null,
-    font_preference: profile.fontPreference ?? undefined,
+    font_preference: profile.fontPreference ?? "inter",
     theme_preference: profile.themePreference ?? undefined,
     last_active_view: profile.lastActiveView ?? undefined,
     has_seen_welcome_toast: profile.hasSeenWelcomeToast ?? false,
@@ -618,6 +618,7 @@ async function ensureUserProfile(
       lastName: args.lastName || existing.lastName,
       updatedAt: timestamp,
     };
+    if (!existing.fontPreference) updates.fontPreference = "inter";
 
     if (
       isConvexDevelopmentAuthDisabled() &&

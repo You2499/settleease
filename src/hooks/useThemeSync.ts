@@ -59,6 +59,13 @@ export function useThemeSync(
     }
   }, [clearPendingLocalTheme, userId]);
 
+  useEffect(() => {
+    if (!isDevelopmentEnvironment || !isMounted || isInitialized) return;
+    lastSyncedTheme.current = theme ?? null;
+    clearPendingLocalTheme();
+    setIsInitialized(true);
+  }, [clearPendingLocalTheme, isDevelopmentEnvironment, isInitialized, isMounted, theme]);
+
   const updateThemeInDatabase = useCallback(async (newTheme: string) => {
     if (isDevelopmentEnvironment) return;
     if (!userId) return;
@@ -79,6 +86,7 @@ export function useThemeSync(
   }, [isDevelopmentEnvironment, updateUserProfile, userId]);
 
   useEffect(() => {
+    if (isDevelopmentEnvironment) return;
     if (!isMounted || !userId || !userProfile || isInitialized) return;
 
     const dbTheme = userProfile.theme_preference;
@@ -103,7 +111,7 @@ export function useThemeSync(
     }
 
     setIsInitialized(true);
-  }, [clearPendingLocalTheme, isMounted, userId, userProfile, isInitialized, markPendingLocalTheme, setTheme, updateThemeInDatabase]);
+  }, [clearPendingLocalTheme, isDevelopmentEnvironment, isMounted, userId, userProfile, isInitialized, markPendingLocalTheme, setTheme, updateThemeInDatabase]);
 
   useEffect(() => {
     if (!isMounted || !theme || !userId || !isInitialized) return;
@@ -120,6 +128,7 @@ export function useThemeSync(
   }, [isMounted, markPendingLocalTheme, theme, userId, isInitialized, updateThemeInDatabase]);
 
   useEffect(() => {
+    if (isDevelopmentEnvironment) return;
     if (!isMounted || !theme || !userProfile?.theme_preference || !isInitialized) return;
 
     const remoteTheme = userProfile.theme_preference;
@@ -147,7 +156,7 @@ export function useThemeSync(
         isUpdatingFromRemote.current = false;
       }, 300);
     }
-  }, [clearPendingLocalTheme, isMounted, isInitialized, setTheme, theme, userProfile?.theme_preference]);
+  }, [clearPendingLocalTheme, isDevelopmentEnvironment, isMounted, isInitialized, setTheme, theme, userProfile?.theme_preference]);
 
   return {
     currentTheme: theme,
