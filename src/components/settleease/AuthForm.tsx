@@ -483,11 +483,209 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
       ? "text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground"
       : "text-sm";
 
+    if (isBetaSurface) {
+      return (
+        <>
+          <form onSubmit={handleSubmit} className="auth-beta-form space-y-4">
+            <div className="auth-beta-name-slot">
+              <div
+                className={cn(
+                  "grid grid-cols-1 gap-3 transition-all duration-200 sm:grid-cols-2",
+                  isLoginView && "pointer-events-none -translate-y-1 opacity-0",
+                )}
+                aria-hidden={isLoginView}
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="firstName" className={labelClassName}>First Name</Label>
+                  <Input
+                    ref={firstNameRef}
+                    id="firstName"
+                    type="text"
+                    autoComplete="given-name"
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
+                    disabled={isLoading || isGoogleLoading || isLoginView}
+                    required={!isLoginView}
+                    className={inputClassName}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lastName" className={labelClassName}>Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    autoComplete="family-name"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
+                    disabled={isLoading || isGoogleLoading || isLoginView}
+                    required={!isLoginView}
+                    className={inputClassName}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className={labelClassName}>Email Address</Label>
+              <Input
+                ref={emailRef}
+                id="email"
+                type="email"
+                autoComplete="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (showResendConfirmation) {
+                    setShowResendConfirmation(false);
+                    setResendEmail('');
+                  }
+                }}
+                disabled={isLoading || isGoogleLoading}
+                required
+                className={inputClassName}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className={labelClassName}>Password</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={isLoginView ? "current-password" : "new-password"}
+                  placeholder={isLoginView ? "Password" : "Password - min. 6 characters"}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (showResendConfirmation) {
+                      setShowResendConfirmation(false);
+                      setResendEmail('');
+                    }
+                  }}
+                  disabled={isLoading || isGoogleLoading}
+                  required
+                  minLength={6}
+                  className={passwordInputClassName}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-1 top-0 h-full rounded-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading || isGoogleLoading}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="auth-beta-action-slot">
+              {showResendConfirmation ? (
+                <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-300/60 bg-[#fff8e7] p-3 text-center shadow-sm dark:bg-amber-950/20">
+                  <div>
+                    <h3 className="mb-1 text-sm font-semibold text-amber-800 dark:text-amber-200">
+                      {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
+                    </h3>
+                    <p className="line-clamp-2 text-xs leading-5 text-amber-700 dark:text-amber-300">
+                      Your account exists but has not been verified yet. Resend the confirmation email below.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={handleResendConfirmation}
+                    disabled={isLoading}
+                    className="h-10 w-full rounded-full bg-black text-sm font-semibold text-white hover:bg-black/90 dark:bg-primary dark:text-primary-foreground"
+                  >
+                    {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  type="submit"
+                  className="h-11 w-full rounded-full bg-black text-sm font-semibold text-white shadow-[rgba(78,50,23,0.08)_0px_10px_24px] hover:bg-black/90 dark:bg-primary dark:text-primary-foreground sm:text-base"
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  {isLoading ? (
+                    isLoginView ? 'Logging in...' : 'Creating Account...'
+                  ) : isLoginView ? (
+                    <>
+                      <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Sign In
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                      Create Account
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </form>
+
+          <div className="relative my-3 sm:my-4">
+            <div className="absolute inset-0 flex items-center">
+              <Separator />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 tracking-[0.16em] text-muted-foreground">
+                Or
+              </span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            className="h-11 w-full rounded-full border border-border/80 bg-white/95 text-sm text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground sm:text-base"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading || isGoogleLoading}
+          >
+            <GoogleMark size={18} />
+            <span className="ml-2.5">
+              {getGoogleButtonText(isLoginView, isGoogleLoading)}
+            </span>
+          </Button>
+
+          <div className="auth-beta-status-slot">
+            {hasAuthError && !showResendConfirmation && authSuggestion ? (
+              <div className="rounded-2xl border border-border/70 bg-muted/60 p-2 text-center text-xs text-muted-foreground">
+                <div className="flex items-center justify-center space-x-2">
+                  <Lightbulb className="h-4 w-4 shrink-0" />
+                  <span className="line-clamp-2">{authSuggestion.text}</span>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <Button
+            type="button"
+            variant="link"
+            onClick={() => {
+              setIsLoginView(!isLoginView);
+              resetAuthModeState();
+            }}
+            disabled={isLoading || isGoogleLoading}
+            className="mt-1 h-auto rounded-full px-3 py-2 text-sm text-foreground underline-offset-8 hover:text-primary/80"
+          >
+            {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+          </Button>
+        </>
+      );
+    }
+
     return (
       <>
-        <form onSubmit={handleSubmit} className={cn("space-y-3 sm:space-y-4", isBetaSurface && "space-y-4")}>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           {!isLoginView && (
-            <div className={cn("grid gap-3", isBetaSurface ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2")}>
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label htmlFor="firstName" className={labelClassName}>First Name</Label>
                 <Input
@@ -519,7 +717,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               </div>
             </div>
           )}
-          <div className="space-y-1.5">
+          <div className="space-y-1 sm:space-y-1.5">
             <Label htmlFor="email" className={labelClassName}>Email Address</Label>
             <Input
               ref={emailRef}
@@ -540,7 +738,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               className={inputClassName}
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-1 sm:space-y-1.5">
             <Label htmlFor="password" className={labelClassName}>Password</Label>
             <div className="relative">
               <Input
@@ -565,7 +763,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                 type="button"
                 variant="ghost"
                 size="sm"
-                className={cn("absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent", isBetaSurface && "right-1 rounded-full")}
+                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
                 disabled={isLoading || isGoogleLoading}
                 aria-label={showPassword ? "Hide password" : "Show password"}
@@ -582,7 +780,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           {showResendConfirmation ? (
             <div className={cn(
               "space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/20",
-              isBetaSurface && "rounded-2xl border-amber-300/60 bg-[#fff8e7] shadow-sm dark:bg-amber-950/20",
             )}>
               <div className="text-center">
                 <h3 className="mb-1 text-sm font-semibold text-amber-800 dark:text-amber-200">
@@ -598,7 +795,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                 disabled={isLoading}
                 className={cn(
                   "h-10 w-full text-sm font-semibold sm:h-11 sm:text-base",
-                  isBetaSurface ? "rounded-full bg-black text-white hover:bg-black/90 dark:bg-primary dark:text-primary-foreground" : "bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800",
+                  "bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800",
                 )}
               >
                 {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
@@ -609,7 +806,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               type="submit"
               className={cn(
                 "h-10 w-full text-sm font-semibold sm:h-11 sm:text-base",
-                isBetaSurface && "rounded-full bg-black text-white shadow-[rgba(78,50,23,0.08)_0px_10px_24px] hover:bg-black/90 dark:bg-primary dark:text-primary-foreground",
               )}
               disabled={isLoading || isGoogleLoading}
             >
@@ -635,7 +831,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             <Separator />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className={cn("bg-background px-2 text-muted-foreground", isBetaSurface && "bg-card tracking-[0.16em]")}>
+            <span className="bg-background px-2 text-muted-foreground">
               Or
             </span>
           </div>
@@ -645,7 +841,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           type="button"
           className={cn(
             "h-10 w-full border border-gray-300 bg-white text-sm text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 sm:h-11 sm:text-base",
-            isBetaSurface && "rounded-full border-border/80 bg-white/95 text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground",
           )}
           onClick={handleGoogleSignIn}
           disabled={isLoading || isGoogleLoading}
@@ -659,7 +854,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         {hasAuthError && !showResendConfirmation && authSuggestion && (
           <div className={cn(
             "mt-3 rounded-md border border-blue-200 bg-blue-50 p-2 text-center text-xs text-blue-700 dark:border-blue-800 dark:bg-blue-950/20 dark:text-blue-300",
-            isBetaSurface && "rounded-2xl border-border/70 bg-muted/60 text-muted-foreground",
           )}>
             <div className="flex items-center justify-center space-x-2">
               <Lightbulb className="h-4 w-4 shrink-0" />
@@ -676,7 +870,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             resetAuthModeState();
           }}
           disabled={isLoading || isGoogleLoading}
-          className={cn("text-sm text-primary hover:text-primary/80", isBetaSurface && "mt-1 h-auto rounded-full px-3 py-2 text-foreground underline-offset-8")}
+          className="text-sm text-primary hover:text-primary/80"
         >
           {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
         </Button>
@@ -773,28 +967,37 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         <path d="M170 660 C300 594 420 640 552 572 C700 496 800 552 938 468 C1044 404 1114 412 1190 360" />
       </svg>
       <div className="auth-beta-orbit auth-beta-orbit-1">
-        <ReceiptText className="h-5 w-5" />
+        <ReceiptText />
       </div>
       <div className="auth-beta-orbit auth-beta-orbit-2">
-        <Split className="h-5 w-5" />
+        <Split />
       </div>
       <div className="auth-beta-orbit auth-beta-orbit-3">
-        <ChartNoAxesCombined className="h-5 w-5" />
+        <ChartNoAxesCombined />
       </div>
       <div className="auth-beta-orbit auth-beta-orbit-4">
-        <CircleDollarSign className="h-5 w-5" />
+        <CircleDollarSign />
       </div>
-      <div className="auth-beta-token auth-beta-token-1" />
-      <div className="auth-beta-token auth-beta-token-2" />
-      <div className="auth-beta-token auth-beta-token-3" />
+      <div className="auth-beta-orbit auth-beta-orbit-5">
+        <WalletCards />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-6">
+        <ScanLine />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-7">
+        <ShieldCheck />
+      </div>
+      <div className="auth-beta-orbit auth-beta-orbit-8">
+        <Sparkles />
+      </div>
     </div>
   );
 
   const renderBetaLayout = () => (
-    <div className="auth-beta-shell relative min-h-svh w-full overflow-hidden bg-[#f7f6f3] px-4 py-4 text-foreground dark:bg-background sm:px-6 lg:px-8">
+    <div className="auth-beta-shell relative h-svh max-h-svh w-full overflow-hidden bg-[#f7f6f3] px-4 py-3 text-foreground dark:bg-background sm:px-6 lg:px-8">
       {renderBetaAtmosphere()}
 
-      <div className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between gap-4 py-2">
+      <div className="relative z-10 mx-auto flex h-12 w-full max-w-7xl items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/85 shadow-sm backdrop-blur-md">
             <HandCoins className="h-5 w-5 text-foreground" />
@@ -807,15 +1010,15 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         {renderDesignToggle()}
       </div>
 
-      <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-6 py-6 lg:min-h-[calc(100svh-96px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:py-8">
-        <section className="order-2 min-w-0 space-y-6 lg:order-1">
-          <div className="max-w-3xl space-y-5">
+      <main className="relative z-10 mx-auto grid h-[calc(100svh-72px)] w-full max-w-7xl items-center overflow-hidden py-3 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:gap-8">
+        <section className="hidden min-w-0 space-y-4 lg:block">
+          <div className="max-w-3xl space-y-4">
             <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
               <Sparkles className="h-3.5 w-3.5 text-foreground" />
               Built for shared money without the awkward follow-up
             </div>
             <div className="space-y-4">
-              <h1 className="max-w-3xl text-[clamp(2.45rem,7vw,5.7rem)] font-light leading-[0.96] tracking-tight text-foreground">
+              <h1 className="auth-beta-hero-title max-w-3xl text-[clamp(2.45rem,5.4vw,4.65rem)] font-light leading-[0.98] tracking-tight text-foreground">
                 Settle shared expenses without the after-trip math.
               </h1>
               <p className="max-w-2xl text-base leading-7 tracking-[0.01em] text-muted-foreground sm:text-lg">
@@ -826,17 +1029,17 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
           <div className="grid gap-3 sm:grid-cols-2">
             {betaBenefits.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="auth-beta-benefit rounded-2xl border border-border/70 bg-background/72 p-4 shadow-sm backdrop-blur-md">
-                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted">
+              <div key={title} className="auth-beta-benefit rounded-2xl border border-border/70 bg-background/72 p-3.5 shadow-sm backdrop-blur-md">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted">
                   <Icon className="h-5 w-5" />
                 </div>
                 <h2 className="text-base font-semibold tracking-[0.01em]">{title}</h2>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+                <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
               </div>
             ))}
           </div>
 
-          <div className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+          <div className="auth-beta-proof-row grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
             <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
               <BadgeCheck className="h-4 w-4 text-foreground" />
               Admin controls
@@ -852,11 +1055,11 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           </div>
         </section>
 
-        <section className="order-1 lg:order-2">
-          <Card className="auth-beta-card mx-auto w-full max-w-[460px] overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl">
-            <CardHeader className="space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
+        <section className="min-h-0">
+          <Card className="auth-beta-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl">
+            <CardHeader className="auth-beta-card-header space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
               <div className="flex items-start justify-between gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
+                <div className="auth-beta-card-mark flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
                   <HandCoins className="h-6 w-6" />
                 </div>
                 <div className="rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -864,17 +1067,17 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                 </div>
               </div>
               <div>
-                <CardTitle className="text-3xl font-light leading-tight tracking-tight sm:text-4xl">
+                <CardTitle className="auth-beta-card-title text-3xl font-light leading-tight tracking-tight sm:text-4xl">
                   {isLoginView ? "Welcome back." : "Create your account."}
                 </CardTitle>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <p className="auth-beta-card-copy mt-2 text-sm leading-6 text-muted-foreground">
                   {isLoginView
                     ? "Sign in to manage expenses, settlements, and reports."
                     : "Start with your name, then invite the group once you are inside."}
                 </p>
               </div>
             </CardHeader>
-            <CardContent className="px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
+            <CardContent className="auth-beta-card-content flex min-h-0 flex-1 flex-col px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
               <div className="flex flex-col">
                 {renderAuthControls('beta')}
               </div>
