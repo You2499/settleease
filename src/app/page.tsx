@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 
 import AuthForm from '@/components/settleease/AuthForm';
+import AuthFormBeta from '@/components/settleease/AuthFormBeta';
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
@@ -69,6 +70,39 @@ function MobileTopBar() {
         <span className="truncate text-xl font-bold text-primary">SettleEase</span>
       </div>
     </header>
+  );
+}
+
+const AUTH_BETA_STORAGE_KEY = 'settleease:auth-design-beta';
+
+function AuthPageToggle({ supabaseClient }: { supabaseClient: Parameters<typeof AuthForm>[0]['supabase'] }) {
+  const [useBeta, setUseBeta] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem(AUTH_BETA_STORAGE_KEY) === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleToggle = useCallback(() => {
+    setUseBeta(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem(AUTH_BETA_STORAGE_KEY, String(next));
+      } catch { /* storage quota or private mode */ }
+      return next;
+    });
+  }, []);
+
+  if (useBeta) {
+    return <AuthFormBeta supabase={supabaseClient} onToggleDesign={handleToggle} />;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-background">
+      <AuthForm supabase={supabaseClient} onToggleDesign={handleToggle} />
+    </div>
   );
 }
 
@@ -451,11 +485,7 @@ function SettleEasePageContent() {
 
   // Show auth form when auth is complete and there's no user
   if (!currentUser && !isLoadingAuth) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <AuthForm supabase={supabaseClient} />
-      </div>
-    );
+    return <AuthPageToggle supabaseClient={supabaseClient} />;
   }
 
   // Show the app shell during identity loading, with the active page's own skeleton.
