@@ -94,12 +94,27 @@ interface AuthFormBetaProps {
 }
 
 interface LineSegment {
-  x1: number;
-  y1: number;
-  x2: number;
-  y2: number;
+  d: string;
   key: string;
 }
+
+interface ConnectionCurveSeed {
+  phase: number;
+  amplitude: number;
+  speed: number;
+  direction: 1 | -1;
+}
+
+const connectionCurveSeeds: ConnectionCurveSeed[] = connectionPairs.map(([a, b], index) => {
+  const seed = (a + 1) * 37 + (b + 1) * 17 + index * 13;
+  const phase = (seed % 360) * (Math.PI / 180);
+  const amplitude = 1 + (seed % 10) * 0.09; // medium random intensity
+  const speed = 0.6 + (seed % 7) * 0.08;
+  const direction: 1 | -1 = seed % 2 === 0 ? 1 : -1;
+  return { phase, amplitude, speed, direction };
+});
+
+const clampToViewBox = (value: number) => Math.min(98, Math.max(2, value));
 
 export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaProps) {
   const {
@@ -170,7 +185,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
       const shellRect = shell.getBoundingClientRect();
       if (shellRect.width === 0 || shellRect.height === 0) return;
 
-      const nextLines = connectionPairs.flatMap(([a, b]) => {
+      const nowSeconds = performance.now() / 1000;
+      const nextLines = connectionPairs.flatMap(([a, b], pairIndex) => {
         const fromEl = iconRefs.current[a];
         const toEl = iconRefs.current[b];
         if (!fromEl || !toEl) return [];
@@ -186,8 +202,34 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
         const y1 = ((fromRect.top + fromRect.height / 2 - shellRect.top) / shellRect.height) * 100;
         const x2 = ((toRect.left + toRect.width / 2 - shellRect.left) / shellRect.width) * 100;
         const y2 = ((toRect.top + toRect.height / 2 - shellRect.top) / shellRect.height) * 100;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lineLength = Math.hypot(dx, dy);
+        if (lineLength < 0.001) return [];
 
-        return [{ x1, y1, x2, y2, key: `${a}-${b}` }];
+        const seed = connectionCurveSeeds[pairIndex];
+        const normalX = -dy / lineLength;
+        const normalY = dx / lineLength;
+        const tangentX = dx / lineLength;
+        const tangentY = dy / lineLength;
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+
+        const baseCurve = Math.min(6.4, Math.max(1.6, lineLength * 0.16));
+        const jitter = prefersReducedMotion
+          ? 0
+          : Math.sin(nowSeconds * seed.speed + seed.phase) * seed.amplitude
+              + Math.cos(nowSeconds * (seed.speed * 0.66) + seed.phase * 1.3) * (seed.amplitude * 0.36);
+        const normalOffset = baseCurve * seed.direction + jitter;
+        const alongOffset = prefersReducedMotion
+          ? 0
+          : Math.sin(nowSeconds * (seed.speed * 0.52) + seed.phase) * Math.min(1.8, lineLength * 0.08);
+
+        const controlX = clampToViewBox(midX + normalX * normalOffset + tangentX * alongOffset);
+        const controlY = clampToViewBox(midY + normalY * normalOffset + tangentY * alongOffset);
+        const d = `M ${x1.toFixed(3)} ${y1.toFixed(3)} Q ${controlX.toFixed(3)} ${controlY.toFixed(3)} ${x2.toFixed(3)} ${y2.toFixed(3)}`;
+
+        return [{ d, key: `${a}-${b}` }];
       });
 
       setConnectionLines(nextLines);
@@ -239,13 +281,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          {connectionLines.map(({ x1, y1, x2, y2, key }) => (
-            <line
+          {connectionLines.map(({ d, key }) => (
+            <path
               key={key}
-              x1={x1}
-              y1={y1}
-              x2={x2}
-              y2={y2}
+              d={d}
             />
           ))}
         </svg>
