@@ -1059,27 +1059,27 @@
 
 .auth-beta-lines path {
   stroke: var(--ab-line-stroke);
-  stroke-width: 0.16;
+  stroke-width: 0.19;
   stroke-linecap: round;
   fill: none;
   stroke-dasharray: 1.5 2.5;
   animation: auth-beta-line-pulse 14s linear infinite;
-  opacity: 0.86;
+  opacity: 0.92;
 }
 
 /* Stagger line animations */
 .auth-beta-lines path:nth-child(odd) {
   animation-delay: -3s;
   animation-duration: 16s;
-  stroke-width: 0.18;
-  opacity: 0.92;
+  stroke-width: 0.21;
+  opacity: 0.95;
 }
 
 .auth-beta-lines path:nth-child(3n) {
   animation-delay: -7s;
   animation-duration: 12s;
-  stroke-width: 0.14;
-  opacity: 0.72;
+  stroke-width: 0.17;
+  opacity: 0.8;
 }
 
 .auth-beta-lines path:nth-child(4n) {
