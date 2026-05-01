@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import {
   ArrowRightLeft,
@@ -91,10 +91,17 @@ const connectionPairs: [number, number][] = [
 interface AuthFormBetaProps {
   supabase: SupabaseClient | undefined;
   onAuthSuccess?: (user: SupabaseUser) => void;
-  onToggleDesign?: () => void;
 }
 
-export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }: AuthFormBetaProps) {
+interface LineSegment {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  key: string;
+}
+
+export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaProps) {
   const {
     email,
     password,
@@ -126,6 +133,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }
   } = useAuthFormLogic({ supabase, onAuthSuccess });
 
   const [hasMounted, setHasMounted] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [connectionLines, setConnectionLines] = useState<LineSegment[]>([]);
+  const shellRef = useRef<HTMLDivElement | null>(null);
+  const iconRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     // Small delay so the CSS entrance animation triggers after paint
@@ -133,19 +144,76 @@ export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  // Build SVG connection lines between icon pairs
-  const connectionLines = useMemo(() => {
-    return connectionPairs.map(([a, b]) => {
-      const ia = floatingIcons[a];
-      const ib = floatingIcons[b];
-      // Parse percentage positions to numbers
-      const x1 = parseFloat(ia.left) + (ia.size / 20);
-      const y1 = parseFloat(ia.top) + (ia.size / 20);
-      const x2 = parseFloat(ib.left) + (ib.size / 20);
-      const y2 = parseFloat(ib.top) + (ib.size / 20);
-      return { x1, y1, x2, y2, key: `${a}-${b}` };
-    });
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const handleMotionPreferenceChange = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    handleMotionPreferenceChange();
+    mediaQuery.addEventListener('change', handleMotionPreferenceChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleMotionPreferenceChange);
+    };
   }, []);
+
+  useEffect(() => {
+    let rafId: number | undefined;
+
+    const updateConnectionLines = () => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      const shellRect = shell.getBoundingClientRect();
+      if (shellRect.width === 0 || shellRect.height === 0) return;
+
+      const nextLines = connectionPairs.flatMap(([a, b]) => {
+        const fromEl = iconRefs.current[a];
+        const toEl = iconRefs.current[b];
+        if (!fromEl || !toEl) return [];
+
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+
+        if (fromRect.width === 0 || fromRect.height === 0 || toRect.width === 0 || toRect.height === 0) {
+          return [];
+        }
+
+        const x1 = ((fromRect.left + fromRect.width / 2 - shellRect.left) / shellRect.width) * 100;
+        const y1 = ((fromRect.top + fromRect.height / 2 - shellRect.top) / shellRect.height) * 100;
+        const x2 = ((toRect.left + toRect.width / 2 - shellRect.left) / shellRect.width) * 100;
+        const y2 = ((toRect.top + toRect.height / 2 - shellRect.top) / shellRect.height) * 100;
+
+        return [{ x1, y1, x2, y2, key: `${a}-${b}` }];
+      });
+
+      setConnectionLines(nextLines);
+    };
+
+    const tick = () => {
+      updateConnectionLines();
+      if (!prefersReducedMotion) {
+        rafId = window.requestAnimationFrame(tick);
+      }
+    };
+
+    updateConnectionLines();
+    window.addEventListener('resize', updateConnectionLines);
+
+    if (!prefersReducedMotion) {
+      rafId = window.requestAnimationFrame(tick);
+    }
+
+    return () => {
+      window.removeEventListener('resize', updateConnectionLines);
+      if (rafId !== undefined) {
+        window.cancelAnimationFrame(rafId);
+      }
+    };
+  }, [prefersReducedMotion]);
 
   const inputClassName = "h-11 rounded-full border-border/80 bg-background/95 px-4 shadow-sm focus-visible:ring-ring";
   const passwordInputClassName = "h-11 rounded-full border-border/80 bg-background/95 pl-4 pr-12 shadow-sm focus-visible:ring-ring";
@@ -154,6 +222,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }
   return (
     <>
       <div
+        ref={shellRef}
         className="auth-beta-shell relative min-h-svh w-full overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
         data-auth-mode={isLoginView ? "signin" : "signup"}
       >
@@ -186,6 +255,9 @@ export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }
           {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => (
             <div
               key={i}
+              ref={(node) => {
+                iconRefs.current[i] = node;
+              }}
               className={cn(
                 'auth-beta-icon',
                 !mobile && 'auth-beta-icon-desktop-only',
@@ -215,15 +287,6 @@ export default function AuthFormBeta({ supabase, onAuthSuccess, onToggleDesign }
               <p className="truncate text-xs text-muted-foreground">v{packageJson.version}</p>
             </div>
           </div>
-          {onToggleDesign && (
-            <button
-              type="button"
-              onClick={onToggleDesign}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md transition-colors hover:bg-background/90 hover:text-foreground"
-            >
-              Classic design
-            </button>
-          )}
         </div>
 
         {/* ── Main content ───────────────────────────────── */}
