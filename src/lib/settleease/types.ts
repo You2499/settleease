@@ -120,6 +120,7 @@ export interface UserProfile {
   font_preference?: FontPreference;
   theme_preference?: string;
   last_active_view?: ActiveView;
+  windows_experience_enabled?: boolean;
   has_seen_welcome_toast?: boolean;
   should_show_welcome_toast?: boolean;
   last_sign_in_at?: string;

@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { Sheet, SheetContent } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useWindowsExperienceControl } from "@/components/settleease/WindowsExperience"
 import {
   Tooltip,
   TooltipContent,
@@ -554,12 +555,15 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
+      onClick,
+      onClickCapture,
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
     const { isMobile, state } = useSidebar()
+    const windowsExperience = useWindowsExperienceControl("sidebar")
 
     const button = (
       <Comp
@@ -568,6 +572,16 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
+        onClickCapture={(event: React.MouseEvent<HTMLButtonElement>) => {
+          if (windowsExperience.guardInteraction(event)) return
+          onClickCapture?.(event)
+        }}
+        onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
+          onClick?.(event)
+          if (!event.defaultPrevented) {
+            windowsExperience.maybeReloadAfterInteraction(event)
+          }
+        }}
         {...props}
       />
     )

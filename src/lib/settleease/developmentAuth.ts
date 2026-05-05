@@ -61,6 +61,7 @@ export const developmentUserProfile: UserProfile = {
   font_preference: "inter",
   theme_preference: "light",
   last_active_view: "dashboard",
+  windows_experience_enabled: false,
   has_seen_welcome_toast: true,
   should_show_welcome_toast: false,
   created_at: "2026-04-29T00:00:00.000Z",

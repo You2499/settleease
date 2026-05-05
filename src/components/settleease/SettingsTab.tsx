@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { applyFontPreference } from "@/hooks/useFontSync";
@@ -152,6 +153,19 @@ type ReportAnalytics = {
   }>;
 };
 
+type AdminUserProfile = {
+  id: string;
+  user_id: string;
+  email: string | null;
+  role: "admin" | "user";
+  first_name: string | null;
+  last_name: string | null;
+  windows_experience_enabled: boolean;
+  last_sign_in_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 interface SettingsTabProps {
   onNavigate: (view: ActiveView) => void;
   onEditProfileName: () => void;
@@ -234,6 +248,11 @@ function formatDateTime(value?: string | null) {
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return "Unknown";
   return parsed.toLocaleString();
+}
+
+function getAdminProfileDisplayName(profile: AdminUserProfile) {
+  const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+  return fullName || profile.email || profile.user_id;
 }
 
 function buildDangerPhrase(
@@ -632,10 +651,14 @@ export default function SettingsTab({
   const reportAnalytics = useQuery(api.app.getReportGenerationAnalytics, {
     limit: 500,
   }) as ReportAnalytics | undefined;
+  const adminProfiles = useQuery(api.app.listUserProfilesForAdmin, {}) as
+    | AdminUserProfile[]
+    | undefined;
 
   const ensureDefaultPeople = useMutation(api.app.ensureDefaultPeople);
   const seedDefaultCategories = useMutation(api.app.seedDefaultCategories);
   const updateAiConfig = useMutation(api.app.updateAiConfig);
+  const setUserWindowsExperience = useMutation(api.app.setUserWindowsExperience);
   const backfillBudgetItemsFromExpenses = useMutation(api.app.backfillBudgetItemsFromExpenses);
   const clearReportGenerationEvents = useMutation(api.app.clearReportGenerationEvents);
   const clearAiCaches = useMutation(api.app.clearAiCaches);
@@ -888,11 +911,12 @@ export default function SettingsTab({
 
       <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <Tabs defaultValue="overview" className="min-w-0 space-y-4">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-5">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="ai">AI & Reports</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
+            <TabsTrigger value="experiments">Experiments</TabsTrigger>
             <TabsTrigger value="danger">Danger Zone</TabsTrigger>
           </TabsList>
 
@@ -1577,6 +1601,93 @@ export default function SettingsTab({
                   </Button>
                 </ActionRow>
               </div>
+            </SettingsSection>
+          </TabsContent>
+
+          <TabsContent value="experiments" className="space-y-4">
+            <SettingsSection
+              icon={Sparkles}
+              title="Experiments"
+              description="Profile-scoped feature flags. Changes sync live to active sessions through Convex."
+            >
+              {adminProfiles ? (
+                <div className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricTile label="Profiles" value={adminProfiles.length} icon={Users} />
+                    <MetricTile
+                      label="Windows Experience"
+                      value={adminProfiles.filter((profile) => profile.windows_experience_enabled).length}
+                      description="Enabled profiles"
+                      icon={Sparkles}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    {adminProfiles.map((profile) => {
+                      const profileName = getAdminProfileDisplayName(profile);
+                      const isCurrentUser = profile.user_id === currentUserId;
+                      const actionId = `windows-experience-${profile.user_id}`;
+                      const isWorking = workingAction === actionId;
+
+                      return (
+                        <div
+                          key={profile.user_id}
+                          className="flex min-w-0 flex-col gap-3 rounded-lg border bg-card/30 p-4 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex min-w-0 flex-wrap items-center gap-2">
+                              <h4 className="truncate text-sm font-semibold text-foreground">
+                                {profileName}
+                              </h4>
+                              <Badge variant={profile.role === "admin" ? "default" : "outline"}>
+                                {profile.role}
+                              </Badge>
+                              {isCurrentUser ? (
+                                <Badge variant="outline">Current user</Badge>
+                              ) : null}
+                            </div>
+                            <div className="mt-1 grid gap-1 text-xs text-muted-foreground sm:grid-cols-2">
+                              <span className="truncate">{profile.email || "No email"}</span>
+                              <span className="truncate">Last sign-in: {formatDateTime(profile.last_sign_in_at)}</span>
+                            </div>
+                            <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+                              {profile.user_id}
+                            </p>
+                          </div>
+
+                          <div className="flex shrink-0 items-center justify-between gap-3 sm:justify-end">
+                            <Label htmlFor={`windows-experience-${profile.user_id}`} className="text-sm">
+                              Windows Experience
+                            </Label>
+                            <Switch
+                              id={`windows-experience-${profile.user_id}`}
+                              checked={profile.windows_experience_enabled}
+                              disabled={!canMutate || isWorking}
+                              data-windows-experience-safe="true"
+                              onCheckedChange={(value) => {
+                                const enabled = value === true;
+                                void runAction(
+                                  actionId,
+                                  enabled ? "Windows Experience enabled" : "Windows Experience disabled",
+                                  () =>
+                                    setUserWindowsExperience({
+                                      expectedEnvironment: clientEnvironment,
+                                      supabaseUserId: profile.user_id,
+                                      enabled,
+                                    }),
+                                  `${profileName} ${enabled ? "now has" : "no longer has"} the Windows Experience.`,
+                                );
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <SkeletonToolbar count={4} />
+              )}
             </SettingsSection>
           </TabsContent>
 

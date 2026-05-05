@@ -15,6 +15,7 @@ interface Props {
   showIcon?: boolean;
   onReset?: () => void;
   onNavigateHome?: () => void;
+  resetKey?: string | number | boolean;
 }
 
 interface State {
@@ -39,6 +40,12 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('SettleEase Error Boundary caught:', error, errorInfo);
     this.setState({ error, errorInfo });
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    if (prevProps.resetKey !== this.props.resetKey && this.state.hasError) {
+      this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    }
   }
 
   handleRetry = () => {

@@ -46,6 +46,7 @@ export default defineSchema({
     ),
     themePreference: v.optional(v.string()),
     lastActiveView: v.optional(v.string()),
+    windowsExperienceEnabled: v.optional(v.boolean()),
     hasSeenWelcomeToast: v.optional(v.boolean()),
     shouldShowWelcomeToast: v.optional(v.boolean()),
     lastSignInAt: v.optional(v.string()),

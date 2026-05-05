@@ -29,6 +29,11 @@ import DashboardView from '@/components/settleease/DashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
 import KeyboardShortcutsModal from '@/components/settleease/KeyboardShortcutsModal';
+import {
+  WindowsExperienceCrashGate,
+  WindowsExperienceProvider,
+  useWindowsExperienceLoadingDelay,
+} from '@/components/settleease/WindowsExperience';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useConvexData } from '@/hooks/useConvexData';
@@ -430,7 +435,45 @@ function SettleEasePageContent() {
     isLoadingAuth ||
     (isOAuthCallback && !hasResolvedInitialView) ||
     (!!currentUser && (!isAppIdentityReady || !hasResolvedInitialView));
+  const isWindowsExperienceActive =
+    isAppIdentityReady &&
+    !!userProfile?.windows_experience_enabled &&
+    activeView !== 'settings';
+  const visiblePageSkeleton = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton,
+    "page-shell",
+  );
+  const visibleLoadingPeople = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton || isLoadingPeople,
+    "people",
+  );
+  const visibleLoadingExpenses = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton || isLoadingExpenses,
+    "expenses",
+  );
+  const visibleLoadingCategories = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton || isLoadingCategories,
+    "categories",
+  );
+  const visibleLoadingSettlements = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton || isLoadingSettlements,
+    "settlements",
+  );
+  const visibleLoadingOverrides = useWindowsExperienceLoadingDelay(
+    isWindowsExperienceActive,
+    shouldShowPageSkeleton || isLoadingOverrides,
+    "overrides",
+  );
   const forcedDataFetchedAtLeastOnce = shouldShowPageSkeleton ? false : isDataFetchedAtLeastOnce;
+  const visibleDataFetchedAtLeastOnce = visiblePageSkeleton ? false : forcedDataFetchedAtLeastOnce;
+  const windowsExperienceResetKey = isWindowsExperienceActive
+    ? `windows:${currentUser?.id || "unknown"}:${activeView}`
+    : `normal:${currentUser?.id || "unknown"}:${activeView}`;
 
   // Show error screen for Supabase initialization errors
   if (supabaseInitializationError && !supabaseClient) {
@@ -469,6 +512,7 @@ function SettleEasePageContent() {
           isEditMode={isNameModalEditMode}
         />
       )}
+      <WindowsExperienceProvider enabled={isWindowsExperienceActive} surface={activeView}>
       <SidebarProvider defaultOpen={true}>
         <AppSidebar
           activeView={activeView}
@@ -479,7 +523,7 @@ function SettleEasePageContent() {
           userRole={userRole}
           onEditName={handleEditName}
           onShowShortcuts={() => setShowShortcuts(true)}
-          isProfileLoading={shouldShowPageSkeleton || !isAppIdentityReady}
+          isProfileLoading={visiblePageSkeleton || !isAppIdentityReady}
           isDevelopmentEnvironment={isDevelopmentEnvironment}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
@@ -487,204 +531,235 @@ function SettleEasePageContent() {
             <MobileTopBar />
             <main className="no-scrollbar flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
               <div className="min-h-full w-full min-w-0 bg-background">
-                {isLoadingData && isDataFetchedAtLeastOnce && !shouldShowPageSkeleton && (
+                {isLoadingData && isDataFetchedAtLeastOnce && !visiblePageSkeleton && (
                   <div className="sr-only" aria-live="polite">Syncing data...</div>
                 )}
                 {activeView === 'dashboard' && (
                   <SettleEaseErrorBoundary
                     componentName="Home"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <DashboardView
-                      expenses={expenses}
-                      people={people}
-                      peopleMap={peopleMap}
-                      dynamicCategories={categories}
-                      getCategoryIconFromName={getCategoryIconFromName}
-                      settlementPayments={settlementPayments}
-                      manualOverrides={manualOverrides}
-                      currentUserId={currentUser?.id || ''}
-                      onActionComplete={handleActionComplete}
-                      userRole={userRole}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
-                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Home">
+                      <DashboardView
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        dynamicCategories={categories}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                        settlementPayments={settlementPayments}
+                        manualOverrides={manualOverrides}
+                        currentUserId={currentUser?.id || ''}
+                        onActionComplete={handleActionComplete}
+                        userRole={userRole}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingExpenses={visibleLoadingExpenses}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isLoadingSettlements={visibleLoadingSettlements}
+                        isLoadingOverrides={visibleLoadingOverrides}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
                 {activeView === 'analytics' && (
                   <SettleEaseErrorBoundary
                     componentName="Analytics"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <AnalyticsTab
-                      expenses={expenses}
-                      people={people}
-                      peopleMap={peopleMap}
-                      dynamicCategories={categories}
-                      getCategoryIconFromName={getCategoryIconFromName}
-                      settlementPayments={settlementPayments}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Analytics">
+                      <AnalyticsTab
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        dynamicCategories={categories}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                        settlementPayments={settlementPayments}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingExpenses={visibleLoadingExpenses}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isLoadingSettlements={visibleLoadingSettlements}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
                 {activeView === 'health' && (
                   <SettleEaseErrorBoundary
                     componentName="Health"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <HealthTab
-                      expenses={expenses}
-                      people={people}
-                      peopleMap={peopleMap}
-                      dynamicCategories={categories}
-                      getCategoryIconFromName={getCategoryIconFromName}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Health">
+                      <HealthTab
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        dynamicCategories={categories}
+                        getCategoryIconFromName={getCategoryIconFromName}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingExpenses={visibleLoadingExpenses}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'addExpense' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'addExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Add Expense"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <AddExpenseTab
-                      people={people}
-                      onExpenseAdded={handleExpenseAddedAndRedirect}
-                      dynamicCategories={categories}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Add Expense">
+                      <AddExpenseTab
+                        people={people}
+                        onExpenseAdded={handleExpenseAddedAndRedirect}
+                        dynamicCategories={categories}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'editExpenses' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'editExpenses' && (
                   <SettleEaseErrorBoundary
                     componentName="Edit Expenses"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <EditExpensesTab
-                      people={people}
-                      expenses={expenses}
-                      onActionComplete={handleExpenseAddedAndRedirect}
-                      dynamicCategories={categories}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Edit Expenses">
+                      <EditExpensesTab
+                        people={people}
+                        expenses={expenses}
+                        onActionComplete={handleExpenseAddedAndRedirect}
+                        dynamicCategories={categories}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingExpenses={visibleLoadingExpenses}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'managePeople' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'managePeople' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage People"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <ManagePeopleTab
-                      people={people}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Manage People">
+                      <ManagePeopleTab
+                        people={people}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'manageCategories' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'manageCategories' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Categories"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <ManageCategoriesTab
-                      categories={categories}
-                      onCategoriesUpdate={handleActionComplete}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Manage Categories">
+                      <ManageCategoriesTab
+                        categories={categories}
+                        onCategoriesUpdate={handleActionComplete}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'manageSettlements' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'manageSettlements' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Settlements"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <ManageSettlementsTab
-                      expenses={expenses}
-                      people={people}
-                      peopleMap={peopleMap}
-                      settlementPayments={settlementPayments}
-                      manualOverrides={manualOverrides}
-                      currentUserId={currentUser?.id || ''}
-                      onActionComplete={handleActionComplete}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingExpenses={shouldShowPageSkeleton || isLoadingExpenses}
-                      isLoadingSettlements={shouldShowPageSkeleton || isLoadingSettlements}
-                      isLoadingOverrides={shouldShowPageSkeleton || isLoadingOverrides}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                      userRole={userRole}
-                    />
+                    <WindowsExperienceCrashGate componentName="Manage Settlements">
+                      <ManageSettlementsTab
+                        expenses={expenses}
+                        people={people}
+                        peopleMap={peopleMap}
+                        settlementPayments={settlementPayments}
+                        manualOverrides={manualOverrides}
+                        currentUserId={currentUser?.id || ''}
+                        onActionComplete={handleActionComplete}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingExpenses={visibleLoadingExpenses}
+                        isLoadingSettlements={visibleLoadingSettlements}
+                        isLoadingOverrides={visibleLoadingOverrides}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                        userRole={userRole}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'exportExpense' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'exportExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Export Expense"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    {shouldShowPageSkeleton ? (
-                      <ExportExpenseSkeleton />
-                    ) : (
-                      <ExportExpenseTab
-                        expenses={expenses}
-                        settlementPayments={settlementPayments}
-                        people={people}
-                        categories={categories}
-                        manualOverrides={manualOverrides}
-                        peopleMap={peopleMap}
-                        currentUserId={currentUser?.id}
-                        getCategoryIconFromName={getCategoryIconFromName}
-                      />
-                    )}
+                    <WindowsExperienceCrashGate componentName="Export Expense">
+                      {visiblePageSkeleton ? (
+                        <ExportExpenseSkeleton />
+                      ) : (
+                        <ExportExpenseTab
+                          expenses={expenses}
+                          settlementPayments={settlementPayments}
+                          people={people}
+                          categories={categories}
+                          manualOverrides={manualOverrides}
+                          peopleMap={peopleMap}
+                          currentUserId={currentUser?.id}
+                          getCategoryIconFromName={getCategoryIconFromName}
+                        />
+                      )}
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'scanReceipt' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'scanReceipt' && (
                   <SettleEaseErrorBoundary
                     componentName="Smart Scan"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    <ScanReceiptTab
-                      people={people}
-                      onExpenseAdded={handleExpenseAddedAndRedirect}
-                      dynamicCategories={categories}
-                      isLoadingPeople={shouldShowPageSkeleton || isLoadingPeople}
-                      isLoadingCategories={shouldShowPageSkeleton || isLoadingCategories}
-                      isDataFetchedAtLeastOnce={forcedDataFetchedAtLeastOnce}
-                    />
+                    <WindowsExperienceCrashGate componentName="Smart Scan">
+                      <ScanReceiptTab
+                        people={people}
+                        onExpenseAdded={handleExpenseAddedAndRedirect}
+                        dynamicCategories={categories}
+                        isLoadingPeople={visibleLoadingPeople}
+                        isLoadingCategories={visibleLoadingCategories}
+                        isDataFetchedAtLeastOnce={visibleDataFetchedAtLeastOnce}
+                      />
+                    </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || shouldShowPageSkeleton) && activeView === 'settings' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'settings' && (
                   <SettleEaseErrorBoundary
                     componentName="Settings"
                     size="large"
+                    resetKey={windowsExperienceResetKey}
                     onNavigateHome={() => setActiveView('dashboard')}
                   >
-                    {shouldShowPageSkeleton ? (
+                    {visiblePageSkeleton ? (
                       <SettingsTabSkeleton />
                     ) : (
                       <SettingsTab
@@ -715,11 +790,12 @@ function SettleEasePageContent() {
               activeView={activeView}
               setActiveView={handleSetActiveView}
               userRole={userRole}
-              isLoading={shouldShowPageSkeleton || !isAppIdentityReady}
+              isLoading={visiblePageSkeleton || !isAppIdentityReady}
             />
           </div>
         </SidebarInset>
       </SidebarProvider >
+      </WindowsExperienceProvider>
       <KeyboardShortcutsModal isOpen={showShortcuts} onOpenChange={setShowShortcuts} />
     </>
   );

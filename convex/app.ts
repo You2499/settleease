@@ -124,9 +124,26 @@ function profileDto(profile: any) {
     font_preference: profile.fontPreference ?? "inter",
     theme_preference: profile.themePreference ?? undefined,
     last_active_view: profile.lastActiveView ?? undefined,
+    windows_experience_enabled: profile.windowsExperienceEnabled ?? false,
     has_seen_welcome_toast: profile.hasSeenWelcomeToast ?? false,
     should_show_welcome_toast: profile.shouldShowWelcomeToast ?? false,
     last_sign_in_at: profile.lastSignInAt ?? undefined,
+    created_at: profile.createdAt,
+    updated_at: profile.updatedAt,
+  };
+}
+
+function adminUserProfileDto(profile: any) {
+  if (!profile) return null;
+  return {
+    id: profile._id,
+    user_id: profile.supabaseUserId,
+    email: profile.email ?? null,
+    role: profile.role ?? "user",
+    first_name: profile.firstName ?? null,
+    last_name: profile.lastName ?? null,
+    windows_experience_enabled: profile.windowsExperienceEnabled ?? false,
+    last_sign_in_at: profile.lastSignInAt ?? null,
     created_at: profile.createdAt,
     updated_at: profile.updatedAt,
   };
@@ -619,6 +636,9 @@ async function ensureUserProfile(
       updatedAt: timestamp,
     };
     if (!existing.fontPreference) updates.fontPreference = "inter";
+    if (existing.windowsExperienceEnabled === undefined) {
+      updates.windowsExperienceEnabled = false;
+    }
 
     if (
       isConvexDevelopmentAuthDisabled() &&
@@ -644,6 +664,7 @@ async function ensureUserProfile(
     fontPreference: "inter",
     themePreference: "light",
     lastActiveView: "dashboard",
+    windowsExperienceEnabled: false,
     hasSeenWelcomeToast: false,
     shouldShowWelcomeToast: false,
     createdAt: timestamp,
@@ -731,6 +752,24 @@ export const getUserProfile = query({
   },
 });
 
+export const listUserProfilesForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const profiles = await ctx.db.query("userProfiles").collect();
+    return profiles
+      .map(adminUserProfileDto)
+      .filter(Boolean)
+      .sort((a: any, b: any) => {
+        const aName = `${a.first_name ?? ""} ${a.last_name ?? ""}`.trim();
+        const bName = `${b.first_name ?? ""} ${b.last_name ?? ""}`.trim();
+        const aLabel = aName || a.email || a.user_id;
+        const bLabel = bName || b.email || b.user_id;
+        return aLabel.localeCompare(bLabel);
+      });
+  },
+});
+
 export const upsertUserProfile = mutation({
   args: {
     supabaseUserId: v.string(),
@@ -807,6 +846,28 @@ export const updateUserProfile = mutation({
 
     await ctx.db.patch(profile._id, updates);
     return profileDto(await ctx.db.get(profile._id));
+  },
+});
+
+export const setUserWindowsExperience = mutation({
+  args: {
+    supabaseUserId: v.string(),
+    enabled: v.boolean(),
+    expectedEnvironment: settleEaseEnvironment,
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    requireExpectedEnvironment(args.expectedEnvironment);
+
+    const profile = await getProfileBySupabaseUserId(ctx, args.supabaseUserId);
+    if (!profile) throw new ConvexError("User profile not found.");
+
+    await ctx.db.patch(profile._id, {
+      windowsExperienceEnabled: args.enabled,
+      updatedAt: nowIso(),
+    });
+
+    return adminUserProfileDto(await ctx.db.get(profile._id));
   },
 });
 
