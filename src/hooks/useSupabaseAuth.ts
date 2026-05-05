@@ -20,6 +20,54 @@ import {
 
 type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated';
 
+function hasAuthCallbackUrl() {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    const url = new URL(window.location.href);
+    return (
+      url.hash.includes('access_token') ||
+      url.hash.includes('refresh_token') ||
+      url.searchParams.has('code')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function hasStoredSupabaseSession() {
+  if (typeof window === 'undefined') return false;
+
+  try {
+    return Object.keys(localStorage).some((key) => {
+      if (
+        !(key.startsWith('sb-') && key.endsWith('-auth-token')) &&
+        !key.includes('supabase.auth.token')
+      ) {
+        return false;
+      }
+
+      const rawValue = localStorage.getItem(key);
+      if (!rawValue) return false;
+
+      try {
+        const parsed = JSON.parse(rawValue);
+        const session = parsed?.currentSession ?? parsed;
+        return Boolean(session?.access_token || session?.refresh_token);
+      } catch {
+        return rawValue.includes('access_token') || rawValue.includes('refresh_token');
+      }
+    });
+  } catch (error) {
+    console.warn('Could not inspect stored auth session:', error);
+    return false;
+  }
+}
+
+function hasAuthRecoveryHint() {
+  return hasAuthCallbackUrl() || hasStoredSupabaseSession();
+}
+
 function getAuthProcessedKey(userId: string, session: Session) {
   return `auth_processed_${userId}_${session.expires_at ?? 'session'}`;
 }
@@ -72,6 +120,9 @@ export function useSupabaseAuth() {
   const currentUserRef = useRef<SupabaseUser | null>(
     isDevelopmentEnvironment ? developmentSupabaseUser : null,
   );
+  const [hasRecoverableAuthSession, setHasRecoverableAuthSession] = useState(
+    isDevelopmentEnvironment || hasAuthRecoveryHint(),
+  );
   const hasShownLogoutToastRef = useRef(false);
   const lastHandledLogoutIssuedAtRef = useRef(0);
   const lastSessionKeyRef = useRef<string | null>(null);
@@ -100,6 +151,7 @@ export function useSupabaseAuth() {
     currentUserRef.current = null;
     lastSessionKeyRef.current = 'signed-out';
     setCurrentUser(null);
+    setHasRecoverableAuthSession(false);
     setAuthStatusAndRef('unauthenticated');
 
     if (options?.clearStorage) {
@@ -124,6 +176,7 @@ export function useSupabaseAuth() {
 
     lastSessionKeyRef.current = sessionKey;
     currentUserRef.current = newAuthUser;
+    setHasRecoverableAuthSession(Boolean(newAuthUser));
     setCurrentUser(prevUser => {
       if (prevUser?.id === newAuthUser?.id) return prevUser;
       return newAuthUser;
@@ -301,6 +354,7 @@ export function useSupabaseAuth() {
     if (isDevelopmentEnvironment) {
       currentUserRef.current = developmentSupabaseUser;
       setCurrentUser(developmentSupabaseUser);
+      setHasRecoverableAuthSession(true);
       setAuthStatusAndRef('authenticated');
       return;
     }
@@ -359,6 +413,7 @@ export function useSupabaseAuth() {
     supabaseInitializationError: isDevelopmentEnvironment ? null : supabaseInitializationError,
     currentUser,
     isLoadingAuth,
+    hasRecoverableAuthSession,
     handleLogout,
     isDevelopmentEnvironment,
   };

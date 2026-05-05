@@ -122,6 +122,7 @@ function SettleEasePageContent() {
     supabaseInitializationError,
     currentUser,
     isLoadingAuth,
+    hasRecoverableAuthSession,
     handleLogout,
     isDevelopmentEnvironment,
   } = useSupabaseAuth();
@@ -449,8 +450,8 @@ function SettleEasePageContent() {
     );
   }
 
-  // Show auth form when auth is complete and there's no user
-  if (!currentUser && !isLoadingAuth) {
+  // Show auth immediately when there is no stored session/OAuth callback to recover.
+  if (!currentUser && (!isLoadingAuth || !hasRecoverableAuthSession)) {
     return <AuthForm supabase={supabaseClient} />;
   }
 

@@ -719,7 +719,7 @@
 
 /* -- Card ------------------------------------------- */
 .auth-page-card {
-  height: min(760px, calc(100svh - 96px));
+  height: min(760px, calc(100svh - 128px));
   min-height: 0;
   border-color: var(--auth-page-card-border) !important;
   background: var(--auth-page-card-bg) !important;
@@ -917,7 +917,7 @@
 @media (max-height: 760px) {
   .auth-page-card {
     height: auto;
-    min-height: calc(100svh - 80px);
+    min-height: min(620px, calc(100svh - 128px));
   }
 
   .auth-page-card-header {

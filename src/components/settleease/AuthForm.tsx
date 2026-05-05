@@ -24,7 +24,6 @@ import {
   ScanLine,
   Scale,
   ShieldCheck,
-  Sparkles,
   Split,
   TrendingUp,
   UserPlus,
@@ -265,7 +264,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     <>
       <div
         ref={shellRef}
-        className="auth-page-shell relative min-h-svh w-full overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
+        className="auth-page-shell relative flex min-h-svh w-full flex-col overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
         data-auth-mode={isLoginView ? "signin" : "signup"}
       >
         {/* -- Layer 1: Dot grid ---------------------------- */}
@@ -315,29 +314,12 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           ))}
         </div>
 
-        {/* -- Header --------------------------------------- */}
-        <div className="relative z-10 mx-auto flex h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/85 shadow-sm backdrop-blur-md">
-              <HandCoins className="h-5 w-5 text-foreground" />
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold leading-5">SettleEase</p>
-              <p className="truncate text-xs text-muted-foreground">v{packageJson.version}</p>
-            </div>
-          </div>
-        </div>
-
         {/* -- Main content --------------------------------- */}
-        <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-4 px-4 py-3 sm:px-6 lg:h-[calc(100svh-72px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:overflow-hidden lg:px-8">
+        <main className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:overflow-hidden lg:px-8">
 
           {/* -- Left: Hero + benefits (desktop) ------------ */}
           <section className="hidden min-w-0 space-y-5 lg:block">
             <div className="max-w-3xl space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
-                <Sparkles className="h-3.5 w-3.5 text-foreground" />
-                Built for shared money without the awkward follow-up
-              </div>
               <div className="space-y-4">
                 <h1 className="max-w-3xl text-[clamp(2.45rem,5.4vw,4.65rem)] font-light leading-[0.98] tracking-tight text-foreground">
                   Settle shared expenses without the after-trip math.
@@ -626,6 +608,18 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
             </div>
           </section>
         </main>
+
+        <footer className="relative z-10 flex shrink-0 justify-center px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 sm:px-6 lg:px-8">
+          <div className="flex min-w-0 items-center justify-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 shadow-sm backdrop-blur-md">
+              <HandCoins className="h-5 w-5 text-foreground" />
+            </div>
+            <div className="min-w-0 text-left">
+              <p className="truncate text-sm font-semibold leading-5">SettleEase</p>
+              <p className="truncate text-xs text-muted-foreground">v{packageJson.version}</p>
+            </div>
+          </div>
+        </footer>
       </div>
 
       <GoogleOAuthModal
