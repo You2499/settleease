@@ -32,7 +32,7 @@ export interface Expense {
   paid_by: PayerShare[]; // Array of PayerShare objects
   split_method: 'equal' | 'unequal' | 'itemwise';
   shares: PayerShare[]; // Calculated shares for each person (personId and amount) based on the net amount split
-  items?: ExpenseItemDetail[]; // For itemwise split method
+  items?: ExpenseItemDetail[]; // Itemwise split details, or Smart Scan item metadata for equal/unequal expenses
   celebration_contribution?: CelebrationContribution | null; // New field for celebration contributions
   exclude_from_settlement?: boolean; // When true, expense is excluded from settlement calculations but still counted in analytics
   created_at?: string; // ISO date string

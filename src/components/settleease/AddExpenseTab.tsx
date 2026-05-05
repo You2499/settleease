@@ -199,7 +199,7 @@ export default function AddExpenseTab({
         setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
       }
 
-      if (expenseToEdit.split_method === 'itemwise' && Array.isArray(expenseToEdit.items)) {
+      if (Array.isArray(expenseToEdit.items) && expenseToEdit.items.length > 0) {
         setItems(expenseToEdit.items.map(item => ({
           id: item.id || Date.now().toString() + Math.random(),
           name: item.name,

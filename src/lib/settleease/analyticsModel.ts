@@ -398,6 +398,34 @@ function getSpendingAmount(expense: Expense, mode: AnalyticsMode, selectedPerson
   return getTotalObligation(expense, selectedPersonId);
 }
 
+function getValidItemRows(expense: Expense) {
+  if (!Array.isArray(expense.items)) return [];
+
+  return expense.items
+    .map((item, index) => ({
+      item,
+      index,
+      lineTotal: toAmount(getItemLineTotal(item)),
+    }))
+    .filter((row) => row.lineTotal > EPSILON);
+}
+
+function getExpenseShareRatio(expense: Expense, personId: string | null): number {
+  if (!personId) return 0;
+
+  const positiveShares = (expense.shares || [])
+    .map((share) => ({
+      personId: share.personId,
+      amount: Math.max(0, toAmount(share.amount)),
+    }))
+    .filter((share) => share.amount > EPSILON);
+  const shareTotal = positiveShares.reduce((sum, share) => sum + share.amount, 0);
+  if (shareTotal <= EPSILON) return 0;
+
+  const personShare = positiveShares.find((share) => share.personId === personId);
+  return personShare ? personShare.amount / shareTotal : 0;
+}
+
 interface CategoryAllocation {
   category: string;
   amount: number;
@@ -462,6 +490,32 @@ function getCategoryAllocations(
         date: expenseDate,
       });
     }
+
+    return allocations;
+  }
+
+  const metadataItems = expense.split_method !== "itemwise" ? getValidItemRows(expense) : [];
+  if (metadataItems.length > 0 && totalAmount > EPSILON) {
+    const itemSubtotal = metadataItems.reduce((sum, row) => sum + row.lineTotal, 0);
+    const normalizationFactor = itemSubtotal > EPSILON ? totalAmount / itemSubtotal : 0;
+    const personalShareRatio = mode === "personal" ? getExpenseShareRatio(expense, selectedPersonId) : 0;
+
+    metadataItems.forEach(({ item, index, lineTotal }) => {
+      const normalizedItemAmount = lineTotal * normalizationFactor;
+      const amount = mode === "group"
+        ? normalizedItemAmount
+        : normalizedItemAmount * personalShareRatio;
+
+      if (amount > EPSILON) {
+        allocations.push({
+          category: item.categoryName || fallbackCategory,
+          amount,
+          expenseId: expense.id,
+          description: item.name || expense.description || `Item ${index + 1}`,
+          date: expenseDate,
+        });
+      }
+    });
 
     return allocations;
   }

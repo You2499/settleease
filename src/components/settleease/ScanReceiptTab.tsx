@@ -19,8 +19,9 @@ import EqualSplitSection from './addexpense/EqualSplitSection';
 import UnequalSplitSection from './addexpense/UnequalSplitSection';
 import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
-import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
+import { useExpenseFormLogic, type ExpenseSubmitOptions } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
+import SmartScanItemReviewDialog from './SmartScanItemReviewDialog';
 
 import type {
   Expense, Person, PayerInputRow, ExpenseItemDetail,
@@ -32,6 +33,7 @@ import {
   createQuantitySplits,
   dedupePersonIds,
   getItemQuantity,
+  getItemLineTotal,
   getItemUnitSharing,
   normalizeItemQuantityValue,
   resizeQuantitySplits,
@@ -163,6 +165,58 @@ function findChargeCategory(categories: DynamicCategory[]): string {
   return findCategoryByKeywords(["charge", "charges", "fee", "fees", "service"], categories);
 }
 
+function buildScannedExpenseItems(
+  parsedData: ParsedReceiptData,
+  dynamicCategories: DynamicCategory[],
+  people: Person[]
+): ExpenseItemDetail[] {
+  const allPeopleIds = people.map(p => p.id);
+  const timestamp = Date.now();
+  const taxCategory = findTaxCategory(dynamicCategories);
+  const chargeCategory = findChargeCategory(dynamicCategories) || taxCategory;
+
+  const expenseItems: ExpenseItemDetail[] = parsedData.items.map((item, idx) => ({
+    id: `scan-item-${idx}-${timestamp}`,
+    name: item.name,
+    price: item.total_price.toFixed(2),
+    unitPrice: item.unit_price.toFixed(2),
+    quantity: normalizeItemQuantityValue(item.quantity),
+    sharedBy: [...allPeopleIds],
+    categoryName: resolveScannedItemCategory(item, dynamicCategories),
+  }));
+
+  const taxesTotal = parsedData.taxes.reduce((sum, tax) => sum + Math.max(0, toItemAmount(tax.amount)), 0);
+  if (taxesTotal > 0.01) {
+    expenseItems.push({
+      id: `scan-taxes-${timestamp}`,
+      name: 'Taxes',
+      price: taxesTotal.toFixed(2),
+      unitPrice: taxesTotal.toFixed(2),
+      quantity: 1,
+      sharedBy: [...allPeopleIds],
+      categoryName: taxCategory,
+    });
+  }
+
+  const positiveChargesTotal = parsedData.additional_charges.reduce(
+    (sum, charge) => sum + Math.max(0, toItemAmount(charge.amount)),
+    0
+  );
+  if (positiveChargesTotal > 0.01) {
+    expenseItems.push({
+      id: `scan-charges-${timestamp}`,
+      name: 'Other Charges',
+      price: positiveChargesTotal.toFixed(2),
+      unitPrice: positiveChargesTotal.toFixed(2),
+      quantity: 1,
+      sharedBy: [...allPeopleIds],
+      categoryName: chargeCategory,
+    });
+  }
+
+  return expenseItems;
+}
+
 function getStepIndex(step: WizardStep) {
   return STEP_ORDER.indexOf(step);
 }
@@ -259,6 +313,7 @@ export default function ScanReceiptTab({
   const [items, setItems] = useState<ExpenseItemDetail[]>([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
   const [isLoading, setIsLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isMetadataReviewOpen, setIsMetadataReviewOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -449,61 +504,18 @@ export default function ScanReceiptTab({
     const payerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
     setPayers([{ id: Date.now().toString(), personId: payerPersonId, amount: parsedData.total_amount.toFixed(2) }]);
 
+    const scannedItems = buildScannedExpenseItems(parsedData, dynamicCategories, people);
+    setItems(scannedItems.length > 0 ? scannedItems : [{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory, quantity: 1, unitPrice: '' }]);
+
     // Pre-fill split-specific data
     if (splitMethod === 'equal') {
       setSelectedPeopleEqual(people.map(p => p.id));
     } else if (splitMethod === 'unequal') {
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
-    } else if (splitMethod === 'itemwise') {
-      const allPeopleIds = people.map(p => p.id);
-      const taxCategory = findTaxCategory(dynamicCategories);
-      const chargeCategory = findChargeCategory(dynamicCategories) || taxCategory;
-
-      // Convert parsed items to ExpenseItemDetail
-      const expenseItems: ExpenseItemDetail[] = parsedData.items.map((item, idx) => ({
-        id: `scan-item-${idx}-${Date.now()}`,
-        name: item.name,
-        price: item.total_price.toFixed(2),
-        unitPrice: item.unit_price.toFixed(2),
-        quantity: normalizeItemQuantityValue(item.quantity),
-        sharedBy: [...allPeopleIds],
-        categoryName: resolveScannedItemCategory(item, dynamicCategories),
-      }));
-
-      const taxesTotal = parsedData.taxes.reduce((sum, tax) => sum + Math.max(0, toItemAmount(tax.amount)), 0);
-      if (taxesTotal > 0.01) {
-        expenseItems.push({
-          id: `scan-taxes-${Date.now()}`,
-          name: 'Taxes',
-          price: taxesTotal.toFixed(2),
-          unitPrice: taxesTotal.toFixed(2),
-          quantity: 1,
-          sharedBy: [...allPeopleIds],
-          categoryName: taxCategory,
-        });
-      }
-
-      const positiveChargesTotal = parsedData.additional_charges.reduce(
-        (sum, charge) => sum + Math.max(0, toItemAmount(charge.amount)),
-        0
-      );
-      if (positiveChargesTotal > 0.01) {
-        expenseItems.push({
-          id: `scan-charges-${Date.now()}`,
-          name: 'Other Charges',
-          price: positiveChargesTotal.toFixed(2),
-          unitPrice: positiveChargesTotal.toFixed(2),
-          quantity: 1,
-          sharedBy: [...allPeopleIds],
-          categoryName: chargeCategory,
-        });
-      }
-
-      setItems(expenseItems);
     }
 
     setStep('form');
-  }, [parsedData, splitMethod, people, dynamicCategories, defaultPayerId]);
+  }, [parsedData, splitMethod, people, dynamicCategories, defaultPayerId, category, defaultItemCategory]);
 
   const handleReset = useCallback(() => {
     // Cancel any ongoing scan
@@ -528,6 +540,7 @@ export default function ScanReceiptTab({
     setExpenseDate(new Date());
     setSplitMethod('equal');
     setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
+    setIsMetadataReviewOpen(false);
   }, []);
 
   // Form handlers (same as AddExpenseTab)
@@ -660,8 +673,13 @@ export default function ScanReceiptTab({
     setItems(items.filter((_, i) => i !== index));
   };
 
-  const onSubmit = () => {
-    handleSubmitExpense(
+  const hasReviewableMetadata = useMemo(
+    () => Boolean(parsedData && splitMethod !== 'itemwise' && items.some((item) => item.name.trim() || getItemLineTotal(item) > 0)),
+    [parsedData, splitMethod, items]
+  );
+
+  const submitExpense = async (options?: ExpenseSubmitOptions) => {
+    return handleSubmitExpense(
       description,
       totalAmount,
       category,
@@ -678,8 +696,25 @@ export default function ScanReceiptTab({
       amountToSplit,
       undefined, // expenseToEdit
       defaultItemCategory,
-      setIsLoading
+      setIsLoading,
+      options
     );
+  };
+
+  const handleMetadataReviewConfirm = async () => {
+    const saved = await submitExpense({ preserveItemMetadata: true });
+    if (saved) {
+      setIsMetadataReviewOpen(false);
+    }
+  };
+
+  const onSubmit = () => {
+    if (hasReviewableMetadata) {
+      setIsMetadataReviewOpen(true);
+      return;
+    }
+
+    void submitExpense();
   };
 
   if (isLoadingData) {
@@ -764,6 +799,7 @@ export default function ScanReceiptTab({
   }[step];
 
   return (
+    <>
     <Card className="flex h-full flex-col overflow-hidden rounded-lg border shadow-xl">
       <CardHeader className="border-b p-4 sm:p-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -1252,5 +1288,19 @@ export default function ScanReceiptTab({
         }
       `}</style>
     </Card>
+    {splitMethod !== 'itemwise' && (
+      <SmartScanItemReviewDialog
+        open={isMetadataReviewOpen}
+        onOpenChange={setIsMetadataReviewOpen}
+        items={items}
+        onItemsChange={setItems}
+        splitMethod={splitMethod}
+        totalAmount={amountToSplit}
+        dynamicCategories={dynamicCategories}
+        isSaving={isLoading}
+        onConfirm={handleMetadataReviewConfirm}
+      />
+    )}
+    </>
   );
 }

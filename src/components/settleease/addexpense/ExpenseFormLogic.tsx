@@ -24,6 +24,68 @@ interface UseExpenseFormLogicProps {
   onExpenseAdded: () => void;
 }
 
+export interface ExpenseSubmitOptions {
+  preserveItemMetadata?: boolean;
+}
+
+function normalizeMetadataItemsForStorage(
+  items: ExpenseItemDetail[],
+  defaultItemCategory: string,
+  participantIds: string[]
+) {
+  return items
+    .map((item) => {
+      const normalized = normalizeExpenseItemForStorage(
+        {
+          ...item,
+          sharedBy: participantIds.length > 0 ? participantIds : item.sharedBy,
+          quantitySplits: undefined,
+        },
+        defaultItemCategory
+      );
+
+      return {
+        ...normalized,
+        sharedBy: participantIds.length > 0 ? participantIds : normalized.sharedBy,
+        quantitySplits: undefined,
+      };
+    })
+    .filter((item) => item.name.trim() && getItemLineTotal(item) > 0 && item.categoryName);
+}
+
+function toConvexItems(items: ExpenseItemDetail[] | null) {
+  return items?.map((item) => {
+    const convexItem: {
+      id: string;
+      name: string;
+      price: number;
+      sharedBy: string[];
+      categoryName?: string;
+      quantity?: number;
+      unitPrice?: number;
+      quantitySplits?: ExpenseItemDetail["quantitySplits"];
+    } = {
+      id: item.id,
+      name: item.name,
+      price: Number(item.price),
+      sharedBy: item.sharedBy,
+      categoryName: item.categoryName,
+    };
+
+    if (item.quantity !== undefined) {
+      convexItem.quantity = item.quantity;
+    }
+    if (item.unitPrice !== undefined) {
+      convexItem.unitPrice = toItemAmount(item.unitPrice);
+    }
+    if (item.quantitySplits !== undefined) {
+      convexItem.quantitySplits = item.quantitySplits;
+    }
+
+    return convexItem;
+  }) ?? null;
+}
+
 export function useExpenseFormLogic({
   onExpenseAdded,
 }: UseExpenseFormLogicProps) {
@@ -254,7 +316,8 @@ export function useExpenseFormLogic({
       amountToSplit: number,
       expenseToEdit: Expense | null | undefined,
       defaultItemCategory: string,
-      setIsLoading: (loading: boolean) => void
+      setIsLoading: (loading: boolean) => void,
+      options: ExpenseSubmitOptions = {}
     ) => {
       if (
         !validateForm(
@@ -273,7 +336,7 @@ export function useExpenseFormLogic({
           amountToSplit
         )
       )
-        return;
+        return false;
 
       setIsLoading(true);
 
@@ -290,7 +353,7 @@ export function useExpenseFormLogic({
           variant: "destructive",
         });
         setIsLoading(false);
-        return;
+        return false;
       }
 
       let celebrationContributionPayload: CelebrationContribution | null = null;
@@ -324,6 +387,22 @@ export function useExpenseFormLogic({
         ).shares;
       }
 
+      const metadataParticipantIds = calculatedShares
+        .filter((share) => share.amount > 0)
+        .map((share) => share.personId);
+      const shouldPreserveMetadata =
+        splitMethod !== "itemwise" &&
+        (options.preserveItemMetadata || (Array.isArray(expenseToEdit?.items) && expenseToEdit.items.length > 0));
+
+      if (shouldPreserveMetadata) {
+        const metadataItems = normalizeMetadataItemsForStorage(
+          items,
+          defaultItemCategory,
+          metadataParticipantIds
+        );
+        expenseItemsPayload = metadataItems.length > 0 ? metadataItems : null;
+      }
+
       try {
         const commonPayload = {
           description,
@@ -332,30 +411,10 @@ export function useExpenseFormLogic({
           paid_by: finalPayers,
           split_method: splitMethod,
           shares: calculatedShares,
-          items: splitMethod === "itemwise" ? expenseItemsPayload : null,
+          items: splitMethod === "itemwise" || shouldPreserveMetadata ? expenseItemsPayload : null,
           celebration_contribution: celebrationContributionPayload,
         };
-        const convexItems = commonPayload.items?.map((item) => {
-          const convexItem: any = {
-            id: item.id,
-            name: item.name,
-            price: Number(item.price),
-            sharedBy: item.sharedBy,
-            categoryName: item.categoryName,
-          };
-
-          if (item.quantity !== undefined) {
-            convexItem.quantity = item.quantity;
-          }
-          if (item.unitPrice !== undefined) {
-            convexItem.unitPrice = toItemAmount(item.unitPrice);
-          }
-          if (item.quantitySplits !== undefined) {
-            convexItem.quantitySplits = item.quantitySplits;
-          }
-
-          return convexItem;
-        }) ?? null;
+        const convexItems = toConvexItems(commonPayload.items);
 
         if (expenseToEdit && expenseToEdit.id) {
           await saveExpense({
@@ -394,6 +453,7 @@ export function useExpenseFormLogic({
         }
 
         onExpenseAdded();
+        return true;
       } catch (error: any) {
         let errorMessage = "An unknown error occurred while saving the expense.";
 
@@ -408,6 +468,7 @@ export function useExpenseFormLogic({
           description: `Could not save expense: ${errorMessage}`,
           variant: "destructive",
         });
+        return false;
       } finally {
         setIsLoading(false);
       }

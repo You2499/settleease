@@ -72,6 +72,18 @@ function normalizeAllocationShares(shares: Array<{ personId: string; amount: num
   });
 }
 
+function getValidItemRows(expense: Expense) {
+  if (!Array.isArray(expense.items)) return [];
+
+  return expense.items
+    .map((item, index) => ({
+      item,
+      index,
+      amount: toAmount(getItemLineTotal(item)),
+    }))
+    .filter((row) => row.amount > EPSILON);
+}
+
 function compareHealthSourceRow(a: HealthSourceRow, b: HealthSourceRow): number {
   const dateComparison = a.date.localeCompare(b.date);
   if (dateComparison !== 0) return dateComparison;
@@ -101,6 +113,9 @@ export function buildHealthSourceRows({
       Array.isArray(expense.shares) ? expense.shares.map((share) => share.personId) : [],
       knownPersonIds,
     );
+    const fallbackParticipants = expenseSharePersonIds.length > 0
+      ? expenseSharePersonIds
+      : dedupePersonIds(Array.isArray(expense.paid_by) ? expense.paid_by.map((payer) => payer.personId) : [], knownPersonIds);
 
     if (expense.split_method === "itemwise" && Array.isArray(expense.items) && expense.items.length > 0) {
       expense.items.forEach((item, index) => {
@@ -131,12 +146,41 @@ export function buildHealthSourceRows({
       return;
     }
 
+    const metadataItems = expense.split_method !== "itemwise" ? getValidItemRows(expense) : [];
+    const expenseAmount = toAmount(expense.total_amount);
+    if (metadataItems.length > 0 && expenseAmount > EPSILON) {
+      const itemSubtotal = metadataItems.reduce((sum, row) => sum + row.amount, 0);
+      const normalizationFactor = itemSubtotal > EPSILON ? expenseAmount / itemSubtotal : 0;
+      const allocationShares = normalizeAllocationShares(
+        Array.isArray(expense.shares) ? expense.shares : [],
+        fallbackParticipants,
+      );
+
+      metadataItems.forEach(({ item, index, amount }) => {
+        const normalizedAmount = toAmount(amount * normalizationFactor);
+        if (normalizedAmount <= EPSILON) return;
+
+        rows.push({
+          sourceKey: `expense:${expense.id}:item:${item.id || index}`,
+          chunkKey,
+          sourceKind: "item",
+          expenseId: expense.id,
+          itemId: item.id || undefined,
+          title: item.name || expenseDescription,
+          expenseDescription,
+          categoryName: item.categoryName || fallbackCategory,
+          amount: normalizedAmount,
+          date: isoDate,
+          participantIds: fallbackParticipants,
+          allocationShares,
+        });
+      });
+
+      return;
+    }
+
     const amount = toAmount(expense.total_amount);
     if (amount <= EPSILON) return;
-
-    const fallbackParticipants = expenseSharePersonIds.length > 0
-      ? expenseSharePersonIds
-      : dedupePersonIds(Array.isArray(expense.paid_by) ? expense.paid_by.map((payer) => payer.personId) : [], knownPersonIds);
 
     rows.push({
       sourceKey: `expense:${expense.id}:expense`,
