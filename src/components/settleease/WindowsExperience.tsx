@@ -16,12 +16,18 @@ type WindowsExperienceContextValue = {
   enabled: boolean;
   surface: string;
   generation: number;
+  surfaceVisitKey: number;
+  freezeUntil: number;
+  requestFreeze: (durationMs?: number) => void;
 };
 
 const WindowsExperienceContext = createContext<WindowsExperienceContextValue>({
   enabled: false,
   surface: "unknown",
   generation: 0,
+  surfaceVisitKey: 0,
+  freezeUntil: 0,
+  requestFreeze: () => {},
 });
 
 const sessionState = {
@@ -38,6 +44,7 @@ const sessionState = {
   crashedComponents: new Set<string>(),
   lastLagAt: 0,
   lagCount: 0,
+  surfaceVisitKey: 0,
 };
 
 const checkedCrashKeys = new Set<string>();
@@ -48,7 +55,18 @@ const SAFE_CONTROL_PATTERN =
 const RELOAD_BLOCK_PATTERN =
   /save|delete|remove|factory|reset|clear|unlock|lock|confirm|submit|add|scan|upload|camera|download|print|pay|seed|apply|export|sign|log ?out|edit name|try again/i;
 
-const LOCAL_RELOAD_SURFACES = new Set(["dashboard", "analytics", "health"]);
+const LOCAL_RELOAD_SURFACES = new Set([
+  "dashboard",
+  "analytics",
+  "health",
+  "addExpense",
+  "editExpenses",
+  "managePeople",
+  "manageCategories",
+  "manageSettlements",
+  "exportExpense",
+  "scanReceipt",
+]);
 
 function now() {
   return Date.now();
@@ -81,6 +99,21 @@ function getControlKey(kind: ControlKind, element: Element | null, label: string
   return [kind, id, value, href, role, sidebar, label].filter(Boolean).join(":").slice(0, 180);
 }
 
+function getInteractiveElement(target: EventTarget | null) {
+  if (!(target instanceof Element)) return null;
+  return target.closest(
+    "button,a,[role='button'],[role='tab'],[data-sidebar='menu-button'],[data-radix-collection-item]",
+  );
+}
+
+function getControlKind(element: Element | null): ControlKind {
+  if (!element) return "button";
+  if (element.getAttribute("data-sidebar") === "menu-button") return "sidebar";
+  if (element.getAttribute("role") === "tab") return "tab";
+  if (element.getAttribute("role") === "option") return "select";
+  return "button";
+}
+
 function isExplicitlySafe(element: Element | null, label: string) {
   if (!element) return false;
   if (element.closest("[data-windows-experience-safe='true']")) return true;
@@ -89,16 +122,16 @@ function isExplicitlySafe(element: Element | null, label: string) {
 
 function canMiss(kind: ControlKind) {
   if (!sessionState.enabled) return false;
-  if (sessionState.missCount >= 28) return false;
+  if (sessionState.missCount >= 140) return false;
   const timestamp = now();
-  if (timestamp - sessionState.enabledAt < 2500) return false;
-  if (timestamp - sessionState.lastMissAt < 1800) return false;
+  if (timestamp - sessionState.enabledAt < 600) return false;
+  if (timestamp - sessionState.lastMissAt < 350) return false;
 
   const chanceByKind: Record<ControlKind, number> = {
-    button: 0.22,
-    tab: 0.18,
-    select: 0.15,
-    sidebar: 0.2,
+    button: 0.62,
+    tab: 0.58,
+    select: 0.52,
+    sidebar: 0.6,
   };
 
   return Math.random() < chanceByKind[kind];
@@ -125,21 +158,21 @@ function maybeMarkMiss(kind: ControlKind, element: Element | null, label: string
 function canReload(kind: ControlKind, surface: string, element: Element | null, label: string) {
   if (!sessionState.enabled) return false;
   if (!LOCAL_RELOAD_SURFACES.has(surface)) return false;
-  if (sessionState.reloadCount >= 3) return false;
+  if (sessionState.reloadCount >= 5) return false;
   if (kind === "button" && RELOAD_BLOCK_PATTERN.test(label)) return false;
   if (isExplicitlySafe(element, label)) return false;
 
   const timestamp = now();
   const lastStoredReload = Number(sessionStorage.getItem("settleease_windows_experience_reload_at") || "0");
-  if (timestamp - sessionState.enabledAt < 9000) return false;
-  if (timestamp - sessionState.lastReloadAt < 70000) return false;
-  if (timestamp - lastStoredReload < 18000) return false;
+  if (timestamp - sessionState.enabledAt < 4500) return false;
+  if (timestamp - sessionState.lastReloadAt < 32000) return false;
+  if (timestamp - lastStoredReload < 24000) return false;
 
   const chanceByKind: Record<ControlKind, number> = {
-    button: 0.06,
-    tab: 0.16,
-    select: 0.13,
-    sidebar: 0.12,
+    button: 0.12,
+    tab: 0.28,
+    select: 0.2,
+    sidebar: 0.24,
   };
 
   return Math.random() < chanceByKind[kind];
@@ -161,17 +194,17 @@ function scheduleReload(kind: ControlKind, surface: string, element: Element | n
 function shouldCrashComponent(componentName: string) {
   if (!sessionState.enabled) return false;
   if (componentName === "Settings") return false;
-  if (sessionState.crashCount >= 2) return false;
-  if (sessionState.crashedComponents.has(componentName)) return false;
 
   const timestamp = now();
-  if (timestamp - sessionState.enabledAt < 7000) return false;
-  if (timestamp - sessionState.lastCrashAt < 42000) return false;
-  if (Math.random() >= 0.18) return false;
+  if (timestamp - sessionState.enabledAt < 1200) return false;
+
+  const isWholePage = /^(Home|Analytics|Health|Add Expense|Edit Expenses|Manage People|Manage Categories|Manage Settlements|Export Expense|Smart Scan)$/.test(componentName);
+  const isNormalUserSurface = /^(Home|Analytics|Health)/.test(componentName);
+  const crashChance = isWholePage ? 0.18 : isNormalUserSurface ? 0.62 : 0.42;
+  if (Math.random() >= crashChance) return false;
 
   sessionState.crashCount += 1;
   sessionState.lastCrashAt = timestamp;
-  sessionState.crashedComponents.add(componentName);
   return true;
 }
 
@@ -195,6 +228,35 @@ export function WindowsExperienceProvider({
   children: React.ReactNode;
 }) {
   const [generation, setGeneration] = useState(0);
+  const [surfaceVisitKey, setSurfaceVisitKey] = useState(0);
+  const [freezeUntil, setFreezeUntil] = useState(0);
+  const freezeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearFreeze = useCallback(() => {
+    if (freezeTimerRef.current) {
+      clearTimeout(freezeTimerRef.current);
+      freezeTimerRef.current = null;
+    }
+    setFreezeUntil(0);
+  }, []);
+
+  const requestFreeze = useCallback(
+    (durationMs?: number) => {
+      if (!sessionState.enabled) return;
+      const nextFreezeUntil = now() + (durationMs ?? randomBetween(4000, 12000));
+      setFreezeUntil(nextFreezeUntil);
+
+      if (freezeTimerRef.current) {
+        clearTimeout(freezeTimerRef.current);
+      }
+
+      freezeTimerRef.current = setTimeout(() => {
+        freezeTimerRef.current = null;
+        setFreezeUntil(0);
+      }, Math.max(0, nextFreezeUntil - now()));
+    },
+    [],
+  );
 
   useEffect(() => {
     sessionState.enabled = enabled;
@@ -219,16 +281,57 @@ export function WindowsExperienceProvider({
     sessionState.pendingMisses.clear();
     checkedCrashKeys.clear();
     sessionState.enabledAt = 0;
+    clearFreeze();
     setGeneration(sessionState.generation);
-  }, [enabled]);
+  }, [clearFreeze, enabled]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    sessionState.surfaceVisitKey += 1;
+    checkedCrashKeys.clear();
+    setSurfaceVisitKey(sessionState.surfaceVisitKey);
+  }, [enabled, surface]);
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleGlobalClick = (event: MouseEvent) => {
+      const element = getInteractiveElement(event.target);
+      if (!element) return;
+
+      const label = getControlLabel(element);
+      if (isExplicitlySafe(element, label)) return;
+
+      const kind = getControlKind(element);
+      if (maybeMarkMiss(kind, element, label)) {
+        if (Math.random() < 0.36) {
+          requestFreeze(randomBetween(4000, 12000));
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      if (Math.random() < 0.18) {
+        requestFreeze(randomBetween(4000, 10000));
+      }
+      scheduleReload(kind, surface, element, label);
+    };
+
+    window.addEventListener("click", handleGlobalClick, true);
+    return () => window.removeEventListener("click", handleGlobalClick, true);
+  }, [enabled, requestFreeze, surface]);
 
   const value = useMemo(
     () => ({
       enabled,
       surface,
       generation,
+      surfaceVisitKey,
+      freezeUntil,
+      requestFreeze,
     }),
-    [enabled, generation, surface],
+    [enabled, freezeUntil, generation, requestFreeze, surface, surfaceVisitKey],
   );
 
   return (
@@ -243,7 +346,7 @@ export function useWindowsExperience() {
 }
 
 export function useWindowsExperienceControl(kind: ControlKind) {
-  const { enabled, surface } = useWindowsExperience();
+  const { enabled, surface, requestFreeze } = useWindowsExperience();
 
   const guardInteraction = useCallback(
     (event: { preventDefault: () => void; stopPropagation: () => void; currentTarget?: EventTarget | null; target?: EventTarget | null }) => {
@@ -253,11 +356,15 @@ export function useWindowsExperienceControl(kind: ControlKind) {
       const label = getControlLabel(element);
       if (!maybeMarkMiss(kind, element, label)) return false;
 
+      if (Math.random() < 0.34) {
+        requestFreeze(randomBetween(4000, 12000));
+      }
+
       event.preventDefault();
       event.stopPropagation();
       return true;
     },
-    [enabled, kind],
+    [enabled, kind, requestFreeze],
   );
 
   const maybeReloadAfterInteraction = useCallback(
@@ -265,9 +372,12 @@ export function useWindowsExperienceControl(kind: ControlKind) {
       if (!enabled) return;
       const element = getElementFromEvent(event);
       const label = getControlLabel(element);
+      if (!isExplicitlySafe(element, label) && Math.random() < 0.2) {
+        requestFreeze(randomBetween(4000, 10000));
+      }
       scheduleReload(kind, surface, element, label);
     },
-    [enabled, kind, surface],
+    [enabled, kind, requestFreeze, surface],
   );
 
   return {
@@ -284,8 +394,8 @@ export function WindowsExperienceCrashGate({
   componentName: string;
   children: React.ReactNode;
 }) {
-  const { enabled, generation } = useWindowsExperience();
-  const checkKey = `${generation}:${componentName}`;
+  const { enabled, generation, surfaceVisitKey } = useWindowsExperience();
+  const checkKey = `${generation}:${surfaceVisitKey}:${componentName}`;
 
   if (enabled && !checkedCrashKeys.has(checkKey)) {
     checkedCrashKeys.add(checkKey);
@@ -319,10 +429,10 @@ export function useWindowsExperienceLoadingDelay(enabled: boolean, loading: bool
 
     const timestamp = now();
     const shouldLag =
-      sessionState.lagCount < 30 &&
-      timestamp - sessionState.enabledAt > 2000 &&
-      timestamp - sessionState.lastLagAt > 2200 &&
-      Math.random() < 0.38;
+      sessionState.lagCount < 90 &&
+      timestamp - sessionState.enabledAt > 600 &&
+      timestamp - sessionState.lastLagAt > 700 &&
+      Math.random() < 0.78;
 
     if (!shouldLag) {
       setDisplayLoading(false);
@@ -335,7 +445,7 @@ export function useWindowsExperienceLoadingDelay(enabled: boolean, loading: bool
     timeoutRef.current = setTimeout(() => {
       timeoutRef.current = null;
       setDisplayLoading(false);
-    }, randomBetween(800, 2600));
+    }, randomBetween(3000, 10000));
 
     return () => {
       if (timeoutRef.current) {
@@ -346,4 +456,87 @@ export function useWindowsExperienceLoadingDelay(enabled: boolean, loading: bool
   }, [enabled, key, loading]);
 
   return displayLoading;
+}
+
+export function useWindowsExperienceNavigation({
+  activeView,
+  enabled,
+}: {
+  activeView: string;
+  enabled: boolean;
+}) {
+  const [renderedView, setRenderedView] = useState(activeView);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+
+    if (!enabled || activeView === "settings") {
+      setRenderedView(activeView);
+      setIsTransitioning(false);
+      return;
+    }
+
+    if (activeView === renderedView) {
+      setIsTransitioning(false);
+      return;
+    }
+
+    setIsTransitioning(true);
+    timeoutRef.current = setTimeout(() => {
+      timeoutRef.current = null;
+      setRenderedView(activeView);
+      setIsTransitioning(false);
+    }, randomBetween(2200, 8200));
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
+  }, [activeView, enabled, renderedView]);
+
+  return {
+    renderedView,
+    isTransitioning,
+  };
+}
+
+export function WindowsExperienceFreezeLayer() {
+  const { enabled, freezeUntil } = useWindowsExperience();
+  const [isFrozen, setIsFrozen] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || freezeUntil <= now()) {
+      setIsFrozen(false);
+      return;
+    }
+
+    setIsFrozen(true);
+    const timer = setTimeout(() => setIsFrozen(false), freezeUntil - now());
+    return () => clearTimeout(timer);
+  }, [enabled, freezeUntil]);
+
+  if (!isFrozen) return null;
+
+  return (
+    <div
+      aria-hidden="true"
+      data-windows-experience-safe="true"
+      className="absolute inset-0 z-40 cursor-wait"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+      onPointerDown={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
+    />
+  );
 }

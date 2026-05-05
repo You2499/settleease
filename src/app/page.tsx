@@ -31,8 +31,10 @@ import UserNameModal from '@/components/settleease/UserNameModal';
 import KeyboardShortcutsModal from '@/components/settleease/KeyboardShortcutsModal';
 import {
   WindowsExperienceCrashGate,
+  WindowsExperienceFreezeLayer,
   WindowsExperienceProvider,
   useWindowsExperienceLoadingDelay,
+  useWindowsExperienceNavigation,
 } from '@/components/settleease/WindowsExperience';
 
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -439,10 +441,17 @@ function SettleEasePageContent() {
     isAppIdentityReady &&
     !!userProfile?.windows_experience_enabled &&
     activeView !== 'settings';
+  const {
+    renderedView: renderedActiveView,
+    isTransitioning: isWindowsExperienceTransitioning,
+  } = useWindowsExperienceNavigation({
+    activeView,
+    enabled: isWindowsExperienceActive,
+  });
   const visiblePageSkeleton = useWindowsExperienceLoadingDelay(
     isWindowsExperienceActive,
-    shouldShowPageSkeleton,
-    "page-shell",
+    shouldShowPageSkeleton || isWindowsExperienceTransitioning,
+    `page-shell:${activeView}`,
   );
   const visibleLoadingPeople = useWindowsExperienceLoadingDelay(
     isWindowsExperienceActive,
@@ -472,7 +481,7 @@ function SettleEasePageContent() {
   const forcedDataFetchedAtLeastOnce = shouldShowPageSkeleton ? false : isDataFetchedAtLeastOnce;
   const visibleDataFetchedAtLeastOnce = visiblePageSkeleton ? false : forcedDataFetchedAtLeastOnce;
   const windowsExperienceResetKey = isWindowsExperienceActive
-    ? `windows:${currentUser?.id || "unknown"}:${activeView}`
+    ? `windows:${currentUser?.id || "unknown"}:${activeView}:${renderedActiveView}:${isWindowsExperienceTransitioning}`
     : `normal:${currentUser?.id || "unknown"}:${activeView}`;
 
   // Show error screen for Supabase initialization errors
@@ -530,11 +539,12 @@ function SettleEasePageContent() {
           <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
             <MobileTopBar />
             <main className="no-scrollbar flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto bg-background p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
-              <div className="min-h-full w-full min-w-0 bg-background">
+              <div className="relative min-h-full w-full min-w-0 bg-background">
+                <WindowsExperienceFreezeLayer />
                 {isLoadingData && isDataFetchedAtLeastOnce && !visiblePageSkeleton && (
                   <div className="sr-only" aria-live="polite">Syncing data...</div>
                 )}
-                {activeView === 'dashboard' && (
+                {renderedActiveView === 'dashboard' && (
                   <SettleEaseErrorBoundary
                     componentName="Home"
                     size="large"
@@ -563,7 +573,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {activeView === 'analytics' && (
+                {renderedActiveView === 'analytics' && (
                   <SettleEaseErrorBoundary
                     componentName="Analytics"
                     size="large"
@@ -587,7 +597,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {activeView === 'health' && (
+                {renderedActiveView === 'health' && (
                   <SettleEaseErrorBoundary
                     componentName="Health"
                     size="large"
@@ -609,7 +619,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'addExpense' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'addExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Add Expense"
                     size="large"
@@ -628,7 +638,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'editExpenses' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'editExpenses' && (
                   <SettleEaseErrorBoundary
                     componentName="Edit Expenses"
                     size="large"
@@ -649,7 +659,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'managePeople' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'managePeople' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage People"
                     size="large"
@@ -665,7 +675,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'manageCategories' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'manageCategories' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Categories"
                     size="large"
@@ -682,7 +692,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'manageSettlements' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'manageSettlements' && (
                   <SettleEaseErrorBoundary
                     componentName="Manage Settlements"
                     size="large"
@@ -708,7 +718,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'exportExpense' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'exportExpense' && (
                   <SettleEaseErrorBoundary
                     componentName="Export Expense"
                     size="large"
@@ -733,7 +743,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'scanReceipt' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'scanReceipt' && (
                   <SettleEaseErrorBoundary
                     componentName="Smart Scan"
                     size="large"
@@ -752,7 +762,7 @@ function SettleEasePageContent() {
                     </WindowsExperienceCrashGate>
                   </SettleEaseErrorBoundary>
                 )}
-                {(userRole === 'admin' || visiblePageSkeleton) && activeView === 'settings' && (
+                {(userRole === 'admin' || visiblePageSkeleton) && renderedActiveView === 'settings' && (
                   <SettleEaseErrorBoundary
                     componentName="Settings"
                     size="large"

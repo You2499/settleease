@@ -28,6 +28,11 @@ import ExpenseLog from './dashboard/ExpenseLog';
 import { calculateSimplifiedTransactions, calculatePairwiseTransactions } from '@/lib/settleease/settlementCalculations';
 import type { Person, Expense, Category, SettlementPayment, CalculatedTransaction, UserRole, ManualSettlementOverride } from '@/lib/settleease/types';
 import ManualOverrideAlert from './ManualOverrideAlert';
+import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
+import {
+  WindowsExperienceCrashGate,
+  useWindowsExperience,
+} from './WindowsExperience';
 
 function SettlementSummarySkeleton() {
   return (
@@ -119,6 +124,27 @@ function DashboardSkeleton() {
         <ExpenseLogSkeleton />
       </div>
     </LoadingRegion>
+  );
+}
+
+function DashboardBugBoundary({
+  componentName,
+  size = "medium",
+  children,
+}: {
+  componentName: string;
+  size?: "small" | "medium" | "large";
+  children: React.ReactNode;
+}) {
+  const windowsExperience = useWindowsExperience();
+  const resetKey = `${windowsExperience.enabled}:${windowsExperience.generation}:${windowsExperience.surfaceVisitKey}:${componentName}`;
+
+  return (
+    <SettleEaseErrorBoundary componentName={componentName} size={size} resetKey={resetKey}>
+      <WindowsExperienceCrashGate componentName={componentName}>
+        {children}
+      </WindowsExperienceCrashGate>
+    </SettleEaseErrorBoundary>
   );
 }
 
@@ -241,89 +267,103 @@ export default function DashboardView({
   // Empty state: no people or expenses
   if (!isLoading && people.length === 0 && expenses.length === 0) {
     return (
-      <AppEmptyState
-        icon={Sparkles}
-        title="Welcome to SettleEase"
-        description='Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.'
-        size="page"
-      />
+      <DashboardBugBoundary componentName="Home Empty State" size="large">
+        <AppEmptyState
+          icon={Sparkles}
+          title="Welcome to SettleEase"
+          description='Navigate to "Manage People" to add participants, then to "Add Expense" to start managing your group finances.'
+          size="page"
+        />
+      </DashboardBugBoundary>
     );
   }
 
   if (!isLoading && expenses.length === 0 && settlementPayments.length === 0) {
     return (
-      <AppEmptyState
-        icon={FileText}
-        title="Ready to Settle?"
-        description='Navigate to "Add Expense" to start managing your group finances.'
-        secondaryDescription={people.length === 0 ? 'First, go to "Manage People" to add participants to your group.' : undefined}
-        size="page"
-      />
+      <DashboardBugBoundary componentName="Home Ready State" size="large">
+        <AppEmptyState
+          icon={FileText}
+          title="Ready to Settle?"
+          description='Navigate to "Add Expense" to start managing your group finances.'
+          secondaryDescription={people.length === 0 ? 'First, go to "Manage People" to add participants to your group.' : undefined}
+          size="page"
+        />
+      </DashboardBugBoundary>
     );
   }
 
   return (
     <div className="h-full flex-1 flex flex-col space-y-6 md:space-y-8 min-h-0">
       {/* Manual Override Alert — no visual change needed, themed by CSS */}
-      <ManualOverrideAlert
-        overrides={manualOverrides}
-        peopleMap={peopleMap}
-        onActionComplete={onActionComplete}
-        userRole={userRole}
-      />
-
-      <SettlementSummary
-        simplifiedTransactions={simplifiedTransactions}
-        pairwiseTransactions={pairwiseTransactions}
-        allExpenses={expenses}
-        people={people}
-        peopleMap={peopleMap}
-        settlementPayments={settlementPayments}
-        manualOverrides={manualOverrides}
-        onMarkAsPaid={handleMarkAsPaid}
-        onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
-        onViewExpenseDetails={handleExpenseCardClick}
-        onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
-        onCreateBudget={() => setIsBudgetModalOpen(true)}
-        getCategoryIconFromName={getCategoryIconFromName}
-        categories={dynamicCategories}
-        userRole={userRole}
-        currentUserId={currentUserId}
-        isLoadingPeople={isLoadingPeople}
-        isLoadingExpenses={isLoadingExpenses}
-        isLoadingSettlements={isLoadingSettlements}
-      />
-      <div className="flex-1 flex flex-col">
-        <ExpenseLog
-          expenses={expenses}
-          settlementPayments={settlementPayments}
+      <DashboardBugBoundary componentName="Home Manual Override Alert" size="small">
+        <ManualOverrideAlert
+          overrides={manualOverrides}
           peopleMap={peopleMap}
-          handleExpenseCardClick={handleExpenseCardClick}
+          onActionComplete={onActionComplete}
+          userRole={userRole}
+        />
+      </DashboardBugBoundary>
+
+      <DashboardBugBoundary componentName="Home Settlement Summary" size="medium">
+        <SettlementSummary
+          simplifiedTransactions={simplifiedTransactions}
+          pairwiseTransactions={pairwiseTransactions}
+          allExpenses={expenses}
+          people={people}
+          peopleMap={peopleMap}
+          settlementPayments={settlementPayments}
+          manualOverrides={manualOverrides}
+          onMarkAsPaid={handleMarkAsPaid}
+          onUnmarkSettlementPayment={handleUnmarkSettlementPayment}
+          onViewExpenseDetails={handleExpenseCardClick}
+          onViewExpenseDetailsFromStep2={handleExpenseClickFromStep2}
+          onCreateBudget={() => setIsBudgetModalOpen(true)}
           getCategoryIconFromName={getCategoryIconFromName}
           categories={dynamicCategories}
+          userRole={userRole}
+          currentUserId={currentUserId}
+          isLoadingPeople={isLoadingPeople}
           isLoadingExpenses={isLoadingExpenses}
           isLoadingSettlements={isLoadingSettlements}
         />
+      </DashboardBugBoundary>
+      <div className="flex-1 flex flex-col">
+        <DashboardBugBoundary componentName="Home Expense Log" size="medium">
+          <ExpenseLog
+            expenses={expenses}
+            settlementPayments={settlementPayments}
+            peopleMap={peopleMap}
+            handleExpenseCardClick={handleExpenseCardClick}
+            getCategoryIconFromName={getCategoryIconFromName}
+            categories={dynamicCategories}
+            isLoadingExpenses={isLoadingExpenses}
+            isLoadingSettlements={isLoadingSettlements}
+          />
+        </DashboardBugBoundary>
       </div>
       {selectedExpenseForModal && (
-        <ExpenseDetailModal
-          expense={selectedExpenseForModal}
-          isOpen={isExpenseModalOpen}
-          onOpenChange={setIsExpenseModalOpen}
-          peopleMap={peopleMap}
-          getCategoryIconFromName={getCategoryIconFromName}
-          categories={dynamicCategories}
-          showBackButton={expenseModalOpenedFromStep2}
-          onBack={handleBackFromExpenseModal}
-        />
+        <DashboardBugBoundary componentName="Home Expense Detail Modal" size="medium">
+          <ExpenseDetailModal
+            expense={selectedExpenseForModal}
+            isOpen={isExpenseModalOpen}
+            onOpenChange={setIsExpenseModalOpen}
+            peopleMap={peopleMap}
+            getCategoryIconFromName={getCategoryIconFromName}
+            categories={dynamicCategories}
+            showBackButton={expenseModalOpenedFromStep2}
+            onBack={handleBackFromExpenseModal}
+          />
+        </DashboardBugBoundary>
       )}
-      <CreateBudgetModal
-        isOpen={isBudgetModalOpen}
-        onOpenChange={setIsBudgetModalOpen}
-        categories={dynamicCategories}
-        getCategoryIconFromName={getCategoryIconFromName}
-        userRole={userRole}
-      />
+      <DashboardBugBoundary componentName="Home Budget Modal" size="medium">
+        <CreateBudgetModal
+          isOpen={isBudgetModalOpen}
+          onOpenChange={setIsBudgetModalOpen}
+          categories={dynamicCategories}
+          getCategoryIconFromName={getCategoryIconFromName}
+          userRole={userRole}
+        />
+      </DashboardBugBoundary>
     </div>
   );
 }

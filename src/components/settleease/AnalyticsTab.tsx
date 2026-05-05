@@ -49,6 +49,11 @@ import {
   SkeletonToolbar,
 } from "./SkeletonLayouts";
 import AppEmptyState from "./AppEmptyState";
+import SettleEaseErrorBoundary from "../ui/SettleEaseErrorBoundary";
+import {
+  WindowsExperienceCrashGate,
+  useWindowsExperience,
+} from "./WindowsExperience";
 
 interface AnalyticsTabProps {
   expenses: Expense[];
@@ -82,6 +87,25 @@ const GRANULARITY_OPTIONS: Array<{ value: AnalyticsGranularity; label: string }>
 
 const panelClass = "min-w-0 overflow-hidden rounded-lg border bg-card/50 p-3 sm:p-4 shadow-sm";
 const insetTileClass = "rounded-lg border bg-background p-3";
+
+function AnalyticsBugBoundary({
+  componentName,
+  children,
+}: {
+  componentName: string;
+  children: React.ReactNode;
+}) {
+  const windowsExperience = useWindowsExperience();
+  const resetKey = `${windowsExperience.enabled}:${windowsExperience.generation}:${windowsExperience.surfaceVisitKey}:${componentName}`;
+
+  return (
+    <SettleEaseErrorBoundary componentName={componentName} size="medium" resetKey={resetKey}>
+      <WindowsExperienceCrashGate componentName={componentName}>
+        {children}
+      </WindowsExperienceCrashGate>
+    </SettleEaseErrorBoundary>
+  );
+}
 
 export default function AnalyticsTab({
   expenses,
@@ -162,59 +186,73 @@ export default function AnalyticsTab({
 
       <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
         <div className="min-w-0 space-y-4 sm:space-y-5">
-          <AnalyticsToolbar
-            mode={mode}
-            datePreset={datePreset}
-            onDatePresetChange={setDatePreset}
-            granularity={granularity}
-            onGranularityChange={setGranularity}
-            selectedPersonId={selectedPersonId}
-            onSelectedPersonIdChange={setSelectedPersonId}
-            people={people}
-            peopleMap={peopleMap}
-            isLoadingPeople={isLoadingPeople}
-          />
+          <AnalyticsBugBoundary componentName="Analytics Filters">
+            <AnalyticsToolbar
+              mode={mode}
+              datePreset={datePreset}
+              onDatePresetChange={setDatePreset}
+              granularity={granularity}
+              onGranularityChange={setGranularity}
+              selectedPersonId={selectedPersonId}
+              onSelectedPersonIdChange={setSelectedPersonId}
+              people={people}
+              peopleMap={peopleMap}
+              isLoadingPeople={isLoadingPeople}
+            />
+          </AnalyticsBugBoundary>
 
           {!expenses.length ? (
             <>
               <Separator />
-              <AppEmptyState
-                icon={BarChart4}
-                title="No analytics yet"
-                description="Add expenses to unlock the dashboard."
-                size="page"
-              />
+              <AnalyticsBugBoundary componentName="Analytics Empty State">
+                <AppEmptyState
+                  icon={BarChart4}
+                  title="No analytics yet"
+                  description="Add expenses to unlock the dashboard."
+                  size="page"
+                />
+              </AnalyticsBugBoundary>
             </>
           ) : (
             <>
               <Separator />
 
               <AnalyticsSection id="overview" icon={BarChart4} title="Overview">
-                <OverviewSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+                <AnalyticsBugBoundary componentName="Analytics Overview Metrics">
+                  <OverviewSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+                </AnalyticsBugBoundary>
               </AnalyticsSection>
 
               <Separator />
 
               <AnalyticsSection id="money-flow" icon={CircleDollarSign} title="Money Flow">
-                <MoneyFlowSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+                <AnalyticsBugBoundary componentName="Analytics Money Flow">
+                  <MoneyFlowSection model={model} mode={mode} selectedPersonName={selectedPersonName} />
+                </AnalyticsBugBoundary>
               </AnalyticsSection>
 
               <Separator />
 
               <AnalyticsSection id="trends" icon={LineChart} title="Trends">
-                <TrendsSection model={model} mode={mode} getCategoryIconFromName={getCategoryIconFromName} />
+                <AnalyticsBugBoundary componentName="Analytics Trend Charts">
+                  <TrendsSection model={model} mode={mode} getCategoryIconFromName={getCategoryIconFromName} />
+                </AnalyticsBugBoundary>
               </AnalyticsSection>
 
               <Separator />
 
               <AnalyticsSection id="activity" icon={Activity} title="Activity">
-                <ActivitySection model={model} />
+                <AnalyticsBugBoundary componentName="Analytics Activity Charts">
+                  <ActivitySection model={model} />
+                </AnalyticsBugBoundary>
               </AnalyticsSection>
 
               <Separator />
 
               <AnalyticsSection id="records" icon={ReceiptText} title="Records">
-                <RecordsSection model={model} getCategoryIconFromName={getCategoryIconFromName} />
+                <AnalyticsBugBoundary componentName="Analytics Records">
+                  <RecordsSection model={model} getCategoryIconFromName={getCategoryIconFromName} />
+                </AnalyticsBugBoundary>
               </AnalyticsSection>
             </>
           )}

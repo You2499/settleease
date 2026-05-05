@@ -51,6 +51,11 @@ import {
   SkeletonToolbar,
 } from "./SkeletonLayouts";
 import AppEmptyState from "./AppEmptyState";
+import SettleEaseErrorBoundary from "../ui/SettleEaseErrorBoundary";
+import {
+  WindowsExperienceCrashGate,
+  useWindowsExperience,
+} from "./WindowsExperience";
 
 const ExpenseDetailModal = dynamic(() => import("./ExpenseDetailModal"), {
   ssr: false,
@@ -80,6 +85,25 @@ const DATE_PRESETS: Array<{ value: HealthDatePreset; label: string }> = [
 
 const panelClass = "min-w-0 overflow-hidden rounded-lg border bg-card/50 p-3 sm:p-4 shadow-sm";
 const insetTileClass = "rounded-lg border bg-background p-3";
+
+function HealthBugBoundary({
+  componentName,
+  children,
+}: {
+  componentName: string;
+  children: React.ReactNode;
+}) {
+  const windowsExperience = useWindowsExperience();
+  const resetKey = `${windowsExperience.enabled}:${windowsExperience.generation}:${windowsExperience.surfaceVisitKey}:${componentName}`;
+
+  return (
+    <SettleEaseErrorBoundary componentName={componentName} size="medium" resetKey={resetKey}>
+      <WindowsExperienceCrashGate componentName={componentName}>
+        {children}
+      </WindowsExperienceCrashGate>
+    </SettleEaseErrorBoundary>
+  );
+}
 
 interface SurfaceChromeState {
   status: HealthSurfaceStatus;
@@ -1160,58 +1184,70 @@ export default function HealthTab({
 
         <CardContent className="flex-1 min-h-0 min-w-0 overflow-x-hidden overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6 pt-2">
           <div className="min-w-0 space-y-4 sm:space-y-5">
-            <HealthToolbar
-              mode={mode}
-              datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
-              selectedPersonId={selectedPersonId}
-              onSelectedPersonIdChange={setSelectedPersonId}
-              people={people}
-              peopleMap={peopleMap}
-              isLoadingPeople={isLoadingPeople}
-            />
+            <HealthBugBoundary componentName="Health Filters">
+              <HealthToolbar
+                mode={mode}
+                datePreset={datePreset}
+                onDatePresetChange={setDatePreset}
+                selectedPersonId={selectedPersonId}
+                onSelectedPersonIdChange={setSelectedPersonId}
+                people={people}
+                peopleMap={peopleMap}
+                isLoadingPeople={isLoadingPeople}
+              />
+            </HealthBugBoundary>
 
             {!expenses.length ? (
               <>
                 <Separator />
-                <HealthEmptyState />
+                <HealthBugBoundary componentName="Health Empty State">
+                  <HealthEmptyState />
+                </HealthBugBoundary>
               </>
             ) : (
               <>
                 <Separator />
 
                 <HealthSection icon={Sparkles} title="Coverage">
-                  <CoverageSection
-                    mode={mode}
-                    selectedPersonId={selectedPersonId}
-                    startDate={startDate}
-                    endDate={endDate}
-                  />
+                  <HealthBugBoundary componentName="Health Coverage">
+                    <CoverageSection
+                      mode={mode}
+                      selectedPersonId={selectedPersonId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  </HealthBugBoundary>
                 </HealthSection>
 
                 <Separator />
 
                 <HealthSection icon={Heart} title="Overview">
                   <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1.08fr)_minmax(0,0.92fr)]">
-                    <OverviewCaloriesPanel
-                      mode={mode}
-                      selectedPersonId={selectedPersonId}
-                      startDate={startDate}
-                      endDate={endDate}
-                    />
+                    <HealthBugBoundary componentName="Health Calories">
+                      <OverviewCaloriesPanel
+                        mode={mode}
+                        selectedPersonId={selectedPersonId}
+                        startDate={startDate}
+                        endDate={endDate}
+                      />
+                    </HealthBugBoundary>
                     <div className="grid gap-4">
+                      <HealthBugBoundary componentName="Health Macros">
                       <OverviewMacrosPanel
                         mode={mode}
                         selectedPersonId={selectedPersonId}
                         startDate={startDate}
                         endDate={endDate}
                       />
+                      </HealthBugBoundary>
+                      <HealthBugBoundary componentName="Health Alcohol">
                       <OverviewAlcoholPanel
                         mode={mode}
                         selectedPersonId={selectedPersonId}
                         startDate={startDate}
                         endDate={endDate}
                       />
+                      </HealthBugBoundary>
                     </div>
                   </div>
                 </HealthSection>
@@ -1219,23 +1255,27 @@ export default function HealthTab({
                 <Separator />
 
                 <HealthSection icon={CalendarDays} title="Trends">
-                  <TrendsSection
-                    mode={mode}
-                    selectedPersonId={selectedPersonId}
-                    startDate={startDate}
-                    endDate={endDate}
-                  />
+                  <HealthBugBoundary componentName="Health Trend Charts">
+                    <TrendsSection
+                      mode={mode}
+                      selectedPersonId={selectedPersonId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  </HealthBugBoundary>
                 </HealthSection>
 
                 <Separator />
 
                 <HealthSection icon={Sparkles} title="Sources">
-                  <SourcesSection
-                    mode={mode}
-                    selectedPersonId={selectedPersonId}
-                    startDate={startDate}
-                    endDate={endDate}
-                  />
+                  <HealthBugBoundary componentName="Health Sources">
+                    <SourcesSection
+                      mode={mode}
+                      selectedPersonId={selectedPersonId}
+                      startDate={startDate}
+                      endDate={endDate}
+                    />
+                  </HealthBugBoundary>
                 </HealthSection>
 
                 {mode === "group" ? (
@@ -1243,12 +1283,14 @@ export default function HealthTab({
                     <Separator />
 
                     <HealthSection icon={Users} title="People">
-                      <PeopleSection
-                        mode={mode}
-                        selectedPersonId={selectedPersonId}
-                        startDate={startDate}
-                        endDate={endDate}
-                      />
+                      <HealthBugBoundary componentName="Health People">
+                        <PeopleSection
+                          mode={mode}
+                          selectedPersonId={selectedPersonId}
+                          startDate={startDate}
+                          endDate={endDate}
+                        />
+                      </HealthBugBoundary>
                     </HealthSection>
                   </>
                 ) : null}
@@ -1256,13 +1298,15 @@ export default function HealthTab({
                 <Separator />
 
                 <HealthSection icon={Heart} title="Ledger">
-                  <LedgerSection
-                    mode={mode}
-                    selectedPersonId={selectedPersonId}
-                    startDate={startDate}
-                    endDate={endDate}
-                    onOpenExpense={setSelectedExpenseId}
-                  />
+                  <HealthBugBoundary componentName="Health Ledger">
+                    <LedgerSection
+                      mode={mode}
+                      selectedPersonId={selectedPersonId}
+                      startDate={startDate}
+                      endDate={endDate}
+                      onOpenExpense={setSelectedExpenseId}
+                    />
+                  </HealthBugBoundary>
                 </HealthSection>
               </>
             )}
@@ -1271,16 +1315,18 @@ export default function HealthTab({
       </Card>
 
       {selectedExpense ? (
-        <ExpenseDetailModal
-          expense={selectedExpense}
-          isOpen={Boolean(selectedExpense)}
-          onOpenChange={(open) => {
-            if (!open) setSelectedExpenseId(null);
-          }}
-          peopleMap={peopleMap}
-          getCategoryIconFromName={getCategoryIconFromName}
-          categories={dynamicCategories}
-        />
+        <HealthBugBoundary componentName="Health Expense Detail">
+          <ExpenseDetailModal
+            expense={selectedExpense}
+            isOpen={Boolean(selectedExpense)}
+            onOpenChange={(open) => {
+              if (!open) setSelectedExpenseId(null);
+            }}
+            peopleMap={peopleMap}
+            getCategoryIconFromName={getCategoryIconFromName}
+            categories={dynamicCategories}
+          />
+        </HealthBugBoundary>
       ) : null}
     </>
   );
