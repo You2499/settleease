@@ -1,13 +1,6 @@
 "use client";
 
 import React from 'react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 import { Keyboard } from 'lucide-react';
 import {
   SETTLEEASE_SHORTCUTS,
@@ -16,6 +9,10 @@ import {
   type ShortcutDefinition,
   type ShortcutGroup,
 } from '@/lib/settleease/shortcuts';
+import SettleEaseDialog, {
+  SettleEaseModalBody,
+  SettleEaseModalHeader,
+} from './SettleEaseDialog';
 
 interface KeyboardShortcutsModalProps {
   isOpen: boolean;
@@ -53,24 +50,20 @@ export default function KeyboardShortcutsModal({ isOpen, onOpenChange }: Keyboar
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-display-card">
-            <Keyboard className="h-5 w-5" />
-            Keyboard Shortcuts
-          </DialogTitle>
-          <DialogDescription className="text-body-standard">
-            Speed up your workflow with these shortcuts
-          </DialogDescription>
-        </DialogHeader>
-        <div className="max-h-[65vh] space-y-5 overflow-y-auto py-4 pr-1">
+    <SettleEaseDialog open={isOpen} onOpenChange={onOpenChange} className="sm:max-w-lg">
+      <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+        <SettleEaseModalHeader
+          icon={Keyboard}
+          title="Keyboard Shortcuts"
+          description="Speed up your workflow with these shortcuts."
+        />
+        <SettleEaseModalBody className="space-y-4">
           {(["navigation", "actions", "focus"] as ShortcutGroup[]).map((group) => (
             <section key={group} className="space-y-2">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 {sectionLabels[group]}
               </h3>
-              <div className="overflow-hidden rounded-lg border border-border">
+              <div className="overflow-hidden rounded-xl border border-border bg-background shadow-sm">
                 {groupedShortcuts[group].map(({ shortcut, keys }) => (
                   <div
                     key={shortcut.id}
@@ -102,8 +95,8 @@ export default function KeyboardShortcutsModal({ isOpen, onOpenChange }: Keyboar
               </div>
             </section>
           ))}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SettleEaseModalBody>
+      </div>
+    </SettleEaseDialog>
   );
 }

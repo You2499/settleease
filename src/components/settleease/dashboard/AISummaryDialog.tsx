@@ -10,13 +10,6 @@ import {
   ReceiptText,
 } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -43,6 +36,10 @@ import {
   SkeletonSectionHeader,
 } from "../SkeletonLayouts";
 import { GeminiMark } from "../BrandAssets";
+import SettleEaseDialog, {
+  SettleEaseModalBody,
+  SettleEaseModalHeader,
+} from "../SettleEaseDialog";
 
 export interface AISummaryActionResult {
   source: "cached" | "generated";
@@ -182,8 +179,8 @@ function buildCompactMarkdown({
 
 function LoadingState() {
   return (
-    <LoadingRegion label="Loading AI settlement summary" className="space-y-4 pt-2">
-      <section className="rounded-lg border bg-card p-4">
+    <LoadingRegion label="Loading AI settlement summary" className="space-y-4">
+      <section className="rounded-xl border bg-card p-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-5 w-44" />
@@ -203,7 +200,7 @@ function LoadingState() {
 
       <section className="space-y-3">
         <SkeletonSectionHeader width="w-28" />
-        <div className="divide-y rounded-lg border bg-background">
+        <div className="divide-y rounded-xl border bg-background">
           {[0, 1].map((item) => (
             <div key={item} className="p-3">
               <div className="flex items-start justify-between gap-3">
@@ -228,17 +225,17 @@ function LoadingState() {
         ))}
       </section>
 
-      <section className="rounded-lg border bg-background p-4">
-        <div className="flex items-center gap-4">
+      <section className="rounded-xl border bg-background p-3">
+        <div className="flex items-center gap-3">
           <Skeleton className="h-24 w-24 shrink-0 rounded-full" />
           <div className="min-w-0 flex-1 space-y-2">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-full max-w-sm" />
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3">
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
+        <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3">
+          <Skeleton className="h-12 rounded-xl" />
+          <Skeleton className="h-12 rounded-xl" />
         </div>
         <div className="mt-5 space-y-4">
           {[0, 1].map((group) => (
@@ -357,31 +354,35 @@ export default function AISummaryDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto no-scrollbar">
-        <DialogHeader className="border-b pb-3 pr-8">
-          <DialogTitle className="flex items-center gap-2 text-xl text-primary sm:text-2xl">
+    <SettleEaseDialog open={open} onOpenChange={onOpenChange} className="sm:max-w-xl">
+      <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+        <SettleEaseModalHeader
+          title={(
+            <span className="flex items-center gap-2">
             <GeminiMark size={20} />
             AI Settlement Summary
-          </DialogTitle>
-          <DialogDescription className="flex flex-wrap items-center gap-2 pt-1 text-left">
+            </span>
+          )}
+          description={(
+            <span className="flex flex-wrap items-center gap-2">
             <span>{activeModelDisplayName}</span>
             <Badge variant={source === "cached" ? "outline" : "secondary"} className="h-5 rounded">
               {sourceLabel}
             </Badge>
-          </DialogDescription>
-        </DialogHeader>
+            </span>
+          )}
+        />
 
-        <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pt-0">
+        <SettleEaseModalBody className="no-scrollbar">
           {error && !summary ? (
-            <div className="mt-2 rounded-lg border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
+            <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               {error}
             </div>
           ) : !summary ? (
             <LoadingState />
           ) : (
-            <div className="space-y-4 pt-2 sm:space-y-6">
-              <section className="rounded-lg border bg-card p-4">
+            <div className="space-y-4">
+              <section className="rounded-xl border bg-card p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <h3 className="text-base font-semibold text-foreground">What needs attention</h3>
@@ -410,11 +411,11 @@ export default function AISummaryDialog({
                 </div>
 
                 {paymentRows.length === 0 ? (
-                  <div className="rounded-lg border bg-background p-4 text-sm text-muted-foreground">
+                  <div className="rounded-xl border bg-background p-3 text-sm text-muted-foreground">
                     No outstanding payments.
                   </div>
                 ) : (
-                  <div className="divide-y rounded-lg border bg-background">
+                  <div className="divide-y rounded-xl border bg-background">
                     {paymentRows.map((payment, index) => (
                       <div key={`${payment.from}-${payment.to}-${index}`} className="p-3">
                         <div className="flex items-start justify-between gap-3">
@@ -438,7 +439,7 @@ export default function AISummaryDialog({
 
               <section className="grid grid-cols-2 gap-2">
                 {metricCards.map((metric) => (
-                  <div key={metric.label} className="min-w-0 rounded-lg border bg-background p-3">
+                  <div key={metric.label} className="min-w-0 rounded-xl border bg-background p-3">
                     <p className="text-[11px] font-medium leading-snug text-muted-foreground">{metric.label}</p>
                     <p className="mt-1 break-words text-base font-semibold leading-tight text-foreground">
                       {metric.value}
@@ -447,10 +448,10 @@ export default function AISummaryDialog({
                 ))}
               </section>
 
-              <section className="rounded-lg border bg-background p-4">
+              <section className="rounded-xl border bg-background p-3">
                 <SettlementDonut percent={progress.percentSettled} />
 
-                <div className="mt-4 grid grid-cols-2 gap-2 rounded-lg bg-muted/40 p-3 text-sm">
+                <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-muted/40 p-3 text-sm">
                   <div>
                     <p className="text-xs text-muted-foreground">Settled</p>
                     <p className="font-semibold">{formatCurrency(progress.alreadySettled)}</p>
@@ -527,7 +528,7 @@ export default function AISummaryDialog({
               </section>
 
               {(nextActions.length > 0 || exceptionItems.length > 0) && (
-                <section className="rounded-lg border bg-background p-4">
+                <section className="rounded-xl border bg-background p-3">
                   {nextActions.length > 0 && (
                     <>
                       <h3 className="text-sm font-semibold text-foreground">Next best actions</h3>
@@ -555,8 +556,8 @@ export default function AISummaryDialog({
               <section
                 className={
                   hasDataQualityWarnings
-                    ? "rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
-                    : "rounded-lg border border-emerald-300 bg-emerald-50 p-4 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100"
+                    ? "rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
+                    : "rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100"
                 }
               >
                 <div className="mb-2 flex items-center gap-2">
@@ -587,8 +588,8 @@ export default function AISummaryDialog({
               Refreshing summary...
             </div>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SettleEaseModalBody>
+      </div>
+    </SettleEaseDialog>
   );
 }

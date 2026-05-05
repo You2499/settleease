@@ -9,16 +9,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Label } from '@/components/ui/label';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { PlusCircle, Trash2, Pencil, Save, Ban, Users, AlertTriangle, HandCoins } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Person } from '@/lib/settleease';
@@ -30,6 +20,13 @@ import {
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
 import AppEmptyState from './AppEmptyState';
+import {
+  SettleEaseAlertDialog,
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalNotice,
+} from './SettleEaseDialog';
 
 interface ManagePeopleTabProps {
   people: Person[];
@@ -240,59 +237,45 @@ export default function ManagePeopleTab({
       </Card>
 
       {personToDelete && (
-        <AlertDialog open={personToDelete !== null} onOpenChange={(open) => !open && setPersonToDelete(null)}>
-          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
-            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-              <div>
-                <AlertDialogHeader className="pb-4">
-                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
-                    Remove Person
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-
-                <div className="space-y-3">
-                  {/* Warning Section */}
-                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#EA4335]/30 dark:border-[#EA4335]/20 rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 bg-[#EA4335]/10 dark:bg-[#EA4335]/5">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
-                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                          Remove Person
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        This action will attempt to remove <strong>{personToDelete.name}</strong> from the group.
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        If this person is involved in any expenses or settlements, removal will be blocked. This action cannot be undone if successful.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col space-y-2 pt-4">
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleExecuteRemovePerson}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Removing...' : `Remove ${personToDelete.name}`}
-                  </button>
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => setPersonToDelete(null)}
-                    disabled={isLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        <SettleEaseAlertDialog open={personToDelete !== null} onOpenChange={(open) => !open && setPersonToDelete(null)}>
+          <SettleEaseModalHeader
+            kind="alert"
+            icon={AlertTriangle}
+            tone="danger"
+            title="Remove Person"
+            description="SettleEase will block removal if this person is referenced by expenses or settlements."
+          />
+          <SettleEaseModalBody>
+            <SettleEaseModalNotice tone="danger">
+              <p>
+                This action will attempt to remove <strong>{personToDelete.name}</strong> from the group.
+              </p>
+              <p className="mt-2">
+                If successful, this action cannot be undone.
+              </p>
+            </SettleEaseModalNotice>
+          </SettleEaseModalBody>
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                className="h-10 rounded-full"
+                onClick={() => setPersonToDelete(null)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-10 rounded-full"
+                onClick={handleExecuteRemovePerson}
+                disabled={isLoading}
+              >
+                {isLoading ? 'Removing...' : `Remove ${personToDelete.name}`}
+              </Button>
             </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </SettleEaseModalFooter>
+        </SettleEaseAlertDialog>
       )}
     </>
   );

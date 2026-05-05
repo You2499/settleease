@@ -1,9 +1,14 @@
 import React, { useState, useMemo, Suspense } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Shapes } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import lucideMetadata from '@/lib/lucide-icons-metadata.json';
+import SettleEaseDialog, {
+  SettleEaseModalHeader,
+  SettleEaseModalSection,
+  SettleEaseModalToolBody,
+} from './SettleEaseDialog';
 
 const ICON_SIZE = 32;
 const PREVIEW_SIZE = 96;
@@ -94,40 +99,57 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar"
-        hideCloseButton={false}
-      >
-        <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-          <div className="space-y-3">
-            {/* Search Section */}
-            <div className="mb-4">
-              <Input
-                autoFocus
-                placeholder={`Search ${filteredIconNames.length} icons ...`}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-full text-sm h-10 px-4 rounded-lg border border-border bg-muted dark:bg-neutral-800 dark:border-neutral-700 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-            </div>
+    <SettleEaseDialog
+      open={open}
+      onOpenChange={(v) => !v && onClose()}
+      className="h-[calc(100dvh-1rem)] sm:h-[760px] sm:max-h-[calc(100dvh-2rem)] sm:max-w-5xl"
+    >
+      <div className="flex h-full min-h-0 flex-col">
+        <SettleEaseModalHeader
+          icon={Shapes}
+          tone="brand"
+          title="Choose an icon"
+          description="Search the Lucide library and pick the symbol for this category."
+        />
 
-            {/* Main Content: Icon Grid + Details Panel */}
-            <div className="flex flex-col md:flex-row h-[60vh] overflow-hidden gap-3">
-              {/* Icon Grid Section */}
-              <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden flex-1">
-                <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                  <div className="flex items-center space-x-2">
-                    <svg className="h-4 w-4 text-[#34A853]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                    </svg>
-                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                      Icon Library
-                    </span>
-                  </div>
+        <SettleEaseModalToolBody className="flex flex-col gap-3">
+          <div className="relative shrink-0">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              autoFocus
+              placeholder={`Search ${filteredIconNames.length} icons ...`}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-10 rounded-full border-border bg-background pl-10 text-sm"
+            />
+          </div>
+
+          {SelectedIconComp && (
+            <SettleEaseModalSection className="flex shrink-0 items-center gap-3 p-3 md:hidden">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border bg-muted/25">
+                <Suspense fallback={<Skeleton className="h-8 w-8 rounded" />}>
+                  <SelectedIconComp width={32} height={32} className="text-primary" />
+                </Suspense>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{toKebabCase(selectedIcon)}</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  {selectedMeta?.tags?.slice(0, 3).join(", ") || "Selected preview"}
+                </p>
+              </div>
+            </SettleEaseModalSection>
+          )}
+
+          <div className="grid min-h-0 flex-1 gap-3 overflow-hidden md:grid-cols-[minmax(0,1fr)_320px]">
+            <SettleEaseModalSection className="flex min-h-0 flex-col overflow-hidden p-0">
+              <div className="shrink-0 border-b bg-muted/30 px-3 py-2.5">
+                <div className="flex items-center space-x-2">
+                  <Shapes className="h-4 w-4" />
+                  <span className="font-medium text-sm text-foreground">Icon Library</span>
                 </div>
-                <div className="bg-white/90 dark:bg-gray-800/90 h-full overflow-y-auto p-4 no-scrollbar">
-                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-3 no-scrollbar">
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7">
                     {filteredIconNames.map((iconName) => {
                       const Icon = getLucideIconComponent(iconName);
                       return (
@@ -137,26 +159,31 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                           onMouseEnter={() => setPreviewIcon(iconName)}
                           onFocus={() => setPreviewIcon(iconName)}
                           onMouseLeave={() => setPreviewIcon(null)}
-                          className={`group flex flex-col items-center justify-center p-2 rounded-lg transition outline-none border-2 border-transparent focus-visible:border-primary hover:border-primary ${previewIcon === iconName ? 'border-primary' : ''}`}
+                          className={`group flex min-w-0 flex-col items-center justify-center rounded-lg border border-transparent p-2 outline-none transition hover:border-primary/50 hover:bg-muted/35 focus-visible:border-primary ${previewIcon === iconName ? 'border-primary bg-muted/45' : ''}`}
                           title={iconName}
                           type="button"
                         >
                           <Suspense fallback={<Skeleton className="rounded" style={{ width: ICON_SIZE, height: ICON_SIZE }} />}>
                             <Icon width={ICON_SIZE} height={ICON_SIZE} className="text-foreground group-hover:text-primary transition-colors" />
                           </Suspense>
-                          <span className="mt-1 text-xs text-muted-foreground truncate w-full text-center">{iconName}</span>
+                          <span className="mt-1 w-full truncate text-center text-xs text-muted-foreground">{iconName}</span>
                         </button>
                       );
                     })}
                   </div>
+              </div>
+            </SettleEaseModalSection>
+
+            <SettleEaseModalSection className="hidden min-h-0 overflow-hidden p-0 md:flex md:flex-col">
+              <div className="shrink-0 border-b bg-muted/30 px-3 py-2.5">
+                <div className="flex items-center space-x-2">
+                  <Search className="h-4 w-4" />
+                  <span className="font-medium text-sm text-foreground">Preview</span>
                 </div>
               </div>
-
-              {/* Details/Preview Panel */}
-              <div className="w-full md:w-[340px] flex-shrink-0 bg-white dark:bg-gray-900 border border-border rounded-lg shadow-sm">
-                <div className="flex flex-col items-center justify-center min-h-[220px] h-full overflow-y-auto no-scrollbar p-6">
-                  <div className="w-full h-full">
-                    <div className="rounded-lg bg-card/50 shadow-sm border border-border p-4 flex flex-col items-center h-full justify-center">
+              <div className="min-h-0 flex-1 overflow-y-auto p-3 no-scrollbar">
+                  <div className="h-full w-full">
+                    <div className="flex min-h-full flex-col items-center justify-center rounded-xl border bg-muted/25 p-3 shadow-sm">
                       {SelectedIconComp && (
                         <div className="flex flex-col items-center gap-2 w-full">
                           <Suspense fallback={<Skeleton className="rounded-lg" style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }} />}>
@@ -186,12 +213,11 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
                       )}
                     </div>
                   </div>
-                </div>
               </div>
-            </div>
+            </SettleEaseModalSection>
           </div>
-        </div>
-      </DialogContent>
+        </SettleEaseModalToolBody>
+      </div>
       <style jsx global>{`
         .no-scrollbar::-webkit-scrollbar {
           display: none !important;
@@ -201,6 +227,6 @@ export default function IconPickerModal({ open, onClose, onSelect, initialSearch
           scrollbar-width: none !important;
         }
       `}</style>
-    </Dialog>
+    </SettleEaseDialog>
   );
 }

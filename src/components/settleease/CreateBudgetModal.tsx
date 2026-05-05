@@ -32,12 +32,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -64,6 +58,9 @@ import type {
   SelectedBudgetLine,
   UserRole,
 } from "@/lib/settleease/types";
+import SettleEaseDialog, {
+  SettleEaseModalHeader,
+} from "./SettleEaseDialog";
 
 const ALL_CATEGORIES_VALUE = "__all__";
 const UNCATEGORIZED_CATEGORY = "Uncategorized";
@@ -577,17 +574,19 @@ export default function CreateBudgetModal({
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-hidden p-0 sm:w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)] lg:max-w-[1400px] xl:max-w-[1500px]">
+    <SettleEaseDialog
+      open={isOpen}
+      onOpenChange={onOpenChange}
+      className="h-[calc(100dvh-1rem)] max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] sm:max-w-[calc(100vw-2rem)] lg:h-[calc(100dvh-2rem)] lg:max-h-[calc(100dvh-2rem)] lg:max-w-[1400px] xl:max-w-[1500px]"
+    >
         <div className="flex h-full min-h-0 flex-col">
-          <DialogHeader className="shrink-0 border-b px-4 pb-3 pr-14 pt-4 sm:px-6 sm:pr-16">
-            <DialogTitle className="flex min-w-0 items-center text-xl text-primary sm:text-2xl">
-              <Calculator className="mr-2 h-5 w-5" />
-              <span className="min-w-0 truncate">Create Your Budget</span>
-            </DialogTitle>
-          </DialogHeader>
+          <SettleEaseModalHeader
+            icon={Calculator}
+            title="Create Your Budget"
+            description="Build a rough bill estimate from catalog items, fees, tax, and VAT."
+          />
 
-          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-6 lg:overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 lg:overflow-hidden">
             <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] xl:grid-cols-[minmax(0,1fr)_minmax(430px,520px)]">
               <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:space-y-0 lg:gap-4">
                 <Card className="min-w-0 overflow-hidden lg:flex lg:min-h-0 lg:flex-col">
@@ -1039,7 +1038,6 @@ export default function CreateBudgetModal({
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </SettleEaseDialog>
   );
 }

@@ -2,14 +2,15 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { AlertTriangle, CheckCircle, UserPlus, LogIn, HandCoins } from 'lucide-react';
 import { GoogleMark } from './BrandAssets';
+import SettleEaseDialog, {
+    SettleEaseModalBody,
+    SettleEaseModalFooter,
+    SettleEaseModalHeader,
+    SettleEaseModalNotice,
+    SettleEaseModalSection,
+} from './SettleEaseDialog';
 
 interface GoogleOAuthModalProps {
     isOpen: boolean;
@@ -27,43 +28,34 @@ export default function GoogleOAuthModal({
     isLoading = false
 }: GoogleOAuthModalProps) {
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && !isLoading && onClose()}>
-            <DialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto overflow-x-hidden sm:max-w-md" hideCloseButton={true}>
-                <div className={`relative -m-6 rounded-[1.35rem] border border-border bg-card p-6 shadow-xl transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
-                    <DialogHeader className="pb-5">
-                        <DialogTitle className="flex items-center justify-center gap-3 text-xl font-light tracking-tight">
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted/60">
-                                <HandCoins className="h-5 w-5 text-foreground" />
-                            </span>
-                            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-background">
-                                <GoogleMark size={22} />
-                            </span>
-                        </DialogTitle>
-                    </DialogHeader>
+        <SettleEaseDialog
+            open={isOpen}
+            onOpenChange={(open) => !open && !isLoading && onClose()}
+            hideCloseButton
+            className="sm:max-w-md"
+        >
+            <div className={`flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col transition-opacity duration-200 ${isLoading ? 'opacity-75' : 'opacity-100'}`}>
+                <SettleEaseModalHeader
+                    icon={HandCoins}
+                    title="Continue with Google"
+                    description="SettleEase will use Google for this authentication step."
+                    accessory={<GoogleMark size={24} />}
+                />
 
-                    <div className="space-y-3">
-                        <div className="overflow-hidden rounded-2xl border border-border bg-muted/35">
-                            <div className="flex items-center gap-2 border-b border-border/70 bg-background/70 px-4 py-3">
-                                <AlertTriangle className="h-4 w-4 text-foreground" />
-                                <span className="text-sm font-medium text-foreground">
-                                    Important notice
-                                </span>
-                            </div>
-                            <div className="px-4 py-3">
-                                <p className="text-sm leading-6 text-muted-foreground">
-                                    Google Sign-In will automatically create a new account if you do not already have one with SettleEase.
-                                </p>
-                            </div>
+                <SettleEaseModalBody className="space-y-3">
+                    <SettleEaseModalNotice tone="warning" className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>
+                            Google Sign-In will automatically create a new account if you do not already have one with SettleEase.
+                        </span>
+                    </SettleEaseModalNotice>
+
+                    <SettleEaseModalSection>
+                        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-foreground">
+                            <CheckCircle className="h-4 w-4" />
+                            What happens next?
                         </div>
-
-                        <div className="overflow-hidden rounded-2xl border border-border bg-background/80">
-                            <div className="flex items-center gap-2 border-b border-border/70 bg-muted/40 px-4 py-3">
-                                <CheckCircle className="h-4 w-4 text-foreground" />
-                                <span className="text-sm font-medium text-foreground">
-                                    What happens next?
-                                </span>
-                            </div>
-                            <div className="space-y-1 px-4 py-3">
+                        <div className="space-y-1">
                                 {isSignIn ? (
                                     <>
                                         <div className="flex items-center gap-3 rounded-xl py-2">
@@ -115,16 +107,25 @@ export default function GoogleOAuthModal({
                                         </div>
                                     </>
                                 )}
-                            </div>
                         </div>
-                    </div>
+                    </SettleEaseModalSection>
+                </SettleEaseModalBody>
 
-                    <div className="flex flex-col space-y-2 pt-4">
+                <SettleEaseModalFooter className="sm:justify-end">
+                    <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                         <Button
-                            className={`h-11 w-full rounded-full border text-sm transition-all duration-200 sm:text-base ${
+                            variant="outline"
+                            className="h-10 w-full rounded-full text-sm sm:w-auto"
+                            onClick={onClose}
+                            disabled={isLoading}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            className={`h-10 w-full rounded-full border text-sm transition-all duration-200 sm:w-auto ${
                                 isLoading
                                     ? 'cursor-not-allowed border-border bg-muted text-muted-foreground hover:bg-muted'
-                                    : 'border-border bg-background text-foreground hover:bg-muted'
+                                    : 'border-foreground bg-foreground text-background hover:bg-foreground/90'
                             }`}
                             onClick={onConfirm}
                             disabled={isLoading}
@@ -136,17 +137,9 @@ export default function GoogleOAuthModal({
                                 {isLoading ? "Redirecting to Google..." : "Continue with Google"}
                             </span>
                         </Button>
-                        <Button
-                            variant="outline"
-                            className="h-11 w-full rounded-full text-sm sm:text-base"
-                            onClick={onClose}
-                            disabled={isLoading}
-                        >
-                            Cancel
-                        </Button>
                     </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+                </SettleEaseModalFooter>
+            </div>
+        </SettleEaseDialog>
     );
 }

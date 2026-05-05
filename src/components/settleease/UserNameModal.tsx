@@ -4,17 +4,18 @@ import React, { useState, useCallback, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { User, HandCoins, Edit3, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { GoogleMark } from './BrandAssets';
+import SettleEaseDialog, {
+    SettleEaseModalBody,
+    SettleEaseModalFooter,
+    SettleEaseModalHeader,
+    SettleEaseModalNotice,
+    SettleEaseModalSection,
+} from './SettleEaseDialog';
 
 interface UserNameModalProps {
     isOpen: boolean;
@@ -117,152 +118,112 @@ const UserNameModal = React.memo(function UserNameModal({
     }, [firstName, lastName]);
 
     return (
-        <Dialog open={isOpen} onOpenChange={() => { }}>
-            <DialogContent 
-                className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden"
-                hideCloseButton={true}
-            >
-                <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-                    <div>
-                        <DialogHeader className="pb-4">
-                            <DialogTitle className="flex items-center justify-center space-x-3 text-lg font-semibold">
-                                <HandCoins className="h-6 w-6 text-primary" />
-                                {isGoogleUser && <GoogleMark size={24} />}
-                            </DialogTitle>
-                        </DialogHeader>
+        <SettleEaseDialog
+            open={isOpen}
+            onOpenChange={() => { }}
+            hideCloseButton
+            className="sm:max-w-md"
+        >
+            <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+                <SettleEaseModalHeader
+                    icon={isEditMode ? Edit3 : HandCoins}
+                    tone="brand"
+                    title={isEditMode ? "Edit your name" : isGoogleUser ? "Confirm your name" : "Profile setup"}
+                    description={
+                        isEditMode
+                            ? "Update how your name appears to your group."
+                            : isGoogleUser
+                                ? "Review the name pulled from your Google profile before continuing."
+                                : "Add your name so expenses and settlements are easier to read."
+                    }
+                    accessory={isGoogleUser ? <GoogleMark size={24} /> : null}
+                />
 
-                        <div className="space-y-3">
-                            {/* Profile Setup Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <User className="h-4 w-4 text-[#4285F4]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            {isEditMode
-                                                ? 'Edit Your Name'
-                                                : isGoogleUser
-                                                    ? 'Confirm Your Name'
-                                                    : 'Profile Setup'
-                                            }
-                                        </span>
-                                    </div>
+                <SettleEaseModalBody className="space-y-3">
+                    <SettleEaseModalSection>
+                        <div className="mb-4 flex items-center gap-2 text-sm font-medium">
+                            <User className="h-4 w-4" />
+                            Profile details
+                        </div>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="firstName" className="text-sm font-medium">
+                                    First Name
+                                </Label>
+                                <Input
+                                    id="firstName"
+                                    type="text"
+                                    placeholder="John"
+                                    value={firstName}
+                                    onChange={handleFirstNameChange}
+                                    disabled={isLoading}
+                                    required
+                                    autoFocus
+                                    className="h-10 rounded-full text-sm"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="lastName" className="text-sm font-medium">
+                                    Last Name
+                                </Label>
+                                <Input
+                                    id="lastName"
+                                    type="text"
+                                    placeholder="Doe"
+                                    value={lastName}
+                                    onChange={handleLastNameChange}
+                                    disabled={isLoading}
+                                    required
+                                    className="h-10 rounded-full text-sm"
+                                />
+                            </div>
+                        </form>
+                    </SettleEaseModalSection>
+
+                    {displayName && (
+                        <SettleEaseModalSection className="bg-muted/25">
+                            <div className="flex items-center gap-3">
+                                <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full border bg-background">
+                                    <CheckCircle className="h-4 w-4" />
                                 </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                                        {isEditMode
-                                            ? 'Update how your name appears to your friends'
-                                            : isGoogleUser
-                                                ? 'Review and confirm your information below'
-                                                : 'Let\'s set up your profile to get started'
-                                        }
-                                    </p>
-
-                                    <form onSubmit={handleSubmit} className="space-y-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="firstName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                First Name
-                                            </Label>
-                                            <Input
-                                                id="firstName"
-                                                type="text"
-                                                placeholder="John"
-                                                value={firstName}
-                                                onChange={handleFirstNameChange}
-                                                disabled={isLoading}
-                                                required
-                                                autoFocus
-                                                className="h-10 text-sm"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="lastName" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                Last Name
-                                            </Label>
-                                            <Input
-                                                id="lastName"
-                                                type="text"
-                                                placeholder="Doe"
-                                                value={lastName}
-                                                onChange={handleLastNameChange}
-                                                disabled={isLoading}
-                                                required
-                                                className="h-10 text-sm"
-                                            />
-                                        </div>
-                                    </form>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
+                                    <p className="text-xs text-muted-foreground">How others will see you</p>
                                 </div>
                             </div>
+                        </SettleEaseModalSection>
+                    )}
 
-                            {/* Preview Section */}
-                            {displayName && (
-                                <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
-                                    <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                                        <div className="flex items-center space-x-2">
-                                            <CheckCircle className="h-4 w-4 text-[#34A853]" />
-                                            <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                                Preview
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                        <div className="flex items-center space-x-2 py-2">
-                                            <User className="h-4 w-4 text-[#34A853]" />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-gray-800 dark:text-gray-100">
-                                                    {displayName}
-                                                </p>
-                                                <p className="text-xs text-gray-600 dark:text-gray-400">
-                                                    How others will see you
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                    {isGoogleUser && !isEditMode && (
+                        <SettleEaseModalNotice tone="warning" className="flex items-start gap-3">
+                            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                            <span>
+                                We've automatically filled your name from your Google profile. You can edit it above if needed.
+                            </span>
+                        </SettleEaseModalNotice>
+                    )}
+                </SettleEaseModalBody>
 
-                            {/* Google Account Info */}
-                            {isGoogleUser && !isEditMode && (
-                                <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
-                                    <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
-                                        <div className="flex items-center space-x-2">
-                                            <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
-                                            <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                                Google Account
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                            We've automatically filled your name from your Google profile. You can edit it above if needed.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Action Button */}
-                        <div className="flex justify-center pt-4">
-                            <Button
-                                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
-                                onClick={handleButtonClick}
-                                disabled={isLoading || !firstName.trim() || !lastName.trim()}
-                            >
-                                {isLoading ? (
-                                    <span>Saving...</span>
-                                ) : (
-                                    <>
-                                        <User className="h-5 w-5" />
-                                        <span className="ml-2.5">
-                                            {isEditMode ? 'Save Changes' : 'Complete Profile'}
-                                        </span>
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+                <SettleEaseModalFooter className="sm:justify-end">
+                    <Button
+                        className="h-10 w-full rounded-full bg-foreground text-background hover:bg-foreground/90 sm:w-auto"
+                        onClick={handleButtonClick}
+                        disabled={isLoading || !firstName.trim() || !lastName.trim()}
+                    >
+                        {isLoading ? (
+                            <span>Saving...</span>
+                        ) : (
+                            <>
+                                <User className="h-5 w-5" />
+                                <span className="ml-2.5">
+                                    {isEditMode ? 'Save Changes' : 'Complete Profile'}
+                                </span>
+                            </>
+                        )}
+                    </Button>
+                </SettleEaseModalFooter>
+            </div>
+        </SettleEaseDialog>
     );
 });
 

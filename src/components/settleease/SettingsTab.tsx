@@ -31,15 +31,6 @@ import {
   Wrench,
 } from "lucide-react";
 
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -90,6 +81,13 @@ import {
 } from "./SkeletonLayouts";
 import ShortcutHint from "./ShortcutHint";
 import AppEmptyState from "./AppEmptyState";
+import {
+  SettleEaseAlertDialog,
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalSection,
+} from "./SettleEaseDialog";
 
 type AdminSettingsSnapshot = {
   environment: {
@@ -416,64 +414,63 @@ function DangerActionDialog({
 
   const canConfirm = !!action && confirmation === action.phrase && !working;
 
+  if (!action) return null;
+
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-lg">
-        {action ? (
-          <>
-            <AlertDialogHeader>
-              <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-                <AlertTriangle className="h-5 w-5" />
-                {action.title}
-              </AlertDialogTitle>
-              <AlertDialogDescription className="text-sm leading-6">
-                {action.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-
-            <div className="space-y-4">
-              <div className="grid gap-2 rounded-lg border bg-destructive/5 p-3">
-                {action.targetSummary.map((item) => (
-                  <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-muted-foreground">{item.label}</span>
-                    <span className="font-medium text-foreground">{item.value}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="danger-confirmation">Confirmation phrase</Label>
-                <div className="rounded-md bg-muted px-3 py-2 font-mono text-xs text-foreground">
-                  {action.phrase}
-                </div>
-                <Input
-                  id="danger-confirmation"
-                  value={confirmation}
-                  onChange={(event) => setConfirmation(event.target.value)}
-                  placeholder={action.phrase}
-                  autoComplete="off"
-                />
-              </div>
+    <SettleEaseAlertDialog open={open} onOpenChange={onOpenChange}>
+      <SettleEaseModalHeader
+        kind="alert"
+        icon={AlertTriangle}
+        tone="danger"
+        title={action.title}
+        description={action.description}
+      />
+      <SettleEaseModalBody className="space-y-4">
+        <SettleEaseModalSection className="grid gap-2 border-destructive/25 bg-destructive/5">
+          {action.targetSummary.map((item) => (
+            <div key={item.label} className="flex items-center justify-between gap-3 text-sm">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="font-medium text-foreground">{item.value}</span>
             </div>
+          ))}
+        </SettleEaseModalSection>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={working}>Cancel</AlertDialogCancel>
-              <Button
-                variant="destructive"
-                disabled={!canConfirm}
-                onClick={() => {
-                  if (!action || !canConfirm) return;
-                  void action.run(confirmation);
-                }}
-              >
-                {working ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                {action.buttonLabel}
-              </Button>
-            </AlertDialogFooter>
-          </>
-        ) : null}
-      </AlertDialogContent>
-    </AlertDialog>
+        <div className="space-y-2">
+          <Label htmlFor="danger-confirmation">Confirmation phrase</Label>
+          <div className="rounded-xl border bg-muted/40 px-3 py-2 font-mono text-xs text-foreground">
+            {action.phrase}
+          </div>
+          <Input
+            id="danger-confirmation"
+            value={confirmation}
+            onChange={(event) => setConfirmation(event.target.value)}
+            placeholder={action.phrase}
+            autoComplete="off"
+            className="rounded-full"
+          />
+        </div>
+      </SettleEaseModalBody>
+
+      <SettleEaseModalFooter className="sm:justify-end">
+        <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+          <Button variant="outline" className="h-10 rounded-full" disabled={working} onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            className="h-10 rounded-full"
+            disabled={!canConfirm}
+            onClick={() => {
+              if (!canConfirm) return;
+              void action.run(confirmation);
+            }}
+          >
+            {working ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {action.buttonLabel}
+          </Button>
+        </div>
+      </SettleEaseModalFooter>
+    </SettleEaseAlertDialog>
   );
 }
 
@@ -507,20 +504,17 @@ function ProductionDangerUnlockDialog({
     understandsNoCrossEnv;
 
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-h-[90vh] max-w-[95vw] overflow-y-auto sm:max-w-lg">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-            <ShieldAlert className="h-5 w-5" />
-            Unlock Production Danger Zone
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-sm leading-6">
-            This unlocks production-only destructive controls for this browser session. Each destructive action will still require its own exact confirmation phrase.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
+    <SettleEaseAlertDialog open={open} onOpenChange={onOpenChange}>
+      <SettleEaseModalHeader
+        kind="alert"
+        icon={ShieldAlert}
+        tone="danger"
+        title="Unlock Production Danger Zone"
+        description="This unlocks production-only destructive controls for this browser session. Each destructive action will still require its own exact confirmation phrase."
+      />
 
-        <div className="space-y-4">
-          <div className="space-y-3 rounded-lg border bg-destructive/5 p-3">
+      <SettleEaseModalBody className="space-y-4">
+          <SettleEaseModalSection className="space-y-3 border-destructive/25 bg-destructive/5">
             <label className="flex items-start gap-3 text-sm leading-6">
               <Checkbox
                 checked={understandsProduction}
@@ -542,11 +536,11 @@ function ProductionDangerUnlockDialog({
               />
               <span>I have confirmed I am not trying to manage the development database from production.</span>
             </label>
-          </div>
+          </SettleEaseModalSection>
 
           <div className="space-y-2">
             <Label htmlFor="production-danger-unlock">Unlock phrase</Label>
-            <div className="rounded-md bg-muted px-3 py-2 font-mono text-xs text-foreground">
+            <div className="rounded-xl border bg-muted/40 px-3 py-2 font-mono text-xs text-foreground">
               {PRODUCTION_DANGER_UNLOCK_CONFIRMATION}
             </div>
             <Input
@@ -555,14 +549,19 @@ function ProductionDangerUnlockDialog({
               onChange={(event) => setConfirmation(event.target.value)}
               placeholder={PRODUCTION_DANGER_UNLOCK_CONFIRMATION}
               autoComplete="off"
+              className="rounded-full"
             />
           </div>
-        </div>
+      </SettleEaseModalBody>
 
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <SettleEaseModalFooter className="sm:justify-end">
+          <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+          <Button variant="outline" className="h-10 rounded-full" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button
             variant="destructive"
+            className="h-10 rounded-full"
             disabled={!canUnlock}
             onClick={() => {
               if (!canUnlock) return;
@@ -573,9 +572,9 @@ function ProductionDangerUnlockDialog({
             <Unlock className="mr-2 h-4 w-4" />
             Unlock Production Danger Zone
           </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          </div>
+        </SettleEaseModalFooter>
+    </SettleEaseAlertDialog>
   );
 }
 

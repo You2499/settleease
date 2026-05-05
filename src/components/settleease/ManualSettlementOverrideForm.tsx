@@ -15,16 +15,19 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
 import { ArrowRight, Route, AlertCircle, DollarSign, TrendingUp } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { Person } from '@/lib/settleease';
 import { formatCurrency } from '@/lib/settleease/utils';
+import SettleEaseDialog, {
+    SettleEaseModalBody,
+    SettleEaseModalFooter,
+    SettleEaseModalHeader,
+    SettleEaseModalNotice,
+    SettleEaseModalSection,
+} from './SettleEaseDialog';
 
 interface ManualSettlementOverrideFormProps {
     people: Person[];
@@ -175,8 +178,13 @@ export default function ManualSettlementOverrideForm({
     const maxAmount = Math.min(selectedDebtorBalance, selectedCreditorBalance);
 
     return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
+        <SettleEaseDialog
+            open={isOpen}
+            onOpenChange={setIsOpen}
+            hideCloseButton
+            className="sm:max-w-md"
+            trigger={(
+                <DialogTrigger asChild>
                 <Button
                     variant="outline"
                     className="w-full sm:w-auto"
@@ -185,31 +193,23 @@ export default function ManualSettlementOverrideForm({
                     <Route className="mr-2 h-4 w-4" />
                     Set Manual Path
                 </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={true}>
-                <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-                    <div>
-                        <DialogHeader className="pb-4">
-                            <DialogTitle className="flex items-center justify-center text-lg font-semibold">
-                                Set Manual Settlement Path
-                            </DialogTitle>
-                        </DialogHeader>
+                </DialogTrigger>
+            )}
+        >
+            <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+                <SettleEaseModalHeader
+                    icon={Route}
+                    tone="brand"
+                    title="Set Manual Settlement Path"
+                    description="Force a specific settlement path instead of the optimized one."
+                />
 
-                        <div className="space-y-3">
-                            {/* Override Details Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <Route className="h-4 w-4 text-[#4285F4]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            Override Details
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-4">
-                                        Force a specific settlement path instead of the optimized one
-                                    </p>
+                <SettleEaseModalBody className="space-y-3">
+                    <SettleEaseModalSection>
+                        <div className="mb-4 flex items-center gap-2 text-sm font-medium">
+                            <Route className="h-4 w-4" />
+                            Override Details
+                        </div>
 
                                     <form onSubmit={handleSubmit} className="space-y-4">
                                         {/* Debtor Selection */}
@@ -288,7 +288,7 @@ export default function ManualSettlementOverrideForm({
                                                     value={formData.amount}
                                                     onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
                                                     disabled={isLoading}
-                                                    className="pl-10 h-10 text-sm text-right font-mono"
+                                                    className="pl-10 h-10 rounded-full text-sm text-right font-mono"
                                                 />
                                             </div>
                                         </div>
@@ -305,52 +305,38 @@ export default function ManualSettlementOverrideForm({
                                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
                                                 disabled={isLoading}
                                                 rows={3}
-                                                className="resize-none text-sm"
+                                                className="resize-none rounded-xl text-sm"
                                             />
                                         </div>
                                     </form>
-                                </div>
-                            </div>
+                    </SettleEaseModalSection>
 
-                            {/* Help Information Section */}
-                            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
-                                <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                                    <div className="flex items-center space-x-2">
-                                        <TrendingUp className="h-4 w-4 text-[#34A853]" />
-                                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                                            How it works
-                                        </span>
-                                    </div>
-                                </div>
-                                <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                    <p className="text-sm text-gray-700 dark:text-gray-300">
-                                        This overrides the optimized settlement calculation. The manual path will be applied first, then remaining balances are optimized. Active until cleared or debt is settled.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
+                    <SettleEaseModalNotice className="flex items-start gap-3">
+                        <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
+                        <span>This path applies first, then remaining balances are optimized. It stays active until cleared or debt is settled.</span>
+                    </SettleEaseModalNotice>
+                </SettleEaseModalBody>
 
-                        {/* Action Buttons */}
-                        <div className="flex flex-col space-y-2 pt-4">
+                <SettleEaseModalFooter className="sm:justify-end">
+                    <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+                        <Button
+                            variant="outline"
+                            className="h-10 rounded-full"
+                            onClick={handleCancel}
+                            disabled={isLoading}
+                        >
+                            Cancel
+                        </Button>
                             <Button
-                                className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600"
+                                className="h-10 rounded-full bg-foreground text-background hover:bg-foreground/90"
                                 onClick={handleSubmit}
                                 disabled={isLoading || !formData.debtorId || !formData.creditorId || !formData.amount}
                             >
                                 {isLoading ? "Creating Override..." : "Create Override"}
                             </Button>
-                            <Button
-                                variant="outline"
-                                className="w-full h-10 text-sm sm:h-11 sm:text-base"
-                                onClick={handleCancel}
-                                disabled={isLoading}
-                            >
-                                Cancel
-                            </Button>
-                        </div>
                     </div>
-                </div>
-            </DialogContent>
-        </Dialog>
+                </SettleEaseModalFooter>
+            </div>
+        </SettleEaseDialog>
     );
 }

@@ -12,11 +12,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -41,7 +36,13 @@ import {
   toItemAmount,
 } from "@/lib/settleease/itemwiseCalculations";
 import { formatCurrency } from "@/lib/settleease/utils";
-import SettleEaseDialog from "./SettleEaseDialog";
+import SettleEaseDialog, {
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalNotice,
+  SettleEaseModalSection,
+} from "./SettleEaseDialog";
 
 interface SmartScanItemReviewDialogProps {
   open: boolean;
@@ -135,48 +136,38 @@ export default function SmartScanItemReviewDialog({
   };
 
   return (
-    <SettleEaseDialog open={open} onOpenChange={onOpenChange}>
+    <SettleEaseDialog open={open} onOpenChange={onOpenChange} className="sm:max-w-5xl">
       <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
-        <DialogHeader className="border-b bg-[#f7f6f3]/80 px-5 pb-4 pt-5 text-left dark:bg-muted/30 sm:px-7 sm:pt-6">
-          <div className="flex min-w-0 items-start gap-3 pr-10">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-border/70 bg-background/90 shadow-sm">
-              <ReceiptText className="h-5 w-5" />
-            </div>
-            <div className="min-w-0">
-              <DialogTitle className="text-2xl font-light leading-tight tracking-normal sm:text-3xl">
-                Review item metadata
-              </DialogTitle>
-              <DialogDescription className="mt-2 max-w-2xl text-sm leading-6">
-                Settlement stays on {splitMethodLabel(splitMethod).toLowerCase()}. These item names, prices, and categories power Health and Analytics.
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
+        <SettleEaseModalHeader
+          icon={ReceiptText}
+          title="Review item metadata"
+          description={`Settlement stays on ${splitMethodLabel(splitMethod).toLowerCase()}. These item names, prices, and categories power Health and Analytics.`}
+        />
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-7">
+        <SettleEaseModalBody>
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border bg-background p-3 shadow-sm">
+            <SettleEaseModalSection>
               <p className="text-xs text-muted-foreground">Bill total</p>
               <p className="mt-1 text-lg font-semibold">{formatCurrency(totalAmount)}</p>
-            </div>
-            <div className="rounded-2xl border bg-background p-3 shadow-sm">
+            </SettleEaseModalSection>
+            <SettleEaseModalSection>
               <p className="text-xs text-muted-foreground">Item subtotal</p>
               <p className="mt-1 text-lg font-semibold">{formatCurrency(summary.itemSubtotal)}</p>
-            </div>
-            <div className="rounded-2xl border bg-background p-3 shadow-sm">
+            </SettleEaseModalSection>
+            <SettleEaseModalSection>
               <p className="text-xs text-muted-foreground">Split method</p>
               <p className="mt-1 text-lg font-semibold">{splitMethodLabel(splitMethod)}</p>
-            </div>
-            <div className="rounded-2xl border bg-background p-3 shadow-sm">
+            </SettleEaseModalSection>
+            <SettleEaseModalSection>
               <p className="text-xs text-muted-foreground">Category coverage</p>
               <p className="mt-1 text-lg font-semibold">
                 {summary.rowsWithCategory}/{items.length || 0}
               </p>
-            </div>
+            </SettleEaseModalSection>
           </div>
 
           <div className="mt-4 grid gap-3">
-            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+            <SettleEaseModalNotice tone="brand">
               <div className="flex items-start gap-3">
                 <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-background/80 text-foreground">
                   <Split className="h-4 w-4" />
@@ -185,16 +176,11 @@ export default function SmartScanItemReviewDialog({
                   Item metadata will not change who owes what. Health and Analytics normalize these rows to the final bill total if the extracted subtotal differs.
                 </p>
               </div>
-            </div>
+            </SettleEaseModalNotice>
 
             {(summary.invalidRows.length > 0 || summary.subtotalMismatch) && (
-              <div
-                className={cn(
-                  "rounded-2xl border p-3 text-sm",
-                  summary.invalidRows.length > 0
-                    ? "border-destructive/30 bg-destructive/10 text-destructive"
-                    : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
-                )}
+              <SettleEaseModalNotice
+                tone={summary.invalidRows.length > 0 ? "danger" : "warning"}
               >
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -211,12 +197,12 @@ export default function SmartScanItemReviewDialog({
                     )}
                   </div>
                 </div>
-              </div>
+              </SettleEaseModalNotice>
             )}
           </div>
 
-          <div className="mt-5 overflow-hidden rounded-2xl border bg-card/40 shadow-sm">
-            <div className="hidden grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_110px_130px_120px_44px] gap-3 border-b bg-muted/30 px-4 py-3 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground md:grid">
+          <div className="mt-4 overflow-hidden rounded-xl border bg-card/40 shadow-sm">
+            <div className="hidden grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_110px_130px_120px_44px] gap-3 border-b bg-muted/30 px-3 py-2.5 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground md:grid">
               <span>Item</span>
               <span>Category</span>
               <span>Quantity</span>
@@ -234,7 +220,7 @@ export default function SmartScanItemReviewDialog({
                   <div
                     key={item.id || index}
                     className={cn(
-                      "grid gap-3 bg-background/70 p-4 md:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_110px_130px_120px_44px] md:items-end",
+                      "grid gap-3 bg-background/70 p-3 md:grid-cols-[minmax(180px,1.4fr)_minmax(150px,1fr)_110px_130px_120px_44px] md:items-end",
                       rowInvalid && "bg-destructive/5"
                     )}
                   >
@@ -315,18 +301,18 @@ export default function SmartScanItemReviewDialog({
           </div>
 
           <div className="mt-4 grid gap-3 text-sm text-muted-foreground sm:grid-cols-2">
-            <div className="flex items-start gap-2 rounded-2xl border bg-background p-3">
+            <SettleEaseModalSection className="flex items-start gap-2">
               <HeartPulse className="mt-0.5 h-4 w-4 text-foreground" />
               <span>Health will read food and alcohol rows with their verified categories.</span>
-            </div>
-            <div className="flex items-start gap-2 rounded-2xl border bg-background p-3">
+            </SettleEaseModalSection>
+            <SettleEaseModalSection className="flex items-start gap-2">
               <BarChart3 className="mt-0.5 h-4 w-4 text-foreground" />
               <span>Analytics will use these item rows for category breakdowns and trends.</span>
-            </div>
+            </SettleEaseModalSection>
           </div>
-        </div>
+        </SettleEaseModalBody>
 
-        <div className="flex flex-col gap-3 border-t bg-background/95 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+        <SettleEaseModalFooter>
           <div className="flex items-start gap-2 text-xs text-muted-foreground">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
             <span>Settlement remains controlled by the selected {splitMethodLabel(splitMethod).toLowerCase()}.</span>
@@ -335,7 +321,7 @@ export default function SmartScanItemReviewDialog({
             <Button
               type="button"
               variant="outline"
-              className="h-11 rounded-full px-5"
+              className="h-10 rounded-full px-4"
               onClick={() => onOpenChange(false)}
               disabled={isSaving}
             >
@@ -343,14 +329,14 @@ export default function SmartScanItemReviewDialog({
             </Button>
             <Button
               type="button"
-              className="h-11 rounded-full bg-foreground px-5 text-background hover:bg-foreground/90"
+              className="h-10 rounded-full bg-foreground px-4 text-background hover:bg-foreground/90"
               onClick={onConfirm}
               disabled={!summary.canConfirm || isSaving}
             >
               {isSaving ? "Saving..." : "Save Expense With Item Details"}
             </Button>
           </div>
-        </div>
+        </SettleEaseModalFooter>
       </div>
     </SettleEaseDialog>
   );

@@ -2,8 +2,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { 
   FileText, 
   Calendar, 
@@ -17,6 +16,11 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '@/lib/settleease/utils';
 import type { Expense } from '@/lib/settleease/types';
+import SettleEaseDialog, {
+  SettleEaseModalBody,
+  SettleEaseModalHeader,
+  SettleEaseModalSection,
+} from '../SettleEaseDialog';
 
 interface RelevantExpensesModalProps {
   isOpen: boolean;
@@ -74,83 +78,62 @@ export default function RelevantExpensesModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={false}>
-        <div className="space-y-4 w-full min-w-0">
-          {/* Header Section */}
-          <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden w-full">
-            <div className="px-3 sm:px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
-              <div className="flex items-center space-x-2 min-w-0">
-                <FileText className="h-4 w-4 text-[#4285F4] flex-shrink-0" />
-                <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
-                  {modalTitle || "Related Expenses"}
-                </span>
-              </div>
-            </div>
-            <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                These are the expenses contributing to the selected debt or credit. Click any expense for full details.
-              </p>
-            </div>
-          </div>
+    <SettleEaseDialog open={isOpen} onOpenChange={onOpenChange} className="sm:max-w-4xl">
+      <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+        <SettleEaseModalHeader
+          icon={FileText}
+          title={modalTitle || "Related Expenses"}
+          description="These expenses contribute to the selected debt or credit. Click any expense for full details."
+        />
 
+        <SettleEaseModalBody className="space-y-3">
           {sortedExpenses.length > 0 ? (
             <>
-              {/* Summary Section */}
-              <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden w-full">
-                <div className="px-3 sm:px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Info className="h-4 w-4 text-[#34A853] flex-shrink-0" />
-                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
-                      Summary
-                    </span>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <SettleEaseModalSection>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                    Total expenses
                   </div>
-                </div>
-                <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                  <div className="text-sm space-y-2 w-full min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-700 dark:text-gray-300">Total Expenses:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-100">{sortedExpenses.length}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-700 dark:text-gray-300">Combined Amount:</span>
-                      <span className="font-bold text-lg text-primary">
-                        {formatCurrency(
-                          sortedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0)
-                        )}
-                      </span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-                      <span className="text-gray-700 dark:text-gray-300">Date Range:</span>
-                      <span className="font-medium text-gray-800 dark:text-gray-100 text-right sm:text-left">
-                        {sortedExpenses.length > 1 ? (
-                          <>
-                            {new Date(sortedExpenses[sortedExpenses.length - 1].created_at || 0).toLocaleDateString()} 
-                            {" - "}
-                            {new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()}
-                          </>
-                        ) : (
-                          new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()
-                        )}
-                      </span>
-                    </div>
+                  <p className="mt-1 text-lg font-semibold">{sortedExpenses.length}</p>
+                </SettleEaseModalSection>
+                <SettleEaseModalSection>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    Combined amount
                   </div>
-                </div>
+                  <p className="mt-1 text-lg font-semibold text-primary">
+                    {formatCurrency(sortedExpenses.reduce((sum, exp) => sum + Number(exp.total_amount), 0))}
+                  </p>
+                </SettleEaseModalSection>
+                <SettleEaseModalSection>
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    Date range
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-muted-foreground">
+                    {sortedExpenses.length > 1 ? (
+                      <>
+                        {new Date(sortedExpenses[sortedExpenses.length - 1].created_at || 0).toLocaleDateString()}
+                        {" - "}
+                        {new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()}
+                      </>
+                    ) : (
+                      new Date(sortedExpenses[0].created_at || 0).toLocaleDateString()
+                    )}
+                  </p>
+                </SettleEaseModalSection>
               </div>
 
-              {/* Expenses List Section */}
-              <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden w-full">
-                <div className="px-3 sm:px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
-                  <div className="flex items-center space-x-2 min-w-0">
-                    <Receipt className="h-4 w-4 text-[#EA4335] flex-shrink-0" />
-                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
-                      Expense Details
-                    </span>
+              <SettleEaseModalSection className="p-0">
+                <div className="border-b bg-muted/30 px-3 py-2.5">
+                  <div className="flex items-center gap-2 text-sm font-medium">
+                    <Receipt className="h-4 w-4 text-muted-foreground" />
+                    Expense details
                   </div>
                 </div>
-                <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                  <div className="space-y-3 w-full min-w-0">
-                    {sortedExpenses.map((expense) => {
+                <div className="space-y-3 p-3">
+                  {sortedExpenses.map((expense) => {
                       const payerInfo = getPayerInfo(expense);
                       const sharerInfo = getSharerInfo(expense);
                       
@@ -249,32 +232,20 @@ export default function RelevantExpensesModal({
                         </Card>
                       );
                     })}
-                  </div>
                 </div>
-              </div>
+              </SettleEaseModalSection>
             </>
           ) : (
-            <div className="bg-white/95 dark:bg-gray-800/95 border border-[#EA4335]/30 dark:border-[#EA4335]/20 rounded-lg overflow-hidden w-full">
-              <div className="px-3 sm:px-4 py-3 bg-[#EA4335]/10 dark:bg-[#EA4335]/5">
-                <div className="flex items-center space-x-2 min-w-0">
-                  <FileText className="h-4 w-4 text-[#EA4335] flex-shrink-0" />
-                  <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
-                    No Expenses Found
-                  </span>
-                </div>
-              </div>
-              <div className="px-3 sm:px-4 py-8 bg-white/90 dark:bg-gray-800/90 text-center">
+            <SettleEaseModalSection className="py-8 text-center">
                 <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <h3 className="text-lg font-semibold mb-2 text-gray-800 dark:text-gray-100">No Expenses Found</h3>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
+                <h3 className="text-lg font-semibold mb-2">No Expenses Found</h3>
+                <p className="text-sm text-muted-foreground">
                   No specific contributing expenses found for this transaction, or the transaction is fully settled by direct payments.
                 </p>
-              </div>
-            </div>
+            </SettleEaseModalSection>
           )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        </SettleEaseModalBody>
+      </div>
+    </SettleEaseDialog>
   );
 }
-

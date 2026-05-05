@@ -5,21 +5,18 @@ import { useMutation } from 'convex/react';
 import { api } from '@convex/_generated/api';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-    AlertDialog,
-    AlertDialogContent,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-    Dialog,
-    DialogContent,
-} from "@/components/ui/dialog";
 import { Route, X, AlertTriangle, Trash2, Eye, ArrowRight, AlertCircle } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import type { ManualSettlementOverride } from '@/lib/settleease';
 import { formatCurrency } from '@/lib/settleease/utils';
+import SettleEaseDialog, {
+    SettleEaseAlertDialog,
+    SettleEaseModalBody,
+    SettleEaseModalFooter,
+    SettleEaseModalHeader,
+    SettleEaseModalNotice,
+} from './SettleEaseDialog';
 
 interface ManualOverrideAlertProps {
     overrides: ManualSettlementOverride[];
@@ -162,29 +159,19 @@ export default function ManualOverrideAlert({
             </div>
 
             {/* Details Dialog */}
-            <Dialog open={showDetails} onOpenChange={setShowDetails}>
-                <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar" hideCloseButton={false}>
-                    <div className="space-y-4 w-full min-w-0">
-                        {/* Header Section */}
-                        <div className="bg-white/95 dark:bg-gray-800/95 border border-[#FBBC05]/30 dark:border-[#FBBC05]/20 rounded-lg overflow-hidden w-full">
-                            <div className="px-3 sm:px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
-                                <div className="flex items-center space-x-2 min-w-0">
-                                    <Route className="h-4 w-4 text-[#EA4335] flex-shrink-0" />
-                                    <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
-                                        Active Manual Settlement Paths
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                                <p className="text-sm text-gray-700 dark:text-gray-300">
-                                    These custom settlement paths override the optimized calculation. They remain active until cleared or debts are settled.
-                                </p>
-                            </div>
-                        </div>
+            <SettleEaseDialog open={showDetails} onOpenChange={setShowDetails} className="sm:max-w-2xl">
+                <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+                    <SettleEaseModalHeader
+                        icon={Route}
+                        tone="warning"
+                        title="Active Manual Settlement Paths"
+                        description="These custom settlement paths override the optimized calculation until cleared or settled."
+                    />
+                    <SettleEaseModalBody className="space-y-4">
 
                         {/* Summary Section */}
-                        <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden w-full">
-                            <div className="px-3 sm:px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
+                        <div className="overflow-hidden rounded-xl border bg-background shadow-sm w-full">
+                            <div className="px-3 sm:px-4 py-3 bg-muted/30">
                                 <div className="flex items-center space-x-2 min-w-0">
                                     <AlertCircle className="h-4 w-4 text-[#34A853] flex-shrink-0" />
                                     <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
@@ -192,7 +179,7 @@ export default function ManualOverrideAlert({
                                     </span>
                                 </div>
                             </div>
-                            <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                            <div className="px-3 sm:px-4 py-3">
                                 <div className="text-sm space-y-2 w-full min-w-0">
                                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                                         <span className="text-gray-700 dark:text-gray-300">Active Overrides:</span>
@@ -209,8 +196,8 @@ export default function ManualOverrideAlert({
                         </div>
 
                         {/* Overrides List Section */}
-                        <div className="bg-white/95 dark:bg-gray-800/95 border border-[#4285F4]/30 dark:border-[#4285F4]/20 rounded-lg overflow-hidden w-full">
-                            <div className="px-3 sm:px-4 py-3 bg-[#4285F4]/10 dark:bg-[#4285F4]/5">
+                        <div className="overflow-hidden rounded-xl border bg-background shadow-sm w-full">
+                            <div className="px-3 sm:px-4 py-3 bg-muted/30">
                                 <div className="flex items-center space-x-2 min-w-0">
                                     <Route className="h-4 w-4 text-[#4285F4] flex-shrink-0" />
                                     <span className="font-medium text-sm text-gray-800 dark:text-gray-100 truncate">
@@ -218,7 +205,7 @@ export default function ManualOverrideAlert({
                                     </span>
                                 </div>
                             </div>
-                            <div className="px-3 sm:px-4 py-3 bg-white/90 dark:bg-gray-800/90">
+                            <div className="px-3 sm:px-4 py-3">
                                 <div className="space-y-3 w-full min-w-0">
                                     {activeOverrides.map((override) => (
                                         <Card 
@@ -296,26 +283,22 @@ export default function ManualOverrideAlert({
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+                    </SettleEaseModalBody>
+                </div>
+            </SettleEaseDialog>
 
             {/* Delete Confirmation Dialog */}
             {overrideToDelete && (
-                <AlertDialog open={!!overrideToDelete} onOpenChange={(open) => !open && setOverrideToDelete(null)}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle className="flex items-center">
-                                <AlertTriangle className="mr-2 h-5 w-5 text-destructive" />
-                                Delete Manual Override?
-                            </AlertDialogTitle>
-                        </AlertDialogHeader>
-                        
-                        <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground">
-                                Are you sure you want to permanently delete this manual settlement path?
-                            </p>
-                            <div className="bg-muted p-3 rounded-md">
+                <SettleEaseAlertDialog open={!!overrideToDelete} onOpenChange={(open) => !open && setOverrideToDelete(null)}>
+                    <SettleEaseModalHeader
+                        kind="alert"
+                        icon={AlertTriangle}
+                        tone="danger"
+                        title="Delete Manual Override?"
+                        description="This permanently removes the selected manual settlement path."
+                    />
+                    <SettleEaseModalBody className="space-y-4">
+                            <div className="rounded-xl border bg-muted/30 p-3">
                                 <p className="text-sm font-medium">
                                     {peopleMap[overrideToDelete.debtor_id]} → {peopleMap[overrideToDelete.creditor_id]}
                                 </p>
@@ -323,14 +306,16 @@ export default function ManualOverrideAlert({
                                     Amount: {formatCurrency(overrideToDelete.amount)}
                                 </p>
                             </div>
-                            <p className="text-sm text-destructive">
+                            <SettleEaseModalNotice tone="danger">
                                 This action cannot be undone.
-                            </p>
-                        </div>
+                            </SettleEaseModalNotice>
+                    </SettleEaseModalBody>
 
-                        <div className="flex justify-end gap-2 mt-4">
+                    <SettleEaseModalFooter className="sm:justify-end">
+                        <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
                             <Button
                                 variant="outline"
+                                className="h-10 rounded-full"
                                 onClick={() => setOverrideToDelete(null)}
                                 disabled={isLoading}
                             >
@@ -338,14 +323,15 @@ export default function ManualOverrideAlert({
                             </Button>
                             <Button
                                 variant="destructive"
+                                className="h-10 rounded-full"
                                 onClick={handleDelete}
                                 disabled={isLoading}
                             >
                                 {isLoading ? "Deleting..." : "Delete"}
                             </Button>
                         </div>
-                    </AlertDialogContent>
-                </AlertDialog>
+                    </SettleEaseModalFooter>
+                </SettleEaseAlertDialog>
             )}
         </>
     );

@@ -10,22 +10,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Handshake, ArrowRight, CheckCircle2, AlertTriangle, Undo2, History, FileText, Info, Construction, Zap, Code, Wrench, AlertCircle, HandCoins, Pencil, Calendar as CalendarIcon } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import { formatCurrency } from '@/lib/settleease';
@@ -46,6 +30,14 @@ import {
   SkeletonSectionHeader,
 } from './SkeletonLayouts';
 import AppEmptyState from './AppEmptyState';
+import SettleEaseDialog, {
+  SettleEaseAlertDialog,
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalNotice,
+  SettleEaseModalSection,
+} from './SettleEaseDialog';
 
 interface ManageSettlementsTabProps {
   expenses: Expense[];
@@ -469,140 +461,96 @@ export default function ManageSettlementsTab({
       </Card>
 
       {settlementToConfirm && (
-        <AlertDialog open={settlementToConfirm !== null} onOpenChange={(open) => !open && setSettlementToConfirm(null)}>
-          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
-            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-              <div>
-                <AlertDialogHeader className="pb-4">
-                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
-                    Confirm Settlement
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-
-                <div className="space-y-3">
-                  {/* Confirmation Section */}
-                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#34A853]/30 dark:border-[#34A853]/20 rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 bg-[#34A853]/10 dark:bg-[#34A853]/5">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle2 className="h-4 w-4 text-[#34A853]" />
-                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                          Confirm Settlement
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        Are you sure you want to mark this payment as complete?
-                      </p>
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-sm">
-                        <p className="font-medium text-gray-800 dark:text-gray-100">
-                          {formatCurrency(settlementToConfirm.amount)}
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          From <strong>{peopleMap[settlementToConfirm.from]}</strong> to <strong>{peopleMap[settlementToConfirm.to]}</strong>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col space-y-2 pt-4">
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-primary hover:bg-primary/90 text-primary-foreground border border-primary rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleMarkAsPaid}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Recording..." : "Yes, Mark as Paid"}
-                  </button>
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => setSettlementToConfirm(null)}
-                    disabled={isLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        <SettleEaseAlertDialog open={settlementToConfirm !== null} onOpenChange={(open) => !open && setSettlementToConfirm(null)}>
+          <SettleEaseModalHeader
+            kind="alert"
+            icon={CheckCircle2}
+            tone="success"
+            title="Confirm Settlement"
+            description="Mark this payment as complete and record it in settlement history."
+          />
+          <SettleEaseModalBody>
+            <SettleEaseModalSection className="bg-muted/25">
+              <p className="text-lg font-semibold">{formatCurrency(settlementToConfirm.amount)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                From <strong>{peopleMap[settlementToConfirm.from]}</strong> to <strong>{peopleMap[settlementToConfirm.to]}</strong>
+              </p>
+            </SettleEaseModalSection>
+          </SettleEaseModalBody>
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                className="h-10 rounded-full"
+                onClick={() => setSettlementToConfirm(null)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="h-10 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                onClick={handleMarkAsPaid}
+                disabled={isLoading}
+              >
+                {isLoading ? "Recording..." : "Yes, Mark as Paid"}
+              </Button>
             </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </SettleEaseModalFooter>
+        </SettleEaseAlertDialog>
       )}
 
       {paymentToUnmark && (
-        <AlertDialog open={paymentToUnmark !== null} onOpenChange={(open) => !open && setPaymentToUnmark(null)}>
-          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
-            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-              <div>
-                <AlertDialogHeader className="pb-4">
-                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
-                    Unmark Payment
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-
-                <div className="space-y-3">
-                  {/* Warning Section */}
-                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#ff7825]/30 dark:border-[#ff7825]/20 rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 bg-[#FBBC05]/10 dark:bg-[#FBBC05]/5">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
-                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                          Unmark Payment
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        Are you sure you want to unmark (delete) this recorded payment?
-                      </p>
-                      <div className="bg-gray-50 dark:bg-gray-700 rounded-md p-3 text-sm mb-2">
-                        <p className="font-medium text-gray-800 dark:text-gray-100">
-                          {formatCurrency(paymentToUnmark.amount_settled)}
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-400">
-                          From <strong>{peopleMap[paymentToUnmark.debtor_id]}</strong> to <strong>{peopleMap[paymentToUnmark.creditor_id]}</strong>
-                        </p>
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        This action will make this debt appear as outstanding again.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col space-y-2 pt-4">
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleUnmarkAsPaid}
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
-                  </button>
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => setPaymentToUnmark(null)}
-                    disabled={isLoading}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        <SettleEaseAlertDialog open={paymentToUnmark !== null} onOpenChange={(open) => !open && setPaymentToUnmark(null)}>
+          <SettleEaseModalHeader
+            kind="alert"
+            icon={AlertTriangle}
+            tone="warning"
+            title="Unmark Payment"
+            description="Remove this recorded payment and make the debt appear as outstanding again."
+          />
+          <SettleEaseModalBody className="space-y-3">
+            <SettleEaseModalSection className="bg-muted/25">
+              <p className="text-lg font-semibold">{formatCurrency(paymentToUnmark.amount_settled)}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                From <strong>{peopleMap[paymentToUnmark.debtor_id]}</strong> to <strong>{peopleMap[paymentToUnmark.creditor_id]}</strong>
+              </p>
+            </SettleEaseModalSection>
+            <SettleEaseModalNotice tone="warning">This action will make this debt appear as outstanding again.</SettleEaseModalNotice>
+          </SettleEaseModalBody>
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button
+                variant="outline"
+                className="h-10 rounded-full"
+                onClick={() => setPaymentToUnmark(null)}
+                disabled={isLoading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="h-10 rounded-full"
+                onClick={handleUnmarkAsPaid}
+                disabled={isLoading}
+              >
+                {isLoading ? "Unmarking..." : "Yes, Unmark Payment"}
+              </Button>
             </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </SettleEaseModalFooter>
+        </SettleEaseAlertDialog>
       )}
 
       {/* Edit Payment Dialog */}
       {paymentToEdit && (
-        <Dialog open={paymentToEdit !== null} onOpenChange={(open) => !open && setPaymentToEdit(null)}>
-          <DialogContent className="max-w-[95vw] sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Settlement Payment</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-md p-3 text-sm mb-4">
+        <SettleEaseDialog open={paymentToEdit !== null} onOpenChange={(open) => !open && setPaymentToEdit(null)} className="sm:max-w-md">
+          <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+            <SettleEaseModalHeader
+              icon={Pencil}
+              title="Edit Settlement Payment"
+              description="Update the recorded payment amount, date, or notes."
+            />
+            <SettleEaseModalBody className="space-y-4">
+              <div className="rounded-xl border bg-muted/30 p-3 text-sm">
                 <p className="text-gray-600 dark:text-gray-400">
                   Editing payment from <strong>{peopleMap[paymentToEdit.debtor_id]}</strong> to <strong>{peopleMap[paymentToEdit.creditor_id]}</strong>
                 </p>
@@ -620,7 +568,7 @@ export default function ManageSettlementsTab({
                   value={editAmount}
                   onChange={(e) => setEditAmount(e.target.value)}
                   placeholder="Enter amount"
-                  className="text-right font-mono"
+                  className="rounded-full text-right font-mono"
                 />
               </div>
 
@@ -661,27 +609,32 @@ export default function ManageSettlementsTab({
                   onChange={(e) => setEditNotes(e.target.value)}
                   placeholder="Add any notes about this payment..."
                   rows={3}
+                  className="rounded-xl"
                 />
               </div>
-            </div>
+            </SettleEaseModalBody>
             
-            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+            <SettleEaseModalFooter className="sm:justify-end">
+              <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
               <Button
                 variant="outline"
+                className="h-10 rounded-full"
                 onClick={() => setPaymentToEdit(null)}
                 disabled={isLoading}
               >
                 Cancel
               </Button>
               <Button
+                className="h-10 rounded-full bg-foreground text-background hover:bg-foreground/90"
                 onClick={handleUpdatePayment}
                 disabled={isLoading || !editAmount || parseFloat(editAmount) <= 0 || !editDate}
               >
                 {isLoading ? "Updating..." : "Update Payment"}
               </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+              </div>
+            </SettleEaseModalFooter>
+          </div>
+        </SettleEaseDialog>
       )}
     </>
   );

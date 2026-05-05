@@ -6,16 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { FilePenLine, Trash2, Settings2, AlertTriangle, Pencil, HandCoins, Ban, CheckCircle2 } from 'lucide-react';
 import { toast } from "@/hooks/use-toast";
 import AddExpenseTab from './AddExpenseTab';
@@ -30,6 +20,13 @@ import {
   SkeletonCardHeader,
 } from './SkeletonLayouts';
 import AppEmptyState from './AppEmptyState';
+import {
+  SettleEaseAlertDialog,
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalNotice,
+} from './SettleEaseDialog';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -273,60 +270,33 @@ export default function EditExpensesTab({
       </Card>
 
       {expenseToDelete && (
-        <AlertDialog open={expenseToDelete !== null} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
-          <AlertDialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto overflow-x-hidden no-scrollbar">
-            <div className="bg-white dark:bg-gray-900 border border-border shadow-lg relative rounded-lg -m-6 p-6">
-              <div>
-                <AlertDialogHeader className="pb-4">
-                  <AlertDialogTitle className="flex items-center justify-center text-lg font-semibold">
-                    Delete Expense
-                  </AlertDialogTitle>
-                </AlertDialogHeader>
-
-                <div className="space-y-3">
-                  {/* Warning Section */}
-                  <div className="bg-white/95 dark:bg-gray-800/95 border border-[#EA4335]/30 dark:border-[#EA4335]/20 rounded-lg overflow-hidden">
-                    <div className="px-4 py-3 bg-[#EA4335]/10 dark:bg-[#EA4335]/5">
-                      <div className="flex items-center space-x-2">
-                        <AlertTriangle className="h-4 w-4 text-[#EA4335]" />
-                        <span className="font-medium text-sm text-gray-800 dark:text-gray-100">
-                          Delete Expense
-                        </span>
-                      </div>
-                    </div>
-                    <div className="px-4 py-3 bg-white/90 dark:bg-gray-800/90">
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                        This action will permanently delete the expense:
-                      </p>
-                      <p className="text-sm font-medium text-gray-800 dark:text-gray-100 mb-2">
-                        {expenseToDelete.description} ({formatCurrency(Number(expenseToDelete.total_amount))})
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        This action cannot be undone.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex flex-col space-y-2 pt-4">
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-destructive hover:bg-destructive/90 text-destructive-foreground border border-destructive rounded-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleDeleteExpense}
-                  >
-                    Yes, delete expense
-                  </button>
-                  <button
-                    className="w-full h-10 text-sm sm:h-11 sm:text-base bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700 dark:border-gray-600 rounded-md flex items-center justify-center"
-                    onClick={() => setExpenseToDelete(null)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
+        <SettleEaseAlertDialog open={expenseToDelete !== null} onOpenChange={(open) => !open && setExpenseToDelete(null)}>
+          <SettleEaseModalHeader
+            kind="alert"
+            icon={AlertTriangle}
+            tone="danger"
+            title="Delete Expense"
+            description="This permanently removes the expense and its settlement impact."
+          />
+          <SettleEaseModalBody className="space-y-3">
+            <SettleEaseModalNotice tone="danger">
+              <p className="font-medium text-foreground">
+                {expenseToDelete.description} ({formatCurrency(Number(expenseToDelete.total_amount))})
+              </p>
+              <p className="mt-2">This action cannot be undone.</p>
+            </SettleEaseModalNotice>
+          </SettleEaseModalBody>
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button variant="outline" className="h-10 rounded-full" onClick={() => setExpenseToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" className="h-10 rounded-full" onClick={handleDeleteExpense}>
+                Yes, delete expense
+              </Button>
             </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </SettleEaseModalFooter>
+        </SettleEaseAlertDialog>
       )}
     </>
   );
