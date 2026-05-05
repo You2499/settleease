@@ -44,7 +44,7 @@ import packageJson from '../../../package.json';
 import { GoogleMark } from './BrandAssets';
 import { useAuthFormLogic, authBenefits } from '@/hooks/useAuthFormLogic';
 
-// ─── Floating icon configuration ──────────────────────
+// --- Floating icon configuration ----------------------
 // Each icon is hand-placed with unique position, delay, duration for organic feel.
 interface FloatingIconConfig {
   Icon: LucideIcon;
@@ -88,7 +88,7 @@ const connectionPairs: [number, number][] = [
   [17, 18], [18, 19],
 ];
 
-interface AuthFormBetaProps {
+interface AuthFormProps {
   supabase: SupabaseClient | undefined;
   onAuthSuccess?: (user: SupabaseUser) => void;
 }
@@ -116,7 +116,7 @@ const connectionCurveSeeds: ConnectionCurveSeed[] = connectionPairs.map(([a, b],
 
 const clampToViewBox = (value: number) => Math.min(98, Math.max(2, value));
 
-export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaProps) {
+export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   const {
     email,
     password,
@@ -265,18 +265,18 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
     <>
       <div
         ref={shellRef}
-        className="auth-beta-shell relative min-h-svh w-full overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
+        className="auth-page-shell relative min-h-svh w-full overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
         data-auth-mode={isLoginView ? "signin" : "signup"}
       >
-        {/* ── Layer 1: Dot grid ──────────────────────────── */}
-        <div className="auth-beta-dot-grid" aria-hidden="true" />
+        {/* -- Layer 1: Dot grid ---------------------------- */}
+        <div className="auth-page-dot-grid" aria-hidden="true" />
 
-        {/* ── Layer 2: Gradient mesh ─────────────────────── */}
-        <div className="auth-beta-gradient-mesh" aria-hidden="true" />
+        {/* -- Layer 2: Gradient mesh ----------------------- */}
+        <div className="auth-page-gradient-mesh" aria-hidden="true" />
 
-        {/* ── Layer 3: Connection lines SVG ──────────────── */}
+        {/* -- Layer 3: Connection lines SVG ---------------- */}
         <svg
-          className="auth-beta-lines"
+          className="auth-page-lines"
           viewBox="0 0 100 100"
           preserveAspectRatio="none"
           aria-hidden="true"
@@ -289,8 +289,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
           ))}
         </svg>
 
-        {/* ── Layer 4: Floating icons ────────────────────── */}
-        <div className="auth-beta-icons-field" aria-hidden="true">
+        {/* -- Layer 4: Floating icons ---------------------- */}
+        <div className="auth-page-icons-field" aria-hidden="true">
           {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => (
             <div
               key={i}
@@ -298,8 +298,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                 iconRefs.current[i] = node;
               }}
               className={cn(
-                'auth-beta-icon',
-                !mobile && 'auth-beta-icon-desktop-only',
+                'auth-page-icon',
+                !mobile && 'auth-page-icon-desktop-only',
               )}
               style={{
                 top,
@@ -315,7 +315,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
           ))}
         </div>
 
-        {/* ── Header ─────────────────────────────────────── */}
+        {/* -- Header --------------------------------------- */}
         <div className="relative z-10 mx-auto flex h-14 w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/85 shadow-sm backdrop-blur-md">
@@ -328,10 +328,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
           </div>
         </div>
 
-        {/* ── Main content ───────────────────────────────── */}
+        {/* -- Main content --------------------------------- */}
         <main className="relative z-10 mx-auto grid w-full max-w-7xl gap-4 px-4 py-3 sm:px-6 lg:h-[calc(100svh-72px)] lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:overflow-hidden lg:px-8">
 
-          {/* ── Left: Hero + benefits (desktop) ──────────── */}
+          {/* -- Left: Hero + benefits (desktop) ------------ */}
           <section className="hidden min-w-0 space-y-5 lg:block">
             <div className="max-w-3xl space-y-4">
               <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/70 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-md">
@@ -352,7 +352,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
               {authBenefits.map(({ icon: Icon, title, description }, i) => (
                 <div
                   key={title}
-                  className="auth-beta-benefit rounded-2xl border border-border/70 bg-background/72 p-3.5 shadow-sm backdrop-blur-md"
+                  className="auth-page-benefit rounded-2xl border border-border/70 bg-background/72 p-3.5 shadow-sm backdrop-blur-md"
                   style={{ animationDelay: `${i * 150}ms` }}
                 >
                   <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted">
@@ -364,7 +364,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
               ))}
             </div>
 
-            <div className="auth-beta-proof-row grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+            <div className="auth-page-proof-row grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
               <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
                 <BadgeCheck className="h-4 w-4 text-foreground" />
                 Admin controls
@@ -380,17 +380,17 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
             </div>
           </section>
 
-          {/* ── Right: Auth card ─────────────────────────── */}
+          {/* -- Right: Auth card --------------------------- */}
           <section className="min-h-0">
             <Card
               className={cn(
-                'auth-beta-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl',
-                hasMounted && 'auth-beta-card-entered',
+                'auth-page-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl',
+                hasMounted && 'auth-page-card-entered',
               )}
             >
-              <CardHeader className="auth-beta-card-header space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
+              <CardHeader className="auth-page-card-header space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
                 <div className="flex items-start justify-between gap-4">
-                  <div className="auth-beta-card-mark flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
+                  <div className="auth-page-card-mark flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
                     <HandCoins className="h-6 w-6" />
                   </div>
                   <div className="rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
@@ -398,21 +398,21 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                   </div>
                 </div>
                 <div>
-                  <CardTitle className="auth-beta-card-title text-3xl font-light leading-tight tracking-tight sm:text-4xl">
+                  <CardTitle className="auth-page-card-title text-3xl font-light leading-tight tracking-tight sm:text-4xl">
                     {isLoginView ? "Welcome back." : "Create your account."}
                   </CardTitle>
-                  <p className="auth-beta-card-copy mt-2 text-sm leading-6 text-muted-foreground">
+                  <p className="auth-page-card-copy mt-2 text-sm leading-6 text-muted-foreground">
                     {isLoginView
                       ? "Sign in to manage expenses, settlements, and reports."
                       : "Start with your name, then invite the group once you are inside."}
                   </p>
                 </div>
               </CardHeader>
-              <CardContent className="auth-beta-card-content flex min-h-0 flex-1 flex-col px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
+              <CardContent className="auth-page-card-content flex min-h-0 flex-1 flex-col px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
                 <div className="flex flex-col">
-                  {/* ── Form ──────────────────────────────── */}
-                  <form onSubmit={handleSubmit} className="auth-beta-form space-y-4">
-                    <div className="auth-beta-name-slot">
+                  {/* -- Form -------------------------------- */}
+                  <form onSubmit={handleSubmit} className="auth-page-form space-y-4">
+                    <div className="auth-page-name-slot">
                       <div
                         className={cn(
                           "grid grid-cols-2 gap-3 transition-all duration-200",
@@ -421,10 +421,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                         aria-hidden={isLoginView}
                       >
                         <div className="space-y-1.5">
-                          <Label htmlFor="beta-firstName" className={labelClassName}>First Name</Label>
+                          <Label htmlFor="auth-firstName" className={labelClassName}>First Name</Label>
                           <Input
                             ref={firstNameRef}
-                            id="beta-firstName"
+                            id="auth-firstName"
                             type="text"
                             autoComplete="given-name"
                             placeholder="John"
@@ -436,9 +436,9 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="beta-lastName" className={labelClassName}>Last Name</Label>
+                          <Label htmlFor="auth-lastName" className={labelClassName}>Last Name</Label>
                           <Input
-                            id="beta-lastName"
+                            id="auth-lastName"
                             type="text"
                             autoComplete="family-name"
                             placeholder="Doe"
@@ -453,10 +453,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="beta-email" className={labelClassName}>Email Address</Label>
+                      <Label htmlFor="auth-email" className={labelClassName}>Email Address</Label>
                       <Input
                         ref={emailRef}
-                        id="beta-email"
+                        id="auth-email"
                         type="email"
                         autoComplete="email"
                         placeholder="you@example.com"
@@ -468,10 +468,10 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                       />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="beta-password" className={labelClassName}>Password</Label>
+                      <Label htmlFor="auth-password" className={labelClassName}>Password</Label>
                       <div className="relative">
                         <Input
-                          id="beta-password"
+                          id="auth-password"
                           type={showPassword ? "text" : "password"}
                           autoComplete={isLoginView ? "current-password" : "new-password"}
                           placeholder={isLoginView ? "Password" : "Password - min. 6 characters"}
@@ -500,7 +500,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                       </div>
                     </div>
 
-                    <div className="auth-beta-action-slot">
+                    <div className="auth-page-action-slot">
                       {showResendConfirmation ? (
                         <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-300/60 bg-[#fff8e7] p-3 text-center shadow-sm dark:bg-amber-950/20">
                           <div>
@@ -523,7 +523,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                       ) : (
                         <Button
                           type="submit"
-                          className="auth-beta-primary-button h-11 w-full rounded-full text-sm font-semibold shadow-[rgba(78,50,23,0.08)_0px_10px_24px] sm:text-base"
+                          className="auth-page-primary-button h-11 w-full rounded-full text-sm font-semibold shadow-[rgba(78,50,23,0.08)_0px_10px_24px] sm:text-base"
                           disabled={isLoading || isGoogleLoading}
                         >
                           {isLoading ? (
@@ -544,7 +544,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                     </div>
                   </form>
 
-                  {/* ── Separator ──────────────────────────── */}
+                  {/* -- Separator ---------------------------- */}
                   <div className="relative my-3 sm:my-4">
                     <div className="absolute inset-0 flex items-center">
                       <Separator />
@@ -556,7 +556,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                     </div>
                   </div>
 
-                  {/* ── Google OAuth ───────────────────────── */}
+                  {/* -- Google OAuth ------------------------- */}
                   <Button
                     type="button"
                     className="h-11 w-full rounded-full border border-border/80 bg-white/95 text-sm text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground sm:text-base"
@@ -569,8 +569,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                     </span>
                   </Button>
 
-                  {/* ── Suggestion ─────────────────────────── */}
-                  <div className="auth-beta-status-slot">
+                  {/* -- Suggestion --------------------------- */}
+                  <div className="auth-page-status-slot">
                     {hasAuthError && !showResendConfirmation && authSuggestion ? (
                       <div className="rounded-2xl border border-border/70 bg-muted/60 p-2 text-center text-xs text-muted-foreground">
                         <div className="flex items-center justify-center space-x-2">
@@ -581,8 +581,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
                     ) : null}
                   </div>
 
-                  {/* ── Switch auth mode ───────────────────── */}
-                  <div className="auth-beta-switch-slot">
+                  {/* -- Switch auth mode --------------------- */}
+                  <div className="auth-page-switch-slot">
                     <Button
                       type="button"
                       variant="link"
@@ -598,8 +598,8 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
             </Card>
           </section>
 
-          {/* ── Mobile: benefit cards ─────────────────────── */}
-          <section className="auth-beta-mobile-story lg:hidden" aria-label="SettleEase highlights">
+          {/* -- Mobile: benefit cards ----------------------- */}
+          <section className="auth-page-mobile-story lg:hidden" aria-label="SettleEase highlights">
             <div className="space-y-1.5">
               <p className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 Why SettleEase
@@ -613,7 +613,7 @@ export default function AuthFormBeta({ supabase, onAuthSuccess }: AuthFormBetaPr
             </div>
             <div className="mt-4 grid gap-3">
               {authBenefits.map(({ icon: Icon, title, description }) => (
-                <div key={title} className="auth-beta-mobile-benefit">
+                <div key={title} className="auth-page-mobile-benefit">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border/70 bg-background/80 shadow-sm">
                     <Icon className="h-4 w-4" />
                   </div>

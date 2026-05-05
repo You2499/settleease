@@ -13,7 +13,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-import AuthFormBeta from '@/components/settleease/AuthFormBeta';
+import AuthForm from '@/components/settleease/AuthForm';
 import AddExpenseTab from '@/components/settleease/AddExpenseTab';
 import EditExpensesTab from '@/components/settleease/EditExpensesTab';
 import ManagePeopleTab from '@/components/settleease/ManagePeopleTab';
@@ -451,7 +451,7 @@ function SettleEasePageContent() {
 
   // Show auth form when auth is complete and there's no user
   if (!currentUser && !isLoadingAuth) {
-    return <AuthFormBeta supabase={supabaseClient} />;
+    return <AuthForm supabase={supabaseClient} />;
   }
 
   // Show the app shell during identity loading, with the active page's own skeleton.
