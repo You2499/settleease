@@ -4,6 +4,7 @@ import { useCallback } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { toast } from "@/hooks/use-toast";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 import {
   calculateItemwiseSplit,
   getItemLineTotal,
@@ -19,9 +20,11 @@ import type {
   ExpenseItemDetail,
   CelebrationContribution,
 } from "@/lib/settleease/types";
+import type { UsageSurface } from "@/lib/settleease/usageAnalytics";
 
 interface UseExpenseFormLogicProps {
   onExpenseAdded: () => void;
+  analyticsSurface?: UsageSurface;
 }
 
 export interface ExpenseSubmitOptions {
@@ -88,8 +91,10 @@ function toConvexItems(items: ExpenseItemDetail[] | null) {
 
 export function useExpenseFormLogic({
   onExpenseAdded,
+  analyticsSurface = "addExpense",
 }: UseExpenseFormLogicProps) {
   const saveExpense = useMutation(api.app.saveExpense);
+  const usageAnalytics = useUsageAnalytics({ surface: analyticsSurface });
   const validateForm = useCallback(
     (
       description: string,
@@ -335,8 +340,20 @@ export function useExpenseFormLogic({
           actualCelebrationAmount,
           amountToSplit
         )
-      )
+      ) {
+        usageAnalytics.track({
+          eventName: "expense.validation_failed",
+          surface: analyticsSurface,
+          status: "failure",
+          metadata: {
+            splitMethod,
+            itemCount: items.length,
+            participantCount: selectedPeopleEqual.length || Object.keys(unequalShares).length,
+            isMultiplePayers,
+          },
+        });
         return false;
+      }
 
       setIsLoading(true);
 
@@ -353,6 +370,12 @@ export function useExpenseFormLogic({
           variant: "destructive",
         });
         setIsLoading(false);
+        usageAnalytics.track({
+          eventName: "expense.validation_failed",
+          surface: analyticsSurface,
+          status: "failure",
+          metadata: { splitMethod, itemCount: items.length, isMultiplePayers },
+        });
         return false;
       }
 
@@ -434,6 +457,16 @@ export function useExpenseFormLogic({
             title: "Expense Updated",
             description: `${description} has been updated successfully.`,
           });
+          usageAnalytics.track({
+            eventName: "expense.form_saved",
+            surface: analyticsSurface,
+            metadata: {
+              splitMethod,
+              itemCount: items.length,
+              isMultiplePayers,
+              hasItems: items.length > 0,
+            },
+          });
         } else {
           await saveExpense({
             description: commonPayload.description,
@@ -449,6 +482,16 @@ export function useExpenseFormLogic({
           toast({
             title: "Expense Added",
             description: `${description} has been added successfully.`,
+          });
+          usageAnalytics.track({
+            eventName: "expense.form_saved",
+            surface: analyticsSurface,
+            metadata: {
+              splitMethod,
+              itemCount: items.length,
+              isMultiplePayers,
+              hasItems: items.length > 0,
+            },
           });
         }
 
@@ -468,12 +511,22 @@ export function useExpenseFormLogic({
           description: `Could not save expense: ${errorMessage}`,
           variant: "destructive",
         });
+        usageAnalytics.track({
+          eventName: "expense.save_failed",
+          surface: analyticsSurface,
+          status: "failure",
+          metadata: {
+            splitMethod,
+            itemCount: items.length,
+            isMultiplePayers,
+          },
+        });
         return false;
       } finally {
         setIsLoading(false);
       }
     },
-    [onExpenseAdded, saveExpense, validateForm]
+    [analyticsSurface, onExpenseAdded, saveExpense, usageAnalytics, validateForm]
   );
 
   return { handleSubmitExpense };

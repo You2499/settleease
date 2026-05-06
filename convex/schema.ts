@@ -221,4 +221,75 @@ export default defineSchema({
     .index("by_created_at", ["createdAt"])
     .index("by_user_created_at", ["userId", "createdAt"])
     .index("by_event_type", ["eventType"]),
+
+  appUsageEvents: defineTable({
+    actorUserId: v.string(),
+    actorRole: v.union(v.literal("admin"), v.literal("user")),
+    sessionId: v.optional(v.union(v.string(), v.null())),
+    eventName: v.string(),
+    eventGroup: v.string(),
+    surface: v.string(),
+    status: v.union(
+      v.literal("success"),
+      v.literal("failure"),
+      v.literal("cancelled"),
+      v.literal("info"),
+    ),
+    source: v.union(
+      v.literal("client"),
+      v.literal("server"),
+      v.literal("compat"),
+    ),
+    targetKind: v.optional(v.union(v.string(), v.null())),
+    durationMs: v.optional(v.union(v.number(), v.null())),
+    metadataJson: v.optional(v.union(v.string(), v.null())),
+    dateKey: v.string(),
+    createdAt: v.string(),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_date_key", ["dateKey"])
+    .index("by_surface_date", ["surface", "dateKey"])
+    .index("by_event_name", ["eventName"])
+    .index("by_actor_date", ["actorUserId", "dateKey"]),
+
+  usageDailyRollups: defineTable({
+    key: v.string(),
+    dateKey: v.string(),
+    eventName: v.string(),
+    eventGroup: v.string(),
+    surface: v.string(),
+    status: v.union(
+      v.literal("success"),
+      v.literal("failure"),
+      v.literal("cancelled"),
+      v.literal("info"),
+    ),
+    actorRole: v.union(v.literal("admin"), v.literal("user")),
+    source: v.union(
+      v.literal("client"),
+      v.literal("server"),
+      v.literal("compat"),
+    ),
+    count: v.number(),
+    updatedAt: v.string(),
+  })
+    .index("by_key", ["key"])
+    .index("by_date_key", ["dateKey"])
+    .index("by_surface_date", ["surface", "dateKey"]),
+
+  usageDailyTouches: defineTable({
+    key: v.string(),
+    dateKey: v.string(),
+    touchKind: v.union(v.literal("user"), v.literal("session")),
+    touchIdHash: v.string(),
+    actorRole: v.union(v.literal("admin"), v.literal("user")),
+    source: v.union(
+      v.literal("client"),
+      v.literal("server"),
+      v.literal("compat"),
+    ),
+    createdAt: v.string(),
+  })
+    .index("by_key", ["key"])
+    .index("by_date_kind", ["dateKey", "touchKind"]),
 });

@@ -39,6 +39,14 @@ class SettleEaseErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('SettleEase Error Boundary caught:', error, errorInfo);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("settleease:error-boundary", {
+        detail: {
+          componentName: this.props.componentName || "Component",
+          message: error.message,
+        },
+      }));
+    }
     this.setState({ error, errorInfo });
   }
 

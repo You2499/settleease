@@ -31,6 +31,7 @@ import {
 } from "@/lib/settleease/analyticsModel";
 import type { Category, Expense, Person, SettlementPayment } from "@/lib/settleease/types";
 import { cn } from "@/lib/utils";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 
 import {
   BarChart,
@@ -124,6 +125,7 @@ export default function AnalyticsTab({
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [datePreset, setDatePreset] = useState<AnalyticsDatePreset>("all");
   const [granularity, setGranularity] = useState<AnalyticsGranularity>("monthly");
+  const usageAnalytics = useUsageAnalytics({ surface: "analytics" });
 
   useEffect(() => {
     if (mode === "personal" && !selectedPersonId && people.length > 0) {
@@ -173,6 +175,11 @@ export default function AnalyticsTab({
               const nextMode = value as AnalyticsMode;
               setMode(nextMode);
               if (nextMode === "group") setSelectedPersonId(null);
+              usageAnalytics.track({
+                eventName: "analytics.filter_changed",
+                surface: "analytics",
+                metadata: { mode: nextMode, filter: "mode" },
+              });
             }}
             className="w-full sm:w-auto"
           >
@@ -190,11 +197,32 @@ export default function AnalyticsTab({
             <AnalyticsToolbar
               mode={mode}
               datePreset={datePreset}
-              onDatePresetChange={setDatePreset}
+              onDatePresetChange={(preset) => {
+                setDatePreset(preset);
+                usageAnalytics.track({
+                  eventName: "analytics.filter_changed",
+                  surface: "analytics",
+                  metadata: { datePreset: preset, filter: "datePreset" },
+                });
+              }}
               granularity={granularity}
-              onGranularityChange={setGranularity}
+              onGranularityChange={(nextGranularity) => {
+                setGranularity(nextGranularity);
+                usageAnalytics.track({
+                  eventName: "analytics.filter_changed",
+                  surface: "analytics",
+                  metadata: { filter: "granularity", mode: nextGranularity },
+                });
+              }}
               selectedPersonId={selectedPersonId}
-              onSelectedPersonIdChange={setSelectedPersonId}
+              onSelectedPersonIdChange={(personId) => {
+                setSelectedPersonId(personId);
+                usageAnalytics.track({
+                  eventName: "analytics.filter_changed",
+                  surface: "analytics",
+                  metadata: { filter: "person", mode },
+                });
+              }}
               people={people}
               peopleMap={peopleMap}
               isLoadingPeople={isLoadingPeople}

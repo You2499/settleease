@@ -15,6 +15,7 @@ import {
 import { format } from "date-fns";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -375,6 +376,10 @@ export default function ExportExpenseTab({
   const trackedRedactionKeyRef = useRef("");
   const storeAiRedaction = useMutation(api.app.storeAiRedaction);
   const trackReportGenerationEvent = useMutation(api.app.trackReportGenerationEvent);
+  const usageAnalytics = useUsageAnalytics({
+    surface: "exportExpense",
+    enabled: Boolean(currentUserId),
+  });
 
   useEffect(() => {
     if (!selectedPersonId && people.length > 0) {
@@ -404,12 +409,38 @@ export default function ExportExpenseTab({
     };
   }, []);
 
+  const handleModeSelect = (mode: ExportMode) => {
+    setExportMode(mode);
+    usageAnalytics.track({
+      eventName: "report.mode_changed",
+      surface: "exportExpense",
+      metadata: { reportMode: mode },
+    });
+  };
+
   const handlePresetSelect = (preset: DatePreset) => {
     setSelectedPreset(preset);
     const presetConfig = DATE_PRESETS.find((item) => item.id === preset);
     const range = presetConfig?.getRange();
     setStartDate(range?.start);
     setEndDate(range?.end);
+    usageAnalytics.track({
+      eventName: "report.date_preset_changed",
+      surface: "exportExpense",
+      metadata: { datePreset: preset },
+    });
+  };
+
+  const handleRedactionToggle = () => {
+    setIsRedacted((value) => {
+      const nextValue = !value;
+      usageAnalytics.track({
+        eventName: "report.redaction_toggled",
+        surface: "exportExpense",
+        metadata: { redacted: nextValue },
+      });
+      return nextValue;
+    });
   };
 
   const dateRange = useMemo(
@@ -805,14 +836,14 @@ export default function ExportExpenseTab({
                   icon={FileText}
                   title="Group Summary"
                   description="Settlement actions, balances, spending drivers"
-                  onClick={() => setExportMode("group")}
+                  onClick={() => handleModeSelect("group")}
                 />
                 <ModeButton
                   active={exportMode === "personal"}
                   icon={Users}
                   title="Personal Statement"
                   description="Participant ledger and counterparty balances"
-                  onClick={() => setExportMode("personal")}
+                  onClick={() => handleModeSelect("personal")}
                 />
               </div>
             </section>
@@ -860,6 +891,11 @@ export default function ExportExpenseTab({
                           setStartDate(date);
                           setSelectedPreset("custom");
                           setStartCalendarOpen(false);
+                          usageAnalytics.track({
+                            eventName: "report.date_preset_changed",
+                            surface: "exportExpense",
+                            metadata: { datePreset: "custom" },
+                          });
                         }}
                       />
                     </PopoverContent>
@@ -887,6 +923,11 @@ export default function ExportExpenseTab({
                           setEndDate(date);
                           setSelectedPreset("custom");
                           setEndCalendarOpen(false);
+                          usageAnalytics.track({
+                            eventName: "report.date_preset_changed",
+                            surface: "exportExpense",
+                            metadata: { datePreset: "custom" },
+                          });
                         }}
                       />
                     </PopoverContent>
@@ -907,7 +948,7 @@ export default function ExportExpenseTab({
 
                 <Button
                   variant={isRedacted ? "default" : "outline"}
-                  onClick={() => setIsRedacted((value) => !value)}
+                  onClick={handleRedactionToggle}
                   className="h-11 w-full min-w-0 overflow-hidden rounded-lg px-3"
                 >
                   {redactionState === "loading" ? (

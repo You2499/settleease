@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 import {
   BUDGET_ITEM_TAX_RATE,
   getBudgetAlcoholVatRate,
@@ -95,6 +96,7 @@ export default function CreateBudgetModal({
   getCategoryIconFromName,
   userRole,
 }: CreateBudgetModalProps) {
+  const usageAnalytics = useUsageAnalytics({ surface: "dashboard" });
   const [search, setSearch] = useState("");
   const deferredSearch = useDeferredValue(search);
   const [categoryFilter, setCategoryFilter] = useState(ALL_CATEGORIES_VALUE);
@@ -335,6 +337,7 @@ export default function CreateBudgetModal({
 
     const currentSignature = vatInputSignature;
     const currentItems = vatInputItems;
+    const finishTimer = usageAnalytics.startTimer();
 
     setVatStatus("loading");
     setVatModelName("");
@@ -371,12 +374,26 @@ export default function CreateBudgetModal({
       setVatStatus("ai");
       setVatClassifiedSignature(currentSignature);
       setVatModelName(data.modelDisplayName || "");
+      finishTimer({
+        eventName: "budget.vat_classification_generated",
+        surface: "dashboard",
+        metadata: {
+          itemCount: rows.length,
+          aiModelName: data.modelName || data.modelDisplayName || undefined,
+        },
+      });
     } catch (error: any) {
       console.warn("Budget tax calculation failed:", error);
       setVatClassifications({});
       setVatStatus("error");
       setVatModelName("");
       setVatClassifiedSignature("");
+      finishTimer({
+        eventName: "budget.vat_classification_failed",
+        surface: "dashboard",
+        status: "failure",
+        metadata: { itemCount: currentItems.length },
+      });
       toast({
         title: "Tax calculation failed",
         description:
@@ -384,7 +401,7 @@ export default function CreateBudgetModal({
         variant: "destructive",
       });
     }
-  }, [selectedLines.length, vatInputItems, vatInputSignature]);
+  }, [selectedLines.length, usageAnalytics, vatInputItems, vatInputSignature]);
 
   const handleAddCustomItem = async () => {
     const name = customName.trim().replace(/\s+/g, " ");

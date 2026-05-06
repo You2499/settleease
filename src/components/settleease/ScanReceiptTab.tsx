@@ -22,6 +22,7 @@ import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
 import { useExpenseFormLogic, type ExpenseSubmitOptions } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 import SmartScanItemReviewDialog from './SmartScanItemReviewDialog';
+import { useUsageAnalytics } from '@/hooks/useUsageAnalytics';
 
 import type {
   Expense, Person, PayerInputRow, ExpenseItemDetail,
@@ -283,6 +284,7 @@ export default function ScanReceiptTab({
   isLoadingCategories = false,
   isDataFetchedAtLeastOnce = true,
 }: ScanReceiptTabProps) {
+  const usageAnalytics = useUsageAnalytics({ surface: "scanReceipt" });
   const isLoadingData = isLoadingPeople || isLoadingCategories || !isDataFetchedAtLeastOnce;
 
   // Wizard state
@@ -329,7 +331,10 @@ export default function ScanReceiptTab({
 
   const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
 
-  const { handleSubmitExpense } = useExpenseFormLogic({ onExpenseAdded });
+  const { handleSubmitExpense } = useExpenseFormLogic({
+    onExpenseAdded,
+    analyticsSurface: "scanReceipt",
+  });
 
   // Animated analyzing messages
   useEffect(() => {
@@ -363,11 +368,23 @@ export default function ScanReceiptTab({
   const handleFileSelect = useCallback(async (file: File) => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
+      usageAnalytics.track({
+        eventName: "scan.receipt_upload_failed",
+        surface: "scanReceipt",
+        status: "failure",
+        metadata: { mode: "invalid_type" },
+      });
       setScanError('Please select an image file.');
       return;
     }
 
     if (!isSupportedImageType(file)) {
+      usageAnalytics.track({
+        eventName: "scan.receipt_upload_failed",
+        surface: "scanReceipt",
+        status: "failure",
+        metadata: { mode: "unsupported_type" },
+      });
       setScanError('Unsupported image format. Please use JPEG, PNG, or WebP.');
       return;
     }
@@ -396,18 +413,29 @@ export default function ScanReceiptTab({
       setImagePreview(previewUrl);
       setImageBase64(compressed.base64);
       setImageMimeType(compressed.mimeType);
+      usageAnalytics.track({
+        eventName: "scan.receipt_uploaded",
+        surface: "scanReceipt",
+        metadata: { mode: "image", status: "compressed" },
+      });
       
       setScanError(null);
       setIsCompressing(false);
     } catch (error: any) {
       console.error('Compression error:', error);
+      usageAnalytics.track({
+        eventName: "scan.receipt_upload_failed",
+        surface: "scanReceipt",
+        status: "failure",
+        metadata: { mode: "compression" },
+      });
       setScanError('Failed to process image. Please try another image.');
       setIsCompressing(false);
       setImagePreview(null);
       setImageBase64(null);
       setImageMimeType(null);
     }
-  }, []);
+  }, [usageAnalytics]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -425,6 +453,7 @@ export default function ScanReceiptTab({
 
     // Create abort controller for cancellation
     abortControllerRef.current = new AbortController();
+    const finishScanTimer = usageAnalytics.startTimer();
 
     try {
       const response = await fetch('/api/scan-receipt', {
@@ -450,13 +479,33 @@ export default function ScanReceiptTab({
       setParsedData(data);
       setStep('split');
       setCanRetry(false);
+      finishScanTimer({
+        eventName: "scan.receipt_scan_completed",
+        surface: "scanReceipt",
+        metadata: {
+          itemCount: Array.isArray(data?.items) ? data.items.length : 0,
+          categoryCount: dynamicCategories.length,
+        },
+      });
     } catch (error: any) {
       console.error('Scan error:', error);
       
       if (error.name === 'AbortError') {
+        finishScanTimer({
+          eventName: "scan.receipt_scan_cancelled",
+          surface: "scanReceipt",
+          status: "cancelled",
+          metadata: { categoryCount: dynamicCategories.length },
+        });
         setScanError('Scan cancelled.');
         setCanRetry(true);
       } else {
+        finishScanTimer({
+          eventName: "scan.receipt_scan_failed",
+          surface: "scanReceipt",
+          status: "failure",
+          metadata: { categoryCount: dynamicCategories.length },
+        });
         setScanError(error.message || 'Failed to scan receipt. Please try again.');
         setCanRetry(true);
       }
@@ -465,7 +514,7 @@ export default function ScanReceiptTab({
     } finally {
       abortControllerRef.current = null;
     }
-  }, [imageBase64, imageMimeType, dynamicCategories]);
+  }, [imageBase64, imageMimeType, dynamicCategories, usageAnalytics]);
 
   const handleCancelScan = useCallback(() => {
     if (abortControllerRef.current) {
@@ -679,7 +728,7 @@ export default function ScanReceiptTab({
   );
 
   const submitExpense = async (options?: ExpenseSubmitOptions) => {
-    return handleSubmitExpense(
+    const saved = await handleSubmitExpense(
       description,
       totalAmount,
       category,
@@ -699,6 +748,18 @@ export default function ScanReceiptTab({
       setIsLoading,
       options
     );
+    if (saved) {
+      usageAnalytics.track({
+        eventName: "scan.scanned_expense_saved",
+        surface: "scanReceipt",
+        metadata: {
+          splitMethod,
+          itemCount: items.length,
+          participantCount: people.length,
+        },
+      });
+    }
+    return saved;
   };
 
   const handleMetadataReviewConfirm = async () => {

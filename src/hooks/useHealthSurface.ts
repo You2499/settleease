@@ -3,6 +3,7 @@
 import { useAction, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@convex/_generated/api";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 
 import type {
   HealthChunkAvailabilityResult,
@@ -82,6 +83,7 @@ export function useHealthSurface<TSurfaceId extends HealthSurfaceId>({
     queryArgs,
   ) as HealthSurfaceState<HealthSurfacePayloadMap[TSurfaceId]> | undefined;
   const ensureHealthChunks = useAction(api.healthActions.ensureHealthChunks);
+  const usageAnalytics = useUsageAnalytics({ surface: "health", enabled });
   const [lastResolvedState, setLastResolvedState] = useState<HealthSurfaceState<HealthSurfacePayloadMap[TSurfaceId]> | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
 
@@ -102,14 +104,41 @@ export function useHealthSurface<TSurfaceId extends HealthSurfaceId>({
     if (availabilitySummary.missingChunkCount <= 0) return;
 
     const ensureKey = buildEnsureKey({ startDate, endDate });
+    const finishTimer = usageAnalytics.startTimer();
+    usageAnalytics.track({
+      eventName: "health.requested",
+      surface: "health",
+      metadata: {
+        mode,
+        filter: surfaceId,
+      },
+    });
     void runEnsureOnce(ensureKey, () =>
       ensureHealthChunks({
         startDate,
         endDate,
       }),
-    ).catch(() => {
-      // Surface-level UI handles failures through the availability and state queries.
-    });
+    )
+      .then((result: any) => {
+        const generated = Number(result?.generatedChunkCount || 0);
+        const cached = Number(result?.cachedChunkCount || 0);
+        finishTimer({
+          eventName: generated > 0 ? "health.generated" : "health.cache_hit",
+          surface: "health",
+          metadata: {
+            cacheState: generated > 0 ? "generated" : "cached",
+            itemCount: generated + cached,
+          },
+        });
+      })
+      .catch(() => {
+        finishTimer({
+          eventName: "health.failed",
+          surface: "health",
+          status: "failure",
+          metadata: { filter: surfaceId },
+        });
+      });
   }, [
     availabilitySummary,
     availabilitySummary?.candidateRowCount,
@@ -117,7 +146,10 @@ export function useHealthSurface<TSurfaceId extends HealthSurfaceId>({
     enabled,
     endDate,
     ensureHealthChunks,
+    mode,
     startDate,
+    surfaceId,
+    usageAnalytics,
   ]);
 
   const surfaceState = liveState || (
@@ -132,8 +164,9 @@ export function useHealthSurface<TSurfaceId extends HealthSurfaceId>({
   async function retry() {
     if (!enabled) return;
     setIsRetrying(true);
+    const finishTimer = usageAnalytics.startTimer();
     try {
-      await runEnsureOnce(
+      const result: any = await runEnsureOnce(
         buildEnsureKey({ startDate, endDate, regenerateFailed: true }),
         () =>
           ensureHealthChunks({
@@ -142,6 +175,23 @@ export function useHealthSurface<TSurfaceId extends HealthSurfaceId>({
             regenerateFailed: true,
           }),
       );
+      finishTimer({
+        eventName: Number(result?.generatedChunkCount || 0) > 0 ? "health.generated" : "health.cache_hit",
+        surface: "health",
+        metadata: {
+          mode,
+          filter: surfaceId,
+          cacheState: Number(result?.generatedChunkCount || 0) > 0 ? "generated" : "cached",
+        },
+      });
+    } catch (error) {
+      finishTimer({
+        eventName: "health.failed",
+        surface: "health",
+        status: "failure",
+        metadata: { mode, filter: surfaceId },
+      });
+      throw error;
     } finally {
       setIsRetrying(false);
     }

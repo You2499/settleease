@@ -3,6 +3,7 @@
 import React, { useState, useMemo, useRef } from "react";
 import { useAction } from "convex/react";
 import { api } from "@convex/_generated/api";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 import {
   Card,
   CardContent,
@@ -110,6 +111,7 @@ export default function SettlementSummary({
   const [isSummaryLoading, setIsSummaryLoading] = useState(false);
   const summaryButtonRef = useRef<HTMLButtonElement>(null);
   const getOrGenerateSettlementSummary = useAction(api.aiSummaryActions.getOrGenerateSettlementSummary);
+  const usageAnalytics = useUsageAnalytics({ surface: "dashboard" });
 
   const overviewDescription = simplifySettlement
     ? "Minimum transactions required to settle all debts."
@@ -238,11 +240,34 @@ export default function SettlementSummary({
     setSummaryResult(null);
     setSummaryError(null);
     setIsSummaryLoading(true);
+    const finishSummaryTimer = usageAnalytics.startTimer();
+    usageAnalytics.track({
+      eventName: "summary.requested",
+      surface: "dashboard",
+      metadata: {
+        expenseCount: allExpenses.length,
+        settlementCount: settlementPayments.length,
+        manualOverrideCount: manualOverrides.length,
+      },
+    });
     try {
       const result = await getOrGenerateSettlementSummary({});
       setSummaryResult(result as AISummaryActionResult);
+      finishSummaryTimer({
+        eventName: (result as AISummaryActionResult).source === "cached" ? "summary.cache_hit" : "summary.generated",
+        surface: "dashboard",
+        metadata: {
+          cacheState: (result as AISummaryActionResult).source,
+          aiModelName: (result as AISummaryActionResult).modelCode,
+        },
+      });
     } catch (error: any) {
       setSummaryError(error?.message || "Failed to generate summary");
+      finishSummaryTimer({
+        eventName: "summary.failed",
+        surface: "dashboard",
+        status: "failure",
+      });
     } finally {
       setIsSummaryLoading(false);
     }

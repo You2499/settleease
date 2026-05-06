@@ -42,6 +42,7 @@ import type {
 } from "@/lib/settleease/healthTypes";
 import type { Category, Expense, Person } from "@/lib/settleease/types";
 import { useHealthSurface } from "@/hooks/useHealthSurface";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 import {
   ExpenseActivitySkeleton,
   LoadingRegion,
@@ -1129,6 +1130,7 @@ export default function HealthTab({
   const [selectedPersonId, setSelectedPersonId] = useState<string | null>(null);
   const [datePreset, setDatePreset] = useState<HealthDatePreset>("30d");
   const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
+  const usageAnalytics = useUsageAnalytics({ surface: "health" });
 
   useEffect(() => {
     if (mode === "personal" && !selectedPersonId && people.length > 0) {
@@ -1171,6 +1173,11 @@ export default function HealthTab({
                 if (nextMode === "group") {
                   setSelectedPersonId(null);
                 }
+                usageAnalytics.track({
+                  eventName: "health.filter_changed",
+                  surface: "health",
+                  metadata: { mode: nextMode, filter: "mode" },
+                });
               }}
               className="w-full sm:w-auto"
             >
@@ -1188,9 +1195,23 @@ export default function HealthTab({
               <HealthToolbar
                 mode={mode}
                 datePreset={datePreset}
-                onDatePresetChange={setDatePreset}
+                onDatePresetChange={(preset) => {
+                  setDatePreset(preset);
+                  usageAnalytics.track({
+                    eventName: "health.filter_changed",
+                    surface: "health",
+                    metadata: { datePreset: preset, filter: "datePreset" },
+                  });
+                }}
                 selectedPersonId={selectedPersonId}
-                onSelectedPersonIdChange={setSelectedPersonId}
+                onSelectedPersonIdChange={(personId) => {
+                  setSelectedPersonId(personId);
+                  usageAnalytics.track({
+                    eventName: "health.filter_changed",
+                    surface: "health",
+                    metadata: { mode, filter: "person" },
+                  });
+                }}
                 people={people}
                 peopleMap={peopleMap}
                 isLoadingPeople={isLoadingPeople}

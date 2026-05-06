@@ -48,6 +48,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
+import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
 import { applyFontPreference } from "@/hooks/useFontSync";
 import { cn } from "@/lib/utils";
 import type {
@@ -113,6 +114,9 @@ type AdminSettingsSnapshot = {
     budgetItems: number;
     userProfiles: number;
     reportGenerationEvents: number;
+    appUsageEvents: number;
+    usageDailyRollups: number;
+    usageDailyTouches: number;
     aiSummaries: number;
     aiRedactions: number;
     aiPrompts: number;
@@ -128,29 +132,46 @@ type AdminSettingsSnapshot = {
   checkedAt: string;
 };
 
-type ReportAnalytics = {
-  sampledEventCount: number;
-  actions: {
-    previews: number;
-    prints: number;
-    downloads: number;
+type UsageAnalyticsPreset = "24h" | "7d" | "30d" | "90d";
+
+type UsageAnalytics = {
+  datePreset: UsageAnalyticsPreset;
+  filters: {
+    surface: string;
+    status: string;
+    role: string;
+    eventGroup: string;
   };
-  redaction: {
-    enabledEvents: number;
-    cacheHits: number;
-    generated: number;
-    fallbacks: number;
+  range: {
+    startDateKey: string;
+    endDateKey: string;
   };
-  recentEvents: Array<{
-    eventType: string;
-    reportMode: string;
-    dateRangeLabel: string;
-    redacted: boolean;
-    expenseCount: number;
-    settlementCount: number;
-    participantCount: number;
-    createdAt: string;
-  }>;
+  cards: {
+    activeUsers: number;
+    sessions: number;
+    totalEvents: number;
+    failureRate: number;
+    topSurface: string;
+    expenseSaves: number;
+    scanSuccessRate: number;
+    settlementActions: number;
+    reportDownloads: number;
+    aiCacheRate: number;
+    aiFallbackFailureRate: number;
+  };
+  totals: {
+    success: number;
+    failure: number;
+    cancelled: number;
+    info: number;
+  };
+  activityByDate: Array<{ dateKey: string; count: number }>;
+  featureAdoption: Array<{ key: string; count: number }>;
+  eventGroups: Array<{ key: string; count: number }>;
+  statuses: Array<{ key: string; count: number }>;
+  topActions: Array<{ key: string; count: number }>;
+  workflowFunnel: Array<{ key: string; count: number }>;
+  aiReportHealth: Array<{ key: string; count: number }>;
 };
 
 type AdminUserProfile = {
@@ -231,6 +252,38 @@ const LANDING_VIEW_OPTIONS: Array<{ value: ActiveView; label: string }> = [
   { value: "settings", label: "Settings" },
 ];
 
+const USAGE_SURFACE_FILTERS = [
+  "app",
+  "dashboard",
+  "analytics",
+  "health",
+  "addExpense",
+  "editExpenses",
+  "managePeople",
+  "manageCategories",
+  "manageSettlements",
+  "exportExpense",
+  "scanReceipt",
+  "settings",
+];
+
+const USAGE_EVENT_GROUP_FILTERS = [
+  "session",
+  "navigation",
+  "expenses",
+  "people",
+  "categories",
+  "settlements",
+  "scan",
+  "summary",
+  "health",
+  "budget",
+  "report",
+  "analytics",
+  "settings",
+  "errors",
+];
+
 function getHostFromUrl(url: string) {
   try {
     return new URL(url).host;
@@ -241,6 +294,18 @@ function getHostFromUrl(url: string) {
 
 function formatNumber(value: number | undefined | null) {
   return new Intl.NumberFormat("en-US").format(value ?? 0);
+}
+
+function formatPercent(value: number | undefined | null) {
+  return `${Math.round((value ?? 0) * 100)}%`;
+}
+
+function formatUsageLabel(value: string) {
+  return value
+    .replaceAll("_", " ")
+    .replaceAll(".", " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
 function formatDateTime(value?: string | null) {
@@ -259,6 +324,7 @@ function buildDangerPhrase(
   environment: SettleEaseEnvironment,
   action:
     | "clearReportLogs"
+    | "clearUsageAnalytics"
     | "clearAiCaches"
     | "clearActiveOverrides"
     | "clearSettlementRecords"
@@ -270,6 +336,8 @@ function buildDangerPhrase(
   switch (action) {
     case "clearReportLogs":
       return `CLEAR ${name} REPORT LOGS`;
+    case "clearUsageAnalytics":
+      return `CLEAR ${name} USAGE ANALYTICS`;
     case "clearAiCaches":
       return `CLEAR ${name} AI CACHES`;
     case "clearActiveOverrides":
@@ -344,6 +412,43 @@ function MetricTile({
       {description ? (
         <p className="mt-1 truncate text-xs text-muted-foreground">{description}</p>
       ) : null}
+    </div>
+  );
+}
+
+function UsageList({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ key: string; count: number }>;
+}) {
+  const maxCount = Math.max(1, ...rows.map((row) => row.count));
+
+  return (
+    <div className="min-w-0 rounded-lg border bg-card/30 p-4">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold">{title}</p>
+        <Badge variant="secondary">{formatNumber(rows.reduce((sum, row) => sum + row.count, 0))}</Badge>
+      </div>
+      <div className="mt-3 space-y-2">
+        {rows.length > 0 ? rows.slice(0, 8).map((row) => (
+          <div key={row.key} className="space-y-1">
+            <div className="flex items-center justify-between gap-3 text-xs">
+              <span className="min-w-0 truncate text-muted-foreground">{formatUsageLabel(row.key)}</span>
+              <span className="shrink-0 font-medium">{formatNumber(row.count)}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${Math.max(4, (row.count / maxCount) * 100)}%` }}
+              />
+            </div>
+          </div>
+        )) : (
+          <p className="text-sm text-muted-foreground">No aggregate data for this filter.</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -645,12 +750,10 @@ export default function SettingsTab({
   isDevelopmentEnvironment,
 }: SettingsTabProps) {
   const { theme, setTheme } = useTheme();
+  const usageAnalytics = useUsageAnalytics({ surface: "settings" });
   const snapshot = useQuery(api.app.getAdminSettingsSnapshot, {}) as
     | AdminSettingsSnapshot
     | undefined;
-  const reportAnalytics = useQuery(api.app.getReportGenerationAnalytics, {
-    limit: 500,
-  }) as ReportAnalytics | undefined;
   const adminProfiles = useQuery(api.app.listUserProfilesForAdmin, {}) as
     | AdminUserProfile[]
     | undefined;
@@ -660,7 +763,7 @@ export default function SettingsTab({
   const updateAiConfig = useMutation(api.app.updateAiConfig);
   const setUserWindowsExperience = useMutation(api.app.setUserWindowsExperience);
   const backfillBudgetItemsFromExpenses = useMutation(api.app.backfillBudgetItemsFromExpenses);
-  const clearReportGenerationEvents = useMutation(api.app.clearReportGenerationEvents);
+  const clearAppUsageAnalytics = useMutation(api.app.clearAppUsageAnalytics);
   const clearAiCaches = useMutation(api.app.clearAiCaches);
   const clearSettlementRecords = useMutation(api.app.clearSettlementRecords);
   const resetSettleEaseData = useMutation(api.app.resetSettleEaseData);
@@ -687,6 +790,11 @@ export default function SettingsTab({
   const [backfillPreview, setBackfillPreview] = useState<BudgetBackfillResult | null>(null);
   const [includeSummaries, setIncludeSummaries] = useState(true);
   const [includeRedactions, setIncludeRedactions] = useState(true);
+  const [usageDatePreset, setUsageDatePreset] = useState<UsageAnalyticsPreset>("30d");
+  const [usageSurface, setUsageSurface] = useState("all");
+  const [usageStatus, setUsageStatus] = useState("all");
+  const [usageRole, setUsageRole] = useState("all");
+  const [usageEventGroup, setUsageEventGroup] = useState("all");
   const [workingAction, setWorkingAction] = useState<string | null>(null);
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null);
   const [productionDangerUnlocked, setProductionDangerUnlocked] = useState(false);
@@ -711,6 +819,14 @@ export default function SettingsTab({
     setFallbackTwo(snapshot.aiConfig.fallbackModelCodes?.[1] || "none");
   }, [snapshot?.aiConfig]);
 
+  const appUsageAnalytics = useQuery(api.app.getAppUsageAnalytics, {
+    datePreset: usageDatePreset,
+    surface: usageSurface,
+    status: usageStatus,
+    role: usageRole,
+    eventGroup: usageEventGroup,
+  }) as UsageAnalytics | undefined;
+
   const fallbackCounts = useMemo(() => {
     const activeManualOverrides = manualOverrides.filter((override) => override.is_active).length;
     return {
@@ -723,6 +839,9 @@ export default function SettingsTab({
       budgetItems: 0,
       userProfiles: userRole ? 1 : 0,
       reportGenerationEvents: 0,
+      appUsageEvents: 0,
+      usageDailyRollups: 0,
+      usageDailyTouches: 0,
       aiSummaries: 0,
       aiRedactions: 0,
       aiPrompts: 0,
@@ -816,6 +935,13 @@ export default function SettingsTab({
     if (!success) {
       throw new Error("Profile update was rejected.");
     }
+    usageAnalytics.track({
+      eventName: "settings.preference_saved",
+      surface: "settings",
+      metadata: {
+        feature: Object.keys(updates)[0] || "profile",
+      },
+    });
   };
 
   const runDangerAction = async (
@@ -925,7 +1051,7 @@ export default function SettingsTab({
               <MetricTile label="People" value={counts.people} description="Participants" icon={Users} />
               <MetricTile label="Expenses" value={counts.expenses} description="Expense records" icon={FileDown} />
               <MetricTile label="Settlements" value={counts.settlementPayments} description="Recorded payments" icon={HandCoins} />
-              <MetricTile label="Reports" value={counts.reportGenerationEvents} description="Tracked report events" icon={ChartColumn} />
+              <MetricTile label="Usage Events" value={counts.appUsageEvents} description="Tracked app analytics" icon={ChartColumn} />
             </div>
 
             <div className="grid gap-4 xl:grid-cols-2">
@@ -1267,36 +1393,102 @@ export default function SettingsTab({
 
               <SettingsSection
                 icon={ChartColumn}
-                title="Report Analytics"
-                description="Recent export, print, preview, and redaction activity."
+                title="Usage Analytics"
+                description="Aggregate app usage, workflow, report, and AI activity."
               >
-                {reportAnalytics ? (
+                {appUsageAnalytics ? (
                   <div className="space-y-4">
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <MetricTile label="Previews" value={reportAnalytics.actions.previews} icon={Activity} />
-                      <MetricTile label="Downloads" value={reportAnalytics.actions.downloads} icon={FileDown} />
-                      <MetricTile label="Cache Hits" value={reportAnalytics.redaction.cacheHits} icon={Brain} />
-                      <MetricTile label="Fallbacks" value={reportAnalytics.redaction.fallbacks} icon={AlertTriangle} />
+                    <div className="grid gap-3 md:grid-cols-5">
+                      <Select value={usageDatePreset} onValueChange={(value) => setUsageDatePreset(value as UsageAnalyticsPreset)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="24h">24 hours</SelectItem>
+                          <SelectItem value="7d">7 days</SelectItem>
+                          <SelectItem value="30d">30 days</SelectItem>
+                          <SelectItem value="90d">90 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={usageSurface} onValueChange={setUsageSurface}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Surface" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All surfaces</SelectItem>
+                          {USAGE_SURFACE_FILTERS.map((surface) => (
+                            <SelectItem key={surface} value={surface}>
+                              {formatUsageLabel(surface)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={usageStatus} onValueChange={setUsageStatus}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All statuses</SelectItem>
+                          <SelectItem value="success">Success</SelectItem>
+                          <SelectItem value="failure">Failure</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                          <SelectItem value="info">Info</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={usageRole} onValueChange={setUsageRole}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All roles</SelectItem>
+                          <SelectItem value="admin">Admins</SelectItem>
+                          <SelectItem value="user">Users</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select value={usageEventGroup} onValueChange={setUsageEventGroup}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Group" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All groups</SelectItem>
+                          {USAGE_EVENT_GROUP_FILTERS.map((eventGroup) => (
+                            <SelectItem key={eventGroup} value={eventGroup}>
+                              {formatUsageLabel(eventGroup)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    {reportAnalytics.recentEvents.length > 0 ? (
-                      <div className="max-h-[240px] space-y-2 overflow-y-auto pr-1">
-                        {reportAnalytics.recentEvents.slice(0, 8).map((event, index) => (
-                          <div key={`${event.createdAt}-${index}`} className="rounded-lg border bg-card/30 p-3 text-sm">
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium">{event.eventType.replaceAll("_", " ")}</span>
-                              <span className="text-xs text-muted-foreground">{formatDateTime(event.createdAt)}</span>
-                            </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {event.reportMode} / {event.dateRangeLabel} / {event.expenseCount} expenses
-                            </p>
-                          </div>
-                        ))}
+
+                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                      <MetricTile label="Active Users" value={appUsageAnalytics.cards.activeUsers} icon={Users} />
+                      <MetricTile label="Sessions" value={appUsageAnalytics.cards.sessions} icon={Activity} />
+                      <MetricTile label="Events" value={appUsageAnalytics.cards.totalEvents} icon={ChartColumn} />
+                      <MetricTile label="Failure Rate" value={formatPercent(appUsageAnalytics.cards.failureRate)} icon={AlertTriangle} />
+                      <MetricTile label="Top Surface" value={formatUsageLabel(appUsageAnalytics.cards.topSurface)} icon={Sparkles} />
+                      <MetricTile label="Expense Saves" value={appUsageAnalytics.cards.expenseSaves} icon={FileDown} />
+                      <MetricTile label="Scan Success" value={formatPercent(appUsageAnalytics.cards.scanSuccessRate)} icon={Activity} />
+                      <MetricTile label="Settlements" value={appUsageAnalytics.cards.settlementActions} icon={HandCoins} />
+                      <MetricTile label="Downloads" value={appUsageAnalytics.cards.reportDownloads} icon={FileDown} />
+                      <MetricTile label="AI Cache Rate" value={formatPercent(appUsageAnalytics.cards.aiCacheRate)} icon={Brain} />
+                      <MetricTile label="AI Fallbacks" value={formatPercent(appUsageAnalytics.cards.aiFallbackFailureRate)} icon={AlertTriangle} />
+                      <MetricTile label="Success Events" value={appUsageAnalytics.totals.success} icon={ShieldCheck} />
+                    </div>
+
+                    {appUsageAnalytics.cards.totalEvents > 0 ? (
+                      <div className="grid gap-4 xl:grid-cols-2">
+                        <UsageList title="Activity Over Time" rows={appUsageAnalytics.activityByDate.map((row) => ({ key: row.dateKey, count: row.count }))} />
+                        <UsageList title="Feature Adoption" rows={appUsageAnalytics.featureAdoption} />
+                        <UsageList title="Workflow Funnel" rows={appUsageAnalytics.workflowFunnel} />
+                        <UsageList title="AI and Report Health" rows={appUsageAnalytics.aiReportHealth} />
+                        <UsageList title="Event Groups" rows={appUsageAnalytics.eventGroups} />
+                        <UsageList title="Top Aggregate Actions" rows={appUsageAnalytics.topActions} />
                       </div>
                     ) : (
                       <AppEmptyState
                         icon={ChartColumn}
-                        title="No report activity"
-                        description="Report analytics will appear here after exports, prints, or previews."
+                        title="No usage activity"
+                        description="Usage analytics will appear here after users interact with the app."
                         size="compact"
                       />
                     )}
@@ -1309,13 +1501,13 @@ export default function SettingsTab({
 
             <SettingsSection
               icon={Trash2}
-              title="Report and AI Cache Cleanup"
-              description="Clear generated operational logs and cached AI outputs for the current deployment."
+              title="Usage and AI Cache Cleanup"
+              description="Clear generated aggregate analytics and cached AI outputs for the current deployment."
             >
               <div className="grid gap-3 xl:grid-cols-2">
                 <ActionRow
-                  title="Clear report logs"
-                  description={`${formatNumber(counts.reportGenerationEvents)} report events are stored on this deployment.`}
+                  title="Clear usage analytics"
+                  description={`${formatNumber(counts.appUsageEvents)} usage events, ${formatNumber(counts.usageDailyRollups)} rollups, and ${formatNumber(counts.reportGenerationEvents)} legacy report events are stored on this deployment.`}
                   destructive
                 >
                   <Button
@@ -1323,29 +1515,31 @@ export default function SettingsTab({
                     disabled={dangerControlDisabled}
                     onClick={() =>
                       openDangerAction({
-                        id: "clear-report-logs",
-                        title: `Clear ${dangerEnvironmentLabel} report logs`,
-                        description: "This deletes report generation event history for the connected deployment.",
-                        phrase: buildDangerPhrase(clientEnvironment, "clearReportLogs"),
-                        buttonLabel: "Clear Logs",
+                        id: "clear-usage-analytics",
+                        title: `Clear ${dangerEnvironmentLabel} usage analytics`,
+                        description: "This deletes app usage analytics, aggregate rollups, session touches, and legacy report event history for the connected deployment.",
+                        phrase: buildDangerPhrase(clientEnvironment, "clearUsageAnalytics"),
+                        buttonLabel: "Clear Analytics",
                         targetSummary: [
                           { label: "Environment", value: dangerEnvironmentLabel },
-                          { label: "Report events", value: counts.reportGenerationEvents },
+                          { label: "Usage events", value: counts.appUsageEvents },
+                          { label: "Rollups", value: counts.usageDailyRollups },
+                          { label: "Legacy report events", value: counts.reportGenerationEvents },
                         ],
                         run: (confirmation) =>
                           runDangerAction(
-                            "clear-report-logs",
-                            "Report logs cleared",
+                            "clear-usage-analytics",
+                            "Usage analytics cleared",
                             (phrase) =>
-                              clearReportGenerationEvents(buildDangerMutationArgs(phrase)),
-                            "Report generation logs were deleted.",
+                              clearAppUsageAnalytics(buildDangerMutationArgs(phrase)),
+                            "Usage analytics and legacy report logs were deleted.",
                             confirmation,
                           ),
                       })
                     }
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Clear Logs
+                    Clear Analytics
                   </Button>
                 </ActionRow>
 

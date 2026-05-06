@@ -100,6 +100,63 @@ const reportGenerationEventType = v.union(
 
 const exportReportMode = v.union(v.literal("group"), v.literal("personal"));
 
+const usageEventStatus = v.union(
+  v.literal("success"),
+  v.literal("failure"),
+  v.literal("cancelled"),
+  v.literal("info"),
+);
+
+const usageEventSource = v.union(
+  v.literal("client"),
+  v.literal("server"),
+  v.literal("compat"),
+);
+
+const usageDatePreset = v.union(
+  v.literal("24h"),
+  v.literal("7d"),
+  v.literal("30d"),
+  v.literal("90d"),
+);
+
+type UsageEventStatus = "success" | "failure" | "cancelled" | "info";
+type UsageEventSource = "client" | "server" | "compat";
+type UsageActorRole = "admin" | "user";
+
+const SAFE_USAGE_METADATA_KEYS = new Set([
+  "activeView",
+  "aiModelName",
+  "amountBucket",
+  "cacheState",
+  "categoryCount",
+  "datePreset",
+  "durationBucket",
+  "eventType",
+  "expenseCount",
+  "fallback",
+  "feature",
+  "filter",
+  "fromView",
+  "hasItems",
+  "isMultiplePayers",
+  "itemCount",
+  "manualOverrideCount",
+  "mode",
+  "participantCount",
+  "paymentCount",
+  "preset",
+  "redacted",
+  "reportMode",
+  "settlementCount",
+  "splitMethod",
+  "status",
+  "surface",
+  "toView",
+  "usedCache",
+  "view",
+]);
+
 const DEFAULT_CATEGORY_SEEDS = [
   { name: "Food", iconName: "Utensils" },
   { name: "Groceries", iconName: "ShoppingCart" },
@@ -514,6 +571,7 @@ function getDangerConfirmationPhrase(
   environment: SettleEaseEnvironment,
   action:
     | "clearReportLogs"
+    | "clearUsageAnalytics"
     | "clearAiCaches"
     | "clearActiveOverrides"
     | "clearSettlementRecords"
@@ -525,6 +583,8 @@ function getDangerConfirmationPhrase(
   switch (action) {
     case "clearReportLogs":
       return `CLEAR ${name} REPORT LOGS`;
+    case "clearUsageAnalytics":
+      return `CLEAR ${name} USAGE ANALYTICS`;
     case "clearAiCaches":
       return `CLEAR ${name} AI CACHES`;
     case "clearActiveOverrides":
@@ -615,6 +675,276 @@ async function requireAdmin(ctx: any) {
   return supabaseUserId;
 }
 
+function usageDateKey(value?: string | null) {
+  const date = value ? new Date(value) : new Date();
+  if (Number.isNaN(date.getTime())) return nowIso().slice(0, 10);
+  return date.toISOString().slice(0, 10);
+}
+
+function usageRangeStartDateKey(preset: "24h" | "7d" | "30d" | "90d") {
+  const days = preset === "24h" ? 1 : preset === "7d" ? 7 : preset === "30d" ? 30 : 90;
+  const start = new Date();
+  start.setUTCDate(start.getUTCDate() - (days - 1));
+  start.setUTCHours(0, 0, 0, 0);
+  return start.toISOString().slice(0, 10);
+}
+
+function clampUsageString(value: unknown, fallback: string) {
+  const cleaned = String(value ?? "")
+    .trim()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-zA-Z0-9_.:/-]/g, "")
+    .slice(0, 80);
+  return cleaned || fallback;
+}
+
+function sanitizeUsageMetadataValue(value: unknown): string | number | boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? Number(value.toFixed(3)) : null;
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return null;
+    const compact = trimmed.replace(/\s+/g, "_");
+    return /^[a-zA-Z0-9_.:/-]{1,80}$/.test(compact)
+      ? compact
+      : "text_present";
+  }
+  return null;
+}
+
+function sanitizeUsageMetadataJson(value: unknown) {
+  let source = value;
+  if (typeof value === "string" && value.trim()) {
+    try {
+      source = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    return null;
+  }
+
+  const sanitized: Record<string, string | number | boolean | null> = {};
+  for (const [key, rawValue] of Object.entries(source as Record<string, unknown>)) {
+    if (!SAFE_USAGE_METADATA_KEYS.has(key)) continue;
+    const value = sanitizeUsageMetadataValue(rawValue);
+    if (value !== null) sanitized[key] = value;
+  }
+
+  return Object.keys(sanitized).length > 0 ? JSON.stringify(sanitized) : null;
+}
+
+function bucketAmount(value: unknown) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return "unknown";
+  if (amount < 100) return "lt_100";
+  if (amount < 500) return "100_499";
+  if (amount < 1000) return "500_999";
+  if (amount < 5000) return "1000_4999";
+  if (amount < 10000) return "5000_9999";
+  return "gte_10000";
+}
+
+async function getUsageActorRole(ctx: any, actorUserId: string): Promise<UsageActorRole> {
+  if (
+    isConvexDevelopmentAuthDisabled() &&
+    actorUserId === DEVELOPMENT_SUPABASE_USER_ID
+  ) {
+    return "admin";
+  }
+
+  const profile = await getProfileBySupabaseUserId(ctx, actorUserId);
+  return profile?.role === "admin" ? "admin" : "user";
+}
+
+async function upsertUsageRollup(ctx: any, event: {
+  actorRole: UsageActorRole;
+  eventName: string;
+  eventGroup: string;
+  surface: string;
+  status: UsageEventStatus;
+  source: UsageEventSource;
+  dateKey: string;
+  timestamp: string;
+}) {
+  const key = [
+    event.dateKey,
+    event.eventName,
+    event.eventGroup,
+    event.surface,
+    event.status,
+    event.actorRole,
+    event.source,
+  ].join("|");
+  const existing = await ctx.db
+    .query("usageDailyRollups")
+    .withIndex("by_key", (q: any) => q.eq("key", key))
+    .first();
+
+  if (existing) {
+    await ctx.db.patch(existing._id, {
+      count: (Number(existing.count) || 0) + 1,
+      updatedAt: event.timestamp,
+    });
+    return;
+  }
+
+  await ctx.db.insert("usageDailyRollups", {
+    key,
+    dateKey: event.dateKey,
+    eventName: event.eventName,
+    eventGroup: event.eventGroup,
+    surface: event.surface,
+    status: event.status,
+    actorRole: event.actorRole,
+    source: event.source,
+    count: 1,
+    updatedAt: event.timestamp,
+  });
+}
+
+async function insertUsageTouch(ctx: any, args: {
+  actorUserId: string;
+  actorRole: UsageActorRole;
+  sessionId?: string | null;
+  source: UsageEventSource;
+  dateKey: string;
+  timestamp: string;
+}) {
+  const touches = [
+    { kind: "user" as const, id: args.actorUserId },
+    args.sessionId ? { kind: "session" as const, id: args.sessionId } : null,
+  ].filter(Boolean) as Array<{ kind: "user" | "session"; id: string }>;
+
+  for (const touch of touches) {
+    const touchIdHash = `${touch.kind}:${touch.id}`;
+    const key = `${args.dateKey}|${touchIdHash}`;
+    const existing = await ctx.db
+      .query("usageDailyTouches")
+      .withIndex("by_key", (q: any) => q.eq("key", key))
+      .first();
+    if (existing) continue;
+
+    await ctx.db.insert("usageDailyTouches", {
+      key,
+      dateKey: args.dateKey,
+      touchKind: touch.kind,
+      touchIdHash,
+      actorRole: args.actorRole,
+      source: args.source,
+      createdAt: args.timestamp,
+    });
+  }
+}
+
+async function pruneUsageAnalytics(ctx: any, timestamp: string) {
+  const rawCutoff = new Date(timestamp);
+  rawCutoff.setUTCDate(rawCutoff.getUTCDate() - 90);
+  const rawCutoffIso = rawCutoff.toISOString();
+  const rawEvents = await ctx.db
+    .query("appUsageEvents")
+    .withIndex("by_created_at")
+    .filter((q: any) => q.lt(q.field("createdAt"), rawCutoffIso))
+    .take(50);
+  await Promise.all(rawEvents.map((event: any) => ctx.db.delete(event._id)));
+
+  const rollupCutoff = new Date(timestamp);
+  rollupCutoff.setUTCDate(rollupCutoff.getUTCDate() - 400);
+  const rollupCutoffKey = rollupCutoff.toISOString().slice(0, 10);
+  const [rollups, touches] = await Promise.all([
+    ctx.db
+      .query("usageDailyRollups")
+      .withIndex("by_date_key")
+      .filter((q: any) => q.lt(q.field("dateKey"), rollupCutoffKey))
+      .take(50),
+    ctx.db
+      .query("usageDailyTouches")
+      .withIndex("by_date_kind")
+      .filter((q: any) => q.lt(q.field("dateKey"), rollupCutoffKey))
+      .take(50),
+  ]);
+  await Promise.all([
+    ...rollups.map((row: any) => ctx.db.delete(row._id)),
+    ...touches.map((row: any) => ctx.db.delete(row._id)),
+  ]);
+}
+
+async function recordUsageEvent(ctx: any, args: {
+  actorUserId: string;
+  actorRole?: UsageActorRole;
+  sessionId?: string | null;
+  eventName: string;
+  eventGroup?: string;
+  surface: string;
+  status?: UsageEventStatus;
+  source?: UsageEventSource;
+  targetKind?: string | null;
+  durationMs?: number | null;
+  metadata?: Record<string, unknown> | string | null;
+}) {
+  try {
+    const timestamp = nowIso();
+    const actorRole = args.actorRole ?? await getUsageActorRole(ctx, args.actorUserId);
+    const eventName = clampUsageString(args.eventName, "unknown.event");
+    const eventGroup = clampUsageString(
+      args.eventGroup ?? eventName.split(".")[0],
+      "general",
+    );
+    const surface = clampUsageString(args.surface, "app");
+    const source = args.source ?? "server";
+    const status = args.status ?? "success";
+    const dateKey = usageDateKey(timestamp);
+    const durationMs =
+      typeof args.durationMs === "number" && Number.isFinite(args.durationMs)
+        ? Math.max(0, Math.round(args.durationMs))
+        : null;
+    const metadataJson = sanitizeUsageMetadataJson(args.metadata ?? null);
+
+    await ctx.db.insert("appUsageEvents", {
+      actorUserId: args.actorUserId,
+      actorRole,
+      sessionId: args.sessionId ? clampUsageString(args.sessionId, "session") : null,
+      eventName,
+      eventGroup,
+      surface,
+      status,
+      source,
+      targetKind: args.targetKind ? clampUsageString(args.targetKind, "target") : null,
+      durationMs,
+      metadataJson,
+      dateKey,
+      createdAt: timestamp,
+    });
+
+    await Promise.all([
+      upsertUsageRollup(ctx, {
+        actorRole,
+        eventName,
+        eventGroup,
+        surface,
+        status,
+        source,
+        dateKey,
+        timestamp,
+      }),
+      insertUsageTouch(ctx, {
+        actorUserId: args.actorUserId,
+        actorRole,
+        sessionId: args.sessionId ?? null,
+        source,
+        dateKey,
+        timestamp,
+      }),
+      pruneUsageAnalytics(ctx, timestamp),
+    ]);
+  } catch (error) {
+    console.warn("Usage analytics event was not recorded:", error);
+  }
+}
+
 async function ensureUserProfile(
   ctx: any,
   args: {
@@ -694,6 +1024,9 @@ export const getAdminSettingsSnapshot = query({
       budgetItems,
       userProfiles,
       reportGenerationEvents,
+      appUsageEvents,
+      usageDailyRollups,
+      usageDailyTouches,
       aiSummaries,
       aiRedactions,
       aiPrompts,
@@ -707,6 +1040,9 @@ export const getAdminSettingsSnapshot = query({
       ctx.db.query("budgetItems").collect(),
       ctx.db.query("userProfiles").collect(),
       ctx.db.query("reportGenerationEvents").collect(),
+      ctx.db.query("appUsageEvents").collect(),
+      ctx.db.query("usageDailyRollups").collect(),
+      ctx.db.query("usageDailyTouches").collect(),
       ctx.db.query("aiSummaries").collect(),
       ctx.db.query("aiRedactions").collect(),
       ctx.db.query("aiPrompts").collect(),
@@ -732,6 +1068,9 @@ export const getAdminSettingsSnapshot = query({
         budgetItems: budgetItems.length,
         userProfiles: userProfiles.length,
         reportGenerationEvents: reportGenerationEvents.length,
+        appUsageEvents: appUsageEvents.length,
+        usageDailyRollups: usageDailyRollups.length,
+        usageDailyTouches: usageDailyTouches.length,
         aiSummaries: aiSummaries.length,
         aiRedactions: aiRedactions.length,
         aiPrompts: aiPrompts.length,
@@ -856,7 +1195,7 @@ export const setUserWindowsExperience = mutation({
     expectedEnvironment: settleEaseEnvironment,
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     requireExpectedEnvironment(args.expectedEnvironment);
 
     const profile = await getProfileBySupabaseUserId(ctx, args.supabaseUserId);
@@ -865,6 +1204,16 @@ export const setUserWindowsExperience = mutation({
     await ctx.db.patch(profile._id, {
       windowsExperienceEnabled: args.enabled,
       updatedAt: nowIso(),
+    });
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settings.windows_experience_toggled",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "userProfile",
+      metadata: { mode: args.enabled ? "enabled" : "disabled" },
     });
 
     return adminUserProfileDto(await ctx.db.get(profile._id));
@@ -883,7 +1232,7 @@ export const listPeople = query({
 export const addPerson = mutation({
   args: { name: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const name = args.name.trim();
     if (!name) throw new ConvexError("Person's name cannot be empty.");
     const people = await ctx.db.query("people").collect();
@@ -895,14 +1244,24 @@ export const addPerson = mutation({
     ) {
       throw new ConvexError(`A person named "${name}" already exists.`);
     }
-    await ctx.db.insert("people", { name, createdAt: nowIso() });
+    const id = await ctx.db.insert("people", { name, createdAt: nowIso() });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "person.created",
+      eventGroup: "people",
+      surface: "managePeople",
+      targetKind: "person",
+      metadata: { participantCount: people.length + 1 },
+    });
+    return id;
   },
 });
 
 export const updatePerson = mutation({
   args: { id: v.string(), name: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const person: any = await ctx.db.get(args.id as any);
     if (!person) throw new ConvexError("Person not found.");
     const name = args.name.trim();
@@ -918,13 +1277,22 @@ export const updatePerson = mutation({
       throw new ConvexError(`A person named "${name}" already exists.`);
     }
     await ctx.db.patch(person._id, { name });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "person.updated",
+      eventGroup: "people",
+      surface: "managePeople",
+      targetKind: "person",
+      metadata: { participantCount: people.length },
+    });
   },
 });
 
 export const removePerson = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const person: any = await ctx.db.get(args.id as any);
     if (!person) throw new ConvexError("Person not found.");
 
@@ -969,7 +1337,17 @@ export const removePerson = mutation({
       );
     }
 
+    const people = await ctx.db.query("people").collect();
     await ctx.db.delete(person._id);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "person.deleted",
+      eventGroup: "people",
+      surface: "managePeople",
+      targetKind: "person",
+      metadata: { participantCount: Math.max(0, people.length - 1) },
+    });
   },
 });
 
@@ -978,7 +1356,7 @@ export const ensureDefaultPeople = mutation({
     expectedEnvironment: v.optional(settleEaseEnvironment),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     if (args.expectedEnvironment) {
       requireExpectedEnvironment(args.expectedEnvironment);
     }
@@ -989,6 +1367,15 @@ export const ensureDefaultPeople = mutation({
         ctx.db.insert("people", { name, createdAt: nowIso() }),
       ),
     );
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "person.seeded",
+      eventGroup: "people",
+      surface: "settings",
+      targetKind: "person",
+      metadata: { participantCount: 3 },
+    });
     return true;
   },
 });
@@ -1010,7 +1397,7 @@ export const listCategories = query({
 export const addCategory = mutation({
   args: { name: v.string(), iconName: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const name = args.name.trim();
     if (!name) throw new ConvexError("Category name cannot be empty.");
     const categories = await ctx.db.query("categories").collect();
@@ -1032,13 +1419,22 @@ export const addCategory = mutation({
       rank: maxRank + 1,
       createdAt: nowIso(),
     });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "category.created",
+      eventGroup: "categories",
+      surface: "manageCategories",
+      targetKind: "category",
+      metadata: { categoryCount: categories.length + 1 },
+    });
   },
 });
 
 export const updateCategory = mutation({
   args: { id: v.string(), name: v.string(), iconName: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const category: any = await ctx.db.get(args.id as any);
     if (!category) throw new ConvexError("Category not found.");
     const name = args.name.trim();
@@ -1054,13 +1450,22 @@ export const updateCategory = mutation({
       throw new ConvexError(`A category named "${name}" already exists.`);
     }
     await ctx.db.patch(category._id, { name, iconName: args.iconName });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "category.updated",
+      eventGroup: "categories",
+      surface: "manageCategories",
+      targetKind: "category",
+      metadata: { categoryCount: categories.length },
+    });
   },
 });
 
 export const deleteCategory = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const category: any = await ctx.db.get(args.id as any);
     if (!category) throw new ConvexError("Category not found.");
     const expenses = await ctx.db.query("expenses").collect();
@@ -1076,20 +1481,39 @@ export const deleteCategory = mutation({
         `Category "${category.name}" is used by ${count} expense(s).`,
       );
     }
+    const categories = await ctx.db.query("categories").collect();
     await ctx.db.delete(category._id);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "category.deleted",
+      eventGroup: "categories",
+      surface: "manageCategories",
+      targetKind: "category",
+      metadata: { categoryCount: Math.max(0, categories.length - 1) },
+    });
   },
 });
 
 export const reorderCategories = mutation({
   args: { ids: v.array(v.string()) },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     await Promise.all(
       args.ids.map(async (id, index) => {
         const category = await ctx.db.get(id as any);
         if (category) await ctx.db.patch(category._id, { rank: index + 1 });
       }),
     );
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "category.reordered",
+      eventGroup: "categories",
+      surface: "manageCategories",
+      targetKind: "category",
+      metadata: { categoryCount: args.ids.length },
+    });
   },
 });
 
@@ -1098,7 +1522,7 @@ export const seedDefaultCategories = mutation({
     expectedEnvironment: settleEaseEnvironment,
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     requireExpectedEnvironment(args.expectedEnvironment);
 
     const categories = await ctx.db.query("categories").collect();
@@ -1129,6 +1553,16 @@ export const seedDefaultCategories = mutation({
       existingNames.add(seed.name.toLowerCase());
       inserted += 1;
     }
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "category.seeded",
+      eventGroup: "categories",
+      surface: "settings",
+      targetKind: "category",
+      metadata: { categoryCount: categories.length + inserted },
+    });
 
     return {
       inserted,
@@ -1284,12 +1718,30 @@ export const upsertCustomBudgetItem = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload);
+      await recordUsageEvent(ctx, {
+        actorUserId: supabaseUserId,
+        actorRole: "admin",
+        eventName: "budget.item_updated",
+        eventGroup: "budget",
+        surface: "dashboard",
+        targetKind: "budgetItem",
+        metadata: { amountBucket: bucketAmount(price) },
+      });
       return budgetItemDto(await ctx.db.get(existing._id));
     }
 
     const id = await ctx.db.insert("budgetItems", {
       ...payload,
       createdAt: timestamp,
+    });
+    await recordUsageEvent(ctx, {
+      actorUserId: supabaseUserId,
+      actorRole: "admin",
+      eventName: "budget.item_created",
+      eventGroup: "budget",
+      surface: "dashboard",
+      targetKind: "budgetItem",
+      metadata: { amountBucket: bucketAmount(price) },
     });
     return budgetItemDto(await ctx.db.get(id));
   },
@@ -1301,7 +1753,7 @@ export const backfillBudgetItemsFromExpenses = mutation({
     expectedEnvironment: v.optional(settleEaseEnvironment),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     if (args.expectedEnvironment) {
       requireExpectedEnvironment(args.expectedEnvironment);
     }
@@ -1455,7 +1907,7 @@ export const backfillBudgetItemsFromExpenses = mutation({
       }
     }
 
-    return {
+    const result = {
       dryRun,
       expenseCount: expenses.length,
       itemObservationCount,
@@ -1465,6 +1917,19 @@ export const backfillBudgetItemsFromExpenses = mutation({
       rowsToInsert,
       rowsToUpdate,
     };
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: dryRun ? "budget.backfill_previewed" : "budget.backfilled",
+      eventGroup: "budget",
+      surface: "settings",
+      targetKind: "budgetItem",
+      metadata: {
+        expenseCount: expenses.length,
+        itemCount: itemObservationCount,
+      },
+    });
+    return result;
   },
 });
 
@@ -1489,7 +1954,7 @@ export const saveExpense = mutation({
     createdAt: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const payload = {
       description: args.description,
       totalAmount: args.totalAmount,
@@ -1511,25 +1976,74 @@ export const saveExpense = mutation({
       const expense: any = await ctx.db.get(args.id as any);
       if (!expense) throw new ConvexError("Expense not found.");
       await ctx.db.patch(expense._id, patchPayload);
+      await recordUsageEvent(ctx, {
+        actorUserId,
+        actorRole: "admin",
+        eventName: "expense.updated",
+        eventGroup: "expenses",
+        surface: "editExpenses",
+        targetKind: "expense",
+        metadata: {
+          amountBucket: bucketAmount(args.totalAmount),
+          splitMethod: args.splitMethod,
+          participantCount: new Set([
+            ...args.paidBy.map((payer: any) => payer.personId),
+            ...args.shares.map((share: any) => share.personId),
+          ]).size,
+          itemCount: args.items?.length ?? 0,
+          hasItems: Boolean(args.items?.length),
+        },
+      });
       return expense._id;
     }
 
-    return await ctx.db.insert("expenses", {
+    const id = await ctx.db.insert("expenses", {
       ...payload,
       createdAt: args.createdAt ?? nowIso(),
     });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "expense.created",
+      eventGroup: "expenses",
+      surface: "addExpense",
+      targetKind: "expense",
+      metadata: {
+        amountBucket: bucketAmount(args.totalAmount),
+        splitMethod: args.splitMethod,
+        participantCount: new Set([
+          ...args.paidBy.map((payer: any) => payer.personId),
+          ...args.shares.map((share: any) => share.personId),
+        ]).size,
+        itemCount: args.items?.length ?? 0,
+        hasItems: Boolean(args.items?.length),
+      },
+    });
+    return id;
   },
 });
 
 export const updateExpenseExcludeFromSettlement = mutation({
   args: { id: v.string(), excludeFromSettlement: v.boolean() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const expense: any = await ctx.db.get(args.id as any);
     if (!expense) throw new ConvexError("Expense not found.");
     await ctx.db.patch(expense._id, {
       excludeFromSettlement: args.excludeFromSettlement,
       updatedAt: nowIso(),
+    });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: args.excludeFromSettlement ? "expense.excluded" : "expense.included",
+      eventGroup: "expenses",
+      surface: "editExpenses",
+      targetKind: "expense",
+      metadata: {
+        amountBucket: bucketAmount(expense.totalAmount),
+        splitMethod: expense.splitMethod,
+      },
     });
   },
 });
@@ -1537,10 +2051,23 @@ export const updateExpenseExcludeFromSettlement = mutation({
 export const deleteExpense = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const expense: any = await ctx.db.get(args.id as any);
     if (!expense) throw new ConvexError("Expense not found.");
     await ctx.db.delete(expense._id);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "expense.deleted",
+      eventGroup: "expenses",
+      surface: "editExpenses",
+      targetKind: "expense",
+      metadata: {
+        amountBucket: bucketAmount(expense.totalAmount),
+        splitMethod: expense.splitMethod,
+        itemCount: expense.items?.length ?? 0,
+      },
+    });
   },
 });
 
@@ -1568,8 +2095,8 @@ export const addSettlementPayment = mutation({
     notes: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    return await ctx.db.insert("settlementPayments", {
+    const actorUserId = await requireAdmin(ctx);
+    const id = await ctx.db.insert("settlementPayments", {
       debtorId: args.debtorId,
       creditorId: args.creditorId,
       amountSettled: args.amountSettled,
@@ -1577,6 +2104,16 @@ export const addSettlementPayment = mutation({
       settledAt: args.settledAt ?? nowIso(),
       notes: args.notes ?? null,
     });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settlement.created",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "settlementPayment",
+      metadata: { amountBucket: bucketAmount(args.amountSettled) },
+    });
+    return id;
   },
 });
 
@@ -1588,7 +2125,7 @@ export const updateSettlementPayment = mutation({
     settledAt: v.string(),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const payment: any = await ctx.db.get(args.id as any);
     if (!payment) throw new ConvexError("Payment not found.");
     await ctx.db.patch(payment._id, {
@@ -1596,16 +2133,34 @@ export const updateSettlementPayment = mutation({
       notes: args.notes ?? null,
       settledAt: args.settledAt,
     });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settlement.updated",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "settlementPayment",
+      metadata: { amountBucket: bucketAmount(args.amountSettled) },
+    });
   },
 });
 
 export const deleteSettlementPayment = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const payment: any = await ctx.db.get(args.id as any);
     if (!payment) throw new ConvexError("Payment not found.");
     await ctx.db.delete(payment._id);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settlement.deleted",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "settlementPayment",
+      metadata: { amountBucket: bucketAmount(payment.amountSettled) },
+    });
   },
 });
 
@@ -1632,9 +2187,9 @@ export const addManualSettlementOverride = mutation({
     notes: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const timestamp = nowIso();
-    return await ctx.db.insert("manualSettlementOverrides", {
+    const id = await ctx.db.insert("manualSettlementOverrides", {
       debtorId: args.debtorId,
       creditorId: args.creditorId,
       amount: args.amount,
@@ -1644,41 +2199,78 @@ export const addManualSettlementOverride = mutation({
       createdAt: timestamp,
       updatedAt: timestamp,
     });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "manual_override.created",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "manualSettlementOverride",
+      metadata: { amountBucket: bucketAmount(args.amount) },
+    });
+    return id;
   },
 });
 
 export const deactivateManualSettlementOverride = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const override: any = await ctx.db.get(args.id as any);
     if (!override) throw new ConvexError("Override not found.");
     await ctx.db.patch(override._id, { isActive: false, updatedAt: nowIso() });
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "manual_override.deactivated",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "manualSettlementOverride",
+      metadata: { amountBucket: bucketAmount(override.amount) },
+    });
   },
 });
 
 export const deleteManualSettlementOverride = mutation({
   args: { id: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const override: any = await ctx.db.get(args.id as any);
     if (!override) throw new ConvexError("Override not found.");
     await ctx.db.delete(override._id);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "manual_override.deleted",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "manualSettlementOverride",
+      metadata: { amountBucket: bucketAmount(override.amount) },
+    });
   },
 });
 
 export const clearActiveManualSettlementOverrides = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const overrides = await ctx.db.query("manualSettlementOverrides").collect();
+    const activeOverrides = overrides.filter((override: any) => override.isActive);
     await Promise.all(
-      overrides
-        .filter((override: any) => override.isActive)
+      activeOverrides
         .map((override: any) =>
           ctx.db.patch(override._id, { isActive: false, updatedAt: nowIso() }),
         ),
     );
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "manual_override.cleared",
+      eventGroup: "settlements",
+      surface: "manageSettlements",
+      targetKind: "manualSettlementOverride",
+      metadata: { manualOverrideCount: activeOverrides.length },
+    });
   },
 });
 
@@ -1752,11 +2344,37 @@ export const updateAiConfig = mutation({
 
     if (existing) {
       await ctx.db.patch(existing._id, payload);
-      return aiConfigDto(await ctx.db.get(existing._id));
+      const result = aiConfigDto(await ctx.db.get(existing._id));
+      await recordUsageEvent(ctx, {
+        actorUserId: supabaseUserId,
+        actorRole: "admin",
+        eventName: "settings.ai_config_saved",
+        eventGroup: "settings",
+        surface: "settings",
+        targetKind: "aiConfig",
+        metadata: {
+          aiModelName: args.modelCode,
+          fallback: normalizedFallbacks.length > 0,
+        },
+      });
+      return result;
     }
 
     const id = await ctx.db.insert("aiConfigs", payload);
-    return aiConfigDto(await ctx.db.get(id));
+    const result = aiConfigDto(await ctx.db.get(id));
+    await recordUsageEvent(ctx, {
+      actorUserId: supabaseUserId,
+      actorRole: "admin",
+      eventName: "settings.ai_config_saved",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "aiConfig",
+      metadata: {
+        aiModelName: args.modelCode,
+        fallback: normalizedFallbacks.length > 0,
+      },
+    });
+    return result;
   },
 });
 
@@ -1883,6 +2501,202 @@ export const storeAiRedaction = mutation({
   },
 });
 
+export const trackUsageEvent = mutation({
+  args: {
+    eventName: v.string(),
+    eventGroup: v.optional(v.string()),
+    surface: v.string(),
+    status: v.optional(usageEventStatus),
+    sessionId: v.optional(v.union(v.string(), v.null())),
+    targetKind: v.optional(v.union(v.string(), v.null())),
+    durationMs: v.optional(v.union(v.number(), v.null())),
+    metadataJson: v.optional(v.union(v.string(), v.null())),
+  },
+  handler: async (ctx, args) => {
+    const actorUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      sessionId: args.sessionId ?? null,
+      eventName: args.eventName,
+      eventGroup: args.eventGroup,
+      surface: args.surface,
+      status: args.status ?? "success",
+      source: "client",
+      targetKind: args.targetKind ?? null,
+      durationMs: args.durationMs ?? null,
+      metadata: args.metadataJson ?? null,
+    });
+  },
+});
+
+export const getAppUsageAnalytics = query({
+  args: {
+    datePreset: v.optional(usageDatePreset),
+    surface: v.optional(v.string()),
+    status: v.optional(v.string()),
+    role: v.optional(v.string()),
+    eventGroup: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const datePreset = args.datePreset ?? "30d";
+    const startDateKey = usageRangeStartDateKey(datePreset);
+    const allRollups = await ctx.db
+      .query("usageDailyRollups")
+      .withIndex("by_date_key", (q: any) => q.gte("dateKey", startDateKey))
+      .collect();
+
+    const rollups = allRollups.filter((row: any) => {
+      if (args.surface && args.surface !== "all" && row.surface !== args.surface) return false;
+      if (args.status && args.status !== "all" && row.status !== args.status) return false;
+      if (args.role && args.role !== "all" && row.actorRole !== args.role) return false;
+      if (args.eventGroup && args.eventGroup !== "all" && row.eventGroup !== args.eventGroup) return false;
+      return true;
+    });
+
+    const touches = await ctx.db
+      .query("usageDailyTouches")
+      .withIndex("by_date_kind", (q: any) => q.gte("dateKey", startDateKey))
+      .collect();
+    const filteredTouches = touches.filter((touch: any) => {
+      if (args.role && args.role !== "all" && touch.actorRole !== args.role) return false;
+      return true;
+    });
+
+    const totalEvents = rollups.reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
+    const failureEvents = rollups
+      .filter((row: any) => row.status === "failure")
+      .reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
+    const cancelledEvents = rollups
+      .filter((row: any) => row.status === "cancelled")
+      .reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
+    const userTouches = new Set(
+      filteredTouches
+        .filter((touch: any) => touch.touchKind === "user")
+        .map((touch: any) => touch.touchIdHash),
+    );
+    const sessionTouches = new Set(
+      filteredTouches
+        .filter((touch: any) => touch.touchKind === "session")
+        .map((touch: any) => touch.touchIdHash),
+    );
+
+    const increment = (
+      map: Record<string, number>,
+      key: string,
+      count: number,
+    ) => {
+      map[key] = (map[key] ?? 0) + count;
+    };
+
+    const byDate: Record<string, number> = {};
+    const bySurface: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    const byEventGroup: Record<string, number> = {};
+    const byAction: Record<string, number> = {};
+    const eventCount = (name: string) =>
+      rollups
+        .filter((row: any) => row.eventName === name)
+        .reduce((sum: number, row: any) => sum + Number(row.count || 0), 0);
+
+    for (const row of rollups as any[]) {
+      const count = Number(row.count || 0);
+      increment(byDate, row.dateKey, count);
+      increment(bySurface, row.surface, count);
+      increment(byStatus, row.status, count);
+      increment(byEventGroup, row.eventGroup, count);
+      increment(byAction, row.eventName, count);
+    }
+
+    const sortRows = (map: Record<string, number>, limit = 12) =>
+      Object.entries(map)
+        .map(([key, count]) => ({ key, count }))
+        .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key))
+        .slice(0, limit);
+
+    const topSurface = sortRows(bySurface, 1)[0] ?? null;
+    const scanSuccess = eventCount("scan.receipt_scan_completed");
+    const scanFailures =
+      eventCount("scan.receipt_scan_failed") + eventCount("scan.receipt_scan_cancelled");
+    const aiCacheHits =
+      eventCount("report.redaction_cache_hit") +
+      eventCount("summary.cache_hit") +
+      eventCount("health.cache_hit");
+    const aiGenerated =
+      eventCount("report.redaction_generated") +
+      eventCount("summary.generated") +
+      eventCount("health.generated");
+    const aiFallbacks =
+      eventCount("report.redaction_fallback") +
+      eventCount("summary.failed") +
+      eventCount("health.failed") +
+      eventCount("budget.vat_classification_failed");
+
+    return {
+      datePreset,
+      filters: {
+        surface: args.surface ?? "all",
+        status: args.status ?? "all",
+        role: args.role ?? "all",
+        eventGroup: args.eventGroup ?? "all",
+      },
+      range: {
+        startDateKey,
+        endDateKey: usageDateKey(),
+      },
+      cards: {
+        activeUsers: userTouches.size,
+        sessions: sessionTouches.size,
+        totalEvents,
+        failureRate: totalEvents > 0 ? failureEvents / totalEvents : 0,
+        topSurface: topSurface?.key ?? "none",
+        expenseSaves: eventCount("expense.created") + eventCount("expense.updated"),
+        scanSuccessRate:
+          scanSuccess + scanFailures > 0 ? scanSuccess / (scanSuccess + scanFailures) : 0,
+        settlementActions:
+          eventCount("settlement.created") +
+          eventCount("settlement.updated") +
+          eventCount("settlement.deleted"),
+        reportDownloads: eventCount("report.download_clicked"),
+        aiCacheRate:
+          aiCacheHits + aiGenerated > 0 ? aiCacheHits / (aiCacheHits + aiGenerated) : 0,
+        aiFallbackFailureRate:
+          aiCacheHits + aiGenerated + aiFallbacks > 0
+            ? aiFallbacks / (aiCacheHits + aiGenerated + aiFallbacks)
+            : 0,
+      },
+      totals: {
+        success: byStatus.success ?? 0,
+        failure: failureEvents,
+        cancelled: cancelledEvents,
+        info: byStatus.info ?? 0,
+      },
+      activityByDate: Object.entries(byDate)
+        .map(([dateKey, count]) => ({ dateKey, count }))
+        .sort((a, b) => a.dateKey.localeCompare(b.dateKey)),
+      featureAdoption: sortRows(bySurface, 16),
+      eventGroups: sortRows(byEventGroup, 16),
+      statuses: sortRows(byStatus, 8),
+      topActions: sortRows(byAction, 16),
+      workflowFunnel: [
+        { key: "session.started", count: eventCount("session.started") },
+        { key: "expense.created", count: eventCount("expense.created") },
+        { key: "scan.receipt_scan_completed", count: eventCount("scan.receipt_scan_completed") },
+        { key: "settlement.created", count: eventCount("settlement.created") },
+        { key: "report.preview_generated", count: eventCount("report.preview_generated") },
+        { key: "report.download_clicked", count: eventCount("report.download_clicked") },
+      ],
+      aiReportHealth: [
+        { key: "AI cache hits", count: aiCacheHits },
+        { key: "AI generated", count: aiGenerated },
+        { key: "AI fallback/failure", count: aiFallbacks },
+        { key: "Report previews", count: eventCount("report.preview_generated") },
+        { key: "Report downloads", count: eventCount("report.download_clicked") },
+      ],
+    };
+  },
+});
+
 export const trackReportGenerationEvent = mutation({
   args: {
     userId: v.string(),
@@ -1904,12 +2718,37 @@ export const trackReportGenerationEvent = mutation({
       throw new ConvexError("Cannot track report events for another user.");
     }
 
-    return await ctx.db.insert("reportGenerationEvents", {
+    const id = await ctx.db.insert("reportGenerationEvents", {
       ...args,
       usedCache: args.usedCache ?? null,
       aiModelName: args.aiModelName ?? null,
       createdAt: nowIso(),
     });
+
+    await recordUsageEvent(ctx, {
+      actorUserId: supabaseUserId,
+      actorRole: "admin",
+      eventName: `report.${args.eventType}`,
+      eventGroup: "report",
+      surface: "exportExpense",
+      status: args.eventType === "redaction_fallback" ? "info" : "success",
+      source: "compat",
+      targetKind: "report",
+      metadata: {
+        eventType: args.eventType,
+        reportMode: args.reportMode,
+        datePreset: args.datePreset,
+        redacted: args.redacted,
+        usedCache: args.usedCache ?? false,
+        aiModelName: args.aiModelName ?? undefined,
+        expenseCount: args.expenseCount,
+        settlementCount: args.settlementCount,
+        participantCount: args.participantCount,
+        manualOverrideCount: args.manualOverrideCount,
+      },
+    });
+
+    return id;
   },
 });
 
@@ -1988,7 +2827,7 @@ export const clearReportGenerationEvents = mutation({
     dangerZoneUnlockConfirmation: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     requireDangerAction(
       args.expectedEnvironment,
       args.confirmation,
@@ -2003,7 +2842,58 @@ export const clearReportGenerationEvents = mutation({
       ctx,
       "reportGenerationEvents",
     );
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settings.report_logs_cleared",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "reportGenerationEvents",
+      metadata: { eventType: "clear_report_logs" },
+    });
     return { deletedCount };
+  },
+});
+
+export const clearAppUsageAnalytics = mutation({
+  args: {
+    expectedEnvironment: settleEaseEnvironment,
+    confirmation: v.string(),
+    dangerZoneUnlockConfirmation: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const actorUserId = await requireAdmin(ctx);
+    requireDangerAction(
+      args.expectedEnvironment,
+      args.confirmation,
+      getDangerConfirmationPhrase(args.expectedEnvironment, "clearUsageAnalytics"),
+      args.dangerZoneUnlockConfirmation,
+    );
+
+    const deletedReportEvents = await deleteAllFromTable(
+      ctx,
+      "reportGenerationEvents",
+    );
+    const deletedUsageEvents = await deleteAllFromTable(ctx, "appUsageEvents");
+    const deletedRollups = await deleteAllFromTable(ctx, "usageDailyRollups");
+    const deletedTouches = await deleteAllFromTable(ctx, "usageDailyTouches");
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settings.usage_analytics_cleared",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "appUsageEvents",
+      metadata: { eventType: "clear_usage_analytics" },
+    });
+
+    return {
+      deletedReportEvents,
+      deletedUsageEvents,
+      deletedRollups,
+      deletedTouches,
+    };
   },
 });
 
@@ -2016,7 +2906,7 @@ export const clearAiCaches = mutation({
     includeRedactions: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     requireDangerAction(
       args.expectedEnvironment,
       args.confirmation,
@@ -2033,6 +2923,18 @@ export const clearAiCaches = mutation({
       ? await deleteAllFromTable(ctx, "aiRedactions")
       : 0;
 
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settings.ai_caches_cleared",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "aiCache",
+      metadata: {
+        eventType: "clear_ai_caches",
+      },
+    });
+
     return { deletedSummaries, deletedRedactions };
   },
 });
@@ -2045,7 +2947,7 @@ export const clearSettlementRecords = mutation({
     scope: settlementClearScope,
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     const expectedConfirmation =
       args.scope === "activeManualOverrides"
         ? getDangerConfirmationPhrase(
@@ -2071,6 +2973,15 @@ export const clearSettlementRecords = mutation({
         { isActive: false, updatedAt: nowIso() },
         (override) => override.isActive,
       );
+      await recordUsageEvent(ctx, {
+        actorUserId,
+        actorRole: "admin",
+        eventName: "settings.active_overrides_cleared",
+        eventGroup: "settings",
+        surface: "settings",
+        targetKind: "manualSettlementOverride",
+        metadata: { manualOverrideCount: clearedManualOverrides },
+      });
       return {
         clearedManualOverrides,
         deletedSettlementPayments: 0,
@@ -2086,6 +2997,19 @@ export const clearSettlementRecords = mutation({
       ctx,
       "manualSettlementOverrides",
     );
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: "settings.settlement_records_cleared",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "settlementRecords",
+      metadata: {
+        paymentCount: deletedSettlementPayments,
+        manualOverrideCount: deletedManualOverrides,
+      },
+    });
 
     return {
       clearedManualOverrides: 0,
@@ -2103,7 +3027,7 @@ export const resetSettleEaseData = mutation({
     mode: resetDataMode,
   },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const actorUserId = await requireAdmin(ctx);
     requireDangerAction(
       args.expectedEnvironment,
       args.confirmation,
@@ -2128,6 +3052,9 @@ export const resetSettleEaseData = mutation({
       ),
       aiSummaries: await deleteAllFromTable(ctx, "aiSummaries"),
       aiRedactions: await deleteAllFromTable(ctx, "aiRedactions"),
+      appUsageEvents: await deleteAllFromTable(ctx, "appUsageEvents"),
+      usageDailyRollups: await deleteAllFromTable(ctx, "usageDailyRollups"),
+      usageDailyTouches: await deleteAllFromTable(ctx, "usageDailyTouches"),
       people: 0,
       categories: 0,
     };
@@ -2136,6 +3063,16 @@ export const resetSettleEaseData = mutation({
       deleted.people = await deleteAllFromTable(ctx, "people");
       deleted.categories = await deleteAllFromTable(ctx, "categories");
     }
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole: "admin",
+      eventName: args.mode === "factory" ? "settings.factory_reset" : "settings.operational_reset",
+      eventGroup: "settings",
+      surface: "settings",
+      targetKind: "appData",
+      metadata: { mode: args.mode },
+    });
 
     return {
       mode: args.mode,

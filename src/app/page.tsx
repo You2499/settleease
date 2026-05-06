@@ -43,6 +43,7 @@ import { useUserProfile } from '@/hooks/useUserProfile';
 import { useThemeSync } from '@/hooks/useThemeSync';
 import { useFontSync } from '@/hooks/useFontSync';
 import { useSettleEaseShortcuts } from '@/hooks/useSettleEaseShortcuts';
+import { useUsageAnalytics } from '@/hooks/useUsageAnalytics';
 
 import {
   buildWelcomeToastModel,
@@ -54,6 +55,7 @@ import {
 } from '@/lib/settleease/authFlow';
 import type { ActiveView } from '@/lib/settleease';
 import type { UserRole } from '@/lib/settleease';
+import type { UsageSurface } from '@/lib/settleease/usageAnalytics';
 import * as LucideIcons from 'lucide-react';
 import MobileBottomNav from '@/components/settleease/MobileBottomNav';
 
@@ -205,11 +207,86 @@ function SettleEasePageContent() {
     fetchAllData,
   } = useConvexData(currentUser, userRole, isLoadingAuth, isLoadingRole);
 
+  const usageAnalytics = useUsageAnalytics({
+    surface: 'app',
+    enabled: isAppIdentityReady,
+  });
+
   const showAccessDeniedToast = useCallback((view: ActiveView, description = "You do not have permission to access this page.") => {
     if (lastAccessDeniedViewRef.current === view) return;
     lastAccessDeniedViewRef.current = view;
+    usageAnalytics.track({
+      eventName: "navigation.access_denied",
+      surface: "app",
+      status: "failure",
+      metadata: { toView: view },
+    });
     toast({ title: "Access Denied", description, variant: "destructive" });
-  }, []);
+  }, [usageAnalytics]);
+
+  useEffect(() => {
+    if (!isAppIdentityReady || !currentUser) return;
+    usageAnalytics.trackOnce(`session:${currentUser.id}`, {
+      eventName: "session.started",
+      surface: "app",
+      metadata: {
+        activeView,
+        participantCount: people.length,
+        expenseCount: expenses.length,
+        settlementCount: settlementPayments.length,
+      },
+    });
+    usageAnalytics.trackOnce(`app-loaded:${currentUser.id}`, {
+      eventName: "session.app_loaded",
+      surface: "app",
+      metadata: { activeView },
+    });
+  }, [
+    activeView,
+    currentUser,
+    expenses.length,
+    isAppIdentityReady,
+    people.length,
+    settlementPayments.length,
+    usageAnalytics,
+  ]);
+
+  useEffect(() => {
+    if (!isAppIdentityReady || !hasResolvedInitialView) return;
+    const openedAt = performance.now();
+    const surface = activeView as UsageSurface;
+    usageAnalytics.track({
+      eventName: "navigation.view_opened",
+      surface,
+      metadata: { view: activeView },
+    });
+
+    return () => {
+      usageAnalytics.track({
+        eventName: "navigation.view_duration",
+        surface,
+        durationMs: Math.round(performance.now() - openedAt),
+        metadata: { view: activeView },
+      });
+    };
+  }, [activeView, hasResolvedInitialView, isAppIdentityReady, usageAnalytics]);
+
+  useEffect(() => {
+    if (!isAppIdentityReady) return;
+    const handleBoundaryError = (event: Event) => {
+      const detail = (event as CustomEvent<{ componentName?: string }>).detail;
+      usageAnalytics.track({
+        eventName: "error.boundary_caught",
+        surface: activeView as UsageSurface,
+        status: "failure",
+        metadata: {
+          feature: detail?.componentName || activeView,
+        },
+      });
+    };
+    window.addEventListener("settleease:error-boundary", handleBoundaryError);
+    return () => window.removeEventListener("settleease:error-boundary", handleBoundaryError);
+  }, [activeView, isAppIdentityReady, usageAnalytics]);
 
   // Effect to show name modal for users without complete names or Google users
   useEffect(() => {
@@ -286,8 +363,15 @@ function SettleEasePageContent() {
       setActiveView(resolvedView);
     }
     setRestoredInitialView(restoredView);
+    if (restoredView) {
+      usageAnalytics.track({
+        eventName: "navigation.restored_view",
+        surface: restoredView as UsageSurface,
+        metadata: { toView: restoredView },
+      });
+    }
     setHasResolvedInitialView(true);
-  }, [activeView, hasResolvedInitialView, isAppIdentityReady, requestedView, showAccessDeniedToast, userProfile, userRole]);
+  }, [activeView, hasResolvedInitialView, isAppIdentityReady, requestedView, showAccessDeniedToast, usageAnalytics, userProfile, userRole]);
 
   // CENTRALIZED TOAST LOGIC - Single source of truth for all welcome toasts.
   useEffect(() => {
@@ -403,18 +487,32 @@ function SettleEasePageContent() {
     }
 
     lastAccessDeniedViewRef.current = null;
+    usageAnalytics.track({
+      eventName: "navigation.view_selected",
+      surface: view as UsageSurface,
+      metadata: { fromView: activeView, toView: view },
+    });
     setActiveView(view);
-  }, [isAppIdentityReady, showAccessDeniedToast, userRole]);
+  }, [activeView, isAppIdentityReady, showAccessDeniedToast, usageAnalytics, userRole]);
 
   const handleOpenProfileMenu = useCallback(() => {
     window.dispatchEvent(new CustomEvent("settleease:open-profile-menu"));
   }, []);
 
+  const handleShowShortcuts = useCallback(() => {
+    usageAnalytics.track({
+      eventName: "navigation.shortcuts_opened",
+      surface: activeView as UsageSurface,
+      metadata: { activeView },
+    });
+    setShowShortcuts(true);
+  }, [activeView, usageAnalytics]);
+
   useSettleEaseShortcuts({
     activeView,
     isReady: isAppIdentityReady && hasResolvedInitialView,
     onNavigate: handleSetActiveView,
-    onShowShortcuts: () => setShowShortcuts(true),
+    onShowShortcuts: handleShowShortcuts,
     onOpenProfileMenu: handleOpenProfileMenu,
   });
 
@@ -531,7 +629,7 @@ function SettleEasePageContent() {
           currentUserName={getDisplayName()}
           userRole={userRole}
           onEditName={handleEditName}
-          onShowShortcuts={() => setShowShortcuts(true)}
+          onShowShortcuts={handleShowShortcuts}
           isProfileLoading={visiblePageSkeleton || !isAppIdentityReady}
           isDevelopmentEnvironment={isDevelopmentEnvironment}
         />

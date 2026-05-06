@@ -8,3 +8,4 @@ export * from './utils';
 export * from './authUtils';
 export * from './itemwiseDisplay';
 export * from './budgetVat';
+export * from './usageAnalytics';
