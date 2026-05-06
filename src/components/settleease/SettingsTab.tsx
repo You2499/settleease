@@ -1037,10 +1037,11 @@ export default function SettingsTab({
 
       <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <Tabs defaultValue="overview" className="min-w-0 space-y-4">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-3 lg:grid-cols-6">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="ai">AI & Reports</TabsTrigger>
+            <TabsTrigger value="ai">AI Config</TabsTrigger>
+            <TabsTrigger value="appAnalytics">App Analytics</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
             <TabsTrigger value="experiments">Experiments</TabsTrigger>
             <TabsTrigger value="danger">Danger Zone</TabsTrigger>
@@ -1286,7 +1287,7 @@ export default function SettingsTab({
           </TabsContent>
 
           <TabsContent value="ai" className="space-y-4">
-            <div className="grid gap-4 xl:grid-cols-[1.05fr_0.95fr]">
+            <div className="grid gap-4">
               <SettingsSection
                 icon={Brain}
                 title="AI Model Configuration"
@@ -1391,112 +1392,6 @@ export default function SettingsTab({
                 </div>
               </SettingsSection>
 
-              <SettingsSection
-                icon={ChartColumn}
-                title="Usage Analytics"
-                description="Aggregate app usage, workflow, report, and AI activity."
-              >
-                {appUsageAnalytics ? (
-                  <div className="space-y-4">
-                    <div className="grid gap-3 md:grid-cols-5">
-                      <Select value={usageDatePreset} onValueChange={(value) => setUsageDatePreset(value as UsageAnalyticsPreset)}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="24h">24 hours</SelectItem>
-                          <SelectItem value="7d">7 days</SelectItem>
-                          <SelectItem value="30d">30 days</SelectItem>
-                          <SelectItem value="90d">90 days</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={usageSurface} onValueChange={setUsageSurface}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Surface" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All surfaces</SelectItem>
-                          {USAGE_SURFACE_FILTERS.map((surface) => (
-                            <SelectItem key={surface} value={surface}>
-                              {formatUsageLabel(surface)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={usageStatus} onValueChange={setUsageStatus}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All statuses</SelectItem>
-                          <SelectItem value="success">Success</SelectItem>
-                          <SelectItem value="failure">Failure</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="info">Info</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={usageRole} onValueChange={setUsageRole}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All roles</SelectItem>
-                          <SelectItem value="admin">Admins</SelectItem>
-                          <SelectItem value="user">Users</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select value={usageEventGroup} onValueChange={setUsageEventGroup}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Group" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All groups</SelectItem>
-                          {USAGE_EVENT_GROUP_FILTERS.map((eventGroup) => (
-                            <SelectItem key={eventGroup} value={eventGroup}>
-                              {formatUsageLabel(eventGroup)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <MetricTile label="Active Users" value={appUsageAnalytics.cards.activeUsers} icon={Users} />
-                      <MetricTile label="Sessions" value={appUsageAnalytics.cards.sessions} icon={Activity} />
-                      <MetricTile label="Events" value={appUsageAnalytics.cards.totalEvents} icon={ChartColumn} />
-                      <MetricTile label="Failure Rate" value={formatPercent(appUsageAnalytics.cards.failureRate)} icon={AlertTriangle} />
-                      <MetricTile label="Top Surface" value={formatUsageLabel(appUsageAnalytics.cards.topSurface)} icon={Sparkles} />
-                      <MetricTile label="Expense Saves" value={appUsageAnalytics.cards.expenseSaves} icon={FileDown} />
-                      <MetricTile label="Scan Success" value={formatPercent(appUsageAnalytics.cards.scanSuccessRate)} icon={Activity} />
-                      <MetricTile label="Settlements" value={appUsageAnalytics.cards.settlementActions} icon={HandCoins} />
-                      <MetricTile label="Downloads" value={appUsageAnalytics.cards.reportDownloads} icon={FileDown} />
-                      <MetricTile label="AI Cache Rate" value={formatPercent(appUsageAnalytics.cards.aiCacheRate)} icon={Brain} />
-                      <MetricTile label="AI Fallbacks" value={formatPercent(appUsageAnalytics.cards.aiFallbackFailureRate)} icon={AlertTriangle} />
-                      <MetricTile label="Success Events" value={appUsageAnalytics.totals.success} icon={ShieldCheck} />
-                    </div>
-
-                    {appUsageAnalytics.cards.totalEvents > 0 ? (
-                      <div className="grid gap-4 xl:grid-cols-2">
-                        <UsageList title="Activity Over Time" rows={appUsageAnalytics.activityByDate.map((row) => ({ key: row.dateKey, count: row.count }))} />
-                        <UsageList title="Feature Adoption" rows={appUsageAnalytics.featureAdoption} />
-                        <UsageList title="Workflow Funnel" rows={appUsageAnalytics.workflowFunnel} />
-                        <UsageList title="AI and Report Health" rows={appUsageAnalytics.aiReportHealth} />
-                        <UsageList title="Event Groups" rows={appUsageAnalytics.eventGroups} />
-                        <UsageList title="Top Aggregate Actions" rows={appUsageAnalytics.topActions} />
-                      </div>
-                    ) : (
-                      <AppEmptyState
-                        icon={ChartColumn}
-                        title="No usage activity"
-                        description="Usage analytics will appear here after users interact with the app."
-                        size="compact"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <SkeletonToolbar count={4} />
-                )}
-              </SettingsSection>
             </div>
 
             <SettingsSection
@@ -1602,6 +1497,115 @@ export default function SettingsTab({
                   </Button>
                 </ActionRow>
               </div>
+            </SettingsSection>
+          </TabsContent>
+
+          <TabsContent value="appAnalytics" className="space-y-4">
+            <SettingsSection
+              icon={ChartColumn}
+              title="Usage Analytics"
+              description="Aggregate app usage, workflow, report, and AI activity."
+            >
+              {appUsageAnalytics ? (
+                <div className="space-y-4">
+                  <div className="grid gap-3 md:grid-cols-5">
+                    <Select value={usageDatePreset} onValueChange={(value) => setUsageDatePreset(value as UsageAnalyticsPreset)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="24h">24 hours</SelectItem>
+                        <SelectItem value="7d">7 days</SelectItem>
+                        <SelectItem value="30d">30 days</SelectItem>
+                        <SelectItem value="90d">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={usageSurface} onValueChange={setUsageSurface}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Surface" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All surfaces</SelectItem>
+                        {USAGE_SURFACE_FILTERS.map((surface) => (
+                          <SelectItem key={surface} value={surface}>
+                            {formatUsageLabel(surface)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={usageStatus} onValueChange={setUsageStatus}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="success">Success</SelectItem>
+                        <SelectItem value="failure">Failure</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                        <SelectItem value="info">Info</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={usageRole} onValueChange={setUsageRole}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All roles</SelectItem>
+                        <SelectItem value="admin">Admins</SelectItem>
+                        <SelectItem value="user">Users</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Select value={usageEventGroup} onValueChange={setUsageEventGroup}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All groups</SelectItem>
+                        {USAGE_EVENT_GROUP_FILTERS.map((eventGroup) => (
+                          <SelectItem key={eventGroup} value={eventGroup}>
+                            {formatUsageLabel(eventGroup)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <MetricTile label="Active Users" value={appUsageAnalytics.cards.activeUsers} icon={Users} />
+                    <MetricTile label="Sessions" value={appUsageAnalytics.cards.sessions} icon={Activity} />
+                    <MetricTile label="Events" value={appUsageAnalytics.cards.totalEvents} icon={ChartColumn} />
+                    <MetricTile label="Failure Rate" value={formatPercent(appUsageAnalytics.cards.failureRate)} icon={AlertTriangle} />
+                    <MetricTile label="Top Surface" value={formatUsageLabel(appUsageAnalytics.cards.topSurface)} icon={Sparkles} />
+                    <MetricTile label="Expense Saves" value={appUsageAnalytics.cards.expenseSaves} icon={FileDown} />
+                    <MetricTile label="Scan Success" value={formatPercent(appUsageAnalytics.cards.scanSuccessRate)} icon={Activity} />
+                    <MetricTile label="Settlements" value={appUsageAnalytics.cards.settlementActions} icon={HandCoins} />
+                    <MetricTile label="Downloads" value={appUsageAnalytics.cards.reportDownloads} icon={FileDown} />
+                    <MetricTile label="AI Cache Rate" value={formatPercent(appUsageAnalytics.cards.aiCacheRate)} icon={Brain} />
+                    <MetricTile label="AI Fallbacks" value={formatPercent(appUsageAnalytics.cards.aiFallbackFailureRate)} icon={AlertTriangle} />
+                    <MetricTile label="Success Events" value={appUsageAnalytics.totals.success} icon={ShieldCheck} />
+                  </div>
+
+                  {appUsageAnalytics.cards.totalEvents > 0 ? (
+                    <div className="grid gap-4 xl:grid-cols-2">
+                      <UsageList title="Activity Over Time" rows={appUsageAnalytics.activityByDate.map((row) => ({ key: row.dateKey, count: row.count }))} />
+                      <UsageList title="Feature Adoption" rows={appUsageAnalytics.featureAdoption} />
+                      <UsageList title="Workflow Funnel" rows={appUsageAnalytics.workflowFunnel} />
+                      <UsageList title="AI and Report Health" rows={appUsageAnalytics.aiReportHealth} />
+                      <UsageList title="Event Groups" rows={appUsageAnalytics.eventGroups} />
+                      <UsageList title="Top Aggregate Actions" rows={appUsageAnalytics.topActions} />
+                    </div>
+                  ) : (
+                    <AppEmptyState
+                      icon={ChartColumn}
+                      title="No usage activity"
+                      description="Usage analytics will appear here after users interact with the app."
+                      size="compact"
+                    />
+                  )}
+                </div>
+              ) : (
+                <SkeletonToolbar count={4} />
+              )}
             </SettingsSection>
           </TabsContent>
 
