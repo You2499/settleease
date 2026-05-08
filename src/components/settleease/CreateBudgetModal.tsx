@@ -347,18 +347,21 @@ function canvasToPngBlob(canvas: HTMLCanvasElement) {
   });
 }
 
+function loadReceiptLogo() {
+  return new Promise<HTMLImageElement | null>((resolve) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => resolve(null);
+    image.src = "/icon.svg";
+  });
+}
+
 async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
-  const width = 760;
+  const baseWidth = 760;
   const scale = 2;
   const paperX = 30;
   const paperY = 30;
-  const paperWidth = width - paperX * 2;
   const contentPadding = 34;
-  const contentX = paperX + contentPadding;
-  const contentWidth = paperWidth - contentPadding * 2;
-  const qtyX = contentX + 430;
-  const amountRightX = contentX + contentWidth;
-  const nameWidth = qtyX - contentX - 18;
   const scratchCanvas = document.createElement("canvas");
   const scratch = scratchCanvas.getContext("2d");
 
@@ -367,12 +370,17 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
   }
 
   scratch.font = "400 20px ui-sans-serif, system-ui, sans-serif";
+  const basePaperWidth = baseWidth - paperX * 2;
+  const baseContentX = paperX + contentPadding;
+  const baseContentWidth = basePaperWidth - contentPadding * 2;
+  const baseQtyX = baseContentX + 430;
+  const baseNameWidth = baseQtyX - baseContentX - 18;
   const sectionMetrics = model.sections.map((section) => ({
     section,
     lineHeights:
       section.lines.length > 0
         ? section.lines.map((line) => {
-            const wrapped = wrapReceiptText(scratch, line.name, nameWidth);
+            const wrapped = wrapReceiptText(scratch, line.name, baseNameWidth);
             return Math.max(38, wrapped.length * 22 + 14);
           })
         : [38],
@@ -389,7 +397,7 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
   const summaryRowCount =
     3 + (model.otherCharge ? 1 : 0) + (model.discount ? 1 : 0);
   const pendingNoteHeight = model.isTaxCalculationCurrent ? 0 : 42;
-  const height =
+  const requiredHeight =
     paperY * 2 +
     150 +
     42 +
@@ -398,6 +406,18 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
     74 +
     pendingNoteHeight +
     44;
+  const height = Math.max(
+    Math.round((baseWidth * 5) / 4),
+    Math.ceil(requiredHeight / 5) * 5
+  );
+  const width = Math.round((height * 4) / 5);
+  const paperWidth = width - paperX * 2;
+  const contentX = paperX + contentPadding;
+  const contentWidth = paperWidth - contentPadding * 2;
+  const qtyX = contentX + Math.min(430, Math.round(contentWidth * 0.68));
+  const amountRightX = contentX + contentWidth;
+  const nameWidth = qtyX - contentX - 18;
+  const logo = await loadReceiptLogo();
   const canvas = document.createElement("canvas");
   canvas.width = width * scale;
   canvas.height = height * scale;
@@ -436,21 +456,27 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
   ctx.setLineDash([]);
 
   let y = paperY + 60;
-  ctx.fillStyle = "#0f8f71";
-  ctx.beginPath();
-  ctx.arc(contentX + 24, y + 24, 24, 0, Math.PI * 2);
+  drawRoundRect(ctx, contentX, y, 50, 50, 12);
+  ctx.fillStyle = "#ecfdf7";
   ctx.fill();
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "700 18px ui-sans-serif, system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("SE", contentX + 24, y + 24);
+  ctx.strokeStyle = "#b8ead8";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  if (logo) {
+    ctx.drawImage(logo, contentX + 8, y + 8, 34, 34);
+  } else {
+    ctx.fillStyle = "#0f8f71";
+    ctx.font = "800 18px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText("SE", contentX + 25, y + 25);
+  }
 
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "#172621";
   ctx.font = "800 28px ui-sans-serif, system-ui, sans-serif";
-  ctx.fillText("SettleEase", contentX + 62, y + 21);
+  ctx.fillText("SettleEase", contentX + 64, y + 21);
   ctx.fillStyle = "#66756e";
   ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
   ctx.fillText("Bill estimate receipt", contentX + 64, y + 44);
@@ -583,11 +609,6 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
     );
     y += 36;
   }
-
-  ctx.fillStyle = "#7a8781";
-  ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText("Created with SettleEase", width / 2, y);
 
   return canvasToPngBlob(canvas);
 }
