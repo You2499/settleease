@@ -121,6 +121,7 @@ type EstimateReceiptSection = {
   lines: EstimateReceiptLine[];
   totalLabel: string;
   totalValue: string;
+  chargeKind: "tax" | "vat";
 };
 
 type EstimateReceiptModel = {
@@ -150,6 +151,43 @@ function toReceiptLine(line: SelectedBudgetLine): EstimateReceiptLine {
   };
 }
 
+function getBudgetLineCategoryName(line: SelectedBudgetLine) {
+  return formatCopyCell(line.category_name) || UNCATEGORIZED_CATEGORY;
+}
+
+function getBudgetLineChargeKind({
+  line,
+  classification,
+}: {
+  line: SelectedBudgetLine;
+  classification: BudgetVatClassification | null;
+}): "tax" | "vat" {
+  if (classification?.vat_class === "alcohol") {
+    return "vat";
+  }
+
+  if (!classification) {
+    const categoryName = getBudgetLineCategoryName(line).toLowerCase();
+    return categoryName.includes("alcohol") ? "vat" : "tax";
+  }
+
+  return "tax";
+}
+
+function createEstimateSection(
+  title: string,
+  chargeKind: "tax" | "vat",
+  totalValue: string
+): EstimateReceiptSection {
+  return {
+    title,
+    chargeKind,
+    lines: [],
+    totalLabel: chargeKind === "vat" ? "Total VAT" : "Total Tax",
+    totalValue,
+  };
+}
+
 function buildEstimateReceiptModel({
   selectedLines,
   isTaxCalculationCurrent,
@@ -163,21 +201,6 @@ function buildEstimateReceiptModel({
   ) => BudgetVatClassification | null;
   totals: BudgetEstimateTotals;
 }): EstimateReceiptModel {
-  const foodLines: EstimateReceiptLine[] = [];
-  const alcoholLines: EstimateReceiptLine[] = [];
-
-  selectedLines.forEach((line) => {
-    const classification = isTaxCalculationCurrent
-      ? getLineVatClassification(line)
-      : null;
-
-    if (classification?.vat_class === "alcohol") {
-      alcoholLines.push(toReceiptLine(line));
-    } else {
-      foodLines.push(toReceiptLine(line));
-    }
-  });
-
   const taxTotal = isTaxCalculationCurrent
     ? formatCurrency(totals.taxAmount)
     : "Pending";
@@ -187,22 +210,58 @@ function buildEstimateReceiptModel({
   const grandTotal = isTaxCalculationCurrent
     ? formatCurrency(totals.finalTotal)
     : "Pending";
+  const sections: EstimateReceiptSection[] = [];
+  const sectionLineTotals = new Map<string, number>();
+
+  selectedLines.forEach((line) => {
+    const classification = isTaxCalculationCurrent
+      ? getLineVatClassification(line)
+      : null;
+    const chargeKind = getBudgetLineChargeKind({ line, classification });
+    const categoryName = getBudgetLineCategoryName(line);
+    const sectionKey = `${chargeKind}:${categoryName.toLowerCase()}`;
+    let section = sections.find(
+      (entry) =>
+        entry.title.toLowerCase() === categoryName.toLowerCase() &&
+        entry.chargeKind === chargeKind
+    );
+
+    if (!section) {
+      section = createEstimateSection(
+        categoryName,
+        chargeKind,
+        isTaxCalculationCurrent ? formatCurrency(0) : "Pending"
+      );
+      sections.push(section);
+    }
+
+    section.lines.push(toReceiptLine(line));
+    sectionLineTotals.set(
+      sectionKey,
+      (sectionLineTotals.get(sectionKey) ?? 0) +
+        line.unit_price * line.quantity
+    );
+  });
+
+  sections.forEach((section) => {
+    if (!isTaxCalculationCurrent) {
+      section.totalValue = "Pending";
+      return;
+    }
+
+    const sectionKey = `${section.chargeKind}:${section.title.toLowerCase()}`;
+    const sectionSubtotal = sectionLineTotals.get(sectionKey) ?? 0;
+    section.totalValue = formatCurrency(
+      roundMoney(
+        section.chargeKind === "vat"
+          ? sectionSubtotal * getBudgetAlcoholVatRate("alcohol")
+          : sectionSubtotal * BUDGET_ITEM_TAX_RATE
+      )
+    );
+  });
 
   return {
-    sections: [
-      {
-        title: "Food",
-        lines: foodLines,
-        totalLabel: "Total Tax",
-        totalValue: taxTotal,
-      },
-      {
-        title: "ALCOHOL",
-        lines: alcoholLines,
-        totalLabel: "Total VAT",
-        totalValue: vatTotal,
-      },
-    ],
+    sections,
     subtotal: formatCurrency(totals.subtotal),
     taxTotal,
     vatTotal,
@@ -232,9 +291,12 @@ function appendEstimateCopySection(rows: string[], section: EstimateReceiptSecti
 function buildEstimateCopyText(model: EstimateReceiptModel) {
   const rows = ["Bill Estimate", "", "Item Name\tQTY\tAMOUNT", ""];
 
-  appendEstimateCopySection(rows, model.sections[0]);
-  rows.push("");
-  appendEstimateCopySection(rows, model.sections[1]);
+  model.sections.forEach((section, index) => {
+    if (index > 0) {
+      rows.push("");
+    }
+    appendEstimateCopySection(rows, section);
+  });
 
   rows.push("", `Total Tax\t${model.taxTotal}`, `Total VAT\t${model.vatTotal}`);
 
@@ -509,10 +571,10 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
   y += 18;
   sectionMetrics.forEach(({ section, lineHeights }) => {
     y += 18;
-    ctx.fillStyle = section.title === "ALCOHOL" ? "#fff5df" : "#e9f7f1";
+    ctx.fillStyle = section.chargeKind === "vat" ? "#fff5df" : "#e9f7f1";
     drawRoundRect(ctx, contentX - 10, y - 22, contentWidth + 20, 30, 8);
     ctx.fill();
-    ctx.fillStyle = section.title === "ALCOHOL" ? "#8a5a00" : "#0f765f";
+    ctx.fillStyle = section.chargeKind === "vat" ? "#8a5a00" : "#0f765f";
     ctx.font = "800 14px ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "left";
     ctx.fillText(section.title, contentX, y);
