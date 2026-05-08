@@ -53,6 +53,7 @@ import {
 } from "@/lib/settleease/budgetVat";
 import { formatCurrency } from "@/lib/settleease/utils";
 import type {
+  BudgetDraft,
   BudgetFees,
   BudgetItem,
   BudgetVatClassification,
@@ -218,6 +219,30 @@ async function writeClipboardText(text: string) {
   }
 }
 
+function toSavedBudgetLines(lines: SelectedBudgetLine[]) {
+  return lines.map((line) => ({
+    id: line.id,
+    budgetItemId: line.budget_item_id,
+    name: line.name,
+    categoryName: line.category_name,
+    unitPrice: line.unit_price,
+    quantity: line.quantity,
+    source: line.source,
+  }));
+}
+
+function toSavedVatClassifications(
+  classifications: Record<string, BudgetVatClassification>
+) {
+  return Object.values(classifications).map((classification) => ({
+    key: classification.key,
+    vatClass: classification.vat_class,
+    confidence: classification.confidence,
+    rationale: classification.rationale,
+    source: classification.source,
+  }));
+}
+
 export default function CreateBudgetModal({
   isOpen,
   onOpenChange,
@@ -248,6 +273,7 @@ export default function CreateBudgetModal({
     other_charge: "",
     discount: "",
   });
+  const [isDraftHydrated, setIsDraftHydrated] = useState(false);
 
   const isAdmin = userRole === "admin";
   const categoryOptions = useMemo(() => {
@@ -281,10 +307,47 @@ export default function CreateBudgetModal({
         }
       : "skip"
   ) as BudgetItem[] | undefined;
+  const budgetDraft = useQuery(
+    api.app.getBudgetDraft,
+    isOpen ? {} : "skip"
+  ) as BudgetDraft | null | undefined;
+  const isBudgetDraftLoaded = budgetDraft !== undefined;
   const upsertCustomBudgetItem = useMutation(api.app.upsertCustomBudgetItem);
   const backfillBudgetItemsFromExpenses = useMutation(
     api.app.backfillBudgetItemsFromExpenses
   );
+  const saveBudgetDraft = useMutation(api.app.saveBudgetDraft);
+  const clearSavedBudgetDraft = useMutation(api.app.clearBudgetDraft);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setIsDraftHydrated(false);
+      return;
+    }
+
+    if (budgetDraft === undefined || isDraftHydrated) {
+      return;
+    }
+
+    setSelectedLines(budgetDraft?.selected_lines ?? []);
+    setFees(
+      budgetDraft?.fees ?? {
+        other_charge: "",
+        discount: "",
+      }
+    );
+    setVatClassifications(budgetDraft?.vat_classifications ?? {});
+    setVatStatus(
+      budgetDraft?.vat_status === "loading"
+        ? "idle"
+        : budgetDraft?.vat_status ?? "idle"
+    );
+    setVatModelName(budgetDraft?.vat_model_name ?? "");
+    setVatClassifiedSignature(
+      budgetDraft?.vat_classified_signature ?? ""
+    );
+    setIsDraftHydrated(true);
+  }, [budgetDraft, isDraftHydrated, isOpen]);
 
   const vatInputItems = useMemo<BudgetVatInputItem[]>(() => {
     return selectedLines.map((line) => ({
@@ -300,13 +363,13 @@ export default function CreateBudgetModal({
   );
 
   useEffect(() => {
-    if (!isOpen || selectedLines.length === 0) {
+    if (!isOpen || (isDraftHydrated && selectedLines.length === 0)) {
       setVatClassifications({});
       setVatStatus("idle");
       setVatModelName("");
       setVatClassifiedSignature("");
     }
-  }, [isOpen, selectedLines.length]);
+  }, [isDraftHydrated, isOpen, selectedLines.length]);
 
   const isTaxCalculationCurrent =
     selectedLines.length > 0 &&
@@ -315,6 +378,50 @@ export default function CreateBudgetModal({
 
   const needsTaxCalculation =
     selectedLines.length > 0 && !isTaxCalculationCurrent;
+
+  useEffect(() => {
+    if (!isOpen || !isDraftHydrated || !isBudgetDraftLoaded) {
+      return;
+    }
+
+    const saveTimer = window.setTimeout(() => {
+      if (selectedLines.length === 0) {
+        void clearSavedBudgetDraft().catch((error) => {
+          console.warn("Budget draft clear failed:", error);
+        });
+        return;
+      }
+
+      void saveBudgetDraft({
+        selectedLines: toSavedBudgetLines(selectedLines),
+        fees: {
+          otherCharge: fees.other_charge,
+          discount: fees.discount,
+        },
+        vatClassifications: toSavedVatClassifications(vatClassifications),
+        vatStatus,
+        vatModelName,
+        vatClassifiedSignature,
+      }).catch((error) => {
+        console.warn("Budget draft save failed:", error);
+      });
+    }, 350);
+
+    return () => window.clearTimeout(saveTimer);
+  }, [
+    clearSavedBudgetDraft,
+    fees.discount,
+    fees.other_charge,
+    isBudgetDraftLoaded,
+    isDraftHydrated,
+    isOpen,
+    saveBudgetDraft,
+    selectedLines,
+    vatClassifications,
+    vatClassifiedSignature,
+    vatModelName,
+    vatStatus,
+  ]);
 
   const getLineVatClassification = useCallback(
     (line: SelectedBudgetLine) => vatClassifications[line.id] ?? null,
@@ -458,6 +565,13 @@ export default function CreateBudgetModal({
     setFees({
       other_charge: "",
       discount: "",
+    });
+    setVatClassifications({});
+    setVatStatus("idle");
+    setVatModelName("");
+    setVatClassifiedSignature("");
+    void clearSavedBudgetDraft().catch((error) => {
+      console.warn("Budget draft clear failed:", error);
     });
   };
 

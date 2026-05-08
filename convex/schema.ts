@@ -29,6 +29,29 @@ const celebrationContribution = v.object({
   amount: v.number(),
 });
 
+const selectedBudgetLine = v.object({
+  id: v.string(),
+  budgetItemId: v.optional(v.string()),
+  name: v.string(),
+  categoryName: v.string(),
+  unitPrice: v.number(),
+  quantity: v.number(),
+  source: v.union(v.literal("catalog"), v.literal("custom")),
+});
+
+const budgetFees = v.object({
+  otherCharge: v.string(),
+  discount: v.string(),
+});
+
+const budgetVatClassification = v.object({
+  key: v.string(),
+  vatClass: v.union(v.literal("standard"), v.literal("alcohol")),
+  confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  rationale: v.string(),
+  source: v.literal("ai"),
+});
+
 export default defineSchema({
   userProfiles: defineTable({
     supabaseUserId: v.string(),
@@ -124,6 +147,22 @@ export default defineSchema({
       searchField: "searchText",
       filterFields: ["isActive", "categoryName"],
     }),
+
+  budgetDrafts: defineTable({
+    supabaseUserId: v.string(),
+    lines: v.array(selectedBudgetLine),
+    fees: budgetFees,
+    vatClassifications: v.array(budgetVatClassification),
+    vatStatus: v.union(
+      v.literal("idle"),
+      v.literal("ai"),
+      v.literal("error"),
+    ),
+    vatModelName: v.string(),
+    vatClassifiedSignature: v.string(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+  }).index("by_supabase_user_id", ["supabaseUserId"]),
 
   settlementPayments: defineTable({
     debtorId: v.string(),

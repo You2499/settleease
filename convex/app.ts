@@ -100,6 +100,36 @@ const reportGenerationEventType = v.union(
 
 const exportReportMode = v.union(v.literal("group"), v.literal("personal"));
 
+const selectedBudgetLine = v.object({
+  id: v.string(),
+  budgetItemId: v.optional(v.string()),
+  name: v.string(),
+  categoryName: v.string(),
+  unitPrice: v.number(),
+  quantity: v.number(),
+  source: v.union(v.literal("catalog"), v.literal("custom")),
+});
+
+const budgetFees = v.object({
+  otherCharge: v.string(),
+  discount: v.string(),
+});
+
+const budgetVatClassification = v.object({
+  key: v.string(),
+  vatClass: v.union(v.literal("standard"), v.literal("alcohol")),
+  confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+  rationale: v.string(),
+  source: v.literal("ai"),
+});
+
+const budgetDraftVatStatus = v.union(
+  v.literal("idle"),
+  v.literal("loading"),
+  v.literal("ai"),
+  v.literal("error"),
+);
+
 const usageEventStatus = v.union(
   v.literal("success"),
   v.literal("failure"),
@@ -466,6 +496,98 @@ function budgetItemDto(item: any) {
     source: item.source,
     created_at: item.createdAt,
     updated_at: item.updatedAt,
+  };
+}
+
+function cleanBudgetDraftLine(line: {
+  id: string;
+  budgetItemId?: string;
+  name: string;
+  categoryName: string;
+  unitPrice: number;
+  quantity: number;
+  source: "catalog" | "custom";
+}) {
+  const name = cleanBudgetItemName(line.name);
+  const unitPrice = toPositiveBudgetPrice(line.unitPrice);
+  const quantity = Math.max(1, Math.floor(Number(line.quantity) || 1));
+
+  if (!name || unitPrice === null) return null;
+
+  return {
+    id: String(line.id || makeBudgetDraftLineId(name)).slice(0, 120),
+    budgetItemId: line.budgetItemId || undefined,
+    name,
+    categoryName: cleanBudgetCategoryName(line.categoryName),
+    unitPrice,
+    quantity,
+    source: line.source,
+  };
+}
+
+function makeBudgetDraftLineId(name: string) {
+  return `draft-${normalizeBudgetItemName(name).replace(/[^a-z0-9]+/g, "-")}`;
+}
+
+function cleanBudgetDraftClassification(
+  classification: {
+    key: string;
+    vatClass: "standard" | "alcohol";
+    confidence: "low" | "medium" | "high";
+    rationale: string;
+    source: "ai";
+  },
+  lineIds: Set<string>,
+) {
+  const key = String(classification.key ?? "").trim();
+  if (!key || !lineIds.has(key)) return null;
+
+  return {
+    key,
+    vatClass: classification.vatClass,
+    confidence: classification.confidence,
+    rationale:
+      String(classification.rationale ?? "").trim().replace(/\s+/g, " ") ||
+      "Classified for alcohol VAT.",
+    source: "ai" as const,
+  };
+}
+
+function budgetDraftDto(draft: any) {
+  if (!draft) return null;
+
+  return {
+    id: draft._id,
+    selected_lines: (draft.lines ?? []).map((line: any) => ({
+      id: line.id,
+      budget_item_id: line.budgetItemId,
+      name: line.name,
+      category_name: line.categoryName,
+      unit_price: line.unitPrice,
+      quantity: line.quantity,
+      source: line.source,
+    })),
+    fees: {
+      other_charge: draft.fees?.otherCharge ?? "",
+      discount: draft.fees?.discount ?? "",
+    },
+    vat_classifications: Object.fromEntries(
+      (draft.vatClassifications ?? []).map((classification: any) => [
+        classification.key,
+        {
+          key: classification.key,
+          vat_class: classification.vatClass,
+          confidence: classification.confidence,
+          rationale: classification.rationale,
+          source: classification.source,
+        },
+      ]),
+    ),
+    vat_status: draft.vatStatus,
+    vat_model_name: draft.vatModelName ?? "",
+    vat_classified_signature: draft.vatClassifiedSignature ?? "",
+    created_at: draft.createdAt,
+    updated_at: draft.updatedAt,
   };
 }
 
@@ -1022,6 +1144,7 @@ export const getAdminSettingsSnapshot = query({
       settlementPayments,
       manualOverrides,
       budgetItems,
+      budgetDrafts,
       userProfiles,
       reportGenerationEvents,
       appUsageEvents,
@@ -1038,6 +1161,7 @@ export const getAdminSettingsSnapshot = query({
       ctx.db.query("settlementPayments").collect(),
       ctx.db.query("manualSettlementOverrides").collect(),
       ctx.db.query("budgetItems").collect(),
+      ctx.db.query("budgetDrafts").collect(),
       ctx.db.query("userProfiles").collect(),
       ctx.db.query("reportGenerationEvents").collect(),
       ctx.db.query("appUsageEvents").collect(),
@@ -1066,6 +1190,7 @@ export const getAdminSettingsSnapshot = query({
         manualOverrides: manualOverrides.length,
         activeManualOverrides: activeManualOverrideCount,
         budgetItems: budgetItems.length,
+        budgetDrafts: budgetDrafts.length,
         userProfiles: userProfiles.length,
         reportGenerationEvents: reportGenerationEvents.length,
         appUsageEvents: appUsageEvents.length,
@@ -1584,6 +1709,102 @@ export const listExpenses = query({
           new Date(b.created_at ?? 0).getTime() -
           new Date(a.created_at ?? 0).getTime(),
       );
+  },
+});
+
+export const getBudgetDraft = query({
+  args: {},
+  handler: async (ctx) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const draft = await ctx.db
+      .query("budgetDrafts")
+      .withIndex("by_supabase_user_id", (q) =>
+        q.eq("supabaseUserId", supabaseUserId),
+      )
+      .unique();
+
+    return budgetDraftDto(draft);
+  },
+});
+
+export const saveBudgetDraft = mutation({
+  args: {
+    selectedLines: v.array(selectedBudgetLine),
+    fees: budgetFees,
+    vatClassifications: v.array(budgetVatClassification),
+    vatStatus: budgetDraftVatStatus,
+    vatModelName: v.string(),
+    vatClassifiedSignature: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const existing = await ctx.db
+      .query("budgetDrafts")
+      .withIndex("by_supabase_user_id", (q) =>
+        q.eq("supabaseUserId", supabaseUserId),
+      )
+      .unique();
+    const lines = args.selectedLines
+      .map(cleanBudgetDraftLine)
+      .filter((line): line is NonNullable<typeof line> => Boolean(line));
+
+    if (lines.length === 0) {
+      if (existing) await ctx.db.delete(existing._id);
+      return null;
+    }
+
+    const lineIds = new Set(lines.map((line) => line.id));
+    const vatStatus = args.vatStatus === "loading" ? "idle" : args.vatStatus;
+    const vatClassifications =
+      vatStatus === "ai"
+        ? args.vatClassifications
+            .map((classification) =>
+              cleanBudgetDraftClassification(classification, lineIds),
+            )
+            .filter((row): row is NonNullable<typeof row> => Boolean(row))
+        : [];
+    const timestamp = nowIso();
+    const payload = {
+      supabaseUserId,
+      lines,
+      fees: {
+        otherCharge: String(args.fees.otherCharge ?? ""),
+        discount: String(args.fees.discount ?? ""),
+      },
+      vatClassifications,
+      vatStatus,
+      vatModelName: args.vatModelName.trim().slice(0, 120),
+      vatClassifiedSignature:
+        vatStatus === "ai" ? args.vatClassifiedSignature : "",
+      updatedAt: timestamp,
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+      return budgetDraftDto(await ctx.db.get(existing._id));
+    }
+
+    const id = await ctx.db.insert("budgetDrafts", {
+      ...payload,
+      createdAt: timestamp,
+    });
+    return budgetDraftDto(await ctx.db.get(id));
+  },
+});
+
+export const clearBudgetDraft = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const draft = await ctx.db
+      .query("budgetDrafts")
+      .withIndex("by_supabase_user_id", (q) =>
+        q.eq("supabaseUserId", supabaseUserId),
+      )
+      .unique();
+
+    if (draft) await ctx.db.delete(draft._id);
+    return { deleted: Boolean(draft) };
   },
 });
 
@@ -3046,6 +3267,7 @@ export const resetSettleEaseData = mutation({
         "manualSettlementOverrides",
       ),
       budgetItems: await deleteAllFromTable(ctx, "budgetItems"),
+      budgetDrafts: await deleteAllFromTable(ctx, "budgetDrafts"),
       reportGenerationEvents: await deleteAllFromTable(
         ctx,
         "reportGenerationEvents",

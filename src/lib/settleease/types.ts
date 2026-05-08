@@ -98,6 +98,20 @@ export interface BudgetFees {
   discount: string;
 }
 
+export type BudgetDraftVatStatus = 'idle' | 'loading' | 'ai' | 'error';
+
+export interface BudgetDraft {
+  id: string;
+  selected_lines: SelectedBudgetLine[];
+  fees: BudgetFees;
+  vat_classifications: Record<string, BudgetVatClassification>;
+  vat_status: BudgetDraftVatStatus;
+  vat_model_name: string;
+  vat_classified_signature: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Used in AddExpenseTab for form state
 export interface PayerInputRow {
   id: string; // Temporary client-side ID for list rendering

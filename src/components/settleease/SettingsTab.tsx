@@ -112,6 +112,7 @@ type AdminSettingsSnapshot = {
     manualOverrides: number;
     activeManualOverrides: number;
     budgetItems: number;
+    budgetDrafts: number;
     userProfiles: number;
     reportGenerationEvents: number;
     appUsageEvents: number;
@@ -837,6 +838,7 @@ export default function SettingsTab({
       manualOverrides: manualOverrides.length,
       activeManualOverrides,
       budgetItems: 0,
+      budgetDrafts: 0,
       userProfiles: userRole ? 1 : 0,
       reportGenerationEvents: 0,
       appUsageEvents: 0,
