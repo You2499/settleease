@@ -11,7 +11,10 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   Calculator,
+  ChevronDown,
   Copy,
+  FileText,
+  Image as ImageIcon,
   Loader2,
   Minus,
   Plus,
@@ -35,6 +38,11 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -102,6 +110,30 @@ type BudgetEstimateTotals = {
   finalTotal: number;
 };
 
+type EstimateReceiptLine = {
+  name: string;
+  quantity: string;
+  amount: string;
+};
+
+type EstimateReceiptSection = {
+  title: string;
+  lines: EstimateReceiptLine[];
+  totalLabel: string;
+  totalValue: string;
+};
+
+type EstimateReceiptModel = {
+  sections: EstimateReceiptSection[];
+  subtotal: string;
+  taxTotal: string;
+  vatTotal: string;
+  otherCharge: string | null;
+  discount: string | null;
+  grandTotal: string;
+  isTaxCalculationCurrent: boolean;
+};
+
 function formatCopyCell(value: string) {
   return value.trim().replace(/\s+/g, " ");
 }
@@ -110,31 +142,15 @@ function formatCopyAmount(value: number) {
   return formatCurrency(roundMoney(value));
 }
 
-function appendEstimateCopySection(
-  rows: string[],
-  title: string,
-  lines: SelectedBudgetLine[],
-  totalLabel: string,
-  totalValue: string
-) {
-  rows.push(title);
-
-  if (lines.length === 0) {
-    rows.push(`No items\t-\t${formatCurrency(0)}`);
-  } else {
-    lines.forEach((line) => {
-      rows.push(
-        `${formatCopyCell(line.name)}\t${line.quantity}\t${formatCopyAmount(
-          line.unit_price * line.quantity
-        )}`
-      );
-    });
-  }
-
-  rows.push(`${totalLabel}\t\t${totalValue}`);
+function toReceiptLine(line: SelectedBudgetLine): EstimateReceiptLine {
+  return {
+    name: formatCopyCell(line.name),
+    quantity: String(line.quantity),
+    amount: formatCopyAmount(line.unit_price * line.quantity),
+  };
 }
 
-function buildEstimateCopyText({
+function buildEstimateReceiptModel({
   selectedLines,
   isTaxCalculationCurrent,
   getLineVatClassification,
@@ -146,9 +162,9 @@ function buildEstimateCopyText({
     line: SelectedBudgetLine
   ) => BudgetVatClassification | null;
   totals: BudgetEstimateTotals;
-}) {
-  const foodLines: SelectedBudgetLine[] = [];
-  const alcoholLines: SelectedBudgetLine[] = [];
+}): EstimateReceiptModel {
+  const foodLines: EstimateReceiptLine[] = [];
+  const alcoholLines: EstimateReceiptLine[] = [];
 
   selectedLines.forEach((line) => {
     const classification = isTaxCalculationCurrent
@@ -156,9 +172,9 @@ function buildEstimateCopyText({
       : null;
 
     if (classification?.vat_class === "alcohol") {
-      alcoholLines.push(line);
+      alcoholLines.push(toReceiptLine(line));
     } else {
-      foodLines.push(line);
+      foodLines.push(toReceiptLine(line));
     }
   });
 
@@ -171,29 +187,66 @@ function buildEstimateCopyText({
   const grandTotal = isTaxCalculationCurrent
     ? formatCurrency(totals.finalTotal)
     : "Pending";
+
+  return {
+    sections: [
+      {
+        title: "Food",
+        lines: foodLines,
+        totalLabel: "Total Tax",
+        totalValue: taxTotal,
+      },
+      {
+        title: "ALCOHOL",
+        lines: alcoholLines,
+        totalLabel: "Total VAT",
+        totalValue: vatTotal,
+      },
+    ],
+    subtotal: formatCurrency(totals.subtotal),
+    taxTotal,
+    vatTotal,
+    otherCharge:
+      totals.otherCharge > 0 ? formatCurrency(totals.otherCharge) : null,
+    discount:
+      totals.discount > 0 ? `-${formatCurrency(totals.discount)}` : null,
+    grandTotal,
+    isTaxCalculationCurrent,
+  };
+}
+
+function appendEstimateCopySection(rows: string[], section: EstimateReceiptSection) {
+  rows.push(section.title);
+
+  if (section.lines.length === 0) {
+    rows.push(`No items\t-\t${formatCurrency(0)}`);
+  } else {
+    section.lines.forEach((line) => {
+      rows.push(`${line.name}\t${line.quantity}\t${line.amount}`);
+    });
+  }
+
+  rows.push(`${section.totalLabel}\t\t${section.totalValue}`);
+}
+
+function buildEstimateCopyText(model: EstimateReceiptModel) {
   const rows = ["Bill Estimate", "", "Item Name\tQTY\tAMOUNT", ""];
 
-  appendEstimateCopySection(rows, "Food", foodLines, "Total Tax", taxTotal);
+  appendEstimateCopySection(rows, model.sections[0]);
   rows.push("");
-  appendEstimateCopySection(
-    rows,
-    "ALCOHOL",
-    alcoholLines,
-    "Total VAT",
-    vatTotal
-  );
+  appendEstimateCopySection(rows, model.sections[1]);
 
-  rows.push("", `Total Tax\t${taxTotal}`, `Total VAT\t${vatTotal}`);
+  rows.push("", `Total Tax\t${model.taxTotal}`, `Total VAT\t${model.vatTotal}`);
 
-  if (totals.otherCharge > 0) {
-    rows.push(`Other Charge\t${formatCurrency(totals.otherCharge)}`);
+  if (model.otherCharge) {
+    rows.push(`Other Charge\t${model.otherCharge}`);
   }
 
-  if (totals.discount > 0) {
-    rows.push(`Discount\t-${formatCurrency(totals.discount)}`);
+  if (model.discount) {
+    rows.push(`Discount\t${model.discount}`);
   }
 
-  rows.push(`GRAND TOTAL\t${grandTotal}`);
+  rows.push(`GRAND TOTAL\t${model.grandTotal}`);
 
   return rows.join("\n");
 }
@@ -217,6 +270,339 @@ async function writeClipboardText(text: string) {
   } finally {
     document.body.removeChild(textarea);
   }
+}
+
+function drawRoundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) {
+  const safeRadius = Math.min(radius, width / 2, height / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + safeRadius, y);
+  ctx.arcTo(x + width, y, x + width, y + height, safeRadius);
+  ctx.arcTo(x + width, y + height, x, y + height, safeRadius);
+  ctx.arcTo(x, y + height, x, y, safeRadius);
+  ctx.arcTo(x, y, x + width, y, safeRadius);
+  ctx.closePath();
+}
+
+function wrapReceiptText(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number
+) {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth) {
+      currentLine = candidate;
+      return;
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    if (ctx.measureText(word).width <= maxWidth) {
+      currentLine = word;
+      return;
+    }
+
+    let chunk = "";
+    Array.from(word).forEach((character) => {
+      const nextChunk = `${chunk}${character}`;
+      if (chunk && ctx.measureText(nextChunk).width > maxWidth) {
+        lines.push(chunk);
+        chunk = character;
+      } else {
+        chunk = nextChunk;
+      }
+    });
+    currentLine = chunk;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [""];
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+      } else {
+        reject(new Error("Could not render receipt image."));
+      }
+    }, "image/png");
+  });
+}
+
+async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
+  const width = 760;
+  const scale = 2;
+  const paperX = 30;
+  const paperY = 30;
+  const paperWidth = width - paperX * 2;
+  const contentPadding = 34;
+  const contentX = paperX + contentPadding;
+  const contentWidth = paperWidth - contentPadding * 2;
+  const qtyX = contentX + 430;
+  const amountRightX = contentX + contentWidth;
+  const nameWidth = qtyX - contentX - 18;
+  const scratchCanvas = document.createElement("canvas");
+  const scratch = scratchCanvas.getContext("2d");
+
+  if (!scratch) {
+    throw new Error("Could not render receipt image.");
+  }
+
+  scratch.font = "400 20px ui-sans-serif, system-ui, sans-serif";
+  const sectionMetrics = model.sections.map((section) => ({
+    section,
+    lineHeights:
+      section.lines.length > 0
+        ? section.lines.map((line) => {
+            const wrapped = wrapReceiptText(scratch, line.name, nameWidth);
+            return Math.max(38, wrapped.length * 22 + 14);
+          })
+        : [38],
+  }));
+  const tableHeight = sectionMetrics.reduce((sum, sectionMetric) => {
+    return (
+      sum +
+      42 +
+      sectionMetric.lineHeights.reduce((lineSum, height) => lineSum + height, 0) +
+      42 +
+      14
+    );
+  }, 0);
+  const summaryRowCount =
+    3 + (model.otherCharge ? 1 : 0) + (model.discount ? 1 : 0);
+  const pendingNoteHeight = model.isTaxCalculationCurrent ? 0 : 42;
+  const height =
+    paperY * 2 +
+    150 +
+    42 +
+    tableHeight +
+    summaryRowCount * 34 +
+    74 +
+    pendingNoteHeight +
+    44;
+  const canvas = document.createElement("canvas");
+  canvas.width = width * scale;
+  canvas.height = height * scale;
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) {
+    throw new Error("Could not render receipt image.");
+  }
+
+  ctx.scale(scale, scale);
+  ctx.fillStyle = "#eef7f3";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.save();
+  ctx.shadowColor = "rgba(18, 38, 33, 0.16)";
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 10;
+  drawRoundRect(ctx, paperX, paperY, paperWidth, height - paperY * 2, 14);
+  ctx.fillStyle = "#fffdf8";
+  ctx.fill();
+  ctx.restore();
+
+  drawRoundRect(ctx, paperX, paperY, paperWidth, height - paperY * 2, 14);
+  ctx.strokeStyle = "#d8e5dd";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.setLineDash([8, 8]);
+  ctx.strokeStyle = "#cad9d2";
+  ctx.beginPath();
+  ctx.moveTo(contentX, paperY + 24);
+  ctx.lineTo(amountRightX, paperY + 24);
+  ctx.moveTo(contentX, height - paperY - 24);
+  ctx.lineTo(amountRightX, height - paperY - 24);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  let y = paperY + 60;
+  ctx.fillStyle = "#0f8f71";
+  ctx.beginPath();
+  ctx.arc(contentX + 24, y + 24, 24, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 18px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText("SE", contentX + 24, y + 24);
+
+  ctx.textAlign = "left";
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "#172621";
+  ctx.font = "800 28px ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText("SettleEase", contentX + 62, y + 21);
+  ctx.fillStyle = "#66756e";
+  ctx.font = "500 14px ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText("Bill estimate receipt", contentX + 64, y + 44);
+
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#0f8f71";
+  ctx.font = "700 13px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.fillText("RECEIPT", amountRightX, y + 18);
+  ctx.fillStyle = "#66756e";
+  ctx.font = "500 12px ui-sans-serif, system-ui, sans-serif";
+  ctx.fillText(new Date().toLocaleString(), amountRightX, y + 41);
+
+  y += 92;
+  ctx.strokeStyle = "#e0ebe5";
+  ctx.beginPath();
+  ctx.moveTo(contentX, y);
+  ctx.lineTo(amountRightX, y);
+  ctx.stroke();
+
+  y += 34;
+  ctx.fillStyle = "#6b7972";
+  ctx.font = "700 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+  ctx.textAlign = "left";
+  ctx.fillText("ITEM NAME", contentX, y);
+  ctx.textAlign = "center";
+  ctx.fillText("QTY", qtyX + 18, y);
+  ctx.textAlign = "right";
+  ctx.fillText("AMOUNT", amountRightX, y);
+
+  y += 18;
+  sectionMetrics.forEach(({ section, lineHeights }) => {
+    y += 18;
+    ctx.fillStyle = section.title === "ALCOHOL" ? "#fff5df" : "#e9f7f1";
+    drawRoundRect(ctx, contentX - 10, y - 22, contentWidth + 20, 30, 8);
+    ctx.fill();
+    ctx.fillStyle = section.title === "ALCOHOL" ? "#8a5a00" : "#0f765f";
+    ctx.font = "800 14px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(section.title, contentX, y);
+
+    y += 24;
+    const lines =
+      section.lines.length > 0
+        ? section.lines
+        : [{ name: "No items", quantity: "-", amount: formatCurrency(0) }];
+
+    lines.forEach((line, index) => {
+      const rowHeight = lineHeights[index] ?? 38;
+      ctx.font = "500 20px ui-sans-serif, system-ui, sans-serif";
+      const wrappedName = wrapReceiptText(ctx, line.name, nameWidth);
+      const rowTop = y - 11;
+
+      ctx.fillStyle = index % 2 === 0 ? "#fbfaf5" : "#ffffff";
+      drawRoundRect(ctx, contentX - 10, rowTop, contentWidth + 20, rowHeight, 7);
+      ctx.fill();
+
+      ctx.fillStyle = "#20312b";
+      ctx.textAlign = "left";
+      wrappedName.forEach((nameLine, lineIndex) => {
+        ctx.fillText(nameLine, contentX, y + lineIndex * 22 + 13);
+      });
+
+      ctx.fillStyle = "#53645c";
+      ctx.font = "700 18px ui-monospace, SFMono-Regular, Menlo, monospace";
+      ctx.textAlign = "center";
+      ctx.fillText(line.quantity, qtyX + 18, y + 13);
+      ctx.textAlign = "right";
+      ctx.fillText(line.amount, amountRightX, y + 13);
+      y += rowHeight;
+    });
+
+    y += 12;
+    ctx.strokeStyle = "#e3eee8";
+    ctx.beginPath();
+    ctx.moveTo(contentX, y);
+    ctx.lineTo(amountRightX, y);
+    ctx.stroke();
+    y += 28;
+    ctx.fillStyle = "#4d5d56";
+    ctx.font = "700 16px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(section.totalLabel, contentX, y);
+    ctx.textAlign = "right";
+    ctx.fillText(section.totalValue, amountRightX, y);
+    y += 14;
+  });
+
+  y += 20;
+  const summaryRows: Array<[string, string]> = [
+    ["Subtotal", model.subtotal],
+    ["Total Tax", model.taxTotal],
+    ["Total VAT", model.vatTotal],
+  ];
+  if (model.otherCharge) summaryRows.push(["Other Charge", model.otherCharge]);
+  if (model.discount) summaryRows.push(["Discount", model.discount]);
+
+  summaryRows.forEach(([label, value]) => {
+    ctx.fillStyle = "#66756e";
+    ctx.font = "600 17px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(label, contentX, y);
+    ctx.fillStyle = "#20312b";
+    ctx.font = "700 17px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "right";
+    ctx.fillText(value, amountRightX, y);
+    y += 34;
+  });
+
+  y += 8;
+  ctx.fillStyle = "#0f8f71";
+  drawRoundRect(ctx, contentX - 12, y - 26, contentWidth + 24, 58, 10);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 17px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "left";
+  ctx.fillText("GRAND TOTAL", contentX, y + 8);
+  ctx.font = "900 28px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText(model.grandTotal, amountRightX, y + 10);
+  y += 72;
+
+  if (!model.isTaxCalculationCurrent) {
+    ctx.fillStyle = "#8a5a00";
+    ctx.font = "600 14px ui-sans-serif, system-ui, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(
+      "Tax and VAT are pending. Run Calculate Taxes for final amounts.",
+      width / 2,
+      y
+    );
+    y += 36;
+  }
+
+  ctx.fillStyle = "#7a8781";
+  ctx.font = "600 13px ui-sans-serif, system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText("Created with SettleEase", width / 2, y);
+
+  return canvasToPngBlob(canvas);
+}
+
+async function writeReceiptImageToClipboard(model: EstimateReceiptModel) {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+    throw new Error("Image clipboard is not supported in this browser.");
+  }
+
+  const blob = await buildEstimateReceiptImage(model);
+  await navigator.clipboard.write([
+    new ClipboardItem({
+      "image/png": blob,
+    }),
+  ]);
 }
 
 function toSavedBudgetLines(lines: SelectedBudgetLine[]) {
@@ -274,6 +660,8 @@ export default function CreateBudgetModal({
     discount: "",
   });
   const [isDraftHydrated, setIsDraftHydrated] = useState(false);
+  const [isCopyOptionsOpen, setIsCopyOptionsOpen] = useState(false);
+  const [copyMode, setCopyMode] = useState<"text" | "image" | null>(null);
 
   const isAdmin = userRole === "admin";
   const categoryOptions = useMemo(() => {
@@ -484,15 +872,19 @@ export default function CreateBudgetModal({
     };
   }, [fees, getLineVatClassification, isTaxCalculationCurrent, selectedLines]);
 
-  const estimateCopyText = useMemo(
+  const estimateReceiptModel = useMemo(
     () =>
-      buildEstimateCopyText({
+      buildEstimateReceiptModel({
         selectedLines,
         isTaxCalculationCurrent,
         getLineVatClassification,
         totals,
       }),
     [getLineVatClassification, isTaxCalculationCurrent, selectedLines, totals]
+  );
+  const estimateCopyText = useMemo(
+    () => buildEstimateCopyText(estimateReceiptModel),
+    [estimateReceiptModel]
   );
 
   const taxStatusLabel =
@@ -579,7 +971,7 @@ export default function CreateBudgetModal({
     setFees((current) => ({ ...current, [field]: value }));
   };
 
-  const handleCopyEstimate = useCallback(async () => {
+  const handleCopyEstimateText = useCallback(async () => {
     if (selectedLines.length === 0) {
       toast({
         title: "Add items first",
@@ -589,8 +981,10 @@ export default function CreateBudgetModal({
       return;
     }
 
+    setCopyMode("text");
     try {
       await writeClipboardText(estimateCopyText);
+      setIsCopyOptionsOpen(false);
       toast({
         title: "Estimate copied",
         description: needsTaxCalculation
@@ -603,8 +997,42 @@ export default function CreateBudgetModal({
         description: "The browser could not copy the estimate.",
         variant: "destructive",
       });
+    } finally {
+      setCopyMode(null);
     }
   }, [estimateCopyText, needsTaxCalculation, selectedLines.length]);
+
+  const handleCopyEstimateImage = useCallback(async () => {
+    if (selectedLines.length === 0) {
+      toast({
+        title: "Add items first",
+        description: "Select at least one item before copying the receipt image.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setCopyMode("image");
+    try {
+      await writeReceiptImageToClipboard(estimateReceiptModel);
+      setIsCopyOptionsOpen(false);
+      toast({
+        title: "Receipt image copied",
+        description: needsTaxCalculation
+          ? "Copied as an image with pending Tax and VAT."
+          : "The branded receipt image is on your clipboard.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Image copy failed",
+        description:
+          error?.message || "The browser could not copy the receipt image.",
+        variant: "destructive",
+      });
+    } finally {
+      setCopyMode(null);
+    }
+  }, [estimateReceiptModel, needsTaxCalculation, selectedLines.length]);
 
   const handleCalculateTaxes = useCallback(async () => {
     if (selectedLines.length === 0) {
@@ -1054,16 +1482,78 @@ export default function CreateBudgetModal({
                       </span>
                       {selectedLines.length > 0 && (
                         <span className="flex shrink-0 items-center gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="h-8 rounded-md px-2 text-xs"
-                            onClick={handleCopyEstimate}
+                          <Popover
+                            open={isCopyOptionsOpen}
+                            onOpenChange={setIsCopyOptionsOpen}
                           >
-                            <Copy className="h-3.5 w-3.5" />
-                            Copy
-                          </Button>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-md px-2 text-xs"
+                                disabled={copyMode !== null}
+                              >
+                                {copyMode ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                                Copy
+                                <ChevronDown className="h-3.5 w-3.5" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              align="end"
+                              sideOffset={6}
+                              className="z-[60] w-64 rounded-md p-2"
+                            >
+                              <div className="space-y-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-auto w-full justify-start rounded-md px-2 py-2 text-left"
+                                  onClick={handleCopyEstimateImage}
+                                  disabled={copyMode !== null}
+                                >
+                                  {copyMode === "image" ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <ImageIcon className="h-4 w-4" />
+                                  )}
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold">
+                                      Receipt image
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground">
+                                      Branded PNG for sharing
+                                    </span>
+                                  </span>
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  className="h-auto w-full justify-start rounded-md px-2 py-2 text-left"
+                                  onClick={handleCopyEstimateText}
+                                  disabled={copyMode !== null}
+                                >
+                                  {copyMode === "text" ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <FileText className="h-4 w-4" />
+                                  )}
+                                  <span className="min-w-0">
+                                    <span className="block text-sm font-semibold">
+                                      Normal text
+                                    </span>
+                                    <span className="block text-xs text-muted-foreground">
+                                      Current itemized format
+                                    </span>
+                                  </span>
+                                </Button>
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                           <Button
                             type="button"
                             size="sm"
