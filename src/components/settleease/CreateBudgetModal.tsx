@@ -11,6 +11,7 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import {
   Calculator,
+  Copy,
   Loader2,
   Minus,
   Plus,
@@ -87,6 +88,134 @@ function roundMoney(value: number) {
 
 function makeCustomLineId() {
   return `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+type BudgetEstimateTotals = {
+  subtotal: number;
+  taxableSubtotal: number;
+  alcoholSubtotal: number;
+  taxAmount: number;
+  alcoholVatAmount: number;
+  otherCharge: number;
+  discount: number;
+  finalTotal: number;
+};
+
+function formatCopyCell(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function formatCopyAmount(value: number) {
+  return formatCurrency(roundMoney(value));
+}
+
+function appendEstimateCopySection(
+  rows: string[],
+  title: string,
+  lines: SelectedBudgetLine[],
+  totalLabel: string,
+  totalValue: string
+) {
+  rows.push(title);
+
+  if (lines.length === 0) {
+    rows.push(`No items\t-\t${formatCurrency(0)}`);
+  } else {
+    lines.forEach((line) => {
+      rows.push(
+        `${formatCopyCell(line.name)}\t${line.quantity}\t${formatCopyAmount(
+          line.unit_price * line.quantity
+        )}`
+      );
+    });
+  }
+
+  rows.push(`${totalLabel}\t\t${totalValue}`);
+}
+
+function buildEstimateCopyText({
+  selectedLines,
+  isTaxCalculationCurrent,
+  getLineVatClassification,
+  totals,
+}: {
+  selectedLines: SelectedBudgetLine[];
+  isTaxCalculationCurrent: boolean;
+  getLineVatClassification: (
+    line: SelectedBudgetLine
+  ) => BudgetVatClassification | null;
+  totals: BudgetEstimateTotals;
+}) {
+  const foodLines: SelectedBudgetLine[] = [];
+  const alcoholLines: SelectedBudgetLine[] = [];
+
+  selectedLines.forEach((line) => {
+    const classification = isTaxCalculationCurrent
+      ? getLineVatClassification(line)
+      : null;
+
+    if (classification?.vat_class === "alcohol") {
+      alcoholLines.push(line);
+    } else {
+      foodLines.push(line);
+    }
+  });
+
+  const taxTotal = isTaxCalculationCurrent
+    ? formatCurrency(totals.taxAmount)
+    : "Pending";
+  const vatTotal = isTaxCalculationCurrent
+    ? formatCurrency(totals.alcoholVatAmount)
+    : "Pending";
+  const grandTotal = isTaxCalculationCurrent
+    ? formatCurrency(totals.finalTotal)
+    : "Pending";
+  const rows = ["Bill Estimate", "", "Item Name\tQTY\tAMOUNT", ""];
+
+  appendEstimateCopySection(rows, "Food", foodLines, "Total Tax", taxTotal);
+  rows.push("");
+  appendEstimateCopySection(
+    rows,
+    "ALCOHOL",
+    alcoholLines,
+    "Total VAT",
+    vatTotal
+  );
+
+  rows.push("", `Total Tax\t${taxTotal}`, `Total VAT\t${vatTotal}`);
+
+  if (totals.otherCharge > 0) {
+    rows.push(`Other Charge\t${formatCurrency(totals.otherCharge)}`);
+  }
+
+  if (totals.discount > 0) {
+    rows.push(`Discount\t-${formatCurrency(totals.discount)}`);
+  }
+
+  rows.push(`GRAND TOTAL\t${grandTotal}`);
+
+  return rows.join("\n");
+}
+
+async function writeClipboardText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.top = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    document.execCommand("copy");
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 export default function CreateBudgetModal({
@@ -248,6 +377,17 @@ export default function CreateBudgetModal({
     };
   }, [fees, getLineVatClassification, isTaxCalculationCurrent, selectedLines]);
 
+  const estimateCopyText = useMemo(
+    () =>
+      buildEstimateCopyText({
+        selectedLines,
+        isTaxCalculationCurrent,
+        getLineVatClassification,
+        totals,
+      }),
+    [getLineVatClassification, isTaxCalculationCurrent, selectedLines, totals]
+  );
+
   const taxStatusLabel =
     selectedLines.length === 0
       ? "Add items"
@@ -324,6 +464,33 @@ export default function CreateBudgetModal({
   const handleFeeChange = (field: keyof BudgetFees, value: string) => {
     setFees((current) => ({ ...current, [field]: value }));
   };
+
+  const handleCopyEstimate = useCallback(async () => {
+    if (selectedLines.length === 0) {
+      toast({
+        title: "Add items first",
+        description: "Select at least one item before copying the estimate.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await writeClipboardText(estimateCopyText);
+      toast({
+        title: "Estimate copied",
+        description: needsTaxCalculation
+          ? "Copied with pending Tax and VAT. Run Calculate Taxes to include final amounts."
+          : "Food, alcohol, Tax, VAT, and grand total are on your clipboard.",
+      });
+    } catch (error) {
+      toast({
+        title: "Copy failed",
+        description: "The browser could not copy the estimate.",
+        variant: "destructive",
+      });
+    }
+  }, [estimateCopyText, needsTaxCalculation, selectedLines.length]);
 
   const handleCalculateTaxes = useCallback(async () => {
     if (selectedLines.length === 0) {
@@ -772,15 +939,27 @@ export default function CreateBudgetModal({
                         <span className="min-w-0 truncate">Estimate</span>
                       </span>
                       {selectedLines.length > 0 && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 rounded-md px-2 text-xs"
-                          onClick={clearEstimate}
-                        >
-                          Clear
-                        </Button>
+                        <span className="flex shrink-0 items-center gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 rounded-md px-2 text-xs"
+                            onClick={handleCopyEstimate}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 rounded-md px-2 text-xs"
+                            onClick={clearEstimate}
+                          >
+                            Clear
+                          </Button>
+                        </span>
                       )}
                     </CardTitle>
                   </CardHeader>
