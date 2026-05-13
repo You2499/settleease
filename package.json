@@ -7,13 +7,14 @@
     "predev": "node scripts/ensure-lucide-metadata.js",
     "dev": "next dev -p 3000",
     "prebuild": "node scripts/download-lucide-icons.js && node scripts/generate-lucide-metadata.js",
-    "build": "next build",
+    "build": "next build && node scripts/remove-source-maps.js",
     "build:vercel": "node scripts/vercel-build.js",
     "convex:dev": "convex dev --once",
     "convex:deploy": "convex deploy",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "security:check": "npm audit && node scripts/remove-source-maps.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

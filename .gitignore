@@ -9,6 +9,8 @@
 # Next.js
 /.next/
 /out/
+*.map
+**/*.map
 
 # Production
 /build
@@ -19,6 +21,8 @@ tsconfig.tsbuildinfo
 .env.development.local
 .env.test.local
 .env.production.local
+.env
+.env.production
 
 # Log files
 npm-debug.log*

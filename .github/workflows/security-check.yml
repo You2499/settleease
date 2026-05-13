@@ -1,0 +1,90 @@
+name: Security Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run security check weekly on Mondays at 9 AM UTC
+    - cron: '0 9 * * 1'
+
+jobs:
+  security-check:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run security audit
+      run: npm audit --audit-level=high
+      continue-on-error: true
+      
+    - name: Run custom security check
+      run: node scripts/security-check.js
+      
+    - name: Check for hardcoded secrets
+      run: |
+        echo "Checking for potential hardcoded secrets..."
+        if grep -r "sk-" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" src/ convex/ 2>/dev/null; then
+          echo "❌ Found potential API keys starting with 'sk-'"
+          exit 1
+        fi
+        if grep -r "AIza" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.jsx" src/ convex/ 2>/dev/null; then
+          echo "❌ Found potential Google API keys"
+          exit 1
+        fi
+        echo "✓ No obvious hardcoded secrets found"
+        
+    - name: Check for source maps in build
+      run: |
+        if [ -d ".next" ]; then
+          MAP_COUNT=$(find .next -name "*.map" 2>/dev/null | wc -l)
+          if [ "$MAP_COUNT" -gt 0 ]; then
+            echo "❌ Found $MAP_COUNT source map files in .next directory"
+            exit 1
+          fi
+          echo "✓ No source maps found"
+        else
+          echo "⚠️  .next directory not found (build not run)"
+        fi
+        
+    - name: Verify security configuration
+      run: |
+        echo "Checking next.config.ts for security settings..."
+        if ! grep -q "productionBrowserSourceMaps: false" next.config.ts; then
+          echo "❌ Production source maps are not disabled"
+          exit 1
+        fi
+        if ! grep -q "Strict-Transport-Security" next.config.ts; then
+          echo "❌ Security headers not found"
+          exit 1
+        fi
+        echo "✓ Security configuration verified"
+        
+    - name: Check .gitignore
+      run: |
+        echo "Verifying .gitignore includes sensitive files..."
+        if ! grep -q "\.map" .gitignore; then
+          echo "❌ Source maps not in .gitignore"
+          exit 1
+        fi
+        if ! grep -q "\.env\.local" .gitignore; then
+          echo "❌ .env.local not in .gitignore"
+          exit 1
+        fi
+        if ! grep -q "\.pem" .gitignore; then
+          echo "❌ .pem files not in .gitignore"
+          exit 1
+        fi
+        echo "✓ .gitignore properly configured"

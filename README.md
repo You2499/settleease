@@ -772,13 +772,53 @@ npm run typecheck
 
 before trusting a build.
 
-## Security Notes
+## Security
 
-- Do not commit `.env.local`, private keys, deploy keys, Gemini keys, or Supabase secrets.
-- Local no-auth mode is only for local development against the development Convex deployment.
-- Convex server-side guards are the final authorization layer.
-- Destructive mutations must never rely only on client-side disabling.
-- Production data reset features should stay locked unless there is a deliberate operational reason to unlock them.
+SettleEase implements comprehensive security measures to protect your application and data. For complete security documentation, see [SECURITY.md](./SECURITY.md).
+
+### Key Security Features
+
+- **Source Maps Disabled**: Production builds do not include source maps (`productionBrowserSourceMaps: false`)
+- **Security Headers**: Comprehensive security headers configured in `next.config.ts` and `vercel.json`
+- **Environment Variable Protection**: All secrets managed via environment variables, never hardcoded
+- **Authentication**: Supabase Auth with JWT bridge to Convex
+- **Authorization**: Server-side role-based access control with admin guards
+- **API Security**: Bearer token validation and input sanitization
+
+### Security Scripts
+
+```bash
+# Run comprehensive security check
+node scripts/security-check.js
+
+# Remove source maps from build
+node scripts/remove-source-maps.js
+
+# Check for vulnerabilities
+npm audit
+```
+
+### Pre-Deployment Security Checklist
+
+Before deploying to production:
+
+1. Run `node scripts/security-check.js` - all checks must pass
+2. Verify no source maps in `.next/` directory
+3. Ensure all environment variables are set in Vercel dashboard
+4. Rotate JWT private keys and API keys
+5. Review [DEPLOYMENT-CHECKLIST.md](./DEPLOYMENT-CHECKLIST.md)
+
+### Security Best Practices
+
+- Do not commit `.env.local`, private keys, deploy keys, Gemini keys, or Supabase secrets
+- Local no-auth mode is only for local development against the development Convex deployment
+- Convex server-side guards are the final authorization layer
+- Destructive mutations must never rely only on client-side disabling
+- Production data reset features should stay locked unless there is a deliberate operational reason to unlock them
+- Regularly update dependencies and run `npm audit`
+- Use separate API keys for development and production
+
+For detailed security guidelines, incident response procedures, and deployment checklists, see [SECURITY.md](./SECURITY.md).
 
 ## License
 
