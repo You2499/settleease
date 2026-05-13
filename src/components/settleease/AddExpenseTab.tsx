@@ -285,15 +285,21 @@ export default function AddExpenseTab({
           setPayers([nextPayer]);
         }
       } else {
-        const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
-        const nextPayer = {
-          id: currentPayer?.id || Date.now().toString(),
-          personId: defaultPersonIdForNewExpense,
-          amount: expectedAmount
-        };
-
-        if (!currentPayer || currentPayer.personId !== nextPayer.personId || currentPayer.amount !== nextPayer.amount) {
-          setPayers([nextPayer]);
+        // For new expenses, only update amount, preserve user's payer selection
+        if (!currentPayer) {
+          // Initialize with default payer only if no payer exists
+          const defaultPersonIdForNewExpense = defaultPayerId || (people.length > 0 ? people[0].id : '');
+          setPayers([{
+            id: Date.now().toString(),
+            personId: defaultPersonIdForNewExpense,
+            amount: expectedAmount
+          }]);
+        } else if (currentPayer.amount !== expectedAmount) {
+          // Only update amount, keep the selected personId
+          setPayers([{
+            ...currentPayer,
+            amount: expectedAmount
+          }]);
         }
       }
     } else {

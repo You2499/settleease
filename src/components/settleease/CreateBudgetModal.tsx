@@ -675,6 +675,25 @@ async function buildEstimateReceiptImage(model: EstimateReceiptModel) {
   return canvasToPngBlob(canvas);
 }
 
+function isMobileDevice() {
+  // Check if the device is mobile based on screen size and touch capability
+  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth <= 768;
+  return isTouchDevice && isSmallScreen;
+}
+
+async function downloadReceiptImage(model: EstimateReceiptModel) {
+  const blob = await buildEstimateReceiptImage(model);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `settleease-budget-${new Date().toISOString().split('T')[0]}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 async function writeReceiptImageToClipboard(model: EstimateReceiptModel) {
   if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
     throw new Error("Image clipboard is not supported in this browser.");
@@ -745,6 +764,15 @@ export default function CreateBudgetModal({
   const [isDraftHydrated, setIsDraftHydrated] = useState(false);
   const [isCopyOptionsOpen, setIsCopyOptionsOpen] = useState(false);
   const [copyMode, setCopyMode] = useState<"text" | "image" | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detect mobile device on mount and window resize
+    const checkMobile = () => setIsMobile(isMobileDevice());
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const isAdmin = userRole === "admin";
   const categoryOptions = useMemo(() => {
@@ -1096,26 +1124,42 @@ export default function CreateBudgetModal({
     }
 
     setCopyMode("image");
+    
     try {
-      await writeReceiptImageToClipboard(estimateReceiptModel);
-      setIsCopyOptionsOpen(false);
-      toast({
-        title: "Receipt image copied",
-        description: needsTaxCalculation
-          ? "Copied as an image with pending Tax and VAT."
-          : "The branded receipt image is on your clipboard.",
-      });
+      if (isMobile) {
+        // Download on mobile instead of copying
+        await downloadReceiptImage(estimateReceiptModel);
+        setIsCopyOptionsOpen(false);
+        toast({
+          title: "Receipt image downloaded",
+          description: needsTaxCalculation
+            ? "Downloaded as an image with pending Tax and VAT."
+            : "The branded receipt image has been downloaded.",
+        });
+      } else {
+        // Copy to clipboard on desktop
+        await writeReceiptImageToClipboard(estimateReceiptModel);
+        setIsCopyOptionsOpen(false);
+        toast({
+          title: "Receipt image copied",
+          description: needsTaxCalculation
+            ? "Copied as an image with pending Tax and VAT."
+            : "The branded receipt image is on your clipboard.",
+        });
+      }
     } catch (error: any) {
       toast({
-        title: "Image copy failed",
+        title: isMobile ? "Image download failed" : "Image copy failed",
         description:
-          error?.message || "The browser could not copy the receipt image.",
+          error?.message || (isMobile 
+            ? "The browser could not download the receipt image."
+            : "The browser could not copy the receipt image."),
         variant: "destructive",
       });
     } finally {
       setCopyMode(null);
     }
-  }, [estimateReceiptModel, needsTaxCalculation, selectedLines.length]);
+  }, [estimateReceiptModel, needsTaxCalculation, selectedLines.length, isMobile]);
 
   const handleCalculateTaxes = useCallback(async () => {
     if (selectedLines.length === 0) {
@@ -1609,7 +1653,7 @@ export default function CreateBudgetModal({
                                       Receipt image
                                     </span>
                                     <span className="block text-xs text-muted-foreground">
-                                      Branded PNG for sharing
+                                      {isMobile ? "Download branded PNG" : "Branded PNG for sharing"}
                                     </span>
                                   </span>
                                 </Button>

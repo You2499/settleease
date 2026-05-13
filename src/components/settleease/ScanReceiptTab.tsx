@@ -345,14 +345,16 @@ export default function ScanReceiptTab({
     return () => clearInterval(interval);
   }, [step]);
 
-  // Initialize payer when people load
+  // Initialize payer when people load (only once)
+  const hasInitializedPayer = useRef(false);
   useEffect(() => {
-    if (people.length > 0 && defaultPayerId) {
+    if (people.length > 0 && defaultPayerId && !hasInitializedPayer.current) {
       setPayers([{ id: Date.now().toString(), personId: defaultPayerId, amount: totalAmount }]);
       setSelectedPeopleEqual(people.map(p => p.id));
       setUnequalShares(people.reduce((acc, p) => { acc[p.id] = ''; return acc; }, {} as Record<string, string>));
+      hasInitializedPayer.current = true;
     }
-  }, [people, defaultPayerId]);
+  }, [people, defaultPayerId, totalAmount]);
 
   // Sync payer amount with totalAmount
   useEffect(() => {
@@ -590,6 +592,7 @@ export default function ScanReceiptTab({
     setSplitMethod('equal');
     setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
     setIsMetadataReviewOpen(false);
+    hasInitializedPayer.current = false; // Reset the initialization flag
   }, []);
 
   // Form handlers (same as AddExpenseTab)
