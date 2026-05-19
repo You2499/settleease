@@ -205,13 +205,31 @@ export function calculatePairwiseTransactions(
   expenses: Expense[],
   settlementPayments: SettlementPayment[]
 ): CalculatedTransaction[] {
-  // Calculate raw pairwise debts from expenses
+  // 1. Calculate raw pairwise debts from non-excluded expenses
   const rawPairwiseDebts: Record<
     string,
     Record<string, { amount: number; expenseIds: Set<string> }>
   > = {};
 
+  const getOrCreateRelation = (from: string, to: string) => {
+    if (!rawPairwiseDebts[from]) {
+      rawPairwiseDebts[from] = {};
+    }
+    if (!rawPairwiseDebts[from][to]) {
+      rawPairwiseDebts[from][to] = {
+        amount: 0,
+        expenseIds: new Set(),
+      };
+    }
+    return rawPairwiseDebts[from][to];
+  };
+
   expenses.forEach((expense) => {
+    // Skip expenses excluded from settlement calculations
+    if (expense.exclude_from_settlement) {
+      return;
+    }
+
     if (
       expense.total_amount <= 0.001 ||
       !Array.isArray(expense.paid_by) ||
@@ -261,33 +279,69 @@ export function calculatePairwiseTransactions(
           totalOwedByDebtor * proportionPaidByThisPayer;
 
         if (amountOwedToThisPayer > 0.001) {
-          if (!rawPairwiseDebts[debtorId]) rawPairwiseDebts[debtorId] = {};
-          if (!rawPairwiseDebts[debtorId][payerId]) {
-            rawPairwiseDebts[debtorId][payerId] = {
-              amount: 0,
-              expenseIds: new Set(),
-            };
-          }
-
-          rawPairwiseDebts[debtorId][payerId].amount += amountOwedToThisPayer;
-          rawPairwiseDebts[debtorId][payerId].expenseIds.add(expense.id);
+          const relation = getOrCreateRelation(debtorId, payerId);
+          relation.amount += amountOwedToThisPayer;
+          relation.expenseIds.add(expense.id);
         }
       });
     }
   });
 
-  const transactions: CalculatedTransaction[] = [];
+  // 2. Adjust for settlement payments
+  if (Array.isArray(settlementPayments)) {
+    settlementPayments.forEach((payment) => {
+      const debtorId = payment.debtor_id;
+      const creditorId = payment.creditor_id;
+      const amountSettled = Number(payment.amount_settled);
+      if (amountSettled <= 0.001) return;
 
-  for (const debtorId in rawPairwiseDebts) {
-    for (const creditorId in rawPairwiseDebts[debtorId]) {
-      const transaction = rawPairwiseDebts[debtorId][creditorId];
-      if (transaction.amount > 0.01) {
-        transactions.push({
-          from: debtorId,
-          to: creditorId,
-          amount: transaction.amount,
-          contributingExpenseIds: Array.from(transaction.expenseIds),
-        });
+      const relation = getOrCreateRelation(debtorId, creditorId);
+      relation.amount -= amountSettled;
+    });
+  }
+
+  // 3. Perform reciprocal netting between every pair of individuals
+  const transactions: CalculatedTransaction[] = [];
+  const peopleIds = people.map((p) => p.id);
+
+  for (let i = 0; i < peopleIds.length; i++) {
+    for (let j = i + 1; j < peopleIds.length; j++) {
+      const u = peopleIds[i];
+      const v = peopleIds[j];
+
+      const uToV = rawPairwiseDebts[u]?.[v];
+      const vToU = rawPairwiseDebts[v]?.[u];
+
+      const uToVAmount = uToV ? uToV.amount : 0;
+      const vToUAmount = vToU ? vToU.amount : 0;
+
+      const netAmount = uToVAmount - vToUAmount;
+
+      if (Math.abs(netAmount) > 0.01) {
+        const mergedExpenseIds = new Set<string>();
+        if (uToV) {
+          uToV.expenseIds.forEach((id) => mergedExpenseIds.add(id));
+        }
+        if (vToU) {
+          vToU.expenseIds.forEach((id) => mergedExpenseIds.add(id));
+        }
+        const contributingExpenseIds = Array.from(mergedExpenseIds);
+
+        if (netAmount > 0.01) {
+          transactions.push({
+            from: u,
+            to: v,
+            amount: netAmount,
+            contributingExpenseIds,
+          });
+        } else if (netAmount < -0.01) {
+          transactions.push({
+            from: v,
+            to: u,
+            amount: Math.abs(netAmount),
+            contributingExpenseIds,
+          });
+        }
       }
     }
   }
