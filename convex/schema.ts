@@ -101,7 +101,9 @@ export default defineSchema({
     excludeFromSettlement: v.optional(v.boolean()),
     createdAt: v.optional(v.string()),
     updatedAt: v.optional(v.string()),
-  }).index("by_created_at", ["createdAt"]),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_category", ["category"]),
 
   budgetItems: defineTable({
     name: v.string(),
@@ -171,7 +173,10 @@ export default defineSchema({
     settledAt: v.string(),
     markedByUserId: v.string(),
     notes: v.optional(v.union(v.string(), v.null())),
-  }).index("by_settled_at", ["settledAt"]),
+  })
+    .index("by_settled_at", ["settledAt"])
+    .index("by_debtor", ["debtorId"])
+    .index("by_creditor", ["creditorId"]),
 
   manualSettlementOverrides: defineTable({
     debtorId: v.string(),
@@ -182,7 +187,10 @@ export default defineSchema({
     createdAt: v.string(),
     updatedAt: v.string(),
     isActive: v.boolean(),
-  }).index("by_created_at", ["createdAt"]),
+  })
+    .index("by_created_at", ["createdAt"])
+    .index("by_debtor", ["debtorId"])
+    .index("by_creditor", ["creditorId"]),
 
   aiPrompts: defineTable({
     name: v.string(),

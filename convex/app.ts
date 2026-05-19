@@ -1421,14 +1421,37 @@ export const removePerson = mutation({
     const person: any = await ctx.db.get(args.id as any);
     if (!person) throw new ConvexError("Person not found.");
 
-    const payments = await ctx.db.query("settlementPayments").collect();
-    const paymentCount = payments.filter(
-      (payment: any) =>
-        payment.debtorId === args.id || payment.creditorId === args.id,
-    ).length;
+    // Query settlementPayments using indexes to check if the person is involved
+    const debtorPayments = await ctx.db
+      .query("settlementPayments")
+      .withIndex("by_debtor", (q) => q.eq("debtorId", args.id))
+      .collect();
+    const creditorPayments = await ctx.db
+      .query("settlementPayments")
+      .withIndex("by_creditor", (q) => q.eq("creditorId", args.id))
+      .collect();
+    
+    const paymentCount = debtorPayments.length + creditorPayments.length;
     if (paymentCount > 0) {
       throw new ConvexError(
         `${person.name} is involved in ${paymentCount} recorded settlement(s).`,
+      );
+    }
+
+    // Check manual overrides using indexes
+    const debtorOverrides = await ctx.db
+      .query("manualSettlementOverrides")
+      .withIndex("by_debtor", (q) => q.eq("debtorId", args.id))
+      .collect();
+    const creditorOverrides = await ctx.db
+      .query("manualSettlementOverrides")
+      .withIndex("by_creditor", (q) => q.eq("creditorId", args.id))
+      .collect();
+
+    const overrideCount = debtorOverrides.length + creditorOverrides.length;
+    if (overrideCount > 0) {
+      throw new ConvexError(
+        `${person.name} is involved in ${overrideCount} manual settlement override(s).`,
       );
     }
 
@@ -1574,7 +1597,72 @@ export const updateCategory = mutation({
     ) {
       throw new ConvexError(`A category named "${name}" already exists.`);
     }
+
+    const oldName = category.name;
+    const newName = name;
+
     await ctx.db.patch(category._id, { name, iconName: args.iconName });
+
+    if (oldName !== newName) {
+      // 1. Update expenses top-level category field & item categories
+      const expenses = await ctx.db.query("expenses").collect();
+      for (const expense of expenses) {
+        let needsUpdate = false;
+        const patch: any = {};
+
+        if (expense.category === oldName) {
+          patch.category = newName;
+          needsUpdate = true;
+        }
+
+        if (Array.isArray(expense.items)) {
+          const updatedItems = expense.items.map((item: any) => {
+            if (item.categoryName === oldName) {
+              needsUpdate = true;
+              return { ...item, categoryName: newName };
+            }
+            return item;
+          });
+          if (needsUpdate) {
+            patch.items = updatedItems;
+          }
+        }
+
+        if (needsUpdate) {
+          await ctx.db.patch(expense._id, patch);
+        }
+      }
+
+      // 2. Update budgetItems categoryName and normalizedCategoryName
+      const budgetItems = await ctx.db.query("budgetItems").collect();
+      for (const item of budgetItems) {
+        if (item.categoryName === oldName) {
+          await ctx.db.patch(item._id, {
+            categoryName: newName,
+            normalizedCategoryName: newName.trim().toLowerCase(),
+          });
+        }
+      }
+
+      // 3. Update budgetDrafts lines' categoryName
+      const budgetDrafts = await ctx.db.query("budgetDrafts").collect();
+      for (const draft of budgetDrafts) {
+        if (Array.isArray(draft.lines)) {
+          let draftNeedsUpdate = false;
+          const updatedLines = draft.lines.map((line: any) => {
+            if (line.categoryName === oldName) {
+              draftNeedsUpdate = true;
+              return { ...line, categoryName: newName };
+            }
+            return line;
+          });
+          if (draftNeedsUpdate) {
+            await ctx.db.patch(draft._id, { lines: updatedLines });
+          }
+        }
+      }
+    }
+
     await recordUsageEvent(ctx, {
       actorUserId,
       actorRole: "admin",
@@ -1593,6 +1681,7 @@ export const deleteCategory = mutation({
     const actorUserId = await requireAdmin(ctx);
     const category: any = await ctx.db.get(args.id as any);
     if (!category) throw new ConvexError("Category not found.");
+
     const expenses = await ctx.db.query("expenses").collect();
     const count = expenses.filter((expense: any) => {
       if (expense.category === category.name) return true;
@@ -1606,6 +1695,17 @@ export const deleteCategory = mutation({
         `Category "${category.name}" is used by ${count} expense(s).`,
       );
     }
+
+    const budgetItems = await ctx.db.query("budgetItems").collect();
+    const budgetItemsCount = budgetItems.filter(
+      (item: any) => item.categoryName === category.name
+    ).length;
+    if (budgetItemsCount > 0) {
+      throw new ConvexError(
+        `Category "${category.name}" is used by ${budgetItemsCount} budget catalog item(s).`,
+      );
+    }
+
     const categories = await ctx.db.query("categories").collect();
     await ctx.db.delete(category._id);
     await recordUsageEvent(ctx, {
@@ -2176,15 +2276,94 @@ export const saveExpense = mutation({
   },
   handler: async (ctx, args) => {
     const actorUserId = await requireAdmin(ctx);
+
+    // 1. Enforce strict currency-resolution rounding to 2 decimal places
+    const totalAmount = Math.round(args.totalAmount * 100) / 100;
+    if (totalAmount <= 0) {
+      throw new ConvexError("Expense total amount must be positive.");
+    }
+
+    const paidBy = args.paidBy.map((p) => ({
+      personId: p.personId,
+      amount: Math.round(Number(p.amount) * 100) / 100,
+    }));
+
+    const shares = args.shares.map((s) => ({
+      personId: s.personId,
+      amount: Math.round(Number(s.amount) * 100) / 100,
+    }));
+
+    let celebrationContribution: any = null;
+    if (args.celebrationContribution && args.celebrationContribution.amount > 0) {
+      const amount = Math.round(Number(args.celebrationContribution.amount) * 100) / 100;
+      if (amount > totalAmount) {
+        throw new ConvexError("Celebration contribution cannot exceed the total expense amount.");
+      }
+      celebrationContribution = {
+        personId: args.celebrationContribution.personId,
+        amount,
+      };
+    }
+
+    let items = null;
+    if (Array.isArray(args.items)) {
+      items = args.items.map((item) => {
+        const roundedPrice = Math.round(Number(item.price) * 100) / 100;
+        const roundedQuantity = item.quantity !== undefined ? Math.round(Number(item.quantity) * 1000) / 1000 : undefined;
+        const roundedUnitPrice = item.unitPrice !== undefined ? Math.round(Number(item.unitPrice) * 100) / 100 : undefined;
+        
+        const quantitySplits = Array.isArray(item.quantitySplits)
+          ? item.quantitySplits.map((split) => ({
+              unitIndex: Number(split.unitIndex),
+              sharedBy: split.sharedBy,
+            }))
+          : undefined;
+
+        return {
+          id: item.id,
+          name: item.name,
+          price: roundedPrice,
+          sharedBy: item.sharedBy,
+          categoryName: item.categoryName,
+          quantity: roundedQuantity,
+          unitPrice: roundedUnitPrice,
+          ...(quantitySplits ? { quantitySplits } : {}),
+        };
+      });
+    }
+
+    // 2. Validate that the payer shares sum up to exactly totalAmount
+    const totalPaid = Math.round(paidBy.reduce((sum, p) => sum + p.amount, 0) * 100) / 100;
+    if (Math.abs(totalPaid - totalAmount) > 0.01) {
+      throw new ConvexError(`Sum of payer amounts ($${totalPaid.toFixed(2)}) must equal total amount ($${totalAmount.toFixed(2)}).`);
+    }
+
+    // 3. Validate that the sharer shares sum up to exactly (totalAmount - celebrationAmount)
+    const celebrationAmount = celebrationContribution ? celebrationContribution.amount : 0;
+    const expectedShareSum = Math.round((totalAmount - celebrationAmount) * 100) / 100;
+    const totalShares = Math.round(shares.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
+    
+    if (Math.abs(totalShares - expectedShareSum) > 0.01) {
+      if (celebrationContribution) {
+        throw new ConvexError(
+          `Sum of shares ($${totalShares.toFixed(2)}) must equal total bill minus celebration contribution ($${expectedShareSum.toFixed(2)}).`
+        );
+      } else {
+        throw new ConvexError(
+          `Sum of shares ($${totalShares.toFixed(2)}) must equal total amount ($${totalAmount.toFixed(2)}).`
+        );
+      }
+    }
+
     const payload = {
       description: args.description,
-      totalAmount: args.totalAmount,
+      totalAmount,
       category: args.category,
-      paidBy: args.paidBy,
+      paidBy,
       splitMethod: args.splitMethod,
-      shares: args.shares,
-      items: args.items ?? null,
-      celebrationContribution: args.celebrationContribution ?? null,
+      shares,
+      items: items ?? null,
+      celebrationContribution,
       excludeFromSettlement: args.excludeFromSettlement ?? false,
       updatedAt: nowIso(),
     };
@@ -2205,14 +2384,14 @@ export const saveExpense = mutation({
         surface: "editExpenses",
         targetKind: "expense",
         metadata: {
-          amountBucket: bucketAmount(args.totalAmount),
+          amountBucket: bucketAmount(totalAmount),
           splitMethod: args.splitMethod,
           participantCount: new Set([
-            ...args.paidBy.map((payer: any) => payer.personId),
-            ...args.shares.map((share: any) => share.personId),
+            ...paidBy.map((payer: any) => payer.personId),
+            ...shares.map((share: any) => share.personId),
           ]).size,
-          itemCount: args.items?.length ?? 0,
-          hasItems: Boolean(args.items?.length),
+          itemCount: items?.length ?? 0,
+          hasItems: Boolean(items?.length),
         },
       });
       return expense._id;
@@ -2230,14 +2409,14 @@ export const saveExpense = mutation({
       surface: "addExpense",
       targetKind: "expense",
       metadata: {
-        amountBucket: bucketAmount(args.totalAmount),
+        amountBucket: bucketAmount(totalAmount),
         splitMethod: args.splitMethod,
         participantCount: new Set([
-          ...args.paidBy.map((payer: any) => payer.personId),
-          ...args.shares.map((share: any) => share.personId),
+          ...paidBy.map((payer: any) => payer.personId),
+          ...shares.map((share: any) => share.personId),
         ]).size,
-        itemCount: args.items?.length ?? 0,
-        hasItems: Boolean(args.items?.length),
+        itemCount: items?.length ?? 0,
+        hasItems: Boolean(items?.length),
       },
     });
     return id;
@@ -2317,10 +2496,11 @@ export const addSettlementPayment = mutation({
   },
   handler: async (ctx, args) => {
     const actorUserId = await requireAdmin(ctx);
+    const amountSettled = Math.round(args.amountSettled * 100) / 100;
     const id = await ctx.db.insert("settlementPayments", {
       debtorId: args.debtorId,
       creditorId: args.creditorId,
-      amountSettled: args.amountSettled,
+      amountSettled,
       markedByUserId: args.markedByUserId,
       settledAt: args.settledAt ?? nowIso(),
       notes: args.notes ?? null,
@@ -2332,7 +2512,7 @@ export const addSettlementPayment = mutation({
       eventGroup: "settlements",
       surface: "manageSettlements",
       targetKind: "settlementPayment",
-      metadata: { amountBucket: bucketAmount(args.amountSettled) },
+      metadata: { amountBucket: bucketAmount(amountSettled) },
     });
     return id;
   },
@@ -2349,8 +2529,9 @@ export const updateSettlementPayment = mutation({
     const actorUserId = await requireAdmin(ctx);
     const payment: any = await ctx.db.get(args.id as any);
     if (!payment) throw new ConvexError("Payment not found.");
+    const amountSettled = Math.round(args.amountSettled * 100) / 100;
     await ctx.db.patch(payment._id, {
-      amountSettled: args.amountSettled,
+      amountSettled,
       notes: args.notes ?? null,
       settledAt: args.settledAt,
     });
@@ -2361,7 +2542,7 @@ export const updateSettlementPayment = mutation({
       eventGroup: "settlements",
       surface: "manageSettlements",
       targetKind: "settlementPayment",
-      metadata: { amountBucket: bucketAmount(args.amountSettled) },
+      metadata: { amountBucket: bucketAmount(amountSettled) },
     });
   },
 });
@@ -2410,10 +2591,11 @@ export const addManualSettlementOverride = mutation({
   handler: async (ctx, args) => {
     const actorUserId = await requireAdmin(ctx);
     const timestamp = nowIso();
+    const amount = Math.round(args.amount * 100) / 100;
     const id = await ctx.db.insert("manualSettlementOverrides", {
       debtorId: args.debtorId,
       creditorId: args.creditorId,
-      amount: args.amount,
+      amount,
       createdByUserId: args.createdByUserId ?? null,
       notes: args.notes ?? null,
       isActive: true,
@@ -2427,7 +2609,7 @@ export const addManualSettlementOverride = mutation({
       eventGroup: "settlements",
       surface: "manageSettlements",
       targetKind: "manualSettlementOverride",
-      metadata: { amountBucket: bucketAmount(args.amount) },
+      metadata: { amountBucket: bucketAmount(amount) },
     });
     return id;
   },

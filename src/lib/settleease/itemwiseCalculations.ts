@@ -33,8 +33,8 @@ export function roundItemAmount(value: number): number {
 
 export function normalizeItemQuantityValue(value: unknown): number {
   const quantity = Number(value);
-  if (!Number.isFinite(quantity) || quantity <= 0) return 1;
-  return Math.max(1, Math.floor(quantity));
+  if (!Number.isFinite(quantity) || quantity <= 0.001) return 1;
+  return Math.round(quantity * 1000) / 1000;
 }
 
 export function getItemQuantity(item: Pick<ExpenseItemDetail, "quantity">): number {
@@ -43,17 +43,17 @@ export function getItemQuantity(item: Pick<ExpenseItemDetail, "quantity">): numb
 
 export function getItemLineTotal(item: ExpenseItemDetail): number {
   const price = toItemAmount(item.price);
-  if (price > EPSILON) return price;
+  if (Math.abs(price) > EPSILON) return price;
 
   const unitPrice = toItemAmount(item.unitPrice);
-  if (unitPrice > EPSILON) return unitPrice * getItemQuantity(item);
+  if (Math.abs(unitPrice) > EPSILON) return unitPrice * getItemQuantity(item);
 
   return 0;
 }
 
 export function getItemUnitPrice(item: ExpenseItemDetail): number {
   const unitPrice = toItemAmount(item.unitPrice);
-  if (unitPrice > EPSILON) return unitPrice;
+  if (Math.abs(unitPrice) > EPSILON) return unitPrice;
 
   const quantity = getItemQuantity(item);
   const lineTotal = getItemLineTotal(item);
@@ -93,7 +93,8 @@ export function createQuantitySplits(
 ): ItemQuantitySplit[] {
   const normalizedQuantity = normalizeItemQuantityValue(quantity);
   const normalizedSharedBy = dedupePersonIds(sharedBy);
-  return Array.from({ length: normalizedQuantity }, (_, unitIndex) => ({
+  const roundedQuantity = Math.max(1, Math.round(normalizedQuantity));
+  return Array.from({ length: roundedQuantity }, (_, unitIndex) => ({
     unitIndex,
     sharedBy: [...normalizedSharedBy],
   }));
@@ -109,11 +110,12 @@ export function resizeQuantitySplits(
   }
 
   const normalizedQuantity = normalizeItemQuantityValue(quantity);
-  const normalizedExisting = normalizeQuantitySplits(quantitySplits, normalizedQuantity);
+  const roundedQuantity = Math.max(1, Math.round(normalizedQuantity));
+  const normalizedExisting = normalizeQuantitySplits(quantitySplits, roundedQuantity);
   const byUnit = new Map(normalizedExisting.map((split) => [split.unitIndex, split]));
   const fallback = dedupePersonIds(fallbackSharedBy);
 
-  return Array.from({ length: normalizedQuantity }, (_, unitIndex) => {
+  return Array.from({ length: roundedQuantity }, (_, unitIndex) => {
     const existing = byUnit.get(unitIndex);
     return {
       unitIndex,
@@ -123,16 +125,19 @@ export function resizeQuantitySplits(
 }
 
 export function getItemUnitSharing(item: ExpenseItemDetail): ItemUnitSharing[] {
-  const quantity = getItemQuantity(item);
   const fallbackSharedBy = dedupePersonIds(item.sharedBy || []);
 
   if (!hasCustomQuantitySplits(item)) {
-    return Array.from({ length: quantity }, (_, unitIndex) => ({
-      unitIndex,
-      sharedBy: [...fallbackSharedBy],
-    }));
+    // Return a single unit representing the entire quantity to avoid fractional quantity losses
+    return [
+      {
+        unitIndex: 0,
+        sharedBy: [...fallbackSharedBy],
+      },
+    ];
   }
 
+  const quantity = Math.max(1, Math.round(getItemQuantity(item)));
   const splits = normalizeQuantitySplits(item.quantitySplits, quantity);
   const splitByUnit = new Map(splits.map((split) => [split.unitIndex, split.sharedBy]));
 
@@ -181,10 +186,19 @@ export function calculateItemwiseSplit(
   items: ExpenseItemDetail[],
   amountToSplit: number
 ): ItemwiseSplitCalculation {
-  const totalOriginalItems = items.reduce(
-    (sum, item) => sum + getItemLineTotal(item),
+  let totalOriginalItems = items.reduce(
+    (sum, item) => sum + Math.abs(getItemLineTotal(item)),
     0
   );
+
+  const isZeroPriced = totalOriginalItems <= EPSILON;
+  if (isZeroPriced && amountToSplit > 0) {
+    // Treat zero-priced items as having a virtual price equal to their quantity
+    totalOriginalItems = items.reduce(
+      (sum, item) => sum + getItemQuantity(item),
+      0
+    );
+  }
 
   const reductionFactor =
     totalOriginalItems > EPSILON && amountToSplit >= 0
@@ -196,13 +210,18 @@ export function calculateItemwiseSplit(
   const personBreakdown: PersonAggregatedItemShares = {};
 
   items.forEach((item, itemIndex) => {
-    const lineTotal = getItemLineTotal(item);
-    if (lineTotal <= EPSILON) return;
+    const actualLineTotal = getItemLineTotal(item);
+    let lineTotalForFactor = actualLineTotal;
+    if (isZeroPriced && amountToSplit > 0) {
+      lineTotalForFactor = getItemQuantity(item);
+    }
+
+    if (Math.abs(lineTotalForFactor) <= EPSILON) return;
 
     const quantity = getItemQuantity(item);
-    const unitOriginalPrice = lineTotal / quantity;
-    const unitAdjustedPrice = unitOriginalPrice * reductionFactor;
     const unitSharing = getItemUnitSharing(item);
+    const unitOriginalPrice = actualLineTotal / unitSharing.length;
+    const unitAdjustedPrice = lineTotalForFactor / unitSharing.length * reductionFactor;
     const itemId = item.id || `item-${itemIndex}`;
 
     unitSharing.forEach((unit) => {
@@ -233,7 +252,7 @@ export function calculateItemwiseSplit(
             itemCategoryName: item.categoryName,
             quantity,
             quantityShared: 0,
-            unitPrice: unitOriginalPrice,
+            unitPrice: quantity > 0 ? actualLineTotal / quantity : actualLineTotal,
             unitIndexes: [],
           };
           personData.items.push(detail);
@@ -243,7 +262,7 @@ export function calculateItemwiseSplit(
         detail.adjustedItemPriceForSplit += unitAdjustedPrice;
         detail.shareForPerson += shareForPerson;
         detail.sharedByCount = Math.max(detail.sharedByCount, unit.sharedBy.length);
-        detail.quantityShared = (detail.quantityShared || 0) + 1;
+        detail.quantityShared = (detail.quantityShared || 0) + (hasCustomQuantitySplits(item) ? 1 : quantity);
         detail.unitIndexes = [...(detail.unitIndexes || []), unit.unitIndex];
         personData.totalShareOfAdjustedItems += shareForPerson;
       });

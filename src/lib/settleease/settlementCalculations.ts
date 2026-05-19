@@ -66,6 +66,11 @@ export function calculateNetBalances(
     }
   });
 
+  // Round balances to 2 decimal places to avoid floating point issues
+  Object.keys(balances).forEach((id) => {
+    balances[id] = Math.round(balances[id] * 100) / 100;
+  });
+
   return balances;
 }
 
@@ -99,15 +104,17 @@ export function calculateSimplifiedTransactions(
       const creditorBalance = remainingBalances[override.creditor_id] || 0;
       
       // Only apply override if debtor owes and creditor is owed
-      if (debtorBalance < -0.01 && creditorBalance > 0.01) {
+      if (debtorBalance <= -0.01 && creditorBalance >= 0.01) {
         // Calculate the actual amount that can be settled
-        const maxSettleable = Math.min(
-          Math.abs(debtorBalance),
-          creditorBalance,
-          override.amount
-        );
+        const maxSettleable = Math.round(
+          Math.min(
+            Math.abs(debtorBalance),
+            creditorBalance,
+            override.amount
+          ) * 100
+        ) / 100;
         
-        if (maxSettleable > 0.01) {
+        if (maxSettleable >= 0.01) {
           transactions.push({
             from: override.debtor_id,
             to: override.creditor_id,
@@ -115,20 +122,20 @@ export function calculateSimplifiedTransactions(
           });
           
           // Update remaining balances
-          remainingBalances[override.debtor_id] += maxSettleable;
-          remainingBalances[override.creditor_id] -= maxSettleable;
+          remainingBalances[override.debtor_id] = Math.round((remainingBalances[override.debtor_id] + maxSettleable) * 100) / 100;
+          remainingBalances[override.creditor_id] = Math.round((remainingBalances[override.creditor_id] - maxSettleable) * 100) / 100;
         }
       }
     });
     
     // Now calculate optimized transactions for remaining balances
     const remainingDebtors = Object.entries(remainingBalances)
-      .filter(([_, balance]) => balance < -0.01)
+      .filter(([_, balance]) => balance <= -0.01)
       .map(([id, balance]) => ({ id, amount: Math.abs(balance) }))
       .sort((a, b) => b.amount - a.amount);
 
     const remainingCreditors = Object.entries(remainingBalances)
-      .filter(([_, balance]) => balance > 0.01)
+      .filter(([_, balance]) => balance >= 0.01)
       .map(([id, balance]) => ({ id, amount: balance }))
       .sort((a, b) => b.amount - a.amount);
 
@@ -139,21 +146,21 @@ export function calculateSimplifiedTransactions(
       const debtor = remainingDebtors[debtorIndex];
       const creditor = remainingCreditors[creditorIndex];
 
-      const settlementAmount = Math.min(debtor.amount, creditor.amount);
+      const settlementAmount = Math.round(Math.min(debtor.amount, creditor.amount) * 100) / 100;
 
-      if (settlementAmount > 0.01) {
+      if (settlementAmount >= 0.01) {
         transactions.push({
           from: debtor.id,
           to: creditor.id,
           amount: settlementAmount,
         });
 
-        debtor.amount -= settlementAmount;
-        creditor.amount -= settlementAmount;
+        debtor.amount = Math.round((debtor.amount - settlementAmount) * 100) / 100;
+        creditor.amount = Math.round((creditor.amount - settlementAmount) * 100) / 100;
       }
 
-      if (debtor.amount < 0.01) debtorIndex++;
-      if (creditor.amount < 0.01) creditorIndex++;
+      if (debtor.amount < 0.01 || settlementAmount < 0.01) debtorIndex++;
+      if (creditor.amount < 0.01 || settlementAmount < 0.01) creditorIndex++;
     }
     
     return transactions;
@@ -161,12 +168,12 @@ export function calculateSimplifiedTransactions(
 
   // No manual overrides - use standard optimized calculation
   const debtors = Object.entries(netBalances)
-    .filter(([_, balance]) => balance < -0.01)
+    .filter(([_, balance]) => balance <= -0.01)
     .map(([id, balance]) => ({ id, amount: Math.abs(balance) }))
     .sort((a, b) => b.amount - a.amount);
 
   const creditors = Object.entries(netBalances)
-    .filter(([_, balance]) => balance > 0.01)
+    .filter(([_, balance]) => balance >= 0.01)
     .map(([id, balance]) => ({ id, amount: balance }))
     .sort((a, b) => b.amount - a.amount);
 
@@ -177,21 +184,21 @@ export function calculateSimplifiedTransactions(
     const debtor = debtors[debtorIndex];
     const creditor = creditors[creditorIndex];
 
-    const settlementAmount = Math.min(debtor.amount, creditor.amount);
+    const settlementAmount = Math.round(Math.min(debtor.amount, creditor.amount) * 100) / 100;
 
-    if (settlementAmount > 0.01) {
+    if (settlementAmount >= 0.01) {
       transactions.push({
         from: debtor.id,
         to: creditor.id,
         amount: settlementAmount,
       });
 
-      debtor.amount -= settlementAmount;
-      creditor.amount -= settlementAmount;
+      debtor.amount = Math.round((debtor.amount - settlementAmount) * 100) / 100;
+      creditor.amount = Math.round((creditor.amount - settlementAmount) * 100) / 100;
     }
 
-    if (debtor.amount < 0.01) debtorIndex++;
-    if (creditor.amount < 0.01) creditorIndex++;
+    if (debtor.amount < 0.01 || settlementAmount < 0.01) debtorIndex++;
+    if (creditor.amount < 0.01 || settlementAmount < 0.01) creditorIndex++;
   }
 
   return transactions;
@@ -315,9 +322,9 @@ export function calculatePairwiseTransactions(
       const uToVAmount = uToV ? uToV.amount : 0;
       const vToUAmount = vToU ? vToU.amount : 0;
 
-      const netAmount = uToVAmount - vToUAmount;
+      const netAmount = Math.round((uToVAmount - vToUAmount) * 100) / 100;
 
-      if (Math.abs(netAmount) > 0.01) {
+      if (Math.abs(netAmount) >= 0.01) {
         const mergedExpenseIds = new Set<string>();
         if (uToV) {
           uToV.expenseIds.forEach((id) => mergedExpenseIds.add(id));
@@ -327,14 +334,14 @@ export function calculatePairwiseTransactions(
         }
         const contributingExpenseIds = Array.from(mergedExpenseIds);
 
-        if (netAmount > 0.01) {
+        if (netAmount >= 0.01) {
           transactions.push({
             from: u,
             to: v,
             amount: netAmount,
             contributingExpenseIds,
           });
-        } else if (netAmount < -0.01) {
+        } else if (netAmount <= -0.01) {
           transactions.push({
             from: v,
             to: u,

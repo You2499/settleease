@@ -21,7 +21,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import CustomSettlementForm from './CustomSettlementForm';
 import ManualSettlementOverrideForm from './ManualSettlementOverrideForm';
-import { calculateNetBalances } from '@/lib/settleease/settlementCalculations';
+import { calculateNetBalances, calculateSimplifiedTransactions } from '@/lib/settleease/settlementCalculations';
 import {
   LoadingRegion,
   SettlementActivitySkeleton,
@@ -95,51 +95,8 @@ export default function ManageSettlementsTab({
   }, [people, expenses, settlementPayments]);
 
   const calculatedSimplifiedSettlements = useMemo(() => {
-    if (people.length === 0) return [];
-
-    const balances: Record<string, number> = {};
-    people.forEach(p => balances[p.id] = 0);
-
-    expenses.forEach(expense => {
-      if (Array.isArray(expense.paid_by)) {
-        expense.paid_by.forEach(payment => {
-          balances[payment.personId] = (balances[payment.personId] || 0) + Number(payment.amount);
-        });
-      }
-      if (Array.isArray(expense.shares)) {
-          expense.shares.forEach(share => {
-            balances[share.personId] = (balances[share.personId] || 0) - Number(share.amount);
-          });
-      }
-    });
-    
-    settlementPayments.forEach(payment => {
-        if (balances[payment.debtor_id] !== undefined) {
-            balances[payment.debtor_id] += Number(payment.amount_settled);
-        }
-        if (balances[payment.creditor_id] !== undefined) {
-            balances[payment.creditor_id] -= Number(payment.amount_settled);
-        }
-    });
-
-    const debtors = Object.entries(balances).filter(([_, bal]) => bal < -0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => a.amount - b.amount);
-    const creditors = Object.entries(balances).filter(([_, bal]) => bal > 0.01).map(([id, bal]) => ({ id, amount: bal })).sort((a, b) => b.amount - a.amount);
-    const transactions: CalculatedSettlement[] = [];
-    let debtorIdx = 0, creditorIdx = 0;
-
-    while (debtorIdx < debtors.length && creditorIdx < creditors.length) {
-      const debtor = debtors[debtorIdx], creditor = creditors[creditorIdx];
-      const amountToSettle = Math.min(-debtor.amount, creditor.amount);
-      if (amountToSettle > 0.01) {
-        transactions.push({ from: debtor.id, to: creditor.id, amount: amountToSettle });
-        debtor.amount += amountToSettle;
-        creditor.amount -= amountToSettle;
-      }
-      if (Math.abs(debtor.amount) < 0.01) debtorIdx++;
-      if (Math.abs(creditor.amount) < 0.01) creditorIdx++;
-    }
-    return transactions;
-  }, [expenses, people, settlementPayments]);
+    return calculateSimplifiedTransactions(people, expenses, settlementPayments, manualOverrides);
+  }, [people, expenses, settlementPayments, manualOverrides]);
 
   const handleMarkAsPaid = async () => {
     if (!settlementToConfirm || !currentUserId) {
