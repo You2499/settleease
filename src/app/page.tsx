@@ -28,7 +28,10 @@ import AppSidebar from '@/components/settleease/AppSidebar';
 import DashboardView from '@/components/settleease/DashboardView';
 import SettleEaseErrorBoundary from '@/components/ui/SettleEaseErrorBoundary';
 import UserNameModal from '@/components/settleease/UserNameModal';
+import AnnouncementModal from '@/components/settleease/AnnouncementModal';
 import KeyboardShortcutsModal from '@/components/settleease/KeyboardShortcutsModal';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@convex/_generated/api';
 import {
   WindowsExperienceCrashGate,
   WindowsExperienceFreezeLayer,
@@ -99,6 +102,7 @@ function SettleEasePageContent() {
   const [showNameModal, setShowNameModal] = useState(false);
   const [isNameModalEditMode, setIsNameModalEditMode] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [sessionDismissedIds, setSessionDismissedIds] = useState<string[]>([]);
   const [hasResolvedInitialView, setHasResolvedInitialView] = useState(false);
   const [hasHandledWelcomeToast, setHasHandledWelcomeToast] = useState(false);
   const [restoredInitialView, setRestoredInitialView] = useState<ActiveView | null>(null);
@@ -211,6 +215,42 @@ function SettleEasePageContent() {
     surface: 'app',
     enabled: isAppIdentityReady,
   });
+
+  // Global Announcement System Queries, Mutations & Logic
+   const activeAnnouncements = useQuery(api.app.listActiveAnnouncements, currentUser ? {} : 'skip');
+  const markAnnouncementAsSeen = useMutation(api.app.markAnnouncementAsSeen);
+
+  const announcementToShow = useMemo(() => {
+    if (!isAppIdentityReady || !userProfile || !activeAnnouncements) return null;
+    
+    const seenIds = userProfile.seen_announcement_ids ?? [];
+    
+    return activeAnnouncements.find((ann) => {
+      if (!ann) return false;
+      // Ignore if dismissed in the current session
+      if (sessionDismissedIds.includes(ann.id)) return false;
+      
+      if (ann.display_frequency === 'once') {
+        // Persistent frequency: must not be in userProfile.seenAnnouncementIds
+        return !seenIds.includes(ann.id);
+      }
+      // Everytime frequency: since it is not in sessionDismissedIds, show it
+      return true;
+    });
+  }, [isAppIdentityReady, userProfile, activeAnnouncements, sessionDismissedIds]);
+
+  const handleDismissAnnouncement = useCallback(async (announcementId: string, frequency: 'once' | 'everytime') => {
+    setSessionDismissedIds(prev => [...prev, announcementId]);
+    
+    if (frequency === 'once' && currentUser) {
+      try {
+        await markAnnouncementAsSeen({ supabaseUserId: currentUser.id, announcementId });
+        await refreshUserProfile(false);
+      } catch (error) {
+        console.error('Failed to mark announcement as seen persistently:', error);
+      }
+    }
+  }, [currentUser, markAnnouncementAsSeen, refreshUserProfile]);
 
   const showAccessDeniedToast = useCallback((view: ActiveView, description = "You do not have permission to access this page.") => {
     if (lastAccessDeniedViewRef.current === view) return;
@@ -617,6 +657,13 @@ function SettleEasePageContent() {
           initialLastName={isNameModalEditMode ? (userProfile?.last_name || '') : (getGoogleUserInfo()?.lastName || userProfile?.last_name || '')}
           isGoogleUser={!isNameModalEditMode && (getGoogleUserInfo()?.isGoogle || false)}
           isEditMode={isNameModalEditMode}
+        />
+      )}
+      {announcementToShow && (
+        <AnnouncementModal
+          announcement={announcementToShow}
+          isOpen={!!announcementToShow}
+          onDismiss={() => handleDismissAnnouncement(announcementToShow.id, announcementToShow.display_frequency)}
         />
       )}
       <WindowsExperienceProvider enabled={isWindowsExperienceActive} surface={activeView}>

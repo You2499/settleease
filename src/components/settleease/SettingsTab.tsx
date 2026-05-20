@@ -90,6 +90,10 @@ import {
   SettleEaseModalHeader,
   SettleEaseModalSection,
 } from "./SettleEaseDialog";
+import IconPickerModal from "./IconPickerModal";
+import AnnouncementModal from "./AnnouncementModal";
+import type { Announcement } from "@/lib/settleease";
+import * as LucideIcons from "lucide-react";
 
 type AdminSettingsSnapshot = {
   environment: {
@@ -769,6 +773,13 @@ export default function SettingsTab({
   const clearSettlementRecords = useMutation(api.app.clearSettlementRecords);
   const resetSettleEaseData = useMutation(api.app.resetSettleEaseData);
 
+  // Announcement System Convex Hooks
+  const allAnnouncements = useQuery(api.app.listAllAnnouncementsForAdmin, {}) as Announcement[] | undefined;
+  const createAnnouncement = useMutation(api.app.createAnnouncement);
+  const updateAnnouncementMutation = useMutation(api.app.updateAnnouncement);
+  const toggleAnnouncementActive = useMutation(api.app.toggleAnnouncementActive);
+  const deleteAnnouncement = useMutation(api.app.deleteAnnouncement);
+
   const clientEnvironment = getClientSettleEaseEnvironment();
   const configuredConvexUrl = getConvexUrl();
   const configuredConvexHost = getHostFromUrl(configuredConvexUrl);
@@ -800,6 +811,23 @@ export default function SettingsTab({
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null);
   const [productionDangerUnlocked, setProductionDangerUnlocked] = useState(false);
   const [productionUnlockDialogOpen, setProductionUnlockDialogOpen] = useState(false);
+
+  // Announcement composition form states
+  const [announcementTitle, setAnnouncementTitle] = useState("");
+  const [announcementDescription, setAnnouncementDescription] = useState("");
+  const [announcementTone, setAnnouncementTone] = useState<'default' | 'success' | 'warning' | 'danger' | 'brand'>("default");
+  const [announcementIcon, setAnnouncementIcon] = useState("Megaphone");
+  const [announcementFrequency, setAnnouncementFrequency] = useState<'once' | 'everytime'>("once");
+  const [editingAnnouncementId, setEditingAnnouncementId] = useState<string | null>(null);
+  
+  // Icon Picker modal control
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
+  
+  // Preview Modal control
+  const [previewAnnouncement, setPreviewAnnouncement] = useState<Announcement | null>(null);
+  
+  // Loading state for announcement CRUD actions
+  const [isAnnouncementActionLoading, setIsAnnouncementActionLoading] = useState(false);
 
   useEffect(() => {
     setSelectedTheme(theme || userProfile?.theme_preference || "light");
@@ -946,6 +974,144 @@ export default function SettingsTab({
     });
   };
 
+  // Announcement System CRUD & Preview Handlers
+  const handleSaveAnnouncement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!announcementTitle.trim() || !announcementDescription.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Title and description are required fields.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnnouncementActionLoading(true);
+    try {
+      if (editingAnnouncementId) {
+        const currentAnn = allAnnouncements?.find((a: any) => a.id === editingAnnouncementId);
+        await updateAnnouncementMutation({
+          id: editingAnnouncementId,
+          title: announcementTitle.trim(),
+          description: announcementDescription.trim(),
+          tone: announcementTone,
+          iconName: announcementIcon,
+          displayFrequency: announcementFrequency,
+          isActive: currentAnn?.is_active ?? true,
+        });
+        toast({
+          title: "Announcement Updated",
+          description: "The global announcement has been updated successfully.",
+        });
+      } else {
+        await createAnnouncement({
+          title: announcementTitle.trim(),
+          description: announcementDescription.trim(),
+          tone: announcementTone,
+          iconName: announcementIcon,
+          displayFrequency: announcementFrequency,
+          isActive: true,
+        });
+        toast({
+          title: "Announcement Created",
+          description: "The global announcement has been created successfully.",
+        });
+      }
+      
+      // Reset form
+      setAnnouncementTitle("");
+      setAnnouncementDescription("");
+      setAnnouncementTone("default");
+      setAnnouncementIcon("Megaphone");
+      setAnnouncementFrequency("once");
+      setEditingAnnouncementId(null);
+    } catch (error: any) {
+      toast({
+        title: "Action Failed",
+        description: error?.message || "Failed to save the announcement.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnnouncementActionLoading(false);
+    }
+  };
+
+  const handleEditAnnouncement = (ann: Announcement) => {
+    setAnnouncementTitle(ann.title);
+    setAnnouncementDescription(ann.description);
+    setAnnouncementTone(ann.tone);
+    setAnnouncementIcon(ann.icon_name);
+    setAnnouncementFrequency(ann.display_frequency);
+    setEditingAnnouncementId(ann.id);
+  };
+
+  const handleCancelEditAnnouncement = () => {
+    setAnnouncementTitle("");
+    setAnnouncementDescription("");
+    setAnnouncementTone("default");
+    setAnnouncementIcon("Megaphone");
+    setAnnouncementFrequency("once");
+    setEditingAnnouncementId(null);
+  };
+
+  const handleToggleAnnouncementActive = async (id: string, currentStatus: boolean) => {
+    try {
+      await toggleAnnouncementActive({ id, isActive: !currentStatus });
+      toast({
+        title: !currentStatus ? "Announcement Activated" : "Announcement Deactivated",
+        description: `Announcement is now ${!currentStatus ? "active" : "inactive"}.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Toggle Failed",
+        description: error?.message || "Failed to toggle announcement status.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id: string) => {
+    try {
+      await deleteAnnouncement({ id });
+      toast({
+        title: "Announcement Deleted",
+        description: "The global announcement has been permanently deleted.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Delete Failed",
+        description: error?.message || "Failed to delete the announcement.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handlePreviewAnnouncementForm = () => {
+    if (!announcementTitle.trim() || !announcementDescription.trim()) {
+      toast({
+        title: "Preview Error",
+        description: "Please enter a title and description to preview.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Construct transient Announcement object
+    const transientAnn: Announcement = {
+      id: "preview-temp-id",
+      title: announcementTitle.trim(),
+      description: announcementDescription.trim(),
+      tone: announcementTone,
+      icon_name: announcementIcon,
+      display_frequency: announcementFrequency,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    setPreviewAnnouncement(transientAnn);
+  };
+
   const runDangerAction = async (
     id: string,
     title: string,
@@ -1039,10 +1205,11 @@ export default function SettingsTab({
 
       <CardContent className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
         <Tabs defaultValue="overview" className="min-w-0 space-y-4">
-          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-4 lg:grid-cols-7">
+          <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
             <TabsTrigger value="ai">AI Config</TabsTrigger>
+            <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="appAnalytics">App Analytics</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
             <TabsTrigger value="experiments">Experiments</TabsTrigger>
@@ -1498,6 +1665,316 @@ export default function SettingsTab({
                     Clear Caches
                   </Button>
                 </ActionRow>
+              </div>
+            </SettingsSection>
+          </TabsContent>
+
+          <TabsContent value="announcements" className="space-y-4">
+            <SettingsSection
+              icon={LucideIcons.Megaphone}
+              title="Announcements Management"
+              description="Create and manage global announcements displayed to all users upon sign-in."
+            >
+              <div className="grid gap-6 lg:grid-cols-12 mt-4">
+                {/* Left Side: Alert Composition Form */}
+                <div className="lg:col-span-5 space-y-4">
+                  <Card className="border-muted bg-muted/15 shadow-sm">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base font-semibold">
+                        {editingAnnouncementId ? "Edit Announcement" : "Create Announcement"}
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        {editingAnnouncementId 
+                          ? "Modify this active or inactive global system alert." 
+                          : "Compose a new system alert to push globally to all users."}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <form onSubmit={handleSaveAnnouncement} className="space-y-4">
+                        {/* Title Input */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="announcement-title" className="text-xs font-semibold">
+                            Title
+                          </Label>
+                          <Input
+                            id="announcement-title"
+                            value={announcementTitle}
+                            onChange={(e) => setAnnouncementTitle(e.target.value)}
+                            placeholder="e.g. Scheduled System Maintenance"
+                            className="h-10 text-sm rounded-lg"
+                            required
+                          />
+                        </div>
+
+                        {/* Description Textarea */}
+                        <div className="space-y-1.5">
+                          <Label htmlFor="announcement-desc" className="text-xs font-semibold">
+                            Message
+                          </Label>
+                          <textarea
+                            id="announcement-desc"
+                            value={announcementDescription}
+                            onChange={(e) => setAnnouncementDescription(e.target.value)}
+                            placeholder="Compose detailed announcement content here..."
+                            rows={4}
+                            className="w-full text-sm rounded-lg border border-input bg-transparent px-3 py-2 shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            required
+                          />
+                        </div>
+
+                        {/* Tone and Frequency Fields */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="announcement-tone" className="text-xs font-semibold">
+                              Tone Style
+                            </Label>
+                            <Select
+                              value={announcementTone}
+                              onValueChange={(val: any) => setAnnouncementTone(val)}
+                            >
+                              <SelectTrigger id="announcement-tone" className="h-10 text-xs rounded-lg">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="default" className="text-xs">Default (Muted)</SelectItem>
+                                <SelectItem value="brand" className="text-xs">Brand (SettleEase Purple)</SelectItem>
+                                <SelectItem value="success" className="text-xs">Success (Green)</SelectItem>
+                                <SelectItem value="warning" className="text-xs">Warning (Amber)</SelectItem>
+                                <SelectItem value="danger" className="text-xs">Danger (Red)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            <Label htmlFor="announcement-frequency" className="text-xs font-semibold">
+                              Show Frequency
+                            </Label>
+                            <Select
+                              value={announcementFrequency}
+                              onValueChange={(val: any) => setAnnouncementFrequency(val)}
+                            >
+                              <SelectTrigger id="announcement-frequency" className="h-10 text-xs rounded-lg">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="once" className="text-xs">Show Once</SelectItem>
+                                <SelectItem value="everytime" className="text-xs">Every Session</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+
+                        {/* Icon Picker Trigger */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs font-semibold">Alert Icon</Label>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setIconPickerOpen(true)}
+                              className="h-10 rounded-lg flex-1 justify-start gap-2 border-dashed border-muted-foreground/30 hover:border-primary/50 text-xs text-foreground font-medium"
+                            >
+                              {(() => {
+                                const PickerIcon = (LucideIcons as any)[announcementIcon] || LucideIcons.Megaphone;
+                                return <PickerIcon className="h-4 w-4 text-primary shrink-0" />;
+                              })()}
+                              <span className="truncate">{announcementIcon}</span>
+                            </Button>
+                            <span className="text-xs text-muted-foreground shrink-0 italic">Select icon</span>
+                          </div>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex gap-2 pt-2">
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={handlePreviewAnnouncementForm}
+                            className="flex-1 h-10 rounded-lg text-xs"
+                          >
+                            <LucideIcons.Eye className="mr-1.5 h-3.5 w-3.5" />
+                            Preview
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={isAnnouncementActionLoading}
+                            className="flex-1 h-10 rounded-lg text-xs"
+                          >
+                            {isAnnouncementActionLoading ? (
+                              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                            ) : editingAnnouncementId ? (
+                              <Save className="mr-1.5 h-3.5 w-3.5" />
+                            ) : (
+                              <LucideIcons.Plus className="mr-1.5 h-3.5 w-3.5" />
+                            )}
+                            {editingAnnouncementId ? "Save Changes" : "Create Alert"}
+                          </Button>
+                        </div>
+
+                        {editingAnnouncementId && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={handleCancelEditAnnouncement}
+                            className="w-full h-8 text-xs font-medium text-muted-foreground hover:text-foreground"
+                          >
+                            Cancel Editing
+                          </Button>
+                        )}
+                      </form>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Side: Announcements Dashboard List */}
+                <div className="lg:col-span-7 space-y-4">
+                  <Card className="border-muted bg-muted/15 shadow-sm h-full flex flex-col">
+                    <CardHeader className="pb-3 shrink-0">
+                      <CardTitle className="text-base font-semibold">Active Announcements</CardTitle>
+                      <CardDescription className="text-xs">
+                        View, toggle status, edit, or delete existing system announcements.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 overflow-y-auto min-h-0 space-y-3 p-6 pt-0">
+                      {!allAnnouncements ? (
+                        <div className="space-y-3 py-2">
+                          {[1, 2].map((i) => (
+                            <div key={i} className="flex items-center space-x-3 rounded-lg border p-3">
+                              <Skeleton className="h-10 w-10 rounded-full" />
+                              <div className="space-y-2 flex-1">
+                                <Skeleton className="h-4 w-1/3" />
+                                <Skeleton className="h-3 w-2/3" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : allAnnouncements.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-12 text-center rounded-xl border border-dashed border-muted/80 bg-background/40">
+                          <div className="rounded-full bg-secondary/50 p-3 mb-3 text-muted-foreground">
+                            <LucideIcons.Megaphone className="h-6 w-6" />
+                          </div>
+                          <p className="text-sm font-semibold text-foreground">No Announcements Found</p>
+                          <p className="text-xs text-muted-foreground mt-1 max-w-[280px]">
+                            Create your first announcement using the form to publish a system-wide notice.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {allAnnouncements.map((ann) => {
+                            const AnnIcon = (LucideIcons as any)[ann.icon_name] || LucideIcons.Megaphone;
+                            
+                            // Tone background and border color classes
+                            let toneBgClass = "bg-muted/50 border-muted text-foreground/80";
+                            let toneIconClass = "text-muted-foreground bg-muted";
+                            if (ann.tone === "brand") {
+                              toneBgClass = "bg-purple-500/5 border-purple-500/10 dark:bg-purple-500/10 dark:border-purple-500/20";
+                              toneIconClass = "text-purple-500 bg-purple-500/10 dark:bg-purple-500/25";
+                            } else if (ann.tone === "success") {
+                              toneBgClass = "bg-green-500/5 border-green-500/10 dark:bg-green-500/10 dark:border-green-500/20";
+                              toneIconClass = "text-green-500 bg-green-500/10 dark:bg-green-500/25";
+                            } else if (ann.tone === "warning") {
+                              toneBgClass = "bg-amber-500/5 border-amber-500/10 dark:bg-amber-500/10 dark:border-amber-500/20";
+                              toneIconClass = "text-amber-500 bg-amber-500/10 dark:bg-amber-500/25";
+                            } else if (ann.tone === "danger") {
+                              toneBgClass = "bg-red-500/5 border-red-500/10 dark:bg-red-500/10 dark:border-red-500/20";
+                              toneIconClass = "text-red-500 bg-red-500/10 dark:bg-red-500/25";
+                            }
+
+                            return (
+                              <div
+                                key={ann.id}
+                                className={cn(
+                                  "group relative flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border p-4 transition-all duration-200 hover:shadow-md",
+                                  ann.is_active ? toneBgClass : "bg-card/45 border-muted/50 opacity-75"
+                                )}
+                              >
+                                <div className="flex gap-3 items-start min-w-0">
+                                  <div className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg shadow-sm border", toneIconClass)}>
+                                    <AnnIcon className="h-4.5 w-4.5" />
+                                  </div>
+                                  <div className="space-y-1 min-w-0">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      <span className="font-semibold text-sm text-foreground truncate max-w-[200px] sm:max-w-xs">
+                                        {ann.title}
+                                      </span>
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "px-1.5 py-0.5 text-[10px] uppercase font-bold rounded-md shrink-0 tracking-wider",
+                                          ann.display_frequency === "once" 
+                                            ? "border-blue-500/20 text-blue-500 bg-blue-500/5" 
+                                            : "border-purple-500/20 text-purple-500 bg-purple-500/5"
+                                        )}
+                                      >
+                                        {ann.display_frequency}
+                                      </Badge>
+                                      {!ann.is_active && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="px-1.5 py-0.5 text-[10px] uppercase font-bold rounded-md shrink-0 tracking-wider border-dashed text-muted-foreground"
+                                        >
+                                          Inactive
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed whitespace-pre-wrap">
+                                      {ann.description}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 shrink-0 self-end md:self-center border-t md:border-t-0 pt-2.5 md:pt-0 border-dashed border-muted-foreground/10 justify-end w-full md:w-auto">
+                                  {/* Toggle Active Switch */}
+                                  <div className="flex items-center gap-2 mr-2">
+                                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                      {ann.is_active ? "Active" : "Inactive"}
+                                    </span>
+                                    <Switch
+                                      checked={ann.is_active}
+                                      onCheckedChange={() => handleToggleAnnouncementActive(ann.id, ann.is_active)}
+                                      className="scale-90"
+                                    />
+                                  </div>
+
+                                  {/* Action Buttons */}
+                                  <div className="flex items-center gap-1">
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => setPreviewAnnouncement(ann)}
+                                      title="Preview Dialog"
+                                      className="h-8 w-8 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                    >
+                                      <LucideIcons.Eye className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => handleEditAnnouncement(ann)}
+                                      title="Edit Announcement"
+                                      className="h-8 w-8 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                                    >
+                                      <LucideIcons.Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      size="icon"
+                                      variant="ghost"
+                                      onClick={() => handleDeleteAnnouncement(ann.id)}
+                                      title="Delete Announcement"
+                                      className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </SettingsSection>
           </TabsContent>
@@ -2072,6 +2549,25 @@ export default function SettingsTab({
           });
         }}
       />
+
+      {previewAnnouncement && (
+        <AnnouncementModal
+          announcement={previewAnnouncement}
+          isOpen={!!previewAnnouncement}
+          onDismiss={() => setPreviewAnnouncement(null)}
+        />
+      )}
+
+      {iconPickerOpen && (
+        <IconPickerModal
+          open={iconPickerOpen}
+          onClose={() => setIconPickerOpen(false)}
+          onSelect={(iconName) => {
+            setAnnouncementIcon(iconName);
+            setIconPickerOpen(false);
+          }}
+        />
+      )}
     </Card>
   );
 }

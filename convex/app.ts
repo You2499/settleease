@@ -217,6 +217,7 @@ function profileDto(profile: any) {
     last_sign_in_at: profile.lastSignInAt ?? undefined,
     created_at: profile.createdAt,
     updated_at: profile.updatedAt,
+    seen_announcement_ids: profile.seenAnnouncementIds ?? [],
   };
 }
 
@@ -1153,6 +1154,7 @@ export const getAdminSettingsSnapshot = query({
       aiSummaries,
       aiRedactions,
       aiPrompts,
+      announcements,
       aiConfig,
     ] = await Promise.all([
       ctx.db.query("people").collect(),
@@ -1170,6 +1172,7 @@ export const getAdminSettingsSnapshot = query({
       ctx.db.query("aiSummaries").collect(),
       ctx.db.query("aiRedactions").collect(),
       ctx.db.query("aiPrompts").collect(),
+      ctx.db.query("announcements").collect(),
       ctx.db
         .query("aiConfigs")
         .withIndex("by_key", (q: any) => q.eq("key", DEFAULT_AI_CONFIG_KEY))
@@ -1199,6 +1202,7 @@ export const getAdminSettingsSnapshot = query({
         aiSummaries: aiSummaries.length,
         aiRedactions: aiRedactions.length,
         aiPrompts: aiPrompts.length,
+        announcements: announcements.length,
       },
       aiConfig: aiConfigDto(aiConfig),
       checkedAt: nowIso(),
@@ -3482,5 +3486,173 @@ export const resetSettleEaseData = mutation({
       mode: args.mode,
       deleted,
     };
+  },
+});
+
+// ==========================================
+// Announcements DTO, Queries & Mutations
+// ==========================================
+
+function announcementDto(ann: any) {
+  if (!ann) return null;
+  return {
+    id: ann._id,
+    title: ann.title,
+    description: ann.description,
+    tone: ann.tone,
+    icon_name: ann.iconName,
+    display_frequency: ann.displayFrequency,
+    is_active: ann.isActive,
+    created_at: ann.createdAt,
+    updated_at: ann.updatedAt,
+    created_by_user_id: ann.createdByUserId ?? null,
+  };
+}
+
+export const listActiveAnnouncements = query({
+  args: {},
+  handler: async (ctx) => {
+    const active = await ctx.db
+      .query("announcements")
+      .withIndex("by_active", (q: any) => q.eq("isActive", true))
+      .collect();
+    return active.map(announcementDto);
+  },
+});
+
+export const listAllAnnouncementsForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const all = await ctx.db.query("announcements").collect();
+    return all
+      .map(announcementDto)
+      .sort((a: any, b: any) => b.created_at.localeCompare(a.created_at));
+  },
+});
+
+export const createAnnouncement = mutation({
+  args: {
+    title: v.string(),
+    description: v.string(),
+    tone: v.union(
+      v.literal("default"),
+      v.literal("success"),
+      v.literal("warning"),
+      v.literal("danger"),
+      v.literal("brand"),
+    ),
+    iconName: v.string(),
+    displayFrequency: v.union(
+      v.literal("once"),
+      v.literal("everytime"),
+    ),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const actorUserId = await requireAdmin(ctx);
+    const now = nowIso();
+    const id = await ctx.db.insert("announcements", {
+      title: args.title,
+      description: args.description,
+      tone: args.tone,
+      iconName: args.iconName,
+      displayFrequency: args.displayFrequency,
+      isActive: args.isActive,
+      createdAt: now,
+      updatedAt: now,
+      createdByUserId: actorUserId,
+    });
+    return announcementDto(await ctx.db.get(id));
+  },
+});
+
+export const updateAnnouncement = mutation({
+  args: {
+    id: v.string(),
+    title: v.string(),
+    description: v.string(),
+    tone: v.union(
+      v.literal("default"),
+      v.literal("success"),
+      v.literal("warning"),
+      v.literal("danger"),
+      v.literal("brand"),
+    ),
+    iconName: v.string(),
+    displayFrequency: v.union(
+      v.literal("once"),
+      v.literal("everytime"),
+    ),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const announcement = await ctx.db.get(args.id as any);
+    if (!announcement) throw new ConvexError("Announcement not found.");
+
+    const updates = {
+      title: args.title,
+      description: args.description,
+      tone: args.tone,
+      iconName: args.iconName,
+      displayFrequency: args.displayFrequency,
+      isActive: args.isActive,
+      updatedAt: nowIso(),
+    };
+    await ctx.db.patch(announcement._id, updates);
+    return announcementDto(await ctx.db.get(announcement._id));
+  },
+});
+
+export const toggleAnnouncementActive = mutation({
+  args: {
+    id: v.string(),
+    isActive: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const announcement = await ctx.db.get(args.id as any);
+    if (!announcement) throw new ConvexError("Announcement not found.");
+
+    await ctx.db.patch(announcement._id, {
+      isActive: args.isActive,
+      updatedAt: nowIso(),
+    });
+    return announcementDto(await ctx.db.get(announcement._id));
+  },
+});
+
+export const deleteAnnouncement = mutation({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const announcement = await ctx.db.get(args.id as any);
+    if (!announcement) throw new ConvexError("Announcement not found.");
+
+    await ctx.db.delete(announcement._id);
+    return { success: true, id: args.id };
+  },
+});
+
+export const markAnnouncementAsSeen = mutation({
+  args: {
+    supabaseUserId: v.string(),
+    announcementId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const supabaseUserId = await requireSelf(ctx, args.supabaseUserId);
+    const profile = await getProfileBySupabaseUserId(ctx, supabaseUserId);
+    if (!profile) throw new ConvexError("User profile not found.");
+
+    const currentSeen = profile.seenAnnouncementIds ?? [];
+    if (!currentSeen.includes(args.announcementId)) {
+      const updatedSeen = [...currentSeen, args.announcementId];
+      await ctx.db.patch(profile._id, {
+        seenAnnouncementIds: updatedSeen,
+        updatedAt: nowIso(),
+      });
+    }
+    return profileDto(await ctx.db.get(profile._id));
   },
 });

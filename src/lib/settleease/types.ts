@@ -140,6 +140,7 @@ export interface UserProfile {
   last_sign_in_at?: string;
   created_at?: string;
   updated_at?: string;
+  seen_announcement_ids?: string[];
 }
 
 export interface SettlementPayment {
@@ -215,4 +216,17 @@ export interface PersonAggregatedItemShares {
     items: PersonItemShareDetails[];
     totalShareOfAdjustedItems: number;
   };
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  description: string;
+  tone: 'default' | 'success' | 'warning' | 'danger' | 'brand';
+  icon_name: string;
+  display_frequency: 'once' | 'everytime';
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_user_id?: string | null;
 }

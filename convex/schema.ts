@@ -75,6 +75,7 @@ export default defineSchema({
     lastSignInAt: v.optional(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
+    seenAnnouncementIds: v.optional(v.array(v.string())),
   }).index("by_supabase_user_id", ["supabaseUserId"]),
 
   people: defineTable({
@@ -339,4 +340,25 @@ export default defineSchema({
   })
     .index("by_key", ["key"])
     .index("by_date_kind", ["dateKey", "touchKind"]),
+
+  announcements: defineTable({
+    title: v.string(),
+    description: v.string(),
+    tone: v.union(
+      v.literal("default"),
+      v.literal("success"),
+      v.literal("warning"),
+      v.literal("danger"),
+      v.literal("brand"),
+    ),
+    iconName: v.string(),
+    displayFrequency: v.union(
+      v.literal("once"),
+      v.literal("everytime"),
+    ),
+    isActive: v.boolean(),
+    createdAt: v.string(),
+    updatedAt: v.string(),
+    createdByUserId: v.optional(v.union(v.string(), v.null())),
+  }).index("by_active", ["isActive"]),
 });
