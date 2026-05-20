@@ -19,8 +19,6 @@ export const viewport: Viewport = {
   userScalable: false,
 };
 
-import { GeistSans } from 'geist/font/sans';
-import { GeistMono } from 'geist/font/mono';
 import { Inter } from 'next/font/google';
 
 // Load Inter font
@@ -36,11 +34,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="font-inter settleease-app-design">
+    <html lang="en" suppressHydrationWarning className="font-google-sans settleease-app-design">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
       </head>
-      <body className={`${GeistSans.variable} ${GeistMono.variable} ${inter.variable} antialiased`}>
+      <body className={`${inter.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

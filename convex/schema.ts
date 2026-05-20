@@ -61,8 +61,6 @@ export default defineSchema({
     lastName: v.optional(v.string()),
     fontPreference: v.optional(
       v.union(
-        v.literal("geist"),
-        v.literal("system"),
         v.literal("inter"),
         v.literal("google-sans"),
       ),

@@ -1,6 +1,17 @@
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght,wdth,opsz,slnt,GRAD,ROND@100..900,25..151,8..144,-10..0,-50..100,0..100&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Google Sans Flex Local Fallback Support */
+@font-face {
+  font-family: 'Google Sans Flex';
+  src: local('Google Sans Flex'), local('Google Sans Flex Regular'), local('GoogleSansFlex-Regular');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
 
 /* Google Sans Variable Font - Local Files */
 @font-face {
@@ -18,8 +29,6 @@
   font-style: italic;
   font-display: swap;
 }
-
-/* Removed body { font-family: Arial, Helvetica, sans-serif; } to allow Tailwind and layout.tsx to manage Inter font */
 
 @layer base {
   :root {
@@ -277,41 +286,120 @@
 
   /* Font Preference Classes - Applied to html element */
   /* Using !important to override Tailwind's font-sans utility */
-  html.font-geist,
-  html.font-geist body,
-  html.font-geist * {
-    font-family: var(--font-geist-sans), 'Geist Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
-  }
-
-  html.font-system,
-  html.font-system body,
-  html.font-system * {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto, "Helvetica Neue", Ubuntu, Arial, sans-serif !important;
-  }
-
   html.font-inter,
   html.font-inter body,
   html.font-inter * {
-    font-family: var(--font-inter), 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+    font-family: var(--font-inter), 'Inter', sans-serif !important;
   }
 
   html.font-google-sans,
   html.font-google-sans body,
   html.font-google-sans * {
-    font-family: "Google Sans", sans-serif !important;
+    font-family: "Google Sans Flex", "Inter", sans-serif !important;
     font-optical-sizing: auto;
-    font-variation-settings: "GRAD" 0;
+    
+    /* Default variable axes fallback properties */
+    --gsf-wght: 400;
+    --gsf-wdth: 100;
+    --gsf-opsz: 14;
+    --gsf-grad: 0;
+    --gsf-slnt: 0;
+    --gsf-rond: 0;
+
+    /* Single consolidated font-variation-settings property */
+    font-variation-settings: 
+      "wght" var(--gsf-wght), 
+      "wdth" var(--gsf-wdth), 
+      "opsz" var(--gsf-opsz), 
+      "GRAD" var(--gsf-grad), 
+      "slnt" var(--gsf-slnt), 
+      "ROND" var(--gsf-rond) !important;
+  }
+
+  /* --- Premium Variable Font Utility Mappings --- */
+  html.font-google-sans .font-light { --gsf-wght: 300; --gsf-rond: 0; }
+  html.font-google-sans .font-normal { --gsf-wght: 400; --gsf-rond: 0; }
+  html.font-google-sans .font-medium { --gsf-wght: 500; --gsf-rond: 30; }
+  html.font-google-sans .font-semibold { --gsf-wght: 600; --gsf-rond: 60; }
+  html.font-google-sans .font-bold { --gsf-wght: 700; --gsf-rond: 100; }
+  html.font-google-sans .font-extrabold { --gsf-wght: 800; --gsf-rond: 100; }
+
+  /* Dynamic sizing optical size & density offsets */
+  html.font-google-sans .text-xs,
+  html.font-google-sans .text-\[10px\],
+  html.font-google-sans .text-\[11px\],
+  html.font-google-sans .text-\[12px\] {
+    --gsf-opsz: 10;
+    --gsf-wdth: 90;
+  }
+
+  html.font-google-sans .text-sm {
+    --gsf-opsz: 12;
+    --gsf-wdth: 95;
+  }
+
+  html.font-google-sans .text-3xl,
+  html.font-google-sans .text-4xl,
+  html.font-google-sans .text-5xl,
+  html.font-google-sans .text-display-hero,
+  html.font-google-sans .text-display-section {
+    --gsf-opsz: 36;
+    --gsf-wdth: 108;
+    --gsf-rond: 50;
+    letter-spacing: -0.02em;
+  }
+
+  /* Slant (Italic) Axis Overrides utilizing true slnt axis and normal style to prevent double slanting */
+  html.font-google-sans em,
+  html.font-google-sans i,
+  html.font-google-sans .italic {
+    --gsf-slnt: -10;
+    font-style: normal !important;
+  }
+
+  html.font-google-sans .not-italic {
+    --gsf-slnt: 0;
+    font-style: normal !important;
+  }
+
+  /* Smooth layout-safe hover & active animations utilizing Grade (GRAD), wght and ROND variable changes */
+  html.font-google-sans button,
+  html.font-google-sans .button,
+  html.font-google-sans a,
+  html.font-google-sans [role="button"],
+  html.font-google-sans [role="tab"],
+  html.font-google-sans select,
+  html.font-google-sans input[type="submit"] {
+    transition: font-variation-settings 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s, border-color 0.2s, box-shadow 0.2s !important;
+  }
+
+  html.font-google-sans button:hover,
+  html.font-google-sans button:focus,
+  html.font-google-sans a:hover,
+  html.font-google-sans [role="button"]:hover,
+  html.font-google-sans [role="tab"][data-state="active"]:hover,
+  html.font-google-sans [role="tab"]:hover {
+    --gsf-wght: 520;
+    --gsf-grad: 40;
+    --gsf-rond: 100;
+  }
+
+  /* Sidebar active button formatting */
+  html.font-google-sans .bg-sidebar-accent,
+  html.font-google-sans [data-sidebar="menu-button"][data-active="true"] {
+    --gsf-wght: 600;
+    --gsf-grad: 50;
+    --gsf-rond: 100;
+  }
+
+  /* Dark Graphite Mode Bleed Correction using negative Grade offset */
+  .dark html.font-google-sans,
+  .dark html.font-google-sans body,
+  .dark html.font-google-sans * {
+    --gsf-grad: -20;
   }
 
   /* Preserve monospace fonts for code elements */
-  html.font-geist code,
-  html.font-geist pre,
-  html.font-geist kbd,
-  html.font-geist samp,
-  html.font-system code,
-  html.font-system pre,
-  html.font-system kbd,
-  html.font-system samp,
   html.font-inter code,
   html.font-inter pre,
   html.font-inter kbd,

@@ -208,7 +208,7 @@ function profileDto(profile: any) {
     role: profile.role ?? "user",
     first_name: profile.firstName ?? null,
     last_name: profile.lastName ?? null,
-    font_preference: profile.fontPreference ?? "inter",
+    font_preference: profile.fontPreference ?? "google-sans",
     theme_preference: profile.themePreference ?? undefined,
     last_active_view: profile.lastActiveView ?? undefined,
     windows_experience_enabled: profile.windowsExperienceEnabled ?? false,
@@ -1088,7 +1088,7 @@ async function ensureUserProfile(
       lastName: args.lastName || existing.lastName,
       updatedAt: timestamp,
     };
-    if (!existing.fontPreference) updates.fontPreference = "inter";
+    if (!existing.fontPreference) updates.fontPreference = "google-sans";
     if (existing.windowsExperienceEnabled === undefined) {
       updates.windowsExperienceEnabled = false;
     }
@@ -1114,7 +1114,7 @@ async function ensureUserProfile(
         : "user",
     firstName: args.firstName || undefined,
     lastName: args.lastName || undefined,
-    fontPreference: "inter",
+    fontPreference: "google-sans",
     themePreference: "light",
     lastActiveView: "dashboard",
     windowsExperienceEnabled: false,
@@ -1280,8 +1280,6 @@ export const updateUserProfile = mutation({
     lastName: v.optional(v.union(v.string(), v.null())),
     fontPreference: v.optional(
       v.union(
-        v.literal("geist"),
-        v.literal("system"),
         v.literal("inter"),
         v.literal("google-sans"),
       ),

@@ -123,7 +123,7 @@ export interface PayerInputRow {
 export type UserRole = 'admin' | 'user' | null;
 
 // Font Preferences
-export type FontPreference = 'geist' | 'system' | 'inter' | 'google-sans';
+export type FontPreference = 'google-sans' | 'inter';
 
 export interface UserProfile {
   id: string; // profile ID

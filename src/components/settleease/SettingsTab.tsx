@@ -231,10 +231,8 @@ type BudgetBackfillResult = {
 };
 
 const FONT_OPTIONS: Array<{ value: FontPreference; label: string }> = [
+  { value: "google-sans", label: "Google Sans Flex" },
   { value: "inter", label: "Inter" },
-  { value: "google-sans", label: "Google Sans" },
-  { value: "geist", label: "Geist" },
-  { value: "system", label: "System" },
 ];
 
 const PRODUCTION_DANGER_UNLOCK_CONFIRMATION = "UNLOCK PRODUCTION DANGER ZONE";
@@ -789,7 +787,7 @@ export default function SettingsTab({
     theme || userProfile?.theme_preference || "light",
   );
   const [selectedFont, setSelectedFont] = useState<FontPreference>(
-    userProfile?.font_preference || "inter",
+    userProfile?.font_preference || "google-sans",
   );
   const [defaultView, setDefaultView] = useState<ActiveView>(
     userProfile?.last_active_view || "dashboard",
@@ -834,7 +832,7 @@ export default function SettingsTab({
   }, [theme, userProfile?.theme_preference]);
 
   useEffect(() => {
-    setSelectedFont(userProfile?.font_preference || "inter");
+    setSelectedFont(userProfile?.font_preference || "google-sans");
   }, [userProfile?.font_preference]);
 
   useEffect(() => {
