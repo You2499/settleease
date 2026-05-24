@@ -184,30 +184,48 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     };
   }, []);
 
-  // Mouse movement parallax effect for floating icons (fluid CSS custom variables logic)
+  // Particle physics state (Gentle free-floating trajectory trapped in layout gaps)
+  const particlesRef = useRef<Array<{
+    x: number;
+    y: number;
+    vx: number;
+    vy: number;
+    radiusX: number;
+    radiusY: number;
+    size: number;
+    iconSize: number;
+    delay: string;
+    dur: string;
+    mobile?: boolean;
+    Icon: LucideIcon;
+  }>>([]);
+
   useEffect(() => {
-    if (typeof window === 'undefined' || prefersReducedMotion) return;
+    // Initialize particles from absolute widescreen settings
+    particlesRef.current = floatingIcons.map((icon) => {
+      const leftVal = parseFloat(icon.left);
+      const topVal = parseFloat(icon.top);
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const shell = shellRef.current;
-      if (!shell) return;
+      // Random slow speed (percentage units per frame)
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 0.012 + Math.random() * 0.014; // extremely smooth, premium speed
 
-      const { clientX, clientY } = e;
-      const { innerWidth, innerHeight } = window;
-
-      // Calculate normalized mouse coordinates (-0.5 to 0.5)
-      const x = (clientX / innerWidth) - 0.5;
-      const y = (clientY / innerHeight) - 0.5;
-
-      shell.style.setProperty('--mouse-x', `${x.toFixed(4)}`);
-      shell.style.setProperty('--mouse-y', `${y.toFixed(4)}`);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-    };
-  }, [prefersReducedMotion]);
+      return {
+        x: leftVal,
+        y: topVal,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        size: icon.size,
+        iconSize: icon.iconSize,
+        delay: icon.delay,
+        dur: icon.dur,
+        mobile: icon.mobile,
+        Icon: icon.Icon,
+        radiusX: 0,
+        radiusY: 0,
+      };
+    });
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -225,8 +243,163 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     };
   }, []);
 
+  // Obstacle avoidance solver for expanded rectangles in percentage space
+  const resolvePercentRectCollision = (
+    particle: any,
+    rect: { left: number; right: number; top: number; bottom: number },
+    bufferX: number,
+    bufferY: number
+  ) => {
+    const minX = rect.left - bufferX;
+    const maxX = rect.right + bufferX;
+    const minY = rect.top - bufferY;
+    const maxY = rect.bottom + bufferY;
+
+    // Check if particle overlaps the expanded rect
+    if (
+      particle.x + particle.radiusX > minX &&
+      particle.x - particle.radiusX < maxX &&
+      particle.y + particle.radiusY > minY &&
+      particle.y - particle.radiusY < maxY
+    ) {
+      // Find closest point on expanded rect to particle center
+      const closestX = Math.max(minX, Math.min(particle.x, maxX));
+      const closestY = Math.max(minY, Math.min(particle.y, maxY));
+
+      // Distance vector from particle center to closest point
+      const dx = particle.x - closestX;
+      const dy = particle.y - closestY;
+      const distance = Math.hypot(dx, dy);
+
+      // Average radius for clean circular bounce
+      const radius = (particle.radiusX + particle.radiusY) / 2;
+
+      if (distance < radius) {
+        // Collision! Push out and bounce elastically
+        if (distance === 0) {
+          // Particle center is inside the rect. Determine closest edge to push out
+          const distL = particle.x - minX;
+          const distR = maxX - particle.x;
+          const distT = particle.y - minY;
+          const distB = maxY - particle.y;
+          const minDist = Math.min(distL, distR, distT, distB);
+
+          if (minDist === distL) {
+            particle.x = minX - particle.radiusX;
+            particle.vx = -Math.abs(particle.vx);
+          } else if (minDist === distR) {
+            particle.x = maxX + particle.radiusX;
+            particle.vx = Math.abs(particle.vx);
+          } else if (minDist === distT) {
+            particle.y = minY - particle.radiusY;
+            particle.vy = -Math.abs(particle.vy);
+          } else {
+            particle.y = maxY + particle.radiusY;
+            particle.vy = Math.abs(particle.vy);
+          }
+        } else {
+          const nx = dx / distance;
+          const ny = dy / distance;
+
+          // Push out along the collision vector
+          particle.x = closestX + nx * particle.radiusX;
+          particle.y = closestY + ny * particle.radiusY;
+
+          // Reflect velocity along collision normal
+          const dot = particle.vx * nx + particle.vy * ny;
+          if (dot < 0) {
+            // Bounce only if moving towards the obstacle
+            particle.vx = particle.vx - 2 * dot * nx;
+            particle.vy = particle.vy - 2 * dot * ny;
+          }
+        }
+      }
+    }
+  };
+
   useEffect(() => {
     let rafId: number | undefined;
+
+    const updatePhysicsAndRender = (shellRect: DOMRect) => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      // Query card obstacle bounding box
+      const cardEl = shell.querySelector('.auth-page-card');
+      const cardRect = cardEl?.getBoundingClientRect();
+      let cardPercent: { left: number; right: number; top: number; bottom: number } | null = null;
+      if (cardRect && cardRect.width > 0) {
+        cardPercent = {
+          left: ((cardRect.left - shellRect.left) / shellRect.width) * 100,
+          right: ((cardRect.right - shellRect.left) / shellRect.width) * 100,
+          top: ((cardRect.top - shellRect.top) / shellRect.height) * 100,
+          bottom: ((cardRect.bottom - shellRect.top) / shellRect.height) * 100,
+        };
+      }
+
+      // Query hero column obstacle bounding box (only on desktop where it's visible)
+      const isDesktop = window.innerWidth >= 1024;
+      const heroEl = isDesktop ? shell.querySelector('main > section:first-of-type') : null;
+      const heroRect = heroEl?.getBoundingClientRect();
+      let heroPercent: { left: number; right: number; top: number; bottom: number } | null = null;
+      if (heroRect && heroRect.width > 0) {
+        heroPercent = {
+          left: ((heroRect.left - shellRect.left) / shellRect.width) * 100,
+          right: ((heroRect.right - shellRect.left) / shellRect.width) * 100,
+          top: ((heroRect.top - shellRect.top) / shellRect.height) * 100,
+          bottom: ((heroRect.bottom - shellRect.top) / shellRect.height) * 100,
+        };
+      }
+
+      // Dynamic obstacle buffers (16px buffer converted to percentage)
+      const bufferX = (16 / shellRect.width) * 100;
+      const bufferY = (16 / shellRect.height) * 100;
+
+      particlesRef.current.forEach((particle, i) => {
+        const el = iconRefs.current[i];
+        if (!el) return;
+
+        // Calculate dynamic percentage radii based on shell size
+        particle.radiusX = (particle.size / 2 / shellRect.width) * 100;
+        particle.radiusY = (particle.size / 2 / shellRect.height) * 100;
+
+        // Apply constant velocity drift (bypass mouse physics entirely as requested)
+        particle.x += particle.vx;
+        particle.y += particle.vy;
+
+        // Viewport boundary check & elastic bounce
+        if (particle.x - particle.radiusX < 0) {
+          particle.x = particle.radiusX;
+          particle.vx = Math.abs(particle.vx);
+        } else if (particle.x + particle.radiusX > 100) {
+          particle.x = 100 - particle.radiusX;
+          particle.vx = -Math.abs(particle.vx);
+        }
+
+        if (particle.y - particle.radiusY < 0) {
+          particle.y = particle.radiusY;
+          particle.vy = Math.abs(particle.vy);
+        } else if (particle.y + particle.radiusY > 100) {
+          particle.y = 100 - particle.radiusY;
+          particle.vy = -Math.abs(particle.vy);
+        }
+
+        // Card collision avoidance solver
+        if (cardPercent) {
+          resolvePercentRectCollision(particle, cardPercent, bufferX, bufferY);
+        }
+
+        // Hero column collision avoidance solver
+        if (heroPercent) {
+          resolvePercentRectCollision(particle, heroPercent, bufferX, bufferY);
+        }
+
+        // Direct high-performance DOM update
+        el.style.left = `${particle.x.toFixed(4)}%`;
+        el.style.top = `${particle.y.toFixed(4)}%`;
+        el.style.transform = 'translate(-50%, -50%)';
+      });
+    };
 
     const updateConnectionLines = () => {
       const shell = shellRef.current;
@@ -234,6 +407,9 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
       const shellRect = shell.getBoundingClientRect();
       if (shellRect.width === 0 || shellRect.height === 0) return;
+
+      // Update particle physics and render elements
+      updatePhysicsAndRender(shellRect);
 
       const nowSeconds = performance.now() / 1000;
       const nextLines = connectionPairs.flatMap(([a, b], pairIndex) => {
@@ -354,9 +530,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         {/* -- Layer 4: Floating icons ---------------------- */}
         <div className="auth-page-icons-field" aria-hidden="true">
           {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => {
-            const depthFactor = (size - 38) / 26; // ranges from 0.0 to 1.0
-            const maxShift = 8 + 24 * depthFactor; // shift up to 32px based on depth
-            
             return (
               <div
                 key={i}
@@ -364,7 +537,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                   iconRefs.current[i] = node;
                 }}
                 className={cn(
-                  'auth-page-icon-wrapper absolute transition-transform duration-300 ease-out will-change-transform',
+                  'auth-page-icon-wrapper absolute will-change-[left,top]',
                   !mobile && 'auth-page-icon-desktop-only',
                 )}
                 style={{
@@ -372,7 +545,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                   left,
                   width: size,
                   height: size,
-                  transform: `translate3d(calc(var(--mouse-x, 0) * ${-maxShift}px), calc(var(--mouse-y, 0) * ${-maxShift}px), 0)`,
+                  transform: 'translate(-50%, -50%)',
                 }}
               >
                 <div
