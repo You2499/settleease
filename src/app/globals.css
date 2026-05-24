@@ -740,37 +740,35 @@
   overflow: visible;
 }
 
-.auth-page-lines path {
+.auth-page-lines path.auth-page-line-base {
   stroke: var(--auth-page-line-stroke);
-  stroke-width: 0.19;
+  stroke-width: 0.15;
   stroke-linecap: round;
   fill: none;
-  stroke-dasharray: 1.5 2.5;
-  animation: auth-page-line-pulse 14s linear infinite;
-  opacity: 0.92;
+  stroke-dasharray: 1 2.5;
+  opacity: 0.45;
+  transition: stroke 0.35s ease;
 }
 
-/* Stagger line animations */
-.auth-page-lines path:nth-child(odd) {
-  animation-delay: -3s;
-  animation-duration: 16s;
-  stroke-width: 0.21;
-  opacity: 0.95;
+.auth-page-lines path.auth-page-line-flow {
+  stroke: var(--auth-page-mode-accent);
+  stroke-width: 0.32;
+  stroke-linecap: round;
+  fill: none;
+  stroke-dasharray: 6 36;
+  animation: auth-page-flow-run 6s linear infinite;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 2px var(--auth-page-mode-accent));
+  transition: stroke 0.35s ease, filter 0.35s ease;
 }
 
-.auth-page-lines path:nth-child(3n) {
-  animation-delay: -7s;
-  animation-duration: 12s;
-  stroke-width: 0.17;
-  opacity: 0.8;
-}
-
-.auth-page-lines path:nth-child(4n) {
-  stroke-dasharray: 1.2 2.8;
-}
-
-.auth-page-lines path:nth-child(5n) {
-  stroke-dasharray: 1.8 2.2;
+@keyframes auth-page-flow-run {
+  from {
+    stroke-dashoffset: 42;
+  }
+  to {
+    stroke-dashoffset: -42;
+  }
 }
 
 /* -- Floating icon field ---------------------------- */

@@ -57,26 +57,26 @@ interface FloatingIconConfig {
 }
 
 const floatingIcons: FloatingIconConfig[] = [
-  { Icon: Wallet,           top: '8%',  left: '3%',  delay: '0s',     dur: '11s', size: 58, iconSize: 22, mobile: true },
-  { Icon: ReceiptText,      top: '14%', left: '18%', delay: '-3.2s',  dur: '9s',  size: 44, iconSize: 16, mobile: true },
-  { Icon: PiggyBank,        top: '5%',  left: '34%', delay: '-7.1s',  dur: '13s', size: 62, iconSize: 24 },
-  { Icon: Calculator,       top: '22%', left: '48%', delay: '-1.8s',  dur: '10s', size: 40, iconSize: 15 },
-  { Icon: TrendingUp,       top: '6%',  left: '62%', delay: '-5.5s',  dur: '12s', size: 54, iconSize: 20 },
-  { Icon: BarChart3,        top: '18%', left: '78%', delay: '-9.2s',  dur: '11s', size: 46, iconSize: 17 },
-  { Icon: CreditCard,       top: '35%', left: '5%',  delay: '-2.4s',  dur: '14s', size: 60, iconSize: 22, mobile: true },
-  { Icon: Landmark,         top: '40%', left: '22%', delay: '-6.8s',  dur: '10s', size: 38, iconSize: 14 },
-  { Icon: CircleDollarSign, top: '32%', left: '38%', delay: '-4.3s',  dur: '12s', size: 64, iconSize: 26 },
-  { Icon: Coins,            top: '45%', left: '55%', delay: '-8.1s',  dur: '9s',  size: 50, iconSize: 18 },
+  { Icon: Wallet,           top: '8%',  left: '2%',  delay: '0s',     dur: '11s', size: 58, iconSize: 22, mobile: true },
+  { Icon: ReceiptText,      top: '15%', left: '16%', delay: '-3.2s',  dur: '9s',  size: 44, iconSize: 16, mobile: true },
+  { Icon: PiggyBank,        top: '5%',  left: '32%', delay: '-7.1s',  dur: '13s', size: 62, iconSize: 24 },
+  { Icon: Calculator,       top: '22%', left: '46%', delay: '-1.8s',  dur: '10s', size: 40, iconSize: 15 },
+  { Icon: TrendingUp,       top: '6%',  left: '60%', delay: '-5.5s',  dur: '12s', size: 54, iconSize: 20 },
+  { Icon: BarChart3,        top: '16%', left: '82%', delay: '-9.2s',  dur: '11s', size: 46, iconSize: 17 },
+  { Icon: CreditCard,       top: '36%', left: '3%',  delay: '-2.4s',  dur: '14s', size: 60, iconSize: 22, mobile: true },
+  { Icon: Landmark,         top: '40%', left: '20%', delay: '-6.8s',  dur: '10s', size: 38, iconSize: 14 },
+  { Icon: CircleDollarSign, top: '32%', left: '36%', delay: '-4.3s',  dur: '12s', size: 64, iconSize: 26 },
+  { Icon: Coins,            top: '46%', left: '52%', delay: '-8.1s',  dur: '9s',  size: 50, iconSize: 18 },
   { Icon: ArrowRightLeft,   top: '28%', left: '70%', delay: '-1.1s',  dur: '13s', size: 42, iconSize: 16 },
-  { Icon: Scale,            top: '42%', left: '85%', delay: '-5.9s',  dur: '11s', size: 58, iconSize: 22, mobile: true },
-  { Icon: FileSpreadsheet,  top: '58%', left: '8%',  delay: '-3.7s',  dur: '10s', size: 48, iconSize: 18, mobile: true },
-  { Icon: ClipboardCheck,   top: '62%', left: '28%', delay: '-7.5s',  dur: '12s', size: 40, iconSize: 15 },
-  { Icon: ShieldCheck,      top: '55%', left: '45%', delay: '-0.6s',  dur: '14s', size: 54, iconSize: 20 },
+  { Icon: Scale,            top: '42%', left: '96%', delay: '-5.9s',  dur: '11s', size: 58, iconSize: 22, mobile: true },
+  { Icon: FileSpreadsheet,  top: '58%', left: '2%',  delay: '-3.7s',  dur: '10s', size: 48, iconSize: 18, mobile: true },
+  { Icon: ClipboardCheck,   top: '64%', left: '22%', delay: '-7.5s',  dur: '12s', size: 40, iconSize: 15 },
+  { Icon: ShieldCheck,      top: '55%', left: '44%', delay: '-0.6s',  dur: '14s', size: 54, iconSize: 20 },
   { Icon: Split,            top: '68%', left: '62%', delay: '-4.8s',  dur: '9s',  size: 62, iconSize: 24, mobile: true },
-  { Icon: ScanLine,         top: '72%', left: '80%', delay: '-2.9s',  dur: '11s', size: 46, iconSize: 17 },
-  { Icon: HandCoins,        top: '78%', left: '15%', delay: '-6.2s',  dur: '13s', size: 56, iconSize: 21, mobile: true },
-  { Icon: WalletCards,      top: '82%', left: '42%', delay: '-8.8s',  dur: '10s', size: 42, iconSize: 16 },
-  { Icon: ChartNoAxesCombined, top: '85%', left: '72%', delay: '-1.5s', dur: '12s', size: 50, iconSize: 18 },
+  { Icon: ScanLine,         top: '72%', left: '94%', delay: '-2.9s',  dur: '11s', size: 46, iconSize: 17 },
+  { Icon: HandCoins,        top: '78%', left: '8%',  delay: '-6.2s',  dur: '13s', size: 56, iconSize: 21, mobile: true },
+  { Icon: WalletCards,      top: '82%', left: '40%', delay: '-8.8s',  dur: '10s', size: 42, iconSize: 16 },
+  { Icon: ChartNoAxesCombined, top: '86%', left: '92%', delay: '-1.5s', dur: '12s', size: 50, iconSize: 18 },
 ];
 
 // Connection lines between specific icon pairs (indices into floatingIcons)
@@ -331,11 +331,23 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           preserveAspectRatio="none"
           aria-hidden="true"
         >
-          {connectionLines.map(({ d, key }) => (
-            <path
-              key={key}
-              d={d}
-            />
+          {connectionLines.map(({ d, key }, i) => (
+            <React.Fragment key={key}>
+              {/* Background structural dashed line */}
+              <path
+                d={d}
+                className="auth-page-line-base"
+              />
+              {/* Dynamic glowing laser flow packet */}
+              <path
+                d={d}
+                className="auth-page-line-flow"
+                style={{
+                  animationDuration: `${4.5 + (i % 4) * 1.2}s`,
+                  animationDelay: `${-(i % 3) * 1.8}s`,
+                }}
+              />
+            </React.Fragment>
           ))}
         </svg>
 
