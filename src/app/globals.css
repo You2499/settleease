@@ -782,8 +782,19 @@
   pointer-events: none;
 }
 
+/* -- Floating icon wrapper & animations ------------- */
+.auth-page-icon-wrapper {
+  pointer-events: auto;
+}
+
+.auth-page-icon-drift {
+  animation: auth-page-drift ease-in-out infinite;
+  will-change: transform;
+}
+
 .auth-page-icon {
   position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -795,14 +806,30 @@
   box-shadow:
     rgba(0, 0, 0, 0.06) 0px 0px 0px 0.5px inset,
     rgba(78, 50, 23, 0.03) 0px 8px 24px;
-  animation: auth-page-drift ease-in-out infinite;
-  will-change: transform;
+  transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.auth-page-icon:hover {
+  transform: scale(1.15) rotate(8deg);
+  border-color: var(--auth-page-mode-accent) !important;
+  color: var(--auth-page-mode-accent) !important;
+  box-shadow:
+    rgba(0, 0, 0, 0.08) 0px 0px 0px 0.5px inset,
+    var(--auth-page-mode-accent) 0px 0px 14px -3px,
+    rgba(78, 50, 23, 0.06) 0px 14px 36px;
 }
 
 .dark .auth-page-icon {
   box-shadow:
     rgba(255, 255, 255, 0.06) 0px 0px 0px 0.5px inset,
     rgba(0, 0, 0, 0.25) 0px 10px 28px;
+}
+
+.dark .auth-page-icon:hover {
+  box-shadow:
+    rgba(255, 255, 255, 0.08) 0px 0px 0px 0.5px inset,
+    var(--auth-page-mode-accent) 0px 0px 16px -2px,
+    rgba(0, 0, 0, 0.45) 0px 14px 36px;
 }
 
 /* -- Card ------------------------------------------- */

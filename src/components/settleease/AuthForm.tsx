@@ -57,26 +57,26 @@ interface FloatingIconConfig {
 }
 
 const floatingIcons: FloatingIconConfig[] = [
-  { Icon: Wallet,           top: '8%',  left: '3%',  delay: '0s',     dur: '11s', size: 54, iconSize: 20, mobile: true },
-  { Icon: ReceiptText,      top: '14%', left: '18%', delay: '-3.2s',  dur: '9s',  size: 50, iconSize: 18, mobile: true },
-  { Icon: PiggyBank,        top: '5%',  left: '34%', delay: '-7.1s',  dur: '13s', size: 56, iconSize: 20 },
-  { Icon: Calculator,       top: '22%', left: '48%', delay: '-1.8s',  dur: '10s', size: 48, iconSize: 18 },
-  { Icon: TrendingUp,       top: '6%',  left: '62%', delay: '-5.5s',  dur: '12s', size: 52, iconSize: 19 },
-  { Icon: BarChart3,        top: '18%', left: '78%', delay: '-9.2s',  dur: '11s', size: 50, iconSize: 18 },
-  { Icon: CreditCard,       top: '35%', left: '5%',  delay: '-2.4s',  dur: '14s', size: 52, iconSize: 19, mobile: true },
-  { Icon: Landmark,         top: '40%', left: '22%', delay: '-6.8s',  dur: '10s', size: 48, iconSize: 17 },
-  { Icon: CircleDollarSign, top: '32%', left: '38%', delay: '-4.3s',  dur: '12s', size: 56, iconSize: 21 },
+  { Icon: Wallet,           top: '8%',  left: '3%',  delay: '0s',     dur: '11s', size: 58, iconSize: 22, mobile: true },
+  { Icon: ReceiptText,      top: '14%', left: '18%', delay: '-3.2s',  dur: '9s',  size: 44, iconSize: 16, mobile: true },
+  { Icon: PiggyBank,        top: '5%',  left: '34%', delay: '-7.1s',  dur: '13s', size: 62, iconSize: 24 },
+  { Icon: Calculator,       top: '22%', left: '48%', delay: '-1.8s',  dur: '10s', size: 40, iconSize: 15 },
+  { Icon: TrendingUp,       top: '6%',  left: '62%', delay: '-5.5s',  dur: '12s', size: 54, iconSize: 20 },
+  { Icon: BarChart3,        top: '18%', left: '78%', delay: '-9.2s',  dur: '11s', size: 46, iconSize: 17 },
+  { Icon: CreditCard,       top: '35%', left: '5%',  delay: '-2.4s',  dur: '14s', size: 60, iconSize: 22, mobile: true },
+  { Icon: Landmark,         top: '40%', left: '22%', delay: '-6.8s',  dur: '10s', size: 38, iconSize: 14 },
+  { Icon: CircleDollarSign, top: '32%', left: '38%', delay: '-4.3s',  dur: '12s', size: 64, iconSize: 26 },
   { Icon: Coins,            top: '45%', left: '55%', delay: '-8.1s',  dur: '9s',  size: 50, iconSize: 18 },
-  { Icon: ArrowRightLeft,   top: '28%', left: '70%', delay: '-1.1s',  dur: '13s', size: 48, iconSize: 17 },
-  { Icon: Scale,            top: '42%', left: '85%', delay: '-5.9s',  dur: '11s', size: 54, iconSize: 20, mobile: true },
-  { Icon: FileSpreadsheet,  top: '58%', left: '8%',  delay: '-3.7s',  dur: '10s', size: 50, iconSize: 18, mobile: true },
-  { Icon: ClipboardCheck,   top: '62%', left: '28%', delay: '-7.5s',  dur: '12s', size: 48, iconSize: 17 },
-  { Icon: ShieldCheck,      top: '55%', left: '45%', delay: '-0.6s',  dur: '14s', size: 52, iconSize: 19 },
-  { Icon: Split,            top: '68%', left: '62%', delay: '-4.8s',  dur: '9s',  size: 56, iconSize: 21, mobile: true },
-  { Icon: ScanLine,         top: '72%', left: '80%', delay: '-2.9s',  dur: '11s', size: 50, iconSize: 18 },
-  { Icon: HandCoins,        top: '78%', left: '15%', delay: '-6.2s',  dur: '13s', size: 54, iconSize: 20, mobile: true },
-  { Icon: WalletCards,      top: '82%', left: '42%', delay: '-8.8s',  dur: '10s', size: 48, iconSize: 17 },
-  { Icon: ChartNoAxesCombined, top: '85%', left: '72%', delay: '-1.5s', dur: '12s', size: 52, iconSize: 19 },
+  { Icon: ArrowRightLeft,   top: '28%', left: '70%', delay: '-1.1s',  dur: '13s', size: 42, iconSize: 16 },
+  { Icon: Scale,            top: '42%', left: '85%', delay: '-5.9s',  dur: '11s', size: 58, iconSize: 22, mobile: true },
+  { Icon: FileSpreadsheet,  top: '58%', left: '8%',  delay: '-3.7s',  dur: '10s', size: 48, iconSize: 18, mobile: true },
+  { Icon: ClipboardCheck,   top: '62%', left: '28%', delay: '-7.5s',  dur: '12s', size: 40, iconSize: 15 },
+  { Icon: ShieldCheck,      top: '55%', left: '45%', delay: '-0.6s',  dur: '14s', size: 54, iconSize: 20 },
+  { Icon: Split,            top: '68%', left: '62%', delay: '-4.8s',  dur: '9s',  size: 62, iconSize: 24, mobile: true },
+  { Icon: ScanLine,         top: '72%', left: '80%', delay: '-2.9s',  dur: '11s', size: 46, iconSize: 17 },
+  { Icon: HandCoins,        top: '78%', left: '15%', delay: '-6.2s',  dur: '13s', size: 56, iconSize: 21, mobile: true },
+  { Icon: WalletCards,      top: '82%', left: '42%', delay: '-8.8s',  dur: '10s', size: 42, iconSize: 16 },
+  { Icon: ChartNoAxesCombined, top: '85%', left: '72%', delay: '-1.5s', dur: '12s', size: 50, iconSize: 18 },
 ];
 
 // Connection lines between specific icon pairs (indices into floatingIcons)
@@ -159,6 +159,31 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     const raf = requestAnimationFrame(() => setHasMounted(true));
     return () => cancelAnimationFrame(raf);
   }, []);
+
+  // Mouse movement parallax effect for floating icons (fluid CSS custom variables logic)
+  useEffect(() => {
+    if (typeof window === 'undefined' || prefersReducedMotion) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      const { clientX, clientY } = e;
+      const { innerWidth, innerHeight } = window;
+
+      // Calculate normalized mouse coordinates (-0.5 to 0.5)
+      const x = (clientX / innerWidth) - 0.5;
+      const y = (clientY / innerHeight) - 0.5;
+
+      shell.style.setProperty('--mouse-x', `${x.toFixed(4)}`);
+      shell.style.setProperty('--mouse-y', `${y.toFixed(4)}`);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+    };
+  }, [prefersReducedMotion]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -292,28 +317,42 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
 
         {/* -- Layer 4: Floating icons ---------------------- */}
         <div className="auth-page-icons-field" aria-hidden="true">
-          {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => (
-            <div
-              key={i}
-              ref={(node) => {
-                iconRefs.current[i] = node;
-              }}
-              className={cn(
-                'auth-page-icon',
-                !mobile && 'auth-page-icon-desktop-only',
-              )}
-              style={{
-                top,
-                left,
-                width: size,
-                height: size,
-                animationDelay: delay,
-                animationDuration: dur,
-              }}
-            >
-              <Icon style={{ width: iconSize, height: iconSize }} />
-            </div>
-          ))}
+          {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => {
+            const depthFactor = (size - 38) / 26; // ranges from 0.0 to 1.0
+            const maxShift = 8 + 24 * depthFactor; // shift up to 32px based on depth
+            
+            return (
+              <div
+                key={i}
+                ref={(node) => {
+                  iconRefs.current[i] = node;
+                }}
+                className={cn(
+                  'auth-page-icon-wrapper absolute transition-transform duration-300 ease-out will-change-transform',
+                  !mobile && 'auth-page-icon-desktop-only',
+                )}
+                style={{
+                  top,
+                  left,
+                  width: size,
+                  height: size,
+                  transform: `translate3d(calc(var(--mouse-x, 0) * ${-maxShift}px), calc(var(--mouse-y, 0) * ${-maxShift}px), 0)`,
+                }}
+              >
+                <div
+                  className="auth-page-icon-drift h-full w-full"
+                  style={{
+                    animationDelay: delay,
+                    animationDuration: dur,
+                  }}
+                >
+                  <div className="auth-page-icon h-full w-full flex items-center justify-center">
+                    <Icon style={{ width: iconSize, height: iconSize }} />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* -- Main content --------------------------------- */}
