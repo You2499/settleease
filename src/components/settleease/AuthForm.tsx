@@ -483,23 +483,31 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                         </Button>
                       </div>
 
-                      {isLoginView && (
-                        <div className="flex items-center space-x-2 py-1 px-1">
-                          <input
-                            id="remember-me"
-                            type="checkbox"
-                            checked={rememberMe}
-                            onChange={(e) => setRememberMe(e.target.checked)}
-                            className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-background/95 text-foreground accent-black focus:ring-ring"
-                          />
-                          <Label
-                            htmlFor="remember-me"
-                            className="cursor-pointer text-[11px] font-normal leading-none text-muted-foreground select-none hover:text-foreground transition-colors"
-                          >
-                            Keep me signed in on this device
-                          </Label>
-                        </div>
-                      )}
+                      <div className="h-6 flex items-center px-1">
+                        {isLoginView ? (
+                          <div className="flex items-center space-x-2">
+                            <input
+                              id="remember-me"
+                              type="checkbox"
+                              checked={rememberMe}
+                              onChange={(e) => setRememberMe(e.target.checked)}
+                              className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-background/95 text-foreground accent-black focus:ring-ring"
+                            />
+                            <Label
+                              htmlFor="remember-me"
+                              className="cursor-pointer text-[11px] font-normal leading-none text-muted-foreground select-none hover:text-foreground transition-colors"
+                            >
+                              Keep me signed in on this device
+                            </Label>
+                          </div>
+                        ) : (
+                          <div className="flex items-center space-x-1.5 opacity-60">
+                            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                              Passwords are encrypted end-to-end
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="auth-page-action-slot">
