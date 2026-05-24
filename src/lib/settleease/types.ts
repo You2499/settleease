@@ -138,6 +138,7 @@ export interface UserProfile {
   has_seen_welcome_toast?: boolean;
   should_show_welcome_toast?: boolean;
   last_sign_in_at?: string;
+  last_global_logout_at?: string;
   created_at?: string;
   updated_at?: string;
   seen_announcement_ids?: string[];

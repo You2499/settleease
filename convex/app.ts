@@ -215,6 +215,7 @@ function profileDto(profile: any) {
     has_seen_welcome_toast: profile.hasSeenWelcomeToast ?? false,
     should_show_welcome_toast: profile.shouldShowWelcomeToast ?? false,
     last_sign_in_at: profile.lastSignInAt ?? undefined,
+    last_global_logout_at: profile.lastGlobalLogoutAt ?? undefined,
     created_at: profile.createdAt,
     updated_at: profile.updatedAt,
     seen_announcement_ids: profile.seenAnnouncementIds ?? [],
@@ -3654,3 +3655,18 @@ export const markAnnouncementAsSeen = mutation({
     return profileDto(await ctx.db.get(profile._id));
   },
 });
+
+export const logOutGlobally = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const profile = await getProfileBySupabaseUserId(ctx, supabaseUserId);
+    if (!profile) return;
+
+    await ctx.db.patch(profile._id, {
+      lastGlobalLogoutAt: nowIso(),
+      updatedAt: nowIso(),
+    });
+  },
+});
+

@@ -71,6 +71,7 @@ export default defineSchema({
     hasSeenWelcomeToast: v.optional(v.boolean()),
     shouldShowWelcomeToast: v.optional(v.boolean()),
     lastSignInAt: v.optional(v.string()),
+    lastGlobalLogoutAt: v.optional(v.string()),
     createdAt: v.string(),
     updatedAt: v.string(),
     seenAnnouncementIds: v.optional(v.array(v.string())),

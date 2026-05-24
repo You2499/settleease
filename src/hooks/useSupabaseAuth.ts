@@ -39,25 +39,28 @@ function hasStoredSupabaseSession() {
   if (typeof window === 'undefined') return false;
 
   try {
-    return Object.keys(localStorage).some((key) => {
-      if (
-        !(key.startsWith('sb-') && key.endsWith('-auth-token')) &&
-        !key.includes('supabase.auth.token')
-      ) {
-        return false;
-      }
+    const checkStorage = (storage: Storage) => {
+      return Object.keys(storage).some((key) => {
+        if (
+          !(key.startsWith('sb-') && key.endsWith('-auth-token')) &&
+          !key.includes('supabase.auth.token')
+        ) {
+          return false;
+        }
 
-      const rawValue = localStorage.getItem(key);
-      if (!rawValue) return false;
+        const rawValue = storage.getItem(key);
+        if (!rawValue) return false;
 
-      try {
-        const parsed = JSON.parse(rawValue);
-        const session = parsed?.currentSession ?? parsed;
-        return Boolean(session?.access_token || session?.refresh_token);
-      } catch {
-        return rawValue.includes('access_token') || rawValue.includes('refresh_token');
-      }
-    });
+        try {
+          const parsed = JSON.parse(rawValue);
+          const session = parsed?.currentSession ?? parsed;
+          return Boolean(session?.access_token || session?.refresh_token);
+        } catch {
+          return rawValue.includes('access_token') || rawValue.includes('refresh_token');
+        }
+      });
+    };
+    return checkStorage(localStorage) || checkStorage(sessionStorage);
   } catch (error) {
     console.warn('Could not inspect stored auth session:', error);
     return false;
@@ -123,11 +126,13 @@ export function useSupabaseAuth() {
   const [hasRecoverableAuthSession, setHasRecoverableAuthSession] = useState(
     isDevelopmentEnvironment || hasAuthRecoveryHint(),
   );
+  const [sessionStartedAt, setSessionStartedAt] = useState<number>(Date.now());
   const hasShownLogoutToastRef = useRef(false);
   const lastHandledLogoutIssuedAtRef = useRef(0);
   const lastSessionKeyRef = useRef<string | null>(null);
   const logoutChannelRef = useRef<BroadcastChannel | null>(null);
   const markSignIn = useMutation(api.app.markSignIn);
+  const logOutGlobally = useMutation(api.app.logOutGlobally);
   const isLoadingAuth = authStatus === 'checking';
 
   useEffect(() => {
@@ -174,6 +179,8 @@ export function useSupabaseAuth() {
       return;
     }
 
+    const isTransitioningToAuth = newAuthUser && !currentUserRef.current;
+
     lastSessionKeyRef.current = sessionKey;
     currentUserRef.current = newAuthUser;
     setHasRecoverableAuthSession(Boolean(newAuthUser));
@@ -182,6 +189,10 @@ export function useSupabaseAuth() {
       return newAuthUser;
     });
     setAuthStatusAndRef(newAuthUser ? 'authenticated' : 'unauthenticated');
+
+    if (isTransitioningToAuth) {
+      setSessionStartedAt(Date.now());
+    }
 
     if (newAuthUser) {
       hasShownLogoutToastRef.current = false;
@@ -300,6 +311,12 @@ export function useSupabaseAuth() {
     broadcastLogout(userId);
     
     try {
+      try {
+        await logOutGlobally();
+      } catch (convexErr) {
+        console.warn("Failed to propagate global logout to Convex:", convexErr);
+      }
+
       const { error } = await supabaseClient.auth.signOut();
       
       if (error) {
@@ -416,5 +433,6 @@ export function useSupabaseAuth() {
     hasRecoverableAuthSession,
     handleLogout,
     isDevelopmentEnvironment,
+    sessionStartedAt,
   };
 }

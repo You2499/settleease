@@ -138,6 +138,7 @@ function SettleEasePageContent() {
     hasRecoverableAuthSession,
     handleLogout,
     isDevelopmentEnvironment,
+    sessionStartedAt,
   } = useSupabaseAuth();
 
   const [isOAuthCallback, setIsOAuthCallback] = useState(false);
@@ -152,7 +153,6 @@ function SettleEasePageContent() {
     }
   }, [currentUser, isLoadingAuth, hasResolvedInitialView]);
 
-  // Use user profile hook
   const {
     userProfile,
     isLoadingProfile,
@@ -161,6 +161,22 @@ function SettleEasePageContent() {
     refreshUserProfile,
     updateUserProfile,
   } = useUserProfile(currentUser);
+
+  // Cross-Browser Real-Time Logout Synchronization Hook
+  useEffect(() => {
+    if (!currentUser || !userProfile?.last_global_logout_at) return;
+
+    const globalLogoutTime = new Date(userProfile.last_global_logout_at).getTime();
+    if (globalLogoutTime > sessionStartedAt) {
+      console.log("[Auth Sync] Detected global logout triggered on another device/browser. Logging out locally.");
+      toast({
+        title: "Session Expired",
+        description: "You have been signed out on another browser or device.",
+        variant: "destructive",
+      });
+      void handleLogout();
+    }
+  }, [currentUser, userProfile?.last_global_logout_at, sessionStartedAt, handleLogout]);
 
   const userRole = (currentUser && userProfile?.role ? userProfile.role : null) as UserRole;
   const isLoadingRole = !!currentUser && (isLoadingProfile || !userProfile || !userRole);

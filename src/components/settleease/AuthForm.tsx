@@ -128,9 +128,11 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     showResendConfirmation,
     showGoogleModal,
     showPassword,
+    rememberMe,
     authSuggestion,
     setShowGoogleModal,
     setShowPassword,
+    setRememberMe,
     firstNameRef,
     emailRef,
     handleSubmit,
@@ -481,6 +483,24 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
                         </Button>
                       </div>
                     </div>
+
+                    {isLoginView && (
+                      <div className="flex items-center space-x-2.5 py-0.5 px-1">
+                        <input
+                          id="remember-me"
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="h-4 w-4 accent-black cursor-pointer rounded border-border bg-background text-foreground focus:ring-ring"
+                        />
+                        <Label
+                          htmlFor="remember-me"
+                          className="cursor-pointer text-xs font-normal leading-none text-muted-foreground select-none hover:text-foreground transition-colors"
+                        >
+                          Keep me signed in on this device
+                        </Label>
+                      </div>
+                    )}
 
                     <div className="auth-page-action-slot">
                       {showResendConfirmation ? (

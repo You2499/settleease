@@ -141,6 +141,7 @@ export function useAuthFormLogic({ supabase, onAuthSuccess }: UseAuthFormLogicPr
   const [resendEmail, setResendEmail] = useState('');
   const [showGoogleModal, setShowGoogleModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
 
   // ── Refs ────────────────────────────────────────────
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -438,6 +439,9 @@ export function useAuthFormLogic({ supabase, onAuthSuccess }: UseAuthFormLogicPr
 
     try {
       if (isLoginView) {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem('settleease_remember_me', String(rememberMe));
+        }
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
           email: normalizedEmail,
           password,
@@ -627,6 +631,9 @@ export function useAuthFormLogic({ supabase, onAuthSuccess }: UseAuthFormLogicPr
     console.log("Google OAuth: Loading state set, isGoogleLoading should be true");
 
     try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('settleease_remember_me', String(rememberMe));
+      }
       console.log("Google OAuth: Calling signInWithOAuth");
       const { error: googleError } = await supabase!.auth.signInWithOAuth({
         provider: 'google',
@@ -698,6 +705,7 @@ export function useAuthFormLogic({ supabase, onAuthSuccess }: UseAuthFormLogicPr
     resendEmail,
     showGoogleModal,
     showPassword,
+    rememberMe,
     authSuggestion,
 
     // Setters
@@ -707,6 +715,7 @@ export function useAuthFormLogic({ supabase, onAuthSuccess }: UseAuthFormLogicPr
     setLastName,
     setShowGoogleModal,
     setShowPassword,
+    setRememberMe,
 
     // Refs
     firstNameRef,
