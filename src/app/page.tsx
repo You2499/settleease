@@ -166,6 +166,10 @@ function SettleEasePageContent() {
   useEffect(() => {
     if (!currentUser || !userProfile?.last_global_logout_at) return;
 
+    if (typeof window !== 'undefined' && window.sessionStorage.getItem('settleease_logging_out') === 'true') {
+      return;
+    }
+
     const globalLogoutTime = new Date(userProfile.last_global_logout_at).getTime();
     if (globalLogoutTime > sessionStartedAt) {
       console.log("[Auth Sync] Detected global logout triggered on another device/browser. Logging out locally.");

@@ -192,6 +192,9 @@ export function useSupabaseAuth() {
 
     if (isTransitioningToAuth) {
       setSessionStartedAt(Date.now());
+      if (typeof window !== 'undefined') {
+        window.sessionStorage.removeItem('settleease_logging_out');
+      }
     }
 
     if (newAuthUser) {
@@ -306,6 +309,10 @@ export function useSupabaseAuth() {
     if (isDevelopmentEnvironment) return;
 
     if (!supabaseClient) return;
+
+    if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem('settleease_logging_out', 'true');
+    }
 
     const userId = currentUserRef.current?.id ?? null;
     broadcastLogout(userId);
