@@ -651,11 +651,11 @@
   --auth-page-mode-accent: #141414;
   --auth-page-mode-accent-foreground: #ffffff;
   --auth-page-mark-bg: rgba(245, 242, 239, 0.9);
-  --auth-page-icon-bg: rgba(255, 255, 255, 0.68);
-  --auth-page-icon-border: rgba(0, 0, 0, 0.06);
-  --auth-page-icon-color: rgba(0, 0, 0, 0.44);
-  --auth-page-line-stroke: rgba(78, 50, 23, 0.08);
-  --auth-page-dot-color: rgba(0, 0, 0, 0.06);
+  
+  /* -- Redesigned blueprint grid and spotlight variables -- */
+  --auth-page-grid-line: rgba(0, 0, 0, 0.035);
+  --auth-page-spotlight-color: rgba(230, 218, 202, 0.45);
+  
   --auth-page-mesh-1: rgba(245, 242, 239, 0.5);
   --auth-page-mesh-2: rgba(230, 225, 218, 0.3);
   --auth-page-mesh-3: rgba(245, 240, 235, 0.25);
@@ -669,10 +669,11 @@
   --auth-page-mode-accent: #166534;
   --auth-page-mode-accent-foreground: #ffffff;
   --auth-page-mark-bg: rgba(226, 244, 232, 0.92);
-  --auth-page-icon-bg: rgba(240, 250, 243, 0.65);
-  --auth-page-icon-border: rgba(27, 94, 63, 0.08);
-  --auth-page-icon-color: rgba(22, 101, 52, 0.4);
-  --auth-page-line-stroke: rgba(27, 94, 63, 0.06);
+  
+  /* -- Redesigned green grid and spotlight variables -- */
+  --auth-page-grid-line: rgba(22, 101, 52, 0.035);
+  --auth-page-spotlight-color: rgba(187, 230, 199, 0.55);
+  
   --auth-page-mesh-1: rgba(226, 244, 232, 0.4);
   --auth-page-mesh-2: rgba(200, 235, 210, 0.25);
 }
@@ -684,11 +685,11 @@
   --auth-page-mode-accent: #f5f5f4;
   --auth-page-mode-accent-foreground: #111111;
   --auth-page-mark-bg: rgba(255, 255, 255, 0.08);
-  --auth-page-icon-bg: rgba(255, 255, 255, 0.05);
-  --auth-page-icon-border: rgba(255, 255, 255, 0.08);
-  --auth-page-icon-color: rgba(255, 255, 255, 0.38);
-  --auth-page-line-stroke: rgba(255, 255, 255, 0.04);
-  --auth-page-dot-color: rgba(255, 255, 255, 0.04);
+  
+  /* -- Redesigned dark grid and spotlight variables -- */
+  --auth-page-grid-line: rgba(255, 255, 255, 0.02);
+  --auth-page-spotlight-color: rgba(255, 255, 255, 0.025);
+  
   --auth-page-mesh-1: rgba(255, 255, 255, 0.03);
   --auth-page-mesh-2: rgba(255, 255, 255, 0.02);
   --auth-page-mesh-3: rgba(255, 255, 255, 0.015);
@@ -700,24 +701,20 @@
   --auth-page-mode-accent: #86efac;
   --auth-page-mode-accent-foreground: #052e16;
   --auth-page-mark-bg: rgba(34, 197, 94, 0.14);
-  --auth-page-icon-bg: rgba(34, 197, 94, 0.06);
-  --auth-page-icon-border: rgba(110, 231, 183, 0.1);
-  --auth-page-icon-color: rgba(134, 239, 172, 0.35);
-  --auth-page-line-stroke: rgba(110, 231, 183, 0.04);
+  
+  /* -- Redesigned dark green grid and spotlight variables -- */
+  --auth-page-grid-line: rgba(110, 231, 183, 0.015);
+  --auth-page-spotlight-color: rgba(16, 185, 129, 0.05);
 }
 
-/* -- Dot grid background ---------------------------- */
-.auth-page-dot-grid {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background-image: radial-gradient(circle, var(--auth-page-dot-color) 1px, transparent 1px);
-  background-size: 32px 32px;
-  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, rgba(0,0,0,0.6), transparent 75%);
+/* -- Layer 1: Architectural Blueprint grid background -- */
+.auth-page-blueprint-grid {
+  color: var(--auth-page-grid-line);
+  transition: color 0.35s ease;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 40%, rgba(0,0,0,1), transparent 75%);
 }
 
-/* -- Gradient mesh ---------------------------------- */
+/* -- Layer 2: Gradient mesh -------------------------- */
 .auth-page-gradient-mesh {
   position: absolute;
   inset: 0;
@@ -729,105 +726,10 @@
     radial-gradient(ellipse 60% 30% at 50% 90%, var(--auth-page-mesh-3, transparent), transparent);
 }
 
-/* -- SVG connection lines --------------------------- */
-.auth-page-lines {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  overflow: visible;
-}
-
-.auth-page-lines path.auth-page-line-base {
-  stroke: var(--auth-page-line-stroke);
-  stroke-width: 0.15;
-  stroke-linecap: round;
-  fill: none;
-  stroke-dasharray: 1 2.5;
-  opacity: 0.45;
-  transition: stroke 0.35s ease;
-}
-
-.auth-page-lines path.auth-page-line-flow {
-  stroke: var(--auth-page-mode-accent);
-  stroke-width: 0.32;
-  stroke-linecap: round;
-  fill: none;
-  stroke-dasharray: 6 36;
-  animation: auth-page-flow-run 6s linear infinite;
-  opacity: 0.85;
-  filter: drop-shadow(0 0 2px var(--auth-page-mode-accent));
-  transition: stroke 0.35s ease, filter 0.35s ease;
-}
-
-@keyframes auth-page-flow-run {
-  from {
-    stroke-dashoffset: 42;
-  }
-  to {
-    stroke-dashoffset: -42;
-  }
-}
-
-/* -- Floating icon field ---------------------------- */
-.auth-page-icons-field {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-/* -- Floating icon wrapper & animations ------------- */
-.auth-page-icon-wrapper {
-  pointer-events: auto;
-}
-
-.auth-page-icon-drift {
-  animation: auth-page-drift ease-in-out infinite;
-  will-change: transform;
-}
-
-.auth-page-icon {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 9999px;
-  border: 1px solid var(--auth-page-icon-border);
-  background: var(--auth-page-icon-bg);
-  color: var(--auth-page-icon-color);
-  backdrop-filter: blur(8px);
-  box-shadow:
-    rgba(0, 0, 0, 0.06) 0px 0px 0px 0.5px inset,
-    rgba(78, 50, 23, 0.03) 0px 8px 24px;
-  transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.auth-page-icon:hover {
-  transform: scale(1.15) rotate(8deg);
-  border-color: var(--auth-page-mode-accent) !important;
-  color: var(--auth-page-mode-accent) !important;
-  box-shadow:
-    rgba(0, 0, 0, 0.08) 0px 0px 0px 0.5px inset,
-    var(--auth-page-mode-accent) 0px 0px 14px -3px,
-    rgba(78, 50, 23, 0.06) 0px 14px 36px;
-}
-
-.dark .auth-page-icon {
-  box-shadow:
-    rgba(255, 255, 255, 0.06) 0px 0px 0px 0.5px inset,
-    rgba(0, 0, 0, 0.25) 0px 10px 28px;
-}
-
-.dark .auth-page-icon:hover {
-  box-shadow:
-    rgba(255, 255, 255, 0.08) 0px 0px 0px 0.5px inset,
-    var(--auth-page-mode-accent) 0px 0px 16px -2px,
-    rgba(0, 0, 0, 0.45) 0px 14px 36px;
+/* -- Ambient card spotlight -------------------------- */
+.auth-page-card-spotlight {
+  background: var(--auth-page-spotlight-color);
+  transition: background-color 0.5s ease;
 }
 
 /* -- Card ------------------------------------------- */
@@ -943,29 +845,6 @@
 }
 
 /* -- Keyframes -------------------------------------- */
-@keyframes auth-page-drift {
-  0%, 100% {
-    transform: translate3d(0, 0, 0) rotate(0deg);
-  }
-  25% {
-    transform: translate3d(8px, -12px, 0) rotate(3deg);
-  }
-  50% {
-    transform: translate3d(-6px, 6px, 0) rotate(-2deg);
-  }
-  75% {
-    transform: translate3d(10px, 8px, 0) rotate(5deg);
-  }
-}
-
-@keyframes auth-page-line-pulse {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -80;
-  }
-}
 
 @keyframes auth-page-card-enter {
   from {
@@ -991,23 +870,8 @@
 
 /* -- Mobile overrides ------------------------------- */
 @media (max-width: 767px) {
-  .auth-page-icon-desktop-only {
-    display: none;
-  }
-
-  .auth-page-icon {
-    opacity: 0.7;
-  }
-
-
-
   .auth-page-card-copy {
     display: none;
-  }
-
-  .auth-page-dot-grid {
-    background-size: 28px 28px;
-    mask-image: radial-gradient(ellipse 90% 50% at 50% 30%, rgba(0,0,0,0.4), transparent 70%);
   }
 }
 
@@ -1080,14 +944,6 @@
 
 /* -- Reduced motion --------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  .auth-page-icon {
-    animation: none !important;
-  }
-
-  .auth-page-lines path {
-    animation: none !important;
-  }
-
   .auth-page-card {
     opacity: 1;
     transform: none;

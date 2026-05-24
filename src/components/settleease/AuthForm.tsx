@@ -1,36 +1,18 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 import {
-  ArrowRightLeft,
   BadgeCheck,
-  BarChart3,
-  Calculator,
-  ChartNoAxesCombined,
-  CircleDollarSign,
-  ClipboardCheck,
-  Coins,
-  CreditCard,
   Eye,
   EyeOff,
-  FileSpreadsheet,
   HandCoins,
-  Landmark,
   Lightbulb,
   LogIn,
-  PiggyBank,
-  ReceiptText,
   ScanLine,
-  Scale,
-  ShieldCheck,
-  Split,
-  TrendingUp,
   UserPlus,
-  Wallet,
   WalletCards,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,77 +25,10 @@ import packageJson from '../../../package.json';
 import { GoogleMark } from './BrandAssets';
 import { useAuthFormLogic, authBenefits } from '@/hooks/useAuthFormLogic';
 
-// --- Floating icon configuration ----------------------
-// Each icon is hand-placed with unique position, delay, duration for organic feel.
-interface FloatingIconConfig {
-  Icon: LucideIcon;
-  top: string;
-  left: string;
-  delay: string;   // animation-delay
-  dur: string;      // animation-duration
-  size: number;     // pill container size in px
-  iconSize: number; // icon size in px
-  mobile?: boolean; // show on mobile?
-}
-
-const floatingIcons: FloatingIconConfig[] = [
-  { Icon: Wallet,           top: '8%',  left: '2%',  delay: '0s',     dur: '11s', size: 58, iconSize: 22, mobile: true },
-  { Icon: ReceiptText,      top: '15%', left: '16%', delay: '-3.2s',  dur: '9s',  size: 44, iconSize: 16, mobile: true },
-  { Icon: PiggyBank,        top: '5%',  left: '32%', delay: '-7.1s',  dur: '13s', size: 62, iconSize: 24 },
-  { Icon: Calculator,       top: '22%', left: '46%', delay: '-1.8s',  dur: '10s', size: 40, iconSize: 15 },
-  { Icon: TrendingUp,       top: '6%',  left: '60%', delay: '-5.5s',  dur: '12s', size: 54, iconSize: 20 },
-  { Icon: BarChart3,        top: '16%', left: '82%', delay: '-9.2s',  dur: '11s', size: 46, iconSize: 17 },
-  { Icon: CreditCard,       top: '36%', left: '3%',  delay: '-2.4s',  dur: '14s', size: 60, iconSize: 22, mobile: true },
-  { Icon: Landmark,         top: '40%', left: '20%', delay: '-6.8s',  dur: '10s', size: 38, iconSize: 14 },
-  { Icon: CircleDollarSign, top: '32%', left: '36%', delay: '-4.3s',  dur: '12s', size: 64, iconSize: 26 },
-  { Icon: Coins,            top: '46%', left: '52%', delay: '-8.1s',  dur: '9s',  size: 50, iconSize: 18 },
-  { Icon: ArrowRightLeft,   top: '28%', left: '70%', delay: '-1.1s',  dur: '13s', size: 42, iconSize: 16 },
-  { Icon: Scale,            top: '42%', left: '96%', delay: '-5.9s',  dur: '11s', size: 58, iconSize: 22, mobile: true },
-  { Icon: FileSpreadsheet,  top: '58%', left: '2%',  delay: '-3.7s',  dur: '10s', size: 48, iconSize: 18, mobile: true },
-  { Icon: ClipboardCheck,   top: '64%', left: '22%', delay: '-7.5s',  dur: '12s', size: 40, iconSize: 15 },
-  { Icon: ShieldCheck,      top: '55%', left: '44%', delay: '-0.6s',  dur: '14s', size: 54, iconSize: 20 },
-  { Icon: Split,            top: '68%', left: '62%', delay: '-4.8s',  dur: '9s',  size: 62, iconSize: 24, mobile: true },
-  { Icon: ScanLine,         top: '72%', left: '94%', delay: '-2.9s',  dur: '11s', size: 46, iconSize: 17 },
-  { Icon: HandCoins,        top: '78%', left: '8%',  delay: '-6.2s',  dur: '13s', size: 56, iconSize: 21, mobile: true },
-  { Icon: WalletCards,      top: '82%', left: '40%', delay: '-8.8s',  dur: '10s', size: 42, iconSize: 16 },
-  { Icon: ChartNoAxesCombined, top: '86%', left: '92%', delay: '-1.5s', dur: '12s', size: 50, iconSize: 18 },
-];
-
-// Connection lines between specific icon pairs (indices into floatingIcons)
-const connectionPairs: [number, number][] = [
-  [0, 1], [1, 2], [2, 4], [3, 4], [5, 10],
-  [6, 7], [7, 8], [8, 9], [9, 10], [10, 11],
-  [12, 13], [13, 14], [14, 15], [15, 16],
-  [17, 18], [18, 19],
-];
-
 interface AuthFormProps {
   supabase: SupabaseClient | undefined;
   onAuthSuccess?: (user: SupabaseUser) => void;
 }
-
-interface LineSegment {
-  d: string;
-  key: string;
-}
-
-interface ConnectionCurveSeed {
-  phase: number;
-  amplitude: number;
-  speed: number;
-  direction: 1 | -1;
-}
-
-const connectionCurveSeeds: ConnectionCurveSeed[] = connectionPairs.map(([a, b], index) => {
-  const seed = (a + 1) * 37 + (b + 1) * 17 + index * 13;
-  const phase = (seed % 360) * (Math.PI / 180);
-  const amplitude = 1 + (seed % 10) * 0.09; // medium random intensity
-  const speed = 0.6 + (seed % 7) * 0.08;
-  const direction: 1 | -1 = seed % 2 === 0 ? 1 : -1;
-  return { phase, amplitude, speed, direction };
-});
-
-const clampToViewBox = (value: number) => Math.min(98, Math.max(2, value));
 
 export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   const {
@@ -149,10 +64,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   } = useAuthFormLogic({ supabase, onAuthSuccess });
 
   const [hasMounted, setHasMounted] = useState(false);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [connectionLines, setConnectionLines] = useState<LineSegment[]>([]);
-  const shellRef = useRef<HTMLDivElement | null>(null);
-  const iconRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
     // Small delay so the CSS entrance animation triggers after paint
@@ -184,305 +95,6 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     };
   }, []);
 
-  // Particle physics state (Gentle free-floating trajectory trapped in layout gaps)
-  const particlesRef = useRef<Array<{
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    radiusX: number;
-    radiusY: number;
-    size: number;
-    iconSize: number;
-    delay: string;
-    dur: string;
-    mobile?: boolean;
-    Icon: LucideIcon;
-  }>>([]);
-
-  useEffect(() => {
-    // Initialize particles from absolute widescreen settings
-    particlesRef.current = floatingIcons.map((icon) => {
-      const leftVal = parseFloat(icon.left);
-      const topVal = parseFloat(icon.top);
-
-      // Random slow speed (percentage units per frame)
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 0.012 + Math.random() * 0.014; // extremely smooth, premium speed
-
-      return {
-        x: leftVal,
-        y: topVal,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed,
-        size: icon.size,
-        iconSize: icon.iconSize,
-        delay: icon.delay,
-        dur: icon.dur,
-        mobile: icon.mobile,
-        Icon: icon.Icon,
-        radiusX: 0,
-        radiusY: 0,
-      };
-    });
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const handleMotionPreferenceChange = () => {
-      setPrefersReducedMotion(mediaQuery.matches);
-    };
-
-    handleMotionPreferenceChange();
-    mediaQuery.addEventListener('change', handleMotionPreferenceChange);
-
-    return () => {
-      mediaQuery.removeEventListener('change', handleMotionPreferenceChange);
-    };
-  }, []);
-
-  // Obstacle avoidance solver for expanded rectangles in percentage space
-  const resolvePercentRectCollision = (
-    particle: any,
-    rect: { left: number; right: number; top: number; bottom: number },
-    bufferX: number,
-    bufferY: number
-  ) => {
-    const minX = rect.left - bufferX;
-    const maxX = rect.right + bufferX;
-    const minY = rect.top - bufferY;
-    const maxY = rect.bottom + bufferY;
-
-    // Check if particle overlaps the expanded rect
-    if (
-      particle.x + particle.radiusX > minX &&
-      particle.x - particle.radiusX < maxX &&
-      particle.y + particle.radiusY > minY &&
-      particle.y - particle.radiusY < maxY
-    ) {
-      // Find closest point on expanded rect to particle center
-      const closestX = Math.max(minX, Math.min(particle.x, maxX));
-      const closestY = Math.max(minY, Math.min(particle.y, maxY));
-
-      // Distance vector from particle center to closest point
-      const dx = particle.x - closestX;
-      const dy = particle.y - closestY;
-      const distance = Math.hypot(dx, dy);
-
-      // Average radius for clean circular bounce
-      const radius = (particle.radiusX + particle.radiusY) / 2;
-
-      if (distance < radius) {
-        // Collision! Push out and bounce elastically
-        if (distance === 0) {
-          // Particle center is inside the rect. Determine closest edge to push out
-          const distL = particle.x - minX;
-          const distR = maxX - particle.x;
-          const distT = particle.y - minY;
-          const distB = maxY - particle.y;
-          const minDist = Math.min(distL, distR, distT, distB);
-
-          if (minDist === distL) {
-            particle.x = minX - particle.radiusX;
-            particle.vx = -Math.abs(particle.vx);
-          } else if (minDist === distR) {
-            particle.x = maxX + particle.radiusX;
-            particle.vx = Math.abs(particle.vx);
-          } else if (minDist === distT) {
-            particle.y = minY - particle.radiusY;
-            particle.vy = -Math.abs(particle.vy);
-          } else {
-            particle.y = maxY + particle.radiusY;
-            particle.vy = Math.abs(particle.vy);
-          }
-        } else {
-          const nx = dx / distance;
-          const ny = dy / distance;
-
-          // Push out along the collision vector
-          particle.x = closestX + nx * particle.radiusX;
-          particle.y = closestY + ny * particle.radiusY;
-
-          // Reflect velocity along collision normal
-          const dot = particle.vx * nx + particle.vy * ny;
-          if (dot < 0) {
-            // Bounce only if moving towards the obstacle
-            particle.vx = particle.vx - 2 * dot * nx;
-            particle.vy = particle.vy - 2 * dot * ny;
-          }
-        }
-      }
-    }
-  };
-
-  useEffect(() => {
-    let rafId: number | undefined;
-
-    const updatePhysicsAndRender = (shellRect: DOMRect) => {
-      const shell = shellRef.current;
-      if (!shell) return;
-
-      // Query card obstacle bounding box
-      const cardEl = shell.querySelector('.auth-page-card');
-      const cardRect = cardEl?.getBoundingClientRect();
-      let cardPercent: { left: number; right: number; top: number; bottom: number } | null = null;
-      if (cardRect && cardRect.width > 0) {
-        cardPercent = {
-          left: ((cardRect.left - shellRect.left) / shellRect.width) * 100,
-          right: ((cardRect.right - shellRect.left) / shellRect.width) * 100,
-          top: ((cardRect.top - shellRect.top) / shellRect.height) * 100,
-          bottom: ((cardRect.bottom - shellRect.top) / shellRect.height) * 100,
-        };
-      }
-
-      // Query hero column obstacle bounding box (only on desktop where it's visible)
-      const isDesktop = window.innerWidth >= 1024;
-      const heroEl = isDesktop ? shell.querySelector('main > section:first-of-type') : null;
-      const heroRect = heroEl?.getBoundingClientRect();
-      let heroPercent: { left: number; right: number; top: number; bottom: number } | null = null;
-      if (heroRect && heroRect.width > 0) {
-        heroPercent = {
-          left: ((heroRect.left - shellRect.left) / shellRect.width) * 100,
-          right: ((heroRect.right - shellRect.left) / shellRect.width) * 100,
-          top: ((heroRect.top - shellRect.top) / shellRect.height) * 100,
-          bottom: ((heroRect.bottom - shellRect.top) / shellRect.height) * 100,
-        };
-      }
-
-      // Dynamic obstacle buffers (16px buffer converted to percentage)
-      const bufferX = (16 / shellRect.width) * 100;
-      const bufferY = (16 / shellRect.height) * 100;
-
-      particlesRef.current.forEach((particle, i) => {
-        const el = iconRefs.current[i];
-        if (!el) return;
-
-        // Calculate dynamic percentage radii based on shell size
-        particle.radiusX = (particle.size / 2 / shellRect.width) * 100;
-        particle.radiusY = (particle.size / 2 / shellRect.height) * 100;
-
-        // Apply constant velocity drift (bypass mouse physics entirely as requested)
-        particle.x += particle.vx;
-        particle.y += particle.vy;
-
-        // Viewport boundary check & elastic bounce
-        if (particle.x - particle.radiusX < 0) {
-          particle.x = particle.radiusX;
-          particle.vx = Math.abs(particle.vx);
-        } else if (particle.x + particle.radiusX > 100) {
-          particle.x = 100 - particle.radiusX;
-          particle.vx = -Math.abs(particle.vx);
-        }
-
-        if (particle.y - particle.radiusY < 0) {
-          particle.y = particle.radiusY;
-          particle.vy = Math.abs(particle.vy);
-        } else if (particle.y + particle.radiusY > 100) {
-          particle.y = 100 - particle.radiusY;
-          particle.vy = -Math.abs(particle.vy);
-        }
-
-        // Card collision avoidance solver
-        if (cardPercent) {
-          resolvePercentRectCollision(particle, cardPercent, bufferX, bufferY);
-        }
-
-        // Hero column collision avoidance solver
-        if (heroPercent) {
-          resolvePercentRectCollision(particle, heroPercent, bufferX, bufferY);
-        }
-
-        // Direct high-performance DOM update
-        el.style.left = `${particle.x.toFixed(4)}%`;
-        el.style.top = `${particle.y.toFixed(4)}%`;
-        el.style.transform = 'translate(-50%, -50%)';
-      });
-    };
-
-    const updateConnectionLines = () => {
-      const shell = shellRef.current;
-      if (!shell) return;
-
-      const shellRect = shell.getBoundingClientRect();
-      if (shellRect.width === 0 || shellRect.height === 0) return;
-
-      // Update particle physics and render elements
-      updatePhysicsAndRender(shellRect);
-
-      const nowSeconds = performance.now() / 1000;
-      const nextLines = connectionPairs.flatMap(([a, b], pairIndex) => {
-        const fromEl = iconRefs.current[a];
-        const toEl = iconRefs.current[b];
-        if (!fromEl || !toEl) return [];
-
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-
-        if (fromRect.width === 0 || fromRect.height === 0 || toRect.width === 0 || toRect.height === 0) {
-          return [];
-        }
-
-        const x1 = ((fromRect.left + fromRect.width / 2 - shellRect.left) / shellRect.width) * 100;
-        const y1 = ((fromRect.top + fromRect.height / 2 - shellRect.top) / shellRect.height) * 100;
-        const x2 = ((toRect.left + toRect.width / 2 - shellRect.left) / shellRect.width) * 100;
-        const y2 = ((toRect.top + toRect.height / 2 - shellRect.top) / shellRect.height) * 100;
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const lineLength = Math.hypot(dx, dy);
-        if (lineLength < 0.001) return [];
-
-        const seed = connectionCurveSeeds[pairIndex];
-        const normalX = -dy / lineLength;
-        const normalY = dx / lineLength;
-        const tangentX = dx / lineLength;
-        const tangentY = dy / lineLength;
-        const midX = (x1 + x2) / 2;
-        const midY = (y1 + y2) / 2;
-
-        const baseCurve = Math.min(6.4, Math.max(1.6, lineLength * 0.16));
-        const jitter = prefersReducedMotion
-          ? 0
-          : Math.sin(nowSeconds * seed.speed + seed.phase) * seed.amplitude
-              + Math.cos(nowSeconds * (seed.speed * 0.66) + seed.phase * 1.3) * (seed.amplitude * 0.36);
-        const normalOffset = baseCurve * seed.direction + jitter;
-        const alongOffset = prefersReducedMotion
-          ? 0
-          : Math.sin(nowSeconds * (seed.speed * 0.52) + seed.phase) * Math.min(1.8, lineLength * 0.08);
-
-        const controlX = clampToViewBox(midX + normalX * normalOffset + tangentX * alongOffset);
-        const controlY = clampToViewBox(midY + normalY * normalOffset + tangentY * alongOffset);
-        const d = `M ${x1.toFixed(3)} ${y1.toFixed(3)} Q ${controlX.toFixed(3)} ${controlY.toFixed(3)} ${x2.toFixed(3)} ${y2.toFixed(3)}`;
-
-        return [{ d, key: `${a}-${b}` }];
-      });
-
-      setConnectionLines(nextLines);
-    };
-
-    const tick = () => {
-      updateConnectionLines();
-      if (!prefersReducedMotion) {
-        rafId = window.requestAnimationFrame(tick);
-      }
-    };
-
-    updateConnectionLines();
-    window.addEventListener('resize', updateConnectionLines);
-
-    if (!prefersReducedMotion) {
-      rafId = window.requestAnimationFrame(tick);
-    }
-
-    return () => {
-      window.removeEventListener('resize', updateConnectionLines);
-      if (rafId !== undefined) {
-        window.cancelAnimationFrame(rafId);
-      }
-    };
-  }, [prefersReducedMotion]);
-
   const inputClassName = "h-11 rounded-full border-border/80 bg-background/95 px-4 shadow-sm focus-visible:ring-ring";
   const passwordInputClassName = "h-11 rounded-full border-border/80 bg-background/95 pl-4 pr-12 shadow-sm focus-visible:ring-ring";
   const labelClassName = "text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground";
@@ -490,79 +102,21 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
   return (
     <>
       <div
-        ref={shellRef}
         className="auth-page-shell relative flex min-h-svh w-full flex-col overflow-x-hidden text-foreground lg:h-svh lg:max-h-svh lg:overflow-hidden"
         data-auth-mode={isLoginView ? "signin" : "signup"}
       >
-        {/* -- Layer 1: Dot grid ---------------------------- */}
-        <div className="auth-page-dot-grid" aria-hidden="true" />
+        {/* -- Layer 1: Architectural Blueprint Grid -------- */}
+        <svg className="auth-page-blueprint-grid w-full h-full absolute inset-0 pointer-events-none z-0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <pattern id="grid-pattern" width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="currentColor" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+        </svg>
 
         {/* -- Layer 2: Gradient mesh ----------------------- */}
         <div className="auth-page-gradient-mesh" aria-hidden="true" />
-
-        {/* -- Layer 3: Connection lines SVG ---------------- */}
-        <svg
-          className="auth-page-lines"
-          viewBox="0 0 100 100"
-          preserveAspectRatio="none"
-          aria-hidden="true"
-        >
-          {connectionLines.map(({ d, key }, i) => (
-            <React.Fragment key={key}>
-              {/* Background structural dashed line */}
-              <path
-                d={d}
-                className="auth-page-line-base"
-              />
-              {/* Dynamic glowing laser flow packet */}
-              <path
-                d={d}
-                className="auth-page-line-flow"
-                style={{
-                  animationDuration: `${4.5 + (i % 4) * 1.2}s`,
-                  animationDelay: `${-(i % 3) * 1.8}s`,
-                }}
-              />
-            </React.Fragment>
-          ))}
-        </svg>
-
-        {/* -- Layer 4: Floating icons ---------------------- */}
-        <div className="auth-page-icons-field" aria-hidden="true">
-          {floatingIcons.map(({ Icon, top, left, delay, dur, size, iconSize, mobile }, i) => {
-            return (
-              <div
-                key={i}
-                ref={(node) => {
-                  iconRefs.current[i] = node;
-                }}
-                className={cn(
-                  'auth-page-icon-wrapper absolute will-change-[left,top]',
-                  !mobile && 'auth-page-icon-desktop-only',
-                )}
-                style={{
-                  top,
-                  left,
-                  width: size,
-                  height: size,
-                  transform: 'translate(-50%, -50%)',
-                }}
-              >
-                <div
-                  className="auth-page-icon-drift h-full w-full"
-                  style={{
-                    animationDelay: delay,
-                    animationDuration: dur,
-                  }}
-                >
-                  <div className="auth-page-icon h-full w-full flex items-center justify-center">
-                    <Icon style={{ width: iconSize, height: iconSize }} />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
 
         {/* -- Main content --------------------------------- */}
         <main className="relative z-10 mx-auto grid w-full max-w-7xl lg:max-w-[1400px] xl:max-w-[1560px] 2xl:max-w-[1720px] flex-1 gap-4 px-4 py-5 sm:px-6 lg:min-h-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(400px,0.85fr)] lg:items-center lg:gap-12 xl:gap-20 2xl:gap-32 lg:overflow-hidden lg:px-12 xl:px-16 transition-all duration-500">
@@ -613,10 +167,13 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           </section>
 
           {/* -- Right: Auth card --------------------------- */}
-          <section className="min-h-0 flex items-center justify-center lg:justify-end xl:justify-center">
+          <section className="min-h-0 flex items-center justify-center lg:justify-end xl:justify-center relative">
+            {/* Ambient Card Spotlight */}
+            <div className="auth-page-card-spotlight absolute h-[480px] w-[480px] rounded-full blur-[110px] pointer-events-none opacity-80 z-0 transition-colors duration-500" aria-hidden="true" />
+
             <Card
               className={cn(
-                'auth-page-card mx-auto lg:mr-0 xl:mx-auto flex w-full max-w-[460px] lg:max-w-[480px] xl:max-w-[500px] flex-col overflow-hidden rounded-[2rem] border-border/70 bg-card/95 shadow-2xl backdrop-blur-2xl transition-all duration-300',
+                'auth-page-card relative z-10 mx-auto lg:mr-0 xl:mx-auto flex w-full max-w-[460px] lg:max-w-[480px] xl:max-w-[500px] flex-col overflow-hidden rounded-[2rem] border-border/70 bg-card/95 shadow-2xl backdrop-blur-2xl transition-all duration-300',
                 hasMounted && 'auth-page-card-entered',
               )}
             >
