@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Google Sans Flex Variable Font - Local Web Font */
+@font-face {
+  font-family: 'Google Sans Flex';
+  src: url('/fonts/GoogleSansFlex-VariableFont.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* Google Sans Variable Font - Local Files */
 @font-face {
   font-family: 'Google Sans';

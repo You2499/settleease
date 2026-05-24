@@ -37,9 +37,6 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning className="font-google-sans settleease-app-design">
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:wght,wdth,opsz,slnt,GRAD,ROND@100..900,25..151,8..144,-10..0,-50..100,0..100&display=swap" rel="stylesheet" />
       </head>
       <body className={`${inter.variable} antialiased`}>
         <ThemeProvider
