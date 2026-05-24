@@ -807,13 +807,11 @@
 
 /* -- Card ------------------------------------------- */
 .auth-page-card {
-  height: min(760px, calc(100svh - 128px));
-  min-height: 0;
   border-color: var(--auth-page-card-border) !important;
   background: var(--auth-page-card-bg) !important;
   opacity: 0;
   transform: translateY(16px) scale(0.98);
-  transition: none;
+  transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .auth-page-card-entered {
@@ -976,10 +974,7 @@
     opacity: 0.7;
   }
 
-  .auth-page-card {
-    height: auto;
-    min-height: min(664px, calc(100svh - 96px));
-  }
+
 
   .auth-page-card-copy {
     display: none;
@@ -1003,10 +998,7 @@
 
 /* -- Short viewport --------------------------------- */
 @media (max-height: 760px) {
-  .auth-page-card {
-    height: auto;
-    min-height: min(620px, calc(100svh - 128px));
-  }
+
 
   .auth-page-card-header {
     padding: 1rem 1.25rem 0.5rem !important;

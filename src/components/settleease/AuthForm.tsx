@@ -365,244 +365,251 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
           </section>
 
           {/* -- Right: Auth card --------------------------- */}
-          <section className="min-h-0">
+          <section className="min-h-0 flex items-center justify-center">
             <Card
               className={cn(
-                'auth-page-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[1.75rem] border-border/70 bg-card/95 shadow-xl backdrop-blur-xl',
+                'auth-page-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[2rem] border-border/70 bg-card/95 shadow-2xl backdrop-blur-2xl transition-all duration-300',
                 hasMounted && 'auth-page-card-entered',
               )}
             >
-              <CardHeader className="auth-page-card-header space-y-4 p-6 pb-3 sm:p-8 sm:pb-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="auth-page-card-mark flex h-12 w-12 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted">
-                    <HandCoins className="h-6 w-6" />
+              {/* Header Container */}
+              <div className="auth-page-card-header p-6 pb-2 sm:p-8 sm:pb-3 flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="auth-page-card-mark flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted transition-colors duration-300">
+                    <HandCoins className="h-5.5 w-5.5" />
                   </div>
                   <div className="rounded-full border border-border/70 bg-muted/60 px-3 py-1 text-xs font-medium text-muted-foreground">
                     {isLoginView ? "Returning" : "New account"}
                   </div>
                 </div>
-                <div>
-                  <CardTitle className="auth-page-card-title text-3xl font-light leading-tight tracking-tight sm:text-4xl">
+                <div className="space-y-1.5">
+                  <CardTitle className="auth-page-card-title text-2xl sm:text-3xl font-light tracking-tight transition-colors duration-300">
                     {isLoginView ? "Welcome back." : "Create your account."}
                   </CardTitle>
-                  <p className="auth-page-card-copy mt-2 text-sm leading-6 text-muted-foreground">
+                  <p className="auth-page-card-copy text-xs leading-5 text-muted-foreground">
                     {isLoginView
                       ? "Sign in to manage expenses, settlements, and reports."
                       : "Start with your name, then invite the group once you are inside."}
                   </p>
                 </div>
-              </CardHeader>
-              <CardContent className="auth-page-card-content flex min-h-0 flex-1 flex-col px-6 pb-6 pt-0 sm:px-8 sm:pb-8">
-                <div className="flex flex-col">
-                  {/* -- Form -------------------------------- */}
-                  <form onSubmit={handleSubmit} className="auth-page-form space-y-4">
-                    <div className="auth-page-name-slot">
-                      <div
-                        className={cn(
-                          "grid grid-cols-2 gap-3 transition-all duration-200",
-                          isLoginView && "pointer-events-none -translate-y-1 opacity-0",
-                        )}
-                        aria-hidden={isLoginView}
-                      >
-                        <div className="space-y-1.5">
-                          <Label htmlFor="auth-firstName" className={labelClassName}>First Name</Label>
-                          <Input
-                            ref={firstNameRef}
-                            id="auth-firstName"
-                            type="text"
-                            autoComplete="given-name"
-                            placeholder="John"
-                            value={firstName}
-                            onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
-                            disabled={isLoading || isGoogleLoading || isLoginView}
-                            required={!isLoginView}
-                            className={inputClassName}
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="auth-lastName" className={labelClassName}>Last Name</Label>
-                          <Input
-                            id="auth-lastName"
-                            type="text"
-                            autoComplete="family-name"
-                            placeholder="Doe"
-                            value={lastName}
-                            onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
-                            disabled={isLoading || isGoogleLoading || isLoginView}
-                            required={!isLoginView}
-                            className={inputClassName}
-                          />
-                        </div>
+              </div>
+
+              {/* Form Container */}
+              <CardContent className="auth-page-card-content p-6 pt-2 sm:p-8 sm:pt-3 flex flex-col space-y-4">
+                <form onSubmit={handleSubmit} className="auth-page-form flex flex-col space-y-4">
+                  
+                  {/* Name Slot (Transition ready and fixed height to prevent layout shift) */}
+                  <div className="auth-page-name-slot h-[74px] relative overflow-hidden transition-all duration-200">
+                    <div
+                      className={cn(
+                        "grid grid-cols-2 gap-3 absolute inset-x-0 top-0 transition-all duration-300",
+                        isLoginView 
+                          ? "pointer-events-none -translate-y-2 opacity-0 scale-95" 
+                          : "opacity-100 translate-y-0 scale-100"
+                      )}
+                      aria-hidden={isLoginView}
+                    >
+                      <div className="space-y-1">
+                        <Label htmlFor="auth-firstName" className={labelClassName}>First Name</Label>
+                        <Input
+                          ref={firstNameRef}
+                          id="auth-firstName"
+                          type="text"
+                          autoComplete="given-name"
+                          placeholder="John"
+                          value={firstName}
+                          onChange={(e) => setFirstName(capitalizeFirstLetter(e.target.value))}
+                          disabled={isLoading || isGoogleLoading || isLoginView}
+                          required={!isLoginView}
+                          className={inputClassName}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="auth-lastName" className={labelClassName}>Last Name</Label>
+                        <Input
+                          id="auth-lastName"
+                          type="text"
+                          autoComplete="family-name"
+                          placeholder="Doe"
+                          value={lastName}
+                          onChange={(e) => setLastName(capitalizeFirstLetter(e.target.value))}
+                          disabled={isLoading || isGoogleLoading || isLoginView}
+                          required={!isLoginView}
+                          className={inputClassName}
+                        />
                       </div>
                     </div>
+                  </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="auth-email" className={labelClassName}>Email Address</Label>
+                  {/* Email Section */}
+                  <div className="space-y-1">
+                    <Label htmlFor="auth-email" className={labelClassName}>Email Address</Label>
+                    <Input
+                      ref={emailRef}
+                      id="auth-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={(e) => handleEmailChange(e.target.value)}
+                      disabled={isLoading || isGoogleLoading}
+                      required
+                      className={inputClassName}
+                    />
+                  </div>
+
+                  {/* Password Section */}
+                  <div className="space-y-1">
+                    <Label htmlFor="auth-password" className={labelClassName}>Password</Label>
+                    <div className="relative">
                       <Input
-                        ref={emailRef}
-                        id="auth-email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => handleEmailChange(e.target.value)}
+                        id="auth-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete={isLoginView ? "current-password" : "new-password"}
+                        placeholder={isLoginView ? "Password" : "Password - min. 6 characters"}
+                        value={password}
+                        onChange={(e) => handlePasswordChange(e.target.value)}
                         disabled={isLoading || isGoogleLoading}
                         required
-                        className={inputClassName}
+                        minLength={6}
+                        className={passwordInputClassName}
                       />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-1 top-0 h-full rounded-full px-3 py-2 hover:bg-transparent"
+                        onClick={() => setShowPassword(!showPassword)}
+                        disabled={isLoading || isGoogleLoading}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
                     </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="auth-password" className={labelClassName}>Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="auth-password"
-                          type={showPassword ? "text" : "password"}
-                          autoComplete={isLoginView ? "current-password" : "new-password"}
-                          placeholder={isLoginView ? "Password" : "Password - min. 6 characters"}
-                          value={password}
-                          onChange={(e) => handlePasswordChange(e.target.value)}
-                          disabled={isLoading || isGoogleLoading}
-                          required
-                          minLength={6}
-                          className={passwordInputClassName}
+                  </div>
+
+                  {/* Integrated Sub-Actions Row (Fixed h-7 container for absolute zero layout shift) */}
+                  <div className="h-7 flex items-center px-0.5 justify-between">
+                    {isLoginView ? (
+                      <div className="flex items-center space-x-2">
+                        <input
+                          id="remember-me"
+                          type="checkbox"
+                          checked={rememberMe}
+                          onChange={(e) => setRememberMe(e.target.checked)}
+                          className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-background/95 text-foreground accent-black focus:ring-ring"
                         />
+                        <Label
+                          htmlFor="remember-me"
+                          className="cursor-pointer text-[11px] font-normal leading-none text-muted-foreground select-none hover:text-foreground transition-colors"
+                        >
+                          Keep me signed in on this device
+                        </Label>
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-1.5 opacity-60">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Passwords are encrypted end-to-end
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Slot */}
+                  <div className="pt-1">
+                    {showResendConfirmation ? (
+                      <div className="flex flex-col space-y-2 rounded-2xl border border-amber-300/60 bg-[#fff8e7] p-3 text-center shadow-sm dark:bg-amber-950/20">
+                        <div>
+                          <h3 className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+                            {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
+                          </h3>
+                          <p className="text-[10px] leading-4 text-amber-700 dark:text-amber-300 mt-1">
+                            Your account exists but has not been verified yet. Check your inbox or resend verification.
+                          </p>
+                        </div>
                         <Button
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-1 top-0 h-full rounded-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                          disabled={isLoading || isGoogleLoading}
-                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          onClick={handleResendConfirmation}
+                          disabled={isLoading}
+                          className="h-9 w-full rounded-full bg-black text-xs font-semibold text-white hover:bg-black/90 dark:bg-primary dark:text-primary-foreground"
                         >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Eye className="h-4 w-4 text-muted-foreground" />
-                          )}
+                          {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
                         </Button>
                       </div>
-
-                      <div className="h-6 flex items-center px-1">
-                        {isLoginView ? (
-                          <div className="flex items-center space-x-2">
-                            <input
-                              id="remember-me"
-                              type="checkbox"
-                              checked={rememberMe}
-                              onChange={(e) => setRememberMe(e.target.checked)}
-                              className="h-3.5 w-3.5 cursor-pointer rounded border-border bg-background/95 text-foreground accent-black focus:ring-ring"
-                            />
-                            <Label
-                              htmlFor="remember-me"
-                              className="cursor-pointer text-[11px] font-normal leading-none text-muted-foreground select-none hover:text-foreground transition-colors"
-                            >
-                              Keep me signed in on this device
-                            </Label>
-                          </div>
+                    ) : (
+                      <Button
+                        type="submit"
+                        className="auth-page-primary-button h-11 w-full rounded-full text-sm font-semibold shadow-md transition-all duration-300"
+                        disabled={isLoading || isGoogleLoading}
+                      >
+                        {isLoading ? (
+                          isLoginView ? 'Logging in...' : 'Creating Account...'
+                        ) : isLoginView ? (
+                          <>
+                            <LogIn className="mr-2 h-4.5 w-4.5" />
+                            Sign In
+                          </>
                         ) : (
-                          <div className="flex items-center space-x-1.5 opacity-60">
-                            <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                              Passwords are encrypted end-to-end
-                            </span>
-                          </div>
+                          <>
+                            <UserPlus className="mr-2 h-4.5 w-4.5" />
+                            Create Account
+                          </>
                         )}
-                      </div>
-                    </div>
+                      </Button>
+                    )}
+                  </div>
+                </form>
 
-                    <div className="auth-page-action-slot">
-                      {showResendConfirmation ? (
-                        <div className="flex h-full flex-col justify-between rounded-2xl border border-amber-300/60 bg-[#fff8e7] p-3 text-center shadow-sm dark:bg-amber-950/20">
-                          <div>
-                            <h3 className="mb-1 text-sm font-semibold text-amber-800 dark:text-amber-200">
-                              {isLoginView ? "Email Not Verified" : "Account Exists - Email Confirmation Needed"}
-                            </h3>
-                            <p className="line-clamp-2 text-xs leading-5 text-amber-700 dark:text-amber-300">
-                              Your account exists but has not been verified yet. Resend the confirmation email below.
-                            </p>
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={handleResendConfirmation}
-                            disabled={isLoading}
-                            className="h-10 w-full rounded-full bg-black text-sm font-semibold text-white hover:bg-black/90 dark:bg-primary dark:text-primary-foreground"
-                          >
-                            {isLoading ? 'Sending...' : 'Resend Confirmation Email'}
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          type="submit"
-                          className="auth-page-primary-button h-11 w-full rounded-full text-sm font-semibold shadow-[rgba(78,50,23,0.08)_0px_10px_24px] sm:text-base"
-                          disabled={isLoading || isGoogleLoading}
-                        >
-                          {isLoading ? (
-                            isLoginView ? 'Logging in...' : 'Creating Account...'
-                          ) : isLoginView ? (
-                            <>
-                              <LogIn className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                              Sign In
-                            </>
-                          ) : (
-                            <>
-                              <UserPlus className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-                              Create Account
-                            </>
-                          )}
-                        </Button>
-                      )}
-                    </div>
-                  </form>
+                {/* -- Separator ---------------------------- */}
+                <div className="relative py-1">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-3 text-[10px] tracking-[0.16em] text-muted-foreground transition-colors duration-300">
+                      Or
+                    </span>
+                  </div>
+                </div>
 
-                  {/* -- Separator ---------------------------- */}
-                  <div className="relative my-3 sm:my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <Separator />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 tracking-[0.16em] text-muted-foreground">
-                        Or
-                      </span>
+                {/* -- Google OAuth ------------------------- */}
+                <Button
+                  type="button"
+                  className="h-11 w-full rounded-full border border-border/80 bg-white/95 text-sm text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground transition-all duration-200"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || isGoogleLoading}
+                >
+                  <GoogleMark size={18} />
+                  <span className="ml-2.5 font-medium">
+                    {getGoogleButtonText(isLoginView, isGoogleLoading)}
+                  </span>
+                </Button>
+
+                {/* -- Suggestion --------------------------- */}
+                {hasAuthError && !showResendConfirmation && authSuggestion ? (
+                  <div className="rounded-2xl border border-border/70 bg-muted/40 p-2 text-center text-xs text-muted-foreground">
+                    <div className="flex items-center justify-center space-x-2">
+                      <Lightbulb className="h-4 w-4 shrink-0" />
+                      <span className="line-clamp-2 text-[11px]">{authSuggestion.text}</span>
                     </div>
                   </div>
+                ) : null}
 
-                  {/* -- Google OAuth ------------------------- */}
+                {/* -- Switch auth mode --------------------- */}
+                <div className="flex items-center justify-center pt-2">
                   <Button
                     type="button"
-                    className="h-11 w-full rounded-full border border-border/80 bg-white/95 text-sm text-foreground shadow-sm hover:bg-muted dark:bg-card dark:text-card-foreground sm:text-base"
-                    onClick={handleGoogleSignIn}
+                    variant="link"
+                    onClick={toggleAuthMode}
                     disabled={isLoading || isGoogleLoading}
+                    className="h-auto rounded-full px-3 py-1.5 text-xs text-foreground underline-offset-8 hover:text-primary/80 transition-colors"
                   >
-                    <GoogleMark size={18} />
-                    <span className="ml-2.5">
-                      {getGoogleButtonText(isLoginView, isGoogleLoading)}
-                    </span>
+                    {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
                   </Button>
-
-                  {/* -- Suggestion --------------------------- */}
-                  <div className="auth-page-status-slot">
-                    {hasAuthError && !showResendConfirmation && authSuggestion ? (
-                      <div className="rounded-2xl border border-border/70 bg-muted/60 p-2 text-center text-xs text-muted-foreground">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Lightbulb className="h-4 w-4 shrink-0" />
-                          <span className="line-clamp-2">{authSuggestion.text}</span>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-
-                  {/* -- Switch auth mode --------------------- */}
-                  <div className="auth-page-switch-slot">
-                    <Button
-                      type="button"
-                      variant="link"
-                      onClick={toggleAuthMode}
-                      disabled={isLoading || isGoogleLoading}
-                      className="h-auto rounded-full px-3 py-2 text-sm text-foreground underline-offset-8 hover:text-primary/80"
-                    >
-                      {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-                    </Button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
