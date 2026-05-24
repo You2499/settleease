@@ -317,30 +317,30 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
         </div>
 
         {/* -- Main content --------------------------------- */}
-        <main className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 gap-4 px-4 py-5 sm:px-6 lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(390px,0.78fr)] lg:items-center lg:gap-8 lg:overflow-hidden lg:px-8">
+        <main className="relative z-10 mx-auto grid w-full max-w-7xl lg:max-w-[1400px] xl:max-w-[1560px] 2xl:max-w-[1720px] flex-1 gap-4 px-4 py-5 sm:px-6 lg:min-h-0 lg:grid-cols-[minmax(0,1.15fr)_minmax(400px,0.85fr)] lg:items-center lg:gap-12 xl:gap-20 2xl:gap-32 lg:overflow-hidden lg:px-12 xl:px-16 transition-all duration-500">
 
           {/* -- Left: Hero + benefits (desktop) ------------ */}
-          <section className="hidden min-w-0 space-y-5 lg:block">
-            <div className="max-w-3xl space-y-4">
-              <div className="space-y-4">
-                <h1 className="max-w-3xl text-[clamp(2.45rem,5.4vw,4.65rem)] font-light leading-[0.98] tracking-tight text-foreground">
+          <section className="hidden min-w-0 space-y-6 xl:space-y-8 lg:block">
+            <div className="max-w-none xl:max-w-[95%] space-y-4 lg:space-y-5">
+              <div className="space-y-4 lg:space-y-5">
+                <h1 className="max-w-none text-[clamp(2.45rem,5.4vw,4.85rem)] font-light leading-[0.98] tracking-tight text-foreground">
                   Settle shared expenses without the after-trip math.
                 </h1>
-                <p className="max-w-2xl text-base leading-7 tracking-[0.01em] text-muted-foreground sm:text-lg">
+                <p className="max-w-3xl text-base leading-7 tracking-[0.01em] text-muted-foreground sm:text-lg lg:text-xl lg:leading-8">
                   Add people, scan receipts, split precisely, and leave with a clean settlement plan. The form is right here when you are ready.
                 </p>
               </div>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-4 xl:gap-6 sm:grid-cols-2">
               {authBenefits.map(({ icon: Icon, title, description }, i) => (
                 <div
                   key={title}
-                  className="auth-page-benefit rounded-2xl border border-border/70 bg-background/72 p-3.5 shadow-sm backdrop-blur-md"
+                  className="auth-page-benefit rounded-3xl border border-border/70 bg-background/72 p-4 sm:p-5 xl:p-6 shadow-sm backdrop-blur-md transition-all duration-300 hover:shadow-md hover:scale-[1.01]"
                   style={{ animationDelay: `${i * 150}ms` }}
                 >
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted">
-                    <Icon className="h-5 w-5" />
+                  <div className="mb-3.5 flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/80 text-foreground shadow-sm dark:bg-muted transition-colors duration-300">
+                    <Icon className="h-5.5 w-5.5" />
                   </div>
                   <h2 className="text-base font-semibold tracking-[0.01em]">{title}</h2>
                   <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
@@ -348,32 +348,32 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               ))}
             </div>
 
-            <div className="auth-page-proof-row grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
-              <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
-                <BadgeCheck className="h-4 w-4 text-foreground" />
-                Admin controls
+            <div className="auth-page-proof-row grid gap-4 text-sm text-muted-foreground sm:grid-cols-3">
+              <div className="flex items-center justify-center gap-2.5 rounded-full border border-border/60 bg-background/65 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:bg-background/80">
+                <BadgeCheck className="h-4.5 w-4.5 text-foreground shrink-0" />
+                <span>Admin controls</span>
               </div>
-              <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
-                <ScanLine className="h-4 w-4 text-foreground" />
-                Smart receipts
+              <div className="flex items-center justify-center gap-2.5 rounded-full border border-border/60 bg-background/65 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:bg-background/80">
+                <ScanLine className="h-4.5 w-4.5 text-foreground shrink-0" />
+                <span>Smart receipts</span>
               </div>
-              <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/65 px-3 py-2 shadow-sm backdrop-blur-md">
-                <WalletCards className="h-4 w-4 text-foreground" />
-                Clear settlements
+              <div className="flex items-center justify-center gap-2.5 rounded-full border border-border/60 bg-background/65 px-4 py-2.5 shadow-sm backdrop-blur-md transition-all hover:bg-background/80">
+                <WalletCards className="h-4.5 w-4.5 text-foreground shrink-0" />
+                <span>Clear settlements</span>
               </div>
             </div>
           </section>
 
           {/* -- Right: Auth card --------------------------- */}
-          <section className="min-h-0 flex items-center justify-center">
+          <section className="min-h-0 flex items-center justify-center lg:justify-end xl:justify-center">
             <Card
               className={cn(
-                'auth-page-card mx-auto flex w-full max-w-[460px] flex-col overflow-hidden rounded-[2rem] border-border/70 bg-card/95 shadow-2xl backdrop-blur-2xl transition-all duration-300',
+                'auth-page-card mx-auto lg:mr-0 xl:mx-auto flex w-full max-w-[460px] lg:max-w-[480px] xl:max-w-[500px] flex-col overflow-hidden rounded-[2rem] border-border/70 bg-card/95 shadow-2xl backdrop-blur-2xl transition-all duration-300',
                 hasMounted && 'auth-page-card-entered',
               )}
             >
               {/* Header Container */}
-              <div className="auth-page-card-header p-6 pb-2 sm:p-8 sm:pb-3 flex flex-col space-y-4">
+              <div className="auth-page-card-header p-6 pb-2 sm:p-8 sm:pb-3 lg:p-10 lg:pb-4 flex flex-col space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="auth-page-card-mark flex h-11 w-11 items-center justify-center rounded-full border border-border/70 bg-[#f5f2ef]/85 shadow-sm dark:bg-muted transition-colors duration-300">
                     <HandCoins className="h-5.5 w-5.5" />
@@ -395,7 +395,7 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
               </div>
 
               {/* Form Container */}
-              <CardContent className="auth-page-card-content p-6 pt-2 sm:p-8 sm:pt-3 flex flex-col space-y-4">
+              <CardContent className="auth-page-card-content p-6 pt-2 sm:p-8 sm:pt-3 lg:p-10 lg:pt-4 flex flex-col space-y-4">
                 <form onSubmit={handleSubmit} className="auth-page-form flex flex-col space-y-4">
                   
                   {/* Name Slot (Transition ready and fixed height to prevent layout shift) */}
