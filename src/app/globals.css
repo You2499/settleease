@@ -4,15 +4,6 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Google Sans Flex Local Fallback Support */
-@font-face {
-  font-family: 'Google Sans Flex';
-  src: local('Google Sans Flex'), local('Google Sans Flex Regular'), local('GoogleSansFlex-Regular');
-  font-weight: 100 900;
-  font-style: normal;
-  font-display: swap;
-}
-
 /* Google Sans Variable Font - Local Files */
 @font-face {
   font-family: 'Google Sans';
