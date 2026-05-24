@@ -160,6 +160,30 @@ export default function AuthForm({ supabase, onAuthSuccess }: AuthFormProps) {
     return () => cancelAnimationFrame(raf);
   }, []);
 
+  // Force Light Mode on the entire document root while the AuthPage is mounted
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const htmlElement = document.documentElement;
+    
+    // Check if dark mode was active prior to mount
+    const hadDark = htmlElement.classList.contains('dark');
+    const originalColorScheme = htmlElement.style.colorScheme;
+    
+    // Force light mode theme
+    htmlElement.classList.remove('dark');
+    htmlElement.style.colorScheme = 'light';
+    
+    return () => {
+      // Restore the previous dark mode state if it was active
+      if (hadDark) {
+        htmlElement.classList.add('dark');
+        htmlElement.style.colorScheme = 'dark';
+      } else {
+        htmlElement.style.colorScheme = originalColorScheme;
+      }
+    };
+  }, []);
+
   // Mouse movement parallax effect for floating icons (fluid CSS custom variables logic)
   useEffect(() => {
     if (typeof window === 'undefined' || prefersReducedMotion) return;
