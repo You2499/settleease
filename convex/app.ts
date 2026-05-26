@@ -2257,6 +2257,36 @@ export const backfillBudgetItemsFromExpenses = mutation({
   },
 });
 
+function adjustRoundingDifference(
+  items: { personId: string; amount: number }[],
+  targetTotal: number
+): { personId: string; amount: number }[] {
+  if (items.length === 0) return items;
+
+  const roundedItems = items.map((item) => ({
+    personId: item.personId,
+    amount: Math.round(Number(item.amount) * 100) / 100,
+  }));
+
+  const currentTotal = Math.round(roundedItems.reduce((sum, item) => sum + item.amount, 0) * 100) / 100;
+  const diff = Math.round((targetTotal - currentTotal) * 100) / 100;
+
+  const maxAllowedDiff = Math.max(0.10, items.length * 0.01);
+  if (Math.abs(diff) > 0.001 && Math.abs(diff) <= maxAllowedDiff) {
+    let maxIndex = 0;
+    let maxVal = roundedItems[0].amount;
+    for (let i = 1; i < roundedItems.length; i++) {
+      if (roundedItems[i].amount > maxVal) {
+        maxVal = roundedItems[i].amount;
+        maxIndex = i;
+      }
+    }
+    roundedItems[maxIndex].amount = Math.round((roundedItems[maxIndex].amount + diff) * 100) / 100;
+  }
+
+  return roundedItems;
+}
+
 export const saveExpense = mutation({
   args: {
     id: v.optional(v.string()),
@@ -2286,16 +2316,6 @@ export const saveExpense = mutation({
       throw new ConvexError("Expense total amount must be positive.");
     }
 
-    const paidBy = args.paidBy.map((p) => ({
-      personId: p.personId,
-      amount: Math.round(Number(p.amount) * 100) / 100,
-    }));
-
-    const shares = args.shares.map((s) => ({
-      personId: s.personId,
-      amount: Math.round(Number(s.amount) * 100) / 100,
-    }));
-
     let celebrationContribution: any = null;
     if (args.celebrationContribution && args.celebrationContribution.amount > 0) {
       const amount = Math.round(Number(args.celebrationContribution.amount) * 100) / 100;
@@ -2307,6 +2327,12 @@ export const saveExpense = mutation({
         amount,
       };
     }
+
+    const paidBy = adjustRoundingDifference(args.paidBy, totalAmount);
+
+    const celebrationAmount = celebrationContribution ? celebrationContribution.amount : 0;
+    const expectedShareSum = Math.round((totalAmount - celebrationAmount) * 100) / 100;
+    const shares = adjustRoundingDifference(args.shares, expectedShareSum);
 
     let items = null;
     if (Array.isArray(args.items)) {
@@ -2342,8 +2368,6 @@ export const saveExpense = mutation({
     }
 
     // 3. Validate that the sharer shares sum up to exactly (totalAmount - celebrationAmount)
-    const celebrationAmount = celebrationContribution ? celebrationContribution.amount : 0;
-    const expectedShareSum = Math.round((totalAmount - celebrationAmount) * 100) / 100;
     const totalShares = Math.round(shares.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
     
     if (Math.abs(totalShares - expectedShareSum) > 0.01) {
