@@ -76,6 +76,22 @@ import {
   type AiModelCode,
 } from "@/lib/settleease/aiModels";
 import {
+  analyzeModelHeuristically,
+  type DynamicModelMetadata,
+  type ModelUIProps,
+  type ModelGroup,
+} from "@/lib/settleease/aiModelMetadata";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Search,
+  Check,
+  FlaskConical,
+  Package,
+  ChevronDown,
+  Info,
+} from "lucide-react";
+import {
   LoadingRegion,
   SkeletonCardHeader,
   SkeletonMetricTile,
@@ -706,6 +722,212 @@ function ProductionDangerUnlockDialog({
   );
 }
 
+interface ModelSelectorProps {
+  id: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  options: ModelUIProps[];
+  disabled?: boolean;
+  allowNone?: boolean;
+}
+
+export function ModelSelector({
+  id,
+  value,
+  onValueChange,
+  options,
+  disabled = false,
+  allowNone = false,
+}: ModelSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const resolvedModel = useMemo(() => {
+    if (value === "none") return null;
+    const found = options.find((opt) => opt.code === value);
+    return found || analyzeModelHeuristically({ code: value });
+  }, [options, value]);
+
+  const filteredOptions = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return options;
+    return options.filter(
+      (opt) =>
+        opt.displayName.toLowerCase().includes(query) ||
+        opt.code.toLowerCase().includes(query) ||
+        opt.description.toLowerCase().includes(query)
+    );
+  }, [options, searchQuery]);
+
+  const grouped = useMemo(() => {
+    const groups: Record<ModelGroup, ModelUIProps[]> = {
+      stable: [],
+      previews: [],
+      snapshots: [],
+      legacy: [],
+    };
+    filteredOptions.forEach((opt) => {
+      groups[opt.group].push(opt);
+    });
+    return groups;
+  }, [filteredOptions]);
+
+  const activeStatusColor = resolvedModel
+    ? resolvedModel.statusLightColor
+    : "bg-muted-foreground";
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          id={id}
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={disabled}
+          className="flex h-11 w-full items-center justify-between rounded-full border-border/80 bg-background px-4 text-left shadow-sm hover:bg-accent/40 focus:ring-2 focus:ring-ring"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            {value === "none" ? (
+              <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+            ) : (
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", activeStatusColor)} />
+            )}
+            <div className="flex min-w-0 items-baseline gap-2">
+              <span className="truncate text-sm font-medium">
+                {value === "none" ? "None (Disabled)" : resolvedModel?.displayName}
+              </span>
+              {resolvedModel && (
+                <span className="hidden truncate text-[10px] text-muted-foreground sm:inline-block">
+                  ({resolvedModel.formattedInputLimit})
+                </span>
+              )}
+            </div>
+          </div>
+          <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="z-50 w-[340px] p-0 shadow-xl sm:w-[420px] rounded-xl border border-border/80 bg-popover/95 backdrop-blur-md"
+      >
+        <div className="flex items-center border-b px-3 py-2.5 bg-muted/20">
+          <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+          <input
+            placeholder="Search models, capacity, or version..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex h-9 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+          />
+        </div>
+        <ScrollArea className="h-[360px] overflow-y-auto p-2">
+          {allowNone && (
+            <button
+              type="button"
+              onClick={() => {
+                onValueChange("none");
+                setOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs transition-colors hover:bg-accent/60",
+                value === "none" && "bg-accent/60"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-muted-foreground" />
+                <span className="font-semibold text-foreground">None</span>
+              </div>
+              {value === "none" && <Check className="h-4 w-4 text-primary" />}
+            </button>
+          )}
+
+          {Object.entries(grouped).map(([groupKey, groupItems]) => {
+            if (groupItems.length === 0) return null;
+
+            const group = groupKey as ModelGroup;
+            let groupIcon = Sparkles;
+            let groupLabel = "Recommended & Stable";
+
+            if (group === "previews") {
+              groupIcon = FlaskConical;
+              groupLabel = "Previews & Pre-Releases";
+            } else if (group === "snapshots") {
+              groupIcon = Package;
+              groupLabel = "Frozen Snapshots";
+            } else if (group === "legacy") {
+              groupIcon = AlertTriangle;
+              groupLabel = "Outdated & Legacy";
+            }
+
+            const IconComponent = groupIcon;
+
+            return (
+              <div key={groupKey} className="mt-2 space-y-1">
+                <div className="flex items-center gap-1.5 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <IconComponent className="h-3 w-3" />
+                  <span>{groupLabel}</span>
+                </div>
+                <div className="space-y-1">
+                  {groupItems.map((opt) => {
+                    const isSelected = value === opt.code;
+                    return (
+                      <button
+                        key={opt.code}
+                        type="button"
+                        onClick={() => {
+                          onValueChange(opt.code);
+                          setOpen(false);
+                        }}
+                        className={cn(
+                          "group flex w-full flex-col gap-1 rounded-lg border border-transparent px-3 py-2.5 text-left transition-all hover:bg-accent/40",
+                          isSelected && "bg-accent/60 border-border/60"
+                        )}
+                      >
+                        <div className="flex w-full items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className={cn("h-2 w-2 shrink-0 rounded-full", opt.statusLightColor)} />
+                            <span className="truncate text-xs font-semibold text-foreground">
+                              {opt.displayName}
+                            </span>
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <span
+                              className={cn(
+                                "rounded px-1.5 py-0.5 text-[9px] font-semibold border",
+                                opt.suitabilityColor
+                              )}
+                            >
+                              {opt.suitability}
+                            </span>
+                            {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
+                          </div>
+                        </div>
+                        <div className="pl-4 space-y-0.5">
+                          <p className="text-[10px] text-muted-foreground leading-normal line-clamp-2">
+                            {opt.description}
+                          </p>
+                          <div className="flex items-center gap-3 text-[9px] text-muted-foreground/80 font-medium">
+                            <span className="inline-flex items-center gap-1">
+                              <Activity className="h-2.5 w-2.5" />
+                              <span>{opt.formattedInputLimit}</span>
+                            </span>
+                            <span>•</span>
+                            <span>{opt.formattedOutputLimit}</span>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function SettingsTabSkeleton() {
   return (
     <LoadingRegion label="Loading settings" className="flex h-full min-h-0">
@@ -799,7 +1021,7 @@ export default function SettingsTab({
   );
   const [fallbackOne, setFallbackOne] = useState<AiModelCode | "none">("none");
   const [fallbackTwo, setFallbackTwo] = useState<AiModelCode | "none">("none");
-  const [dynamicModelOptions, setDynamicModelOptions] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [dynamicModelOptions, setDynamicModelOptions] = useState<DynamicModelMetadata[]>([]);
   const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [backfillPreview, setBackfillPreview] = useState<BudgetBackfillResult | null>(null);
   const [includeSummaries, setIncludeSummaries] = useState(true);
@@ -875,25 +1097,46 @@ export default function SettingsTab({
     };
   }, [listAvailableModels, userRole]);
 
-  const modelOptions = useMemo(() => {
-    const optionsMap = new Map<string, ReturnType<typeof getAiModelOption>>(
-      AI_MODEL_OPTIONS.map((opt) => [opt.code, opt])
-    );
+  const modelOptions = useMemo<ModelUIProps[]>(() => {
+    const optionsMap = new Map<string, ModelUIProps>();
+    
+    // Process local static fallback options
+    AI_MODEL_OPTIONS.forEach((opt) => {
+      optionsMap.set(opt.code, analyzeModelHeuristically({
+        code: opt.code,
+        displayName: opt.displayName,
+        description: opt.recommendedFor,
+        inputTokenLimit: 1048576,
+        outputTokenLimit: 8192
+      }));
+    });
+
+    // Process dynamically discovered models with live descriptions and token limits
     dynamicModelOptions.forEach((opt) => {
-      optionsMap.set(opt.code, getAiModelOption(opt.code));
+      optionsMap.set(opt.code, analyzeModelHeuristically(opt));
     });
     
+    // Ensure selected models are not omitted
     if (selectedAiModel && !optionsMap.has(selectedAiModel)) {
-      optionsMap.set(selectedAiModel, getAiModelOption(selectedAiModel));
+      optionsMap.set(selectedAiModel, analyzeModelHeuristically({ code: selectedAiModel }));
     }
     if (fallbackOne && fallbackOne !== "none" && !optionsMap.has(fallbackOne)) {
-      optionsMap.set(fallbackOne, getAiModelOption(fallbackOne));
+      optionsMap.set(fallbackOne, analyzeModelHeuristically({ code: fallbackOne }));
     }
     if (fallbackTwo && fallbackTwo !== "none" && !optionsMap.has(fallbackTwo)) {
-      optionsMap.set(fallbackTwo, getAiModelOption(fallbackTwo));
+      optionsMap.set(fallbackTwo, analyzeModelHeuristically({ code: fallbackTwo }));
     }
 
     return Array.from(optionsMap.values()).sort((a, b) => {
+      // 1. Sort by suitability grade (Excellent > Good > Caution > Unsuitable)
+      const rank = { Excellent: 4, Good: 3, Caution: 2, Unsuitable: 1 };
+      const aRank = rank[a.suitability] || 0;
+      const bRank = rank[b.suitability] || 0;
+      if (bRank !== aRank) {
+        return bRank - aRank;
+      }
+      
+      // 2. Sort by version descending
       const aVerMatch = a.code.match(/(\d+(?:\.\d+)?)/);
       const bVerMatch = b.code.match(/(\d+(?:\.\d+)?)/);
       const aVer = aVerMatch ? parseFloat(aVerMatch[1]) : 0;
@@ -1527,64 +1770,37 @@ export default function SettingsTab({
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="ai-model">Primary model</Label>
-                    <Select
+                    <ModelSelector
+                      id="ai-model"
                       value={selectedAiModel}
-                      onValueChange={(value) => setSelectedAiModel(value as AiModelCode)}
+                      onValueChange={(value) => setSelectedAiModel(value)}
+                      options={modelOptions}
                       disabled={!canMutate}
-                    >
-                      <SelectTrigger id="ai-model">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {modelOptions.map((option) => (
-                          <SelectItem key={option.code} value={option.code}>
-                            {option.displayName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    />
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="fallback-one">Fallback 1</Label>
-                      <Select
+                      <ModelSelector
+                        id="fallback-one"
                         value={fallbackOne}
-                        onValueChange={(value) => setFallbackOne(value as AiModelCode | "none")}
+                        onValueChange={(value) => setFallbackOne(value)}
+                        options={modelOptions.filter((opt) => opt.code !== selectedAiModel)}
                         disabled={!canMutate}
-                      >
-                        <SelectTrigger id="fallback-one">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {modelOptions.filter((option) => option.code !== selectedAiModel).map((option) => (
-                            <SelectItem key={option.code} value={option.code}>
-                              {option.shortName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        allowNone
+                      />
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="fallback-two">Fallback 2</Label>
-                      <Select
+                      <ModelSelector
+                        id="fallback-two"
                         value={fallbackTwo}
-                        onValueChange={(value) => setFallbackTwo(value as AiModelCode | "none")}
+                        onValueChange={(value) => setFallbackTwo(value)}
+                        options={modelOptions.filter((opt) => opt.code !== selectedAiModel && opt.code !== fallbackOne)}
                         disabled={!canMutate}
-                      >
-                        <SelectTrigger id="fallback-two">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">None</SelectItem>
-                          {modelOptions.filter((option) => option.code !== selectedAiModel).map((option) => (
-                            <SelectItem key={option.code} value={option.code}>
-                              {option.shortName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        allowNone
+                      />
                     </div>
                   </div>
 
@@ -1595,7 +1811,7 @@ export default function SettingsTab({
                         Refreshing model catalog from Google API...
                       </span>
                     )}
-                    <span>{getAiModelOption(selectedAiModel).recommendedFor}</span>
+                    <span>{analyzeModelHeuristically({ code: selectedAiModel }).recommendedReason}</span>
                   </div>
 
                   <Button

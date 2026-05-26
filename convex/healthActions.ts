@@ -581,7 +581,17 @@ export const ensureHealthChunks = action({
 
 export const listAvailableModels = action({
   args: {},
-  handler: async (ctx): Promise<Array<{ code: string; displayName: string }>> => {
+  handler: async (
+    ctx
+  ): Promise<
+    Array<{
+      code: string;
+      displayName: string;
+      description: string;
+      inputTokenLimit: number;
+      outputTokenLimit: number;
+    }>
+  > => {
     await requireAuthenticatedSupabaseUserId(ctx);
     if (!GEMINI_API_KEY) {
       throw new ConvexError("GEMINI_API_KEY is not configured.");
@@ -592,7 +602,9 @@ export const listAvailableModels = action({
         `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
       );
       if (!response.ok) {
-        throw new Error(`Failed to fetch models from Google API: ${response.statusText}`);
+        throw new Error(
+          `Failed to fetch models from Google API: ${response.statusText}`
+        );
       }
       const data: any = await response.json();
       if (!data || !Array.isArray(data.models)) {
@@ -600,16 +612,20 @@ export const listAvailableModels = action({
       }
 
       return data.models
-        .filter((model: any) =>
-          Array.isArray(model.supportedGenerationMethods) &&
-          model.supportedGenerationMethods.includes("generateContent") &&
-          model.name.includes("gemini")
+        .filter(
+          (model: any) =>
+            Array.isArray(model.supportedGenerationMethods) &&
+            model.supportedGenerationMethods.includes("generateContent") &&
+            model.name.includes("gemini")
         )
         .map((model: any) => {
           const code = model.name.replace(/^models\//, "");
           return {
             code,
             displayName: model.displayName || code,
+            description: model.description || "",
+            inputTokenLimit: Number(model.inputTokenLimit) || 0,
+            outputTokenLimit: Number(model.outputTokenLimit) || 0,
           };
         })
         .sort((a: any, b: any) => a.displayName.localeCompare(b.displayName));
