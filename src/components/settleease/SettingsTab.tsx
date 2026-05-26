@@ -1804,16 +1804,6 @@ export default function SettingsTab({
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-muted/40 p-3 text-sm leading-6 text-muted-foreground flex flex-col gap-1">
-                    {isLoadingModels && (
-                      <span className="flex items-center gap-1.5 text-xs text-primary/80 font-medium mb-1">
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        Refreshing model catalog from Google API...
-                      </span>
-                    )}
-                    <span>{analyzeModelHeuristically({ code: selectedAiModel }).recommendedReason}</span>
-                  </div>
-
                   <Button
                     disabled={!canMutate}
                     onClick={() =>
