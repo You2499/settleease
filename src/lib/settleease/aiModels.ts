@@ -1,11 +1,8 @@
 export const AI_CONFIG_KEY = "global-ai-config";
 
-export const DEFAULT_AI_MODEL_CODE = "gemini-3.1-flash-lite-preview";
+export const DEFAULT_AI_MODEL_CODE = "gemini-2.0-flash";
 
-export type AiModelCode =
-  | "gemini-3.1-flash-lite-preview"
-  | "gemini-3-flash-preview"
-  | "gemini-2.5-flash";
+export type AiModelCode = string;
 
 export interface AiModelOption {
   code: AiModelCode;
@@ -13,7 +10,7 @@ export interface AiModelOption {
   shortName: string;
   status: "Preview" | "Stable";
   freeTierLabel: string;
-  paidPricingLabel: string;
+  paidPricingLabel?: string;
   recommendedFor: string;
   documentationUrl: string;
 }
@@ -27,24 +24,43 @@ export interface AiModelConfig {
 
 export const AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    code: "gemini-3.1-flash-lite-preview",
-    displayName: "Gemini 3.1 Flash-Lite Preview",
-    shortName: "3.1 Flash-Lite",
-    status: "Preview",
+    code: "gemini-2.0-flash",
+    displayName: "Gemini 2.0 Flash (Recommended)",
+    shortName: "2.0 Flash",
+    status: "Stable",
     freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $0.25 input, $1.50 output per 1M tokens",
-    recommendedFor: "Default for fast, low-cost summaries and receipt parsing.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview",
+    paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
+    recommendedFor: "Default for extremely fast, highly accurate, and stable summaries and receipt parsing.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-2.0-flash",
   },
   {
-    code: "gemini-3-flash-preview",
-    displayName: "Gemini 3 Flash Preview",
-    shortName: "3 Flash",
-    status: "Preview",
+    code: "gemini-1.5-flash",
+    displayName: "Gemini 1.5 Flash",
+    shortName: "1.5 Flash",
+    status: "Stable",
     freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $0.50 input, $3.00 output per 1M tokens",
-    recommendedFor: "Optional higher-capability model for richer analysis.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-3-flash-preview",
+    paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
+    recommendedFor: "Extremely fast, stable, and low-cost fallback summaries and receipt parsing.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-1.5-flash",
+  },
+  {
+    code: "gemini-2.0-flash-lite",
+    displayName: "Gemini 2.0 Flash Lite",
+    shortName: "2.0 Flash Lite",
+    status: "Stable",
+    freeTierLabel: "Free tier: input and output free of charge",
+    recommendedFor: "Ultra-fast and highly efficient light model.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-2.0-flash-lite",
+  },
+  {
+    code: "gemini-1.5-pro",
+    displayName: "Gemini 1.5 Pro",
+    shortName: "1.5 Pro",
+    status: "Stable",
+    freeTierLabel: "Free tier: input and output free of charge",
+    paidPricingLabel: "Paid Standard: $1.25 input, $5.00 output per 1M tokens",
+    recommendedFor: "High-capability model for highly complex, multi-lingual parsing and reasoning.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-1.5-pro",
   },
   {
     code: "gemini-2.5-flash",
@@ -52,23 +68,30 @@ export const AI_MODEL_OPTIONS: AiModelOption[] = [
     shortName: "2.5 Flash",
     status: "Stable",
     freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $0.30 input, $2.50 output per 1M tokens",
-    recommendedFor: "Stable fallback when preview-model risk is not desired.",
+    paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
+    recommendedFor: "Modern stable fallback model.",
     documentationUrl: "https://ai.google.dev/gemini-api/docs/models",
   },
 ];
 
-const AI_MODEL_CODES = AI_MODEL_OPTIONS.map((model) => model.code);
-
-function isSupportedAiModelCode(code: unknown): code is AiModelCode {
-  return typeof code === "string" && AI_MODEL_CODES.includes(code as AiModelCode);
-}
-
 export function getAiModelOption(code: string | null | undefined): AiModelOption {
-  return (
-    AI_MODEL_OPTIONS.find((model) => model.code === code) ||
-    AI_MODEL_OPTIONS.find((model) => model.code === DEFAULT_AI_MODEL_CODE)!
-  );
+  const found = AI_MODEL_OPTIONS.find((model) => model.code === code);
+  if (found) return found;
+
+  const cleanCode = String(code || DEFAULT_AI_MODEL_CODE).trim();
+  return {
+    code: cleanCode,
+    displayName: cleanCode
+      .replace(/^models\//, "")
+      .replace(/-/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase()),
+    shortName: cleanCode.split("-").slice(1).join(" ") || cleanCode,
+    status: "Stable",
+    freeTierLabel: "Fetched dynamically",
+    paidPricingLabel: "Standard Google API pricing",
+    recommendedFor: `Dynamic model loaded from Google Gemini API: ${cleanCode}`,
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models",
+  };
 }
 
 function getDefaultFallbackModelCodes(modelCode: AiModelCode): AiModelCode[] {
@@ -78,14 +101,12 @@ function getDefaultFallbackModelCodes(modelCode: AiModelCode): AiModelCode[] {
 }
 
 export function resolveAiModelConfig(config: Partial<AiModelConfig> | null | undefined): AiModelConfig {
-  const modelCode = isSupportedAiModelCode(config?.modelCode)
-    ? config.modelCode
-    : DEFAULT_AI_MODEL_CODE;
+  const modelCode = config?.modelCode ? String(config.modelCode).trim() : DEFAULT_AI_MODEL_CODE;
 
   const fallbackModelCodes = Array.isArray(config?.fallbackModelCodes)
-    ? config.fallbackModelCodes.filter(
-        (code): code is AiModelCode => isSupportedAiModelCode(code) && code !== modelCode,
-      )
+    ? config.fallbackModelCodes
+        .map((code) => String(code).trim())
+        .filter((code) => code !== modelCode)
     : getDefaultFallbackModelCodes(modelCode);
 
   const uniqueFallbacks = [...new Set(fallbackModelCodes)];

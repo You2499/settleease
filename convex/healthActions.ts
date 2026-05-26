@@ -578,3 +578,44 @@ export const ensureHealthChunks = action({
     };
   },
 });
+
+export const listAvailableModels = action({
+  args: {},
+  handler: async (ctx): Promise<Array<{ code: string; displayName: string }>> => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+    if (!GEMINI_API_KEY) {
+      throw new ConvexError("GEMINI_API_KEY is not configured.");
+    }
+
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
+      );
+      if (!response.ok) {
+        throw new Error(`Failed to fetch models from Google API: ${response.statusText}`);
+      }
+      const data: any = await response.json();
+      if (!data || !Array.isArray(data.models)) {
+        throw new Error("Invalid response from Google API");
+      }
+
+      return data.models
+        .filter((model: any) =>
+          Array.isArray(model.supportedGenerationMethods) &&
+          model.supportedGenerationMethods.includes("generateContent") &&
+          model.name.includes("gemini")
+        )
+        .map((model: any) => {
+          const code = model.name.replace(/^models\//, "");
+          return {
+            code,
+            displayName: model.displayName || code,
+          };
+        })
+        .sort((a: any, b: any) => a.displayName.localeCompare(b.displayName));
+    } catch (error) {
+      console.error("Error listing available models:", error);
+      throw new ConvexError(`Failed to retrieve models: ${normalizeError(error)}`);
+    }
+  },
+});

@@ -42,10 +42,10 @@ const celebrationContribution = v.object({
 });
 
 const DEFAULT_AI_CONFIG_KEY = "global-ai-config";
-const DEFAULT_AI_MODEL_CODE = "gemini-3.1-flash-lite-preview";
+const DEFAULT_AI_MODEL_CODE = "gemini-2.0-flash";
 const DEFAULT_AI_FALLBACK_MODEL_CODES = [
-  "gemini-3-flash-preview",
-  "gemini-2.5-flash",
+  "gemini-1.5-flash",
+  "gemini-1.5-pro",
 ];
 const DEVELOPMENT_CONVEX_HOST = "shocking-panda-595.convex.cloud";
 const PRODUCTION_CONVEX_HOST = "fortunate-fox-427.convex.cloud";
@@ -59,11 +59,7 @@ const settleEaseEnvironment = v.union(
   v.literal("production"),
 );
 
-const aiModelCode = v.union(
-  v.literal("gemini-3.1-flash-lite-preview"),
-  v.literal("gemini-3-flash-preview"),
-  v.literal("gemini-2.5-flash"),
-);
+const aiModelCode = v.string();
 
 const resetDataMode = v.union(
   v.literal("operational"),

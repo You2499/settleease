@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { useTheme } from "next-themes";
 import {
@@ -72,6 +72,7 @@ import { getConvexUrl } from "@/lib/settleease/convexUrl";
 import {
   AI_MODEL_OPTIONS,
   DEFAULT_AI_MODEL_CODE,
+  getAiModelOption,
   type AiModelCode,
 } from "@/lib/settleease/aiModels";
 import {
@@ -777,6 +778,7 @@ export default function SettingsTab({
   const updateAnnouncementMutation = useMutation(api.app.updateAnnouncement);
   const toggleAnnouncementActive = useMutation(api.app.toggleAnnouncementActive);
   const deleteAnnouncement = useMutation(api.app.deleteAnnouncement);
+  const listAvailableModels = useAction(api.healthActions.listAvailableModels);
 
   const clientEnvironment = getClientSettleEaseEnvironment();
   const configuredConvexUrl = getConvexUrl();
@@ -797,6 +799,8 @@ export default function SettingsTab({
   );
   const [fallbackOne, setFallbackOne] = useState<AiModelCode | "none">("none");
   const [fallbackTwo, setFallbackTwo] = useState<AiModelCode | "none">("none");
+  const [dynamicModelOptions, setDynamicModelOptions] = useState<Array<{ code: string; displayName: string }>>([]);
+  const [isLoadingModels, setIsLoadingModels] = useState(false);
   const [backfillPreview, setBackfillPreview] = useState<BudgetBackfillResult | null>(null);
   const [includeSummaries, setIncludeSummaries] = useState(true);
   const [includeRedactions, setIncludeRedactions] = useState(true);
@@ -845,6 +849,52 @@ export default function SettingsTab({
     setFallbackOne(snapshot.aiConfig.fallbackModelCodes?.[0] || "none");
     setFallbackTwo(snapshot.aiConfig.fallbackModelCodes?.[1] || "none");
   }, [snapshot?.aiConfig]);
+
+  useEffect(() => {
+    let active = true;
+    const fetchModels = async () => {
+      setIsLoadingModels(true);
+      try {
+        const fetched = await listAvailableModels();
+        if (active) {
+          setDynamicModelOptions(fetched);
+        }
+      } catch (error) {
+        console.error("Failed to fetch available Gemini models:", error);
+      } finally {
+        if (active) {
+          setIsLoadingModels(false);
+        }
+      }
+    };
+    if (userRole === "admin") {
+      void fetchModels();
+    }
+    return () => {
+      active = false;
+    };
+  }, [listAvailableModels, userRole]);
+
+  const modelOptions = useMemo(() => {
+    const optionsMap = new Map<string, ReturnType<typeof getAiModelOption>>(
+      AI_MODEL_OPTIONS.map((opt) => [opt.code, opt])
+    );
+    dynamicModelOptions.forEach((opt) => {
+      optionsMap.set(opt.code, getAiModelOption(opt.code));
+    });
+    
+    if (selectedAiModel && !optionsMap.has(selectedAiModel)) {
+      optionsMap.set(selectedAiModel, getAiModelOption(selectedAiModel));
+    }
+    if (fallbackOne && fallbackOne !== "none" && !optionsMap.has(fallbackOne)) {
+      optionsMap.set(fallbackOne, getAiModelOption(fallbackOne));
+    }
+    if (fallbackTwo && fallbackTwo !== "none" && !optionsMap.has(fallbackTwo)) {
+      optionsMap.set(fallbackTwo, getAiModelOption(fallbackTwo));
+    }
+
+    return Array.from(optionsMap.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+  }, [dynamicModelOptions, selectedAiModel, fallbackOne, fallbackTwo]);
 
   const appUsageAnalytics = useQuery(api.app.getAppUsageAnalytics, {
     datePreset: usageDatePreset,
@@ -1477,7 +1527,7 @@ export default function SettingsTab({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {AI_MODEL_OPTIONS.map((option) => (
+                        {modelOptions.map((option) => (
                           <SelectItem key={option.code} value={option.code}>
                             {option.displayName}
                           </SelectItem>
@@ -1499,7 +1549,7 @@ export default function SettingsTab({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {AI_MODEL_OPTIONS.filter((option) => option.code !== selectedAiModel).map((option) => (
+                          {modelOptions.filter((option) => option.code !== selectedAiModel).map((option) => (
                             <SelectItem key={option.code} value={option.code}>
                               {option.shortName}
                             </SelectItem>
@@ -1519,7 +1569,7 @@ export default function SettingsTab({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">None</SelectItem>
-                          {AI_MODEL_OPTIONS.filter((option) => option.code !== selectedAiModel).map((option) => (
+                          {modelOptions.filter((option) => option.code !== selectedAiModel).map((option) => (
                             <SelectItem key={option.code} value={option.code}>
                               {option.shortName}
                             </SelectItem>
@@ -1529,8 +1579,14 @@ export default function SettingsTab({
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-muted/40 p-3 text-sm leading-6 text-muted-foreground">
-                    {AI_MODEL_OPTIONS.find((option) => option.code === selectedAiModel)?.recommendedFor}
+                  <div className="rounded-lg bg-muted/40 p-3 text-sm leading-6 text-muted-foreground flex flex-col gap-1">
+                    {isLoadingModels && (
+                      <span className="flex items-center gap-1.5 text-xs text-primary/80 font-medium mb-1">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        Refreshing model catalog from Google API...
+                      </span>
+                    )}
+                    <span>{getAiModelOption(selectedAiModel).recommendedFor}</span>
                   </div>
 
                   <Button
