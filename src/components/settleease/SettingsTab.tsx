@@ -893,7 +893,16 @@ export default function SettingsTab({
       optionsMap.set(fallbackTwo, getAiModelOption(fallbackTwo));
     }
 
-    return Array.from(optionsMap.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+    return Array.from(optionsMap.values()).sort((a, b) => {
+      const aVerMatch = a.code.match(/(\d+(?:\.\d+)?)/);
+      const bVerMatch = b.code.match(/(\d+(?:\.\d+)?)/);
+      const aVer = aVerMatch ? parseFloat(aVerMatch[1]) : 0;
+      const bVer = bVerMatch ? parseFloat(bVerMatch[1]) : 0;
+      if (bVer !== aVer) {
+        return bVer - aVer;
+      }
+      return a.displayName.localeCompare(b.displayName);
+    });
   }, [dynamicModelOptions, selectedAiModel, fallbackOne, fallbackTwo]);
 
   const appUsageAnalytics = useQuery(api.app.getAppUsageAnalytics, {
