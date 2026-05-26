@@ -281,14 +281,18 @@ export function resolveHealthDateRange({
 
   const endDate = endOfDay(now);
   const daysBackByPreset: Record<Exclude<HealthDatePreset, "all">, number> = {
+    "7d": 6,
     "30d": 29,
+    "60d": 59,
     "90d": 89,
     "1y": 364,
   };
   const startDate = startOfDay(addDays(endDate, -daysBackByPreset[preset]));
 
   const labelByPreset: Record<Exclude<HealthDatePreset, "all">, string> = {
+    "7d": "Last 7 days",
     "30d": "Last 30 days",
+    "60d": "Last 60 days",
     "90d": "Last 90 days",
     "1y": "Last year",
   };

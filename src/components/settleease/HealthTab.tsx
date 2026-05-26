@@ -78,7 +78,9 @@ type HealthTrendMetric = "calories" | "macros" | "alcohol";
 type HealthSourceListMode = "categories" | "contributors";
 
 const DATE_PRESETS: Array<{ value: HealthDatePreset; label: string }> = [
+  { value: "7d", label: "7 days" },
   { value: "30d", label: "30 days" },
+  { value: "60d", label: "60 days" },
   { value: "90d", label: "90 days" },
   { value: "1y", label: "1 year" },
   { value: "all", label: "All time" },

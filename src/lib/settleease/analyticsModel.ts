@@ -8,7 +8,7 @@ import type { Expense, Person, SettlementPayment, Category } from "./types";
 
 export type AnalyticsMode = "group" | "personal";
 export type AnalyticsGranularity = "weekly" | "monthly";
-export type AnalyticsDatePreset = "30d" | "90d" | "1y" | "all" | "custom";
+export type AnalyticsDatePreset = "7d" | "30d" | "60d" | "90d" | "1y" | "all" | "custom";
 
 export interface AnalyticsDateRange {
   preset?: AnalyticsDatePreset;
@@ -339,13 +339,17 @@ function resolveDateRange(range: AnalyticsDateRange | undefined, now: Date): Ana
   let startDate = explicitStart ? startOfDay(explicitStart) : startOfDay(now);
 
   if (!explicitStart) {
+    if (preset === "7d") startDate = startOfDay(addDays(endDate, -6));
     if (preset === "30d") startDate = startOfDay(addDays(endDate, -29));
+    if (preset === "60d") startDate = startOfDay(addDays(endDate, -59));
     if (preset === "90d") startDate = startOfDay(addDays(endDate, -89));
     if (preset === "1y") startDate = startOfDay(addDays(endDate, -364));
   }
 
   const labelByPreset: Record<AnalyticsDatePreset, string> = {
+    "7d": "Last 7 days",
     "30d": "Last 30 days",
+    "60d": "Last 60 days",
     "90d": "Last 90 days",
     "1y": "Last year",
     all: "All time",

@@ -1,6 +1,6 @@
 export type HealthMode = "group" | "personal";
 export type HealthGranularity = "weekly" | "monthly";
-export type HealthDatePreset = "30d" | "90d" | "1y" | "all";
+export type HealthDatePreset = "7d" | "30d" | "60d" | "90d" | "1y" | "all";
 export type HealthSourceKind = "expense" | "item";
 export type HealthClassification = "food" | "alcohol" | "ignore";
 export type HealthConfidence = "low" | "medium" | "high";

@@ -75,10 +75,12 @@ type AnalyticsSectionId = "overview" | "money-flow" | "trends" | "activity" | "r
 type AnalyticsCadenceView = "frequency" | "velocity";
 
 const DATE_PRESETS: Array<{ value: AnalyticsDatePreset; label: string }> = [
-  { value: "all", label: "All time" },
+  { value: "7d", label: "7 days" },
   { value: "30d", label: "30 days" },
+  { value: "60d", label: "60 days" },
   { value: "90d", label: "90 days" },
   { value: "1y", label: "1 year" },
+  { value: "all", label: "All time" },
 ];
 
 const GRANULARITY_OPTIONS: Array<{ value: AnalyticsGranularity; label: string }> = [
