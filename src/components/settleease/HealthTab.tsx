@@ -699,7 +699,7 @@ function TrendsSection(props: {
   const active = metric === "calories" ? calorie : alcohol;
   const valueLabel = metric === "calories" ? "Calories" : "Alcohol calories";
   const valueFormatter = formatCalories;
-  const color = metric === "calories" ? "#2f7d68" : "#c47f2a";
+  const color = metric === "calories" ? "hsl(var(--chart-2))" : "hsl(var(--chart-4))";
   const emptyMessage =
     metric === "calories"
       ? "Not enough classified data is ready to draw this calorie trend yet."

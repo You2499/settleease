@@ -563,7 +563,7 @@ function MoneyFlowSection({
                   sortValue: point.sortValue,
                 }))}
                 valueLabel="Balance"
-                color={model.snapshot.currentNetBalance && model.snapshot.currentNetBalance < 0 ? "#c2415d" : "#2f7d68"}
+                color={model.snapshot.currentNetBalance && model.snapshot.currentNetBalance < 0 ? "hsl(var(--destructive))" : "hsl(var(--chart-2))"}
                 balanceMode
               />
             </div>
@@ -585,8 +585,8 @@ function MoneyFlowSection({
                 obligation: row.obligation,
               }))}
               series={[
-                { id: "paid", label: "Paid", color: "#111827" },
-                { id: "obligation", label: "Share", color: "#c47f2a" },
+                { id: "paid", label: "Paid", color: "hsl(var(--chart-1))" },
+                { id: "obligation", label: "Share", color: "hsl(var(--chart-4))" },
               ]}
             />
           </div>
@@ -622,7 +622,7 @@ function TrendsSection({
             <VisxLineChart
               data={model.charts.spendingTrend}
               valueLabel={mode === "personal" ? "Share" : "Spend"}
-              color="#2f7d68"
+              color="hsl(var(--chart-2))"
             />
           </div>
         </OperationalPanel>
@@ -661,7 +661,7 @@ function ActivitySection({ model }: { model: AnalyticsViewModel }) {
   const cadenceData = cadenceView === "frequency" ? model.charts.frequency : model.charts.velocity;
   const cadenceLabel = cadenceView === "frequency" ? "Daily frequency" : "Weekly velocity";
   const cadenceValueLabel = cadenceView === "frequency" ? "Expenses" : "Expenses per week";
-  const cadenceColor = cadenceView === "frequency" ? "#111827" : "#c47f2a";
+  const cadenceColor = cadenceView === "frequency" ? "hsl(var(--chart-1))" : "hsl(var(--chart-4))";
 
   return (
     <div className="space-y-4">
@@ -679,7 +679,7 @@ function ActivitySection({ model }: { model: AnalyticsViewModel }) {
                   label: point.label,
                   value: point.value,
                 }))}
-                series={[{ id: "value", label: "Spend", color: "#111827" }]}
+                series={[{ id: "value", label: "Spend", color: "hsl(var(--chart-1))" }]}
               />
             </div>
           </OperationalPanel>

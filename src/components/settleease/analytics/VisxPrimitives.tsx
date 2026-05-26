@@ -45,12 +45,12 @@ type ChartFrameProps = {
 };
 
 const CHART_COLORS = [
-  "#111827",
-  "#2f7d68",
-  "#c47f2a",
-  "#c2415d",
-  "#777169",
-  "#4b5563",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--primary))",
 ];
 
 const axisColor = "hsl(var(--muted-foreground))";
@@ -144,7 +144,8 @@ function ZeroLine({
       x2={width}
       y1={y}
       y2={y}
-      stroke="#94a3b8"
+      stroke="hsl(var(--muted-foreground))"
+      strokeOpacity={0.6}
       strokeDasharray="6 5"
       strokeWidth={1.5}
     />
@@ -245,7 +246,7 @@ export function LineChart({
   data,
   valueLabel,
   valueFormatter = formatAnalyticsCurrency,
-  color = "#2f7d68",
+  color = "hsl(var(--chart-2))",
   height = 360,
   balanceMode = false,
   integerAxis = false,
@@ -675,7 +676,7 @@ export function Histogram({
   return (
     <BarChart
       data={data.map((point) => ({ key: point.key, label: point.label, value: point.value }))}
-      series={[{ id: "value", label: valueLabel, color: "#2f7d68" }]}
+      series={[{ id: "value", label: valueLabel, color: "hsl(var(--chart-2))" }]}
       valueFormatter={(value) => `${value}`}
       height={320}
       integerAxis
