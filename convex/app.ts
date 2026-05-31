@@ -3757,13 +3757,57 @@ export const analyzeExpenseExclusionImpact = query({
 
     const peopleMap = new Map(people.map((p) => [p._id, p.name]));
 
-    // Helper: compute balances
-    const computeBalances = (excludedIds: Set<string>) => {
+    const expenseDate = new Date(expense.createdAt || 0).getTime();
+    const expenseParticipantIds = new Set([
+      ...(expense.paidBy ?? []).map((p: any) => p.personId),
+      ...(expense.shares ?? []).map((s: any) => s.personId),
+    ]);
+
+    const totalAmount = expense.totalAmount;
+
+    // Helper: pre-filter and structure all entangled settlements
+    const entangledSettlements = settlements.map((payment) => {
+      const debtorName = peopleMap.get(payment.debtorId as any) || "Unknown";
+      const creditorName = peopleMap.get(payment.creditorId as any) || "Unknown";
+      const paymentDate = new Date(payment.settledAt).getTime();
+
+      const isExplicitLink = payment.associatedExpenseId === args.id;
+      const isLegacyGeneral = !isExplicitLink && 
+        expenseParticipantIds.has(payment.debtorId) &&
+        expenseParticipantIds.has(payment.creditorId) &&
+        paymentDate >= expenseDate - 60000;
+
+      if (!isExplicitLink && !isLegacyGeneral) return null;
+
+      const entangledAmount = Math.round(Math.min(payment.amountSettled, totalAmount) * 100) / 100;
+
+      return {
+        id: payment._id,
+        debtorName,
+        creditorName,
+        amountSettled: payment.amountSettled,
+        entangledAmount,
+        settledAt: payment.settledAt,
+        associationType: isExplicitLink ? ("explicit_link" as const) : ("legacy_general" as const),
+        impactSeverity: isExplicitLink ? ("critical" as const) : ("warning" as const),
+      };
+    }).filter((s) => s !== null) as any[];
+
+    const hasSettlements = entangledSettlements.length > 0;
+
+    // Unified helper: compute ledger balances for any simulated strategy
+    const computeLedgerBalances = (
+      excludeTargetExpense: boolean,
+      settlementModifications?: {
+        archivedIds: Set<string>;
+        adjustedAmounts: Map<string, number>;
+      }
+    ) => {
       const balances: Record<string, number> = {};
       people.forEach((p) => (balances[p._id] = 0));
 
       allExpenses.forEach((exp) => {
-        const isExcluded = exp.excludeFromSettlement || excludedIds.has(exp._id) || exp._id === args.id;
+        const isExcluded = exp.excludeFromSettlement || (excludeTargetExpense && exp._id === args.id);
         if (isExcluded) return;
 
         if (Array.isArray(exp.paidBy)) {
@@ -3784,11 +3828,15 @@ export const analyzeExpenseExclusionImpact = query({
 
       settlements.forEach((payment) => {
         if (payment.isArchived) return;
-        if (payment.associatedExpenseId && (excludedIds.has(payment.associatedExpenseId) || payment.associatedExpenseId === args.id)) {
-          return;
+        if (settlementModifications?.archivedIds.has(payment._id)) return;
+
+        let activeAmount = Number(payment.amountSettled);
+        if (settlementModifications?.adjustedAmounts.has(payment._id)) {
+          activeAmount = settlementModifications.adjustedAmounts.get(payment._id)!;
         }
-        balances[payment.debtorId] = (balances[payment.debtorId] || 0) + Number(payment.amountSettled);
-        balances[payment.creditorId] = (balances[payment.creditorId] || 0) - Number(payment.amountSettled);
+
+        balances[payment.debtorId] = (balances[payment.debtorId] || 0) + activeAmount;
+        balances[payment.creditorId] = (balances[payment.creditorId] || 0) - activeAmount;
       });
 
       Object.keys(balances).forEach((key) => {
@@ -3798,12 +3846,14 @@ export const analyzeExpenseExclusionImpact = query({
       return balances;
     };
 
-    const currentBalances = computeBalances(new Set());
-    const projectedBalances = computeBalances(new Set([args.id]));
+    // Calculate baseline current balances (target expense active, all settlements active)
+    const currentBalances = computeLedgerBalances(false);
 
-    const balanceShifts = people.map((p) => {
+    // Lock & Carry Forward Simulation (target expense excluded, all settlements fully active)
+    const lockAndCarryBalances = computeLedgerBalances(true);
+    const lockAndCarryShifts = people.map((p) => {
       const current = currentBalances[p._id] || 0;
-      const projected = projectedBalances[p._id] || 0;
+      const projected = lockAndCarryBalances[p._id] || 0;
       const shift = Math.round((projected - current) * 100) / 100;
       return {
         personId: p._id,
@@ -3814,62 +3864,152 @@ export const analyzeExpenseExclusionImpact = query({
       };
     }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
 
-    const expenseDate = new Date(expense.createdAt || 0).getTime();
-    const expenseParticipantIds = new Set([
-      ...(expense.paidBy ?? []).map((p: any) => p.personId),
-      ...(expense.shares ?? []).map((s: any) => s.personId),
-    ]);
+    // Pro-Rata Simulation (target expense excluded, overlapping settlements scaled down)
+    const proRataArchivedIds = new Set<string>();
+    const proRataAdjustedAmounts = new Map<string, number>();
+    entangledSettlements.forEach((payment) => {
+      const entangledAmount = Math.min(payment.amountSettled, totalAmount);
+      const remainingAmount = payment.amountSettled - entangledAmount;
+      if (remainingAmount <= 0.01) {
+        proRataArchivedIds.add(payment.id);
+      } else {
+        proRataAdjustedAmounts.set(payment.id, Math.round(remainingAmount * 100) / 100);
+      }
+    });
 
-    const entangledSettlements = settlements.map((payment) => {
-      const debtorName = peopleMap.get(payment.debtorId as any) || "Unknown";
-      const creditorName = peopleMap.get(payment.creditorId as any) || "Unknown";
-      const paymentDate = new Date(payment.settledAt).getTime();
-
-      const isExplicitLink = payment.associatedExpenseId === args.id;
-      const isLegacyGeneral = !isExplicitLink && 
-        expenseParticipantIds.has(payment.debtorId) &&
-        expenseParticipantIds.has(payment.creditorId) &&
-        paymentDate >= expenseDate - 60000;
-
-      if (!isExplicitLink && !isLegacyGeneral) return null;
-
-      const totalAmount = expense.totalAmount;
-      const entangledAmount = Math.round(Math.min(payment.amountSettled, totalAmount) * 100) / 100;
-
+    const proRataBalances = computeLedgerBalances(true, {
+      archivedIds: proRataArchivedIds,
+      adjustedAmounts: proRataAdjustedAmounts,
+    });
+    const proRataShifts = people.map((p) => {
+      const current = currentBalances[p._id] || 0;
+      const projected = proRataBalances[p._id] || 0;
+      const shift = Math.round((projected - current) * 100) / 100;
       return {
-        id: payment._id,
-        debtorName,
-        creditorName,
-        amountSettled: payment.amountSettled,
-        entangledAmount,
-        settledAt: payment.settledAt,
-        associationType: isExplicitLink ? "explicit_link" as const : "legacy_general" as const,
-        impactSeverity: isExplicitLink ? "critical" as const : "warning" as const,
+        personId: p._id,
+        personName: p.name,
+        currentBalance: current,
+        projectedBalance: projected,
+        shiftAmount: shift,
       };
-    }).filter((s) => s !== null) as any[];
+    }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
 
-    const hasSettlements = entangledSettlements.length > 0;
-    const totalAmount = expense.totalAmount;
+    // Unlink & Archive Simulation (target expense excluded, overlapping settlements voided/archived)
+    const unlinkArchivedIds = new Set<string>(entangledSettlements.map((s) => s.id));
+    const unlinkBalances = computeLedgerBalances(true, {
+      archivedIds: unlinkArchivedIds,
+      adjustedAmounts: new Map(),
+    });
+    const unlinkShifts = people.map((p) => {
+      const current = currentBalances[p._id] || 0;
+      const projected = unlinkBalances[p._id] || 0;
+      const shift = Math.round((projected - current) * 100) / 100;
+      return {
+        personId: p._id,
+        personName: p.name,
+        currentBalance: current,
+        projectedBalance: projected,
+        shiftAmount: shift,
+      };
+    }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
 
+    // Format strategies with context-specific descriptions
+    const strategies = [
+      {
+        id: "lock_and_carry" as const,
+        title: "Lock & Carry Forward",
+        badge: "Recommended",
+        shortDescription: "Keeps past settlements intact.",
+        fullDescription: hasSettlements
+          ? `Keeps all ${entangledSettlements.length} overlapping settlements active in the database. SettleEase will dynamically offset the remaining balances, re-routing debts to active creditors. Perfect for netting without rewriting history.`
+          : "Keeps all outstanding settlements fully intact. SettleEase will calculate outstanding debts normally.",
+        impactLabel: "Minimal Impact",
+        impactColor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40",
+        simulatedOutcome: {
+          balanceShifts: lockAndCarryShifts,
+          entangledSettlements: entangledSettlements.map((payment) => ({
+            id: payment.id,
+            debtorName: payment.debtorName,
+            creditorName: payment.creditorName,
+            amountSettled: payment.amountSettled,
+            entangledAmount: payment.entangledAmount,
+            adjustedAmount: payment.amountSettled,
+            isArchived: false,
+            associationType: payment.associationType,
+          })),
+        },
+      },
+      {
+        id: "pro_rata_adjust" as const,
+        title: "Pro-Rata Adjustment",
+        shortDescription: "Scale down overlapping payments.",
+        fullDescription: hasSettlements
+          ? `Scales back the ${entangledSettlements.length} overlapping settlements by their entangled shares in this expense. Settlements scaled down to zero are archived safely. Maintains strict alignment between expenses and cash transfers.`
+          : "Scales back overlapping settlements in proportion to this excluded expense.",
+        impactLabel: "Moderate Impact",
+        impactColor: "text-amber-600 bg-amber-50 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/40",
+        simulatedOutcome: {
+          balanceShifts: proRataShifts,
+          entangledSettlements: entangledSettlements.map((payment) => {
+            const entangledAmount = Math.min(payment.amountSettled, totalAmount);
+            const remainingAmount = payment.amountSettled - entangledAmount;
+            const isArchived = remainingAmount <= 0.01;
+            return {
+              id: payment.id,
+              debtorName: payment.debtorName,
+              creditorName: payment.creditorName,
+              amountSettled: payment.amountSettled,
+              entangledAmount: payment.entangledAmount,
+              adjustedAmount: isArchived ? 0 : Math.round(remainingAmount * 100) / 100,
+              isArchived,
+              associationType: payment.associationType,
+            };
+          }),
+        },
+      },
+      {
+        id: "unlink_and_archive" as const,
+        title: "Unlink & Archive",
+        shortDescription: "Void and reset overlapping payments.",
+        fullDescription: hasSettlements
+          ? `Completely voids and archives all ${entangledSettlements.length} overlapping settlements. Re-opens historical dinner debts in full, requiring you to log new settlements. Best for correcting wrong payments.`
+          : "Completely voids and archives all overlapping settlements from future ledger calculations.",
+        impactLabel: "High Impact",
+        impactColor: "text-rose-600 bg-rose-50 dark:bg-rose-950/20 border-rose-100 dark:border-rose-900/40",
+        simulatedOutcome: {
+          balanceShifts: unlinkShifts,
+          entangledSettlements: entangledSettlements.map((payment) => ({
+            id: payment.id,
+            debtorName: payment.debtorName,
+            creditorName: payment.creditorName,
+            amountSettled: payment.amountSettled,
+            entangledAmount: payment.entangledAmount,
+            adjustedAmount: 0,
+            isArchived: true,
+            associationType: payment.associationType,
+          })),
+        },
+      },
+    ];
+
+    // Standard high-level messaging
     let explanationText = "";
     let warningBoxText = "";
     let recommendedAction = "";
 
     if (hasSettlements) {
-      explanationText = `Excluding this expense will shift outstanding balances because prior payments have already settled parts of it. Specifically, SettleEase detected ${entangledSettlements.length} settlement payment(s) overlapping this expense's timeframe. `;
+      explanationText = `Excluding this expense will shift outstanding balances because prior payments have already settled parts of it. SettleEase detected ${entangledSettlements.length} settlement payment(s) overlapping this expense's timeframe.`;
       
       const criticalLinks = entangledSettlements.filter(s => s.associationType === "explicit_link");
       if (criticalLinks.length > 0) {
-        warningBoxText = `CRITICAL LEDGER MISMATCH: There are settlement payments directly linked to this expense. Excluding it will leave these payments orphaned, creating incorrect overpayment credits.`;
+        warningBoxText = `CRITICAL LEDGER MISMATCH: Settlement payments are directly linked to this expense. Excluding it will leave these payments orphaned, creating incorrect overpayment credits.`;
         recommendedAction = "Select 'Pro-Rata Adjustment' or 'Unlink & Archive' to automatically adjust these linked payments in the database.";
       } else {
-        warningBoxText = `LEDGER WARNING: Excluding this expense will shift net balances because global payments were logged to settle outstanding debts.`;
-        const shifts = balanceShifts.map(s => `${s.personName} (${s.shiftAmount > 0 ? "+" : ""}${s.shiftAmount} INR)`).join(", ");
-        explanationText += `This exclusion will cause the following balance adjustments: ${shifts}. `;
-        recommendedAction = "Use 'Lock & Carry Forward' (Dynamic Cash Reconciliation). SettleEase will automatically offset the excess cash, allowing the remaining debtors to pay the active creditors directly without circular refunds.";
+        warningBoxText = `LEDGER WARNING: Excluding this expense will shift net balances because global settlements were logged to net out outstanding debts.`;
+        recommendedAction = "Use 'Lock & Carry Forward' (Dynamic Cash Reconciliation) to dynamically carry forward outstanding debts without circular balance refunds.";
       }
     } else {
-      explanationText = `Excluding this expense is 100% safe. SettleEase did not find any settlement payments overlapping this expense. Outstanding balances will shift cleanly without any phantom debts.`;
+      explanationText = `Excluding this expense is safe. SettleEase did not find any settlement payments overlapping this expense. Outstanding balances will shift cleanly without any phantom debts.`;
       recommendedAction = "Confirm the exclusion to update the group ledger.";
     }
 
@@ -3877,10 +4017,11 @@ export const analyzeExpenseExclusionImpact = query({
       hasSettlements,
       totalAmount,
       entangledSettlements,
-      balanceShifts,
+      balanceShifts: lockAndCarryShifts, // Keep standard baseline projected shifts
       explanationText,
       warningBoxText,
       recommendedAction,
+      strategies,
     };
   },
 });

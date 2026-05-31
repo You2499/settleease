@@ -221,6 +221,7 @@ export interface PersonAggregatedItemShares {
   };
 }
 
+// Announcement Interface
 export interface Announcement {
   id: string;
   title: string;
@@ -233,3 +234,60 @@ export interface Announcement {
   updated_at: string;
   created_by_user_id?: string | null;
 }
+
+// Dynamic Exclusion Strategies and Simulations (Convex Query Response)
+export interface DynamicExclusionStrategy {
+  id: "lock_and_carry" | "pro_rata_adjust" | "unlink_and_archive";
+  title: string;
+  badge?: string;
+  shortDescription: string;
+  fullDescription: string;
+  impactLabel: string;
+  impactColor: string;
+  simulatedOutcome: {
+    balanceShifts: Array<{
+      personId: string;
+      personName: string;
+      currentBalance: number;
+      projectedBalance: number;
+      shiftAmount: number;
+    }>;
+    entangledSettlements: Array<{
+      id: string;
+      debtorName: string;
+      creditorName: string;
+      amountSettled: number;
+      entangledAmount: number;
+      adjustedAmount: number;
+      isArchived: boolean;
+      associationType: "explicit_link" | "legacy_general";
+    }>;
+  };
+}
+
+export interface ExclusionImpactAnalysis {
+  hasSettlements: boolean;
+  totalAmount: number;
+  entangledSettlements: Array<{
+    id: string;
+    debtorName: string;
+    creditorName: string;
+    amountSettled: number;
+    entangledAmount: number;
+    settledAt: string;
+    associationType: "explicit_link" | "legacy_general";
+    impactSeverity: "critical" | "warning" | "none";
+  }>;
+  balanceShifts: Array<{
+    personId: string;
+    personName: string;
+    currentBalance: number;
+    projectedBalance: number;
+    shiftAmount: number;
+  }>;
+  explanationText: string;
+  warningBoxText: string;
+  recommendedAction: string;
+  strategies: DynamicExclusionStrategy[];
+}
+
