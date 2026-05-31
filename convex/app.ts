@@ -4019,6 +4019,9 @@ export const analyzeExpenseExclusionImpact = query({
         });
         lahuDirectBalances[debtor.id] -= settlementAmount;
         lahuDirectBalances[creditor.id] += settlementAmount;
+
+        debtor.amount = Math.round((debtor.amount - settlementAmount) * 100) / 100;
+        creditor.amount = Math.round((creditor.amount - settlementAmount) * 100) / 100;
       }
 
       if (debtor.amount < 0.01 || settlementAmount < 0.01) lahuDebtorIndex++;
