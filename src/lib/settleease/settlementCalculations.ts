@@ -424,7 +424,7 @@ function calculateLahuDirectTransactions(
   }
 
   lahuExpenses.forEach((expense) => {
-    // 1. Calculate net contributions specifically for this Lahu expense
+    // 1. Calculate raw contributions specifically for this Lahu expense
     const rawContributions: Record<string, number> = {};
     people.forEach((p) => {
       const paidObj = expense.paid_by?.find((pb) => pb.personId === p.id);
@@ -443,62 +443,76 @@ function calculateLahuDirectTransactions(
       rawContributions[p.id] = paid - share;
     });
 
-    // 2. Identify surplus (creditors) and deficit (debtors) contributors
-    const creditors = Object.entries(rawContributions).filter(([_, contrib]) => contrib > 0.001);
-    const debtors = Object.entries(rawContributions).filter(([_, contrib]) => contrib < -0.001);
-    const totalSurplus = creditors.reduce((sum, [_, contrib]) => sum + contrib, 0);
+    // 2. Adjust raw contributions by applying specific or legacy-general entangled settlements
+    const adjustedContributions = { ...rawContributions };
+    const expenseDate = new Date(expense.created_at || 0).getTime();
+    const expenseParticipantIds = new Set([
+      ...(expense.paid_by ?? []).map((p) => p.personId),
+      ...(expense.shares ?? []).map((s) => s.personId),
+    ]);
 
-    if (totalSurplus > 0.001) {
-      debtors.forEach(([debtorId, debtorContrib]) => {
-        const debtorDeficit = Math.abs(debtorContrib);
-        creditors.forEach(([creditorId, creditorContrib]) => {
-          const proportion = creditorContrib / totalSurplus;
-          // grossOwed is debtor's portion of this creditor's surplus
-          const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
+    settlementPayments.forEach((sp) => {
+      if (sp.is_archived) return;
 
-          // 3. Subtract any active (non-archived) settlement payments explicitly or legacy-general entangled with this expense
-          const expenseDate = new Date(expense.created_at || 0).getTime();
-          const expenseParticipantIds = new Set([
-            ...(expense.paid_by ?? []).map((p) => p.personId),
-            ...(expense.shares ?? []).map((s) => s.personId),
-          ]);
+      const paymentDate = new Date(sp.settled_at).getTime();
+      const isExplicitLink = sp.associated_expense_id === expense.id;
+      const isLegacyGeneral =
+        !isExplicitLink &&
+        expenseParticipantIds.has(sp.debtor_id) &&
+        expenseParticipantIds.has(sp.creditor_id) &&
+        paymentDate >= expenseDate - 60000;
 
-          const specificSettled = settlementPayments
-            .filter((sp) => {
-              if (
-                sp.is_archived ||
-                sp.debtor_id !== debtorId ||
-                sp.creditor_id !== creditorId
-              ) {
-                return false;
-              }
-              const paymentDate = new Date(sp.settled_at).getTime();
-              const isExplicitLink = sp.associated_expense_id === expense.id;
-              const isLegacyGeneral =
-                !isExplicitLink &&
-                expenseParticipantIds.has(sp.debtor_id) &&
-                expenseParticipantIds.has(sp.creditor_id) &&
-                paymentDate >= expenseDate - 60000;
-              return isExplicitLink || isLegacyGeneral;
-            })
-            .reduce((sum, sp) => {
-              const entangledAmount = Math.min(Number(sp.amount_settled), Number(expense.total_amount));
-              return sum + entangledAmount;
-            }, 0);
+      if (isExplicitLink || isLegacyGeneral) {
+        const debtorId = sp.debtor_id;
+        const creditorId = sp.creditor_id;
+        const settledAmount = Number(sp.amount_settled);
 
-          const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
+        // Apply transfer: debtor pays creditor
+        if (adjustedContributions[debtorId] !== undefined) {
+          adjustedContributions[debtorId] += settledAmount;
+        }
+        if (adjustedContributions[creditorId] !== undefined) {
+          adjustedContributions[creditorId] -= settledAmount;
+        }
+      }
+    });
 
-          if (unpaidShare >= 0.01) {
-            directTransactions.push({
-              from: debtorId,
-              to: creditorId,
-              amount: unpaidShare,
-              contributingExpenseIds: [expense.id],
-              isDirect: true,
-            });
-          }
+    // 3. Identify surplus (creditors) and deficit (debtors) based on adjusted contributions
+    const creditors = Object.entries(adjustedContributions)
+      .filter(([_, contrib]) => contrib > 0.009)
+      .map(([id, contrib]) => ({ id, amount: Math.round(contrib * 100) / 100 }))
+      .sort((a, b) => b.amount - a.amount);
+
+    const debtors = Object.entries(adjustedContributions)
+      .filter(([_, contrib]) => contrib < -0.009)
+      .map(([id, contrib]) => ({ id, amount: Math.round(Math.abs(contrib) * 100) / 100 }))
+      .sort((a, b) => b.amount - a.amount);
+
+    // 4. Perform greedy matching between debtors and creditors specifically for this isolated expense
+    let debtorIndex = 0;
+    let creditorIndex = 0;
+
+    while (debtorIndex < debtors.length && creditorIndex < creditors.length) {
+      const debtor = debtors[debtorIndex];
+      const creditor = creditors[creditorIndex];
+
+      const settlementAmount = Math.round(Math.min(debtor.amount, creditor.amount) * 100) / 100;
+
+      if (settlementAmount >= 0.01) {
+        directTransactions.push({
+          from: debtor.id,
+          to: creditor.id,
+          amount: settlementAmount,
+          contributingExpenseIds: [expense.id],
+          isDirect: true,
         });
-      });
+
+        debtor.amount = Math.round((debtor.amount - settlementAmount) * 100) / 100;
+        creditor.amount = Math.round((creditor.amount - settlementAmount) * 100) / 100;
+      }
+
+      if (debtor.amount < 0.01 || settlementAmount < 0.01) debtorIndex++;
+      if (creditor.amount < 0.01 || settlementAmount < 0.01) creditorIndex++;
     }
   });
 

@@ -3805,10 +3805,19 @@ export const analyzeExpenseExclusionImpact = query({
       settlementModifications?: {
         archivedIds: Set<string>;
         adjustedAmounts: Map<string, number>;
-      }
+      },
+      simulatedStrategy?: string
     ) => {
       const balances: Record<string, number> = {};
       people.forEach((p) => (balances[p._id] = 0));
+
+      const lahuExcludedExpenses = allExpenses.filter((exp) => {
+        const isExcluded = exp.excludeFromSettlement || (excludeTargetExpense && exp._id === args.id);
+        const strategy = exp._id === args.id 
+          ? (simulatedStrategy || exp.exclusionStrategy) 
+          : exp.exclusionStrategy;
+        return isExcluded && strategy === "lahu_debt_settlement";
+      });
 
       allExpenses.forEach((exp) => {
         const isExcluded = exp.excludeFromSettlement || (excludeTargetExpense && exp._id === args.id);
@@ -3834,6 +3843,26 @@ export const analyzeExpenseExclusionImpact = query({
         if (payment.isArchived) return;
         if (settlementModifications?.archivedIds.has(payment._id)) return;
 
+        // Skip if legacy-general entangled with any Lahu-excluded expense
+        const isLegacyGeneralEntangled = lahuExcludedExpenses.some((exp) => {
+          const expenseDate = new Date(exp.createdAt || 0).getTime();
+          const paymentDate = new Date(payment.settledAt).getTime();
+
+          const expenseParticipantIds = new Set([
+            ...(exp.paidBy ?? []).map((p: any) => p.personId),
+            ...(exp.shares ?? []).map((s: any) => s.personId),
+          ]);
+
+          return (
+            !payment.associatedExpenseId &&
+            expenseParticipantIds.has(payment.debtorId) &&
+            expenseParticipantIds.has(payment.creditorId) &&
+            paymentDate >= expenseDate - 60000
+          );
+        });
+
+        if (isLegacyGeneralEntangled) return;
+
         let activeAmount = Number(payment.amountSettled);
         if (settlementModifications?.adjustedAmounts.has(payment._id)) {
           activeAmount = settlementModifications.adjustedAmounts.get(payment._id)!;
@@ -3854,7 +3883,7 @@ export const analyzeExpenseExclusionImpact = query({
     const currentBalances = computeLedgerBalances(false);
 
     // Lock & Carry Forward Simulation (target expense excluded, all settlements fully active)
-    const lockAndCarryBalances = computeLedgerBalances(true);
+    const lockAndCarryBalances = computeLedgerBalances(true, undefined, "lock_and_carry");
     const lockAndCarryShifts = people.map((p) => {
       const current = currentBalances[p._id] || 0;
       const projected = lockAndCarryBalances[p._id] || 0;
@@ -3884,7 +3913,7 @@ export const analyzeExpenseExclusionImpact = query({
     const proRataBalances = computeLedgerBalances(true, {
       archivedIds: proRataArchivedIds,
       adjustedAmounts: proRataAdjustedAmounts,
-    });
+    }, "pro_rata_adjust");
     const proRataShifts = people.map((p) => {
       const current = currentBalances[p._id] || 0;
       const projected = proRataBalances[p._id] || 0;
@@ -3903,7 +3932,7 @@ export const analyzeExpenseExclusionImpact = query({
     const unlinkBalances = computeLedgerBalances(true, {
       archivedIds: unlinkArchivedIds,
       adjustedAmounts: new Map(),
-    });
+    }, "unlink_and_archive");
     const unlinkShifts = people.map((p) => {
       const current = currentBalances[p._id] || 0;
       const projected = unlinkBalances[p._id] || 0;
@@ -3923,7 +3952,7 @@ export const analyzeExpenseExclusionImpact = query({
     const lahuGeneralBalances = computeLedgerBalances(true, {
       archivedIds: lahuExclSettlementIds,
       adjustedAmounts: new Map()
-    });
+    }, "lahu_debt_settlement");
 
     // 2. Calculate dynamic pairwise Lahu obligations
     const lahuDirectDebts: Array<{
@@ -3947,35 +3976,53 @@ export const analyzeExpenseExclusionImpact = query({
       rawContributions[p._id] = Number(paid) - totalShare;
     });
 
-    const lahuCreditors = Object.entries(rawContributions).filter(([_, contrib]) => contrib > 0.001);
-    const lahuDebtors = Object.entries(rawContributions).filter(([_, contrib]) => contrib < -0.001);
-    const lahuTotalSurplus = lahuCreditors.reduce((sum, [_, contrib]) => sum + contrib, 0);
+    // Adjust raw contributions by applying entangled settlements
+    const lahuAdjustedContributions = { ...rawContributions };
+    entangledSettlements.forEach((sp) => {
+      const debtorId = sp.debtorId;
+      const creditorId = sp.creditorId;
+      const settledAmount = Number(sp.amountSettled);
 
-    if (lahuTotalSurplus > 0.001) {
-      lahuDebtors.forEach(([debtorId, debtorContrib]) => {
-        const debtorDeficit = Math.abs(debtorContrib);
-        lahuCreditors.forEach(([creditorId, creditorContrib]) => {
-          const proportion = creditorContrib / lahuTotalSurplus;
-          const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
-          
-          // Get explicit or legacy general entangled settlements for this pair and this expense
-          const specificSettled = entangledSettlements
-            .filter(es => es.debtorId === debtorId && es.creditorId === creditorId)
-            .reduce((sum, es) => sum + Number(es.entangledAmount), 0);
+      if (lahuAdjustedContributions[debtorId] !== undefined) {
+        lahuAdjustedContributions[debtorId] += settledAmount;
+      }
+      if (lahuAdjustedContributions[creditorId] !== undefined) {
+        lahuAdjustedContributions[creditorId] -= settledAmount;
+      }
+    });
 
-          const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
+    // Identify surplus (creditors) and deficit (debtors) based on adjusted contributions
+    const lahuCreditors = Object.entries(lahuAdjustedContributions)
+      .filter(([_, contrib]) => contrib > 0.009)
+      .map(([id, contrib]) => ({ id, amount: Math.round(contrib * 100) / 100 }))
+      .sort((a, b) => b.amount - a.amount);
 
-          if (unpaidShare >= 0.01) {
-            lahuDirectDebts.push({
-              fromId: debtorId,
-              toId: creditorId,
-              amount: unpaidShare
-            });
-            lahuDirectBalances[debtorId] -= unpaidShare;
-            lahuDirectBalances[creditorId] += unpaidShare;
-          }
+    const lahuDebtors = Object.entries(lahuAdjustedContributions)
+      .filter(([_, contrib]) => contrib < -0.009)
+      .map(([id, contrib]) => ({ id, amount: Math.round(Math.abs(contrib) * 100) / 100 }))
+      .sort((a, b) => b.amount - a.amount);
+
+    let lahuDebtorIndex = 0;
+    let lahuCreditorIndex = 0;
+
+    while (lahuDebtorIndex < lahuDebtors.length && lahuCreditorIndex < lahuCreditors.length) {
+      const debtor = lahuDebtors[lahuDebtorIndex];
+      const creditor = lahuCreditors[lahuCreditorIndex];
+
+      const settlementAmount = Math.round(Math.min(debtor.amount, creditor.amount) * 100) / 100;
+
+      if (settlementAmount >= 0.01) {
+        lahuDirectDebts.push({
+          fromId: debtor.id,
+          toId: creditor.id,
+          amount: settlementAmount
         });
-      });
+        lahuDirectBalances[debtor.id] -= settlementAmount;
+        lahuDirectBalances[creditor.id] += settlementAmount;
+      }
+
+      if (debtor.amount < 0.01 || settlementAmount < 0.01) lahuDebtorIndex++;
+      if (creditor.amount < 0.01 || settlementAmount < 0.01) lahuCreditorIndex++;
     }
 
     // Combine general balances and direct Lahu balances
