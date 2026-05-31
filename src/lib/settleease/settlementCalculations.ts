@@ -19,6 +19,10 @@ export function calculateNetBalances(
   // Initialize balances
   people.forEach((p) => (balances[p.id] = 0));
 
+  const excludedExpenseIds = new Set(
+    expenses.filter((e) => e.exclude_from_settlement).map((e) => e.id)
+  );
+
   // Process expenses (excluding those marked as exclude_from_settlement)
   expenses.forEach((expense) => {
     // Skip expenses excluded from settlement calculations
@@ -58,6 +62,12 @@ export function calculateNetBalances(
 
   // Adjust for settlement payments
   settlementPayments.forEach((payment) => {
+    if (payment.is_archived) {
+      return;
+    }
+    if (payment.associated_expense_id && excludedExpenseIds.has(payment.associated_expense_id)) {
+      return;
+    }
     if (balances[payment.debtor_id] !== undefined) {
       balances[payment.debtor_id] += Number(payment.amount_settled);
     }
@@ -296,7 +306,15 @@ export function calculatePairwiseTransactions(
 
   // 2. Adjust for settlement payments
   if (Array.isArray(settlementPayments)) {
+    const excludedExpenseIds = new Set(
+      expenses.filter((e) => e.exclude_from_settlement).map((e) => e.id)
+    );
+
     settlementPayments.forEach((payment) => {
+      if (payment.is_archived) return;
+      if (payment.associated_expense_id && excludedExpenseIds.has(payment.associated_expense_id)) {
+        return;
+      }
       const debtorId = payment.debtor_id;
       const creditorId = payment.creditor_id;
       const amountSettled = Number(payment.amount_settled);

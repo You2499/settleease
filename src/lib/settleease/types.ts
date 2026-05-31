@@ -152,6 +152,8 @@ export interface SettlementPayment {
   settled_at: string; // ISO date string
   marked_by_user_id: string; // FK to auth.users.id
   notes?: string;
+  associated_expense_id?: string | null;
+  is_archived?: boolean;
 }
 
 export interface ManualSettlementOverride {

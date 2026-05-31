@@ -38,13 +38,28 @@ export default function SettlementListItem({
           </div>
         </CardHeader>
         <CardContent className="px-3 pb-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
+          <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
               {isCustom ? 'Custom Payment' : 'Settlement'}
             </span>
+
+            {settlement.is_archived ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950/30 dark:text-rose-300 dark:border-rose-900/60">
+                Void / Archived
+              </span>
+            ) : settlement.associated_expense_id ? (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-50 text-amber-800 border border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-900/60">
+                Linked Settlement
+              </span>
+            ) : (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-stone-100 text-stone-700 border border-stone-200 dark:bg-stone-800 dark:text-stone-300 dark:border-stone-700">
+                General Settlement
+              </span>
+            )}
+
             {settlement.notes && (
-              <span className="italic text-muted-foreground">
-                {settlement.notes}
+              <span className="italic text-muted-foreground ml-1">
+                &ldquo;{settlement.notes}&rdquo;
               </span>
             )}
           </div>

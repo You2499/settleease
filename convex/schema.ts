@@ -173,10 +173,13 @@ export default defineSchema({
     settledAt: v.string(),
     markedByUserId: v.string(),
     notes: v.optional(v.union(v.string(), v.null())),
+    associatedExpenseId: v.optional(v.union(v.string(), v.null())),
+    isArchived: v.optional(v.boolean()),
   })
     .index("by_settled_at", ["settledAt"])
     .index("by_debtor", ["debtorId"])
-    .index("by_creditor", ["creditorId"]),
+    .index("by_creditor", ["creditorId"])
+    .index("by_associated_expense", ["associatedExpenseId"]),
 
   manualSettlementOverrides: defineTable({
     debtorId: v.string(),

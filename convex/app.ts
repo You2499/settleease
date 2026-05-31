@@ -278,6 +278,8 @@ function settlementPaymentDto(payment: any) {
     settled_at: payment.settledAt,
     marked_by_user_id: payment.markedByUserId,
     notes: payment.notes ?? undefined,
+    associated_expense_id: payment.associatedExpenseId ?? null,
+    is_archived: payment.isArchived ?? false,
   };
 }
 
@@ -2447,7 +2449,11 @@ export const saveExpense = mutation({
 });
 
 export const updateExpenseExcludeFromSettlement = mutation({
-  args: { id: v.string(), excludeFromSettlement: v.boolean() },
+  args: {
+    id: v.string(),
+    excludeFromSettlement: v.boolean(),
+    strategy: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const actorUserId = await requireAdmin(ctx);
     const expense: any = await ctx.db.get(args.id as any);
@@ -2456,6 +2462,51 @@ export const updateExpenseExcludeFromSettlement = mutation({
       excludeFromSettlement: args.excludeFromSettlement,
       updatedAt: nowIso(),
     });
+
+    if (args.excludeFromSettlement && args.strategy) {
+      const settlements = await ctx.db.query("settlementPayments").collect();
+      const expenseDate = new Date(expense.createdAt || 0).getTime();
+      const expenseParticipantIds = new Set([
+        ...(expense.paidBy ?? []).map((p: any) => p.personId),
+        ...(expense.shares ?? []).map((s: any) => s.personId),
+      ]);
+
+      const entangledSettlements = settlements.filter((payment) => {
+        const paymentDate = new Date(payment.settledAt).getTime();
+        const isExplicitLink = payment.associatedExpenseId === args.id;
+        const isLegacyGeneral = !isExplicitLink && 
+          expenseParticipantIds.has(payment.debtorId) &&
+          expenseParticipantIds.has(payment.creditorId) &&
+          paymentDate >= expenseDate - 60000;
+        return isExplicitLink || isLegacyGeneral;
+      });
+
+      if (args.strategy === "unlink_and_archive") {
+        for (const payment of entangledSettlements) {
+          await ctx.db.patch(payment._id, {
+            isArchived: true,
+          });
+        }
+      } else if (args.strategy === "pro_rata_adjust") {
+        for (const payment of entangledSettlements) {
+          const totalAmount = expense.totalAmount;
+          const entangledAmount = Math.round(Math.min(payment.amountSettled, totalAmount) * 100) / 100;
+          const remainingAmount = Math.round((payment.amountSettled - entangledAmount) * 100) / 100;
+          
+          if (remainingAmount <= 0.01) {
+            await ctx.db.patch(payment._id, {
+              amountSettled: 0,
+              isArchived: true,
+            });
+          } else {
+            await ctx.db.patch(payment._id, {
+              amountSettled: remainingAmount,
+            });
+          }
+        }
+      }
+    }
+
     await recordUsageEvent(ctx, {
       actorUserId,
       actorRole: "admin",
@@ -2466,6 +2517,7 @@ export const updateExpenseExcludeFromSettlement = mutation({
       metadata: {
         amountBucket: bucketAmount(expense.totalAmount),
         splitMethod: expense.splitMethod,
+        strategy: args.strategy ?? "none",
       },
     });
   },
@@ -2516,6 +2568,7 @@ export const addSettlementPayment = mutation({
     markedByUserId: v.string(),
     settledAt: v.optional(v.string()),
     notes: v.optional(v.union(v.string(), v.null())),
+    associatedExpenseId: v.optional(v.union(v.string(), v.null())),
   },
   handler: async (ctx, args) => {
     const actorUserId = await requireAdmin(ctx);
@@ -2527,6 +2580,7 @@ export const addSettlementPayment = mutation({
       markedByUserId: args.markedByUserId,
       settledAt: args.settledAt ?? nowIso(),
       notes: args.notes ?? null,
+      associatedExpenseId: args.associatedExpenseId ?? null,
     });
     await recordUsageEvent(ctx, {
       actorUserId,
@@ -3687,6 +3741,147 @@ export const logOutGlobally = mutation({
       lastGlobalLogoutAt: nowIso(),
       updatedAt: nowIso(),
     });
+  },
+});
+
+export const analyzeExpenseExclusionImpact = query({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+    const expense = await ctx.db.get(args.id as any);
+    if (!expense) throw new ConvexError("Expense not found.");
+
+    const allExpenses = await ctx.db.query("expenses").collect();
+    const people = await ctx.db.query("people").collect();
+    const settlements = await ctx.db.query("settlementPayments").collect();
+
+    const peopleMap = new Map(people.map((p) => [p._id, p.name]));
+
+    // Helper: compute balances
+    const computeBalances = (excludedIds: Set<string>) => {
+      const balances: Record<string, number> = {};
+      people.forEach((p) => (balances[p._id] = 0));
+
+      allExpenses.forEach((exp) => {
+        const isExcluded = exp.excludeFromSettlement || excludedIds.has(exp._id) || exp._id === args.id;
+        if (isExcluded) return;
+
+        if (Array.isArray(exp.paidBy)) {
+          exp.paidBy.forEach((p: any) => {
+            balances[p.personId] = (balances[p.personId] || 0) + Number(p.amount);
+          });
+        }
+        if (Array.isArray(exp.shares)) {
+          exp.shares.forEach((s: any) => {
+            balances[s.personId] = (balances[s.personId] || 0) - Number(s.amount);
+          });
+        }
+        if (exp.celebrationContribution && exp.celebrationContribution.amount > 0) {
+          const contributorId = exp.celebrationContribution.personId;
+          balances[contributorId] = (balances[contributorId] || 0) - Number(exp.celebrationContribution.amount);
+        }
+      });
+
+      settlements.forEach((payment) => {
+        if (payment.isArchived) return;
+        if (payment.associatedExpenseId && (excludedIds.has(payment.associatedExpenseId) || payment.associatedExpenseId === args.id)) {
+          return;
+        }
+        balances[payment.debtorId] = (balances[payment.debtorId] || 0) + Number(payment.amountSettled);
+        balances[payment.creditorId] = (balances[payment.creditorId] || 0) - Number(payment.amountSettled);
+      });
+
+      Object.keys(balances).forEach((key) => {
+        balances[key] = Math.round(balances[key] * 100) / 100;
+      });
+
+      return balances;
+    };
+
+    const currentBalances = computeBalances(new Set());
+    const projectedBalances = computeBalances(new Set([args.id]));
+
+    const balanceShifts = people.map((p) => {
+      const current = currentBalances[p._id] || 0;
+      const projected = projectedBalances[p._id] || 0;
+      const shift = Math.round((projected - current) * 100) / 100;
+      return {
+        personId: p._id,
+        personName: p.name,
+        currentBalance: current,
+        projectedBalance: projected,
+        shiftAmount: shift,
+      };
+    }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
+
+    const expenseDate = new Date(expense.createdAt || 0).getTime();
+    const expenseParticipantIds = new Set([
+      ...(expense.paidBy ?? []).map((p: any) => p.personId),
+      ...(expense.shares ?? []).map((s: any) => s.personId),
+    ]);
+
+    const entangledSettlements = settlements.map((payment) => {
+      const debtorName = peopleMap.get(payment.debtorId) || "Unknown";
+      const creditorName = peopleMap.get(payment.creditorId) || "Unknown";
+      const paymentDate = new Date(payment.settledAt).getTime();
+
+      const isExplicitLink = payment.associatedExpenseId === args.id;
+      const isLegacyGeneral = !isExplicitLink && 
+        expenseParticipantIds.has(payment.debtorId) &&
+        expenseParticipantIds.has(payment.creditorId) &&
+        paymentDate >= expenseDate - 60000;
+
+      if (!isExplicitLink && !isLegacyGeneral) return null;
+
+      const totalAmount = expense.totalAmount;
+      const entangledAmount = Math.round(Math.min(payment.amountSettled, totalAmount) * 100) / 100;
+
+      return {
+        id: payment._id,
+        debtorName,
+        creditorName,
+        amountSettled: payment.amountSettled,
+        entangledAmount,
+        settledAt: payment.settledAt,
+        associationType: isExplicitLink ? "explicit_link" as const : "legacy_general" as const,
+        impactSeverity: isExplicitLink ? "critical" as const : "warning" as const,
+      };
+    }).filter((s) => s !== null) as any[];
+
+    const hasSettlements = entangledSettlements.length > 0;
+    const totalAmount = expense.totalAmount;
+
+    let explanationText = "";
+    let warningBoxText = "";
+    let recommendedAction = "";
+
+    if (hasSettlements) {
+      explanationText = `Excluding this expense will shift outstanding balances because prior payments have already settled parts of it. Specifically, SettleEase detected ${entangledSettlements.length} settlement payment(s) overlapping this expense's timeframe. `;
+      
+      const criticalLinks = entangledSettlements.filter(s => s.associationType === "explicit_link");
+      if (criticalLinks.length > 0) {
+        warningBoxText = `CRITICAL LEDGER MISMATCH: There are settlement payments directly linked to this expense. Excluding it will leave these payments orphaned, creating incorrect overpayment credits.`;
+        recommendedAction = "Select 'Pro-Rata Adjustment' or 'Unlink & Archive' to automatically adjust these linked payments in the database.";
+      } else {
+        warningBoxText = `LEDGER WARNING: Excluding this expense will shift net balances because global payments were logged to settle outstanding debts.`;
+        const shifts = balanceShifts.map(s => `${s.personName} (${s.shiftAmount > 0 ? "+" : ""}${s.shiftAmount} INR)`).join(", ");
+        explanationText += `This exclusion will cause the following balance adjustments: ${shifts}. `;
+        recommendedAction = "Use 'Lock & Carry Forward' (Dynamic Cash Reconciliation). SettleEase will automatically offset the excess cash, allowing the remaining debtors to pay the active creditors directly without circular refunds.";
+      }
+    } else {
+      explanationText = `Excluding this expense is 100% safe. SettleEase did not find any settlement payments overlapping this expense. Outstanding balances will shift cleanly without any phantom debts.`;
+      recommendedAction = "Confirm the exclusion to update the group ledger.";
+    }
+
+    return {
+      hasSettlements,
+      totalAmount,
+      entangledSettlements,
+      balanceShifts,
+      explanationText,
+      warningBoxText,
+      recommendedAction,
+    };
   },
 });
 

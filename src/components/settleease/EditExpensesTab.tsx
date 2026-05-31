@@ -27,6 +27,7 @@ import {
   SettleEaseModalHeader,
   SettleEaseModalNotice,
 } from './SettleEaseDialog';
+import ExclusionResolutionModal from './ExclusionResolutionModal';
 
 interface EditExpensesTabProps {
   people: Person[];
@@ -53,6 +54,7 @@ export default function EditExpensesTab({
 
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
+  const [expenseToExclude, setExpenseToExclude] = useState<Expense | null>(null);
   const updateExpenseExcludeFromSettlement = useMutation(api.app.updateExpenseExcludeFromSettlement);
   const deleteExpense = useMutation(api.app.deleteExpense);
 
@@ -106,21 +108,46 @@ export default function EditExpensesTab({
   const handleToggleExcludeFromSettlement = async (expense: Expense) => {
     const newExcludeStatus = !expense.exclude_from_settlement;
 
+    if (newExcludeStatus) {
+      setExpenseToExclude(expense);
+      return;
+    }
+
     try {
       await updateExpenseExcludeFromSettlement({
         id: expense.id,
-        excludeFromSettlement: newExcludeStatus,
+        excludeFromSettlement: false,
       });
 
       toast({
-        title: newExcludeStatus ? "Excluded from Settlements" : "Included in Settlements",
-        description: newExcludeStatus
-          ? `${expense.description} will not be counted in settlement calculations (still in analytics).`
-          : `${expense.description} will now be included in settlement calculations.`
+        title: "Included in Settlements",
+        description: `${expense.description} will now be included in settlement calculations.`
       });
       onActionComplete();
     } catch (error: any) {
       toast({ title: "Error", description: `Could not update expense: ${error.message}`, variant: "destructive" });
+    }
+  };
+
+  const handleConfirmExclusion = async (strategy: string) => {
+    if (!expenseToExclude) return;
+    const expense = expenseToExclude;
+    setExpenseToExclude(null);
+
+    try {
+      await updateExpenseExcludeFromSettlement({
+        id: expense.id,
+        excludeFromSettlement: true,
+        strategy,
+      });
+
+      toast({
+        title: "Excluded from Settlements",
+        description: `${expense.description} successfully excluded from the settlement ledger using '${strategy.replace(/_/g, ' ')}'.`
+      });
+      onActionComplete();
+    } catch (error: any) {
+      toast({ title: "Error", description: `Could not exclude expense: ${error.message}`, variant: "destructive" });
     }
   };
 
@@ -297,6 +324,18 @@ export default function EditExpensesTab({
             </div>
           </SettleEaseModalFooter>
         </SettleEaseAlertDialog>
+      )}
+
+      {expenseToExclude && (
+        <ExclusionResolutionModal
+          open={expenseToExclude !== null}
+          onOpenChange={(open) => !open && setExpenseToExclude(null)}
+          expenseId={expenseToExclude.id}
+          expenseDescription={expenseToExclude.description}
+          expenseAmount={Number(expenseToExclude.total_amount)}
+          onConfirm={handleConfirmExclusion}
+          onCancel={() => setExpenseToExclude(null)}
+        />
       )}
     </>
   );

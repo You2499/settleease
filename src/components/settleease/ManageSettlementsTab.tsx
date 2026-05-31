@@ -360,20 +360,31 @@ export default function ManageSettlementsTab({
                                 <span className="font-medium text-foreground">{peopleMap[payment.creditor_id] || 'Unknown'}</span>
                                 <span className="block sm:inline sm:ml-2 text-green-700 font-semibold text-sm sm:text-base">{formatCurrency(payment.amount_settled)}</span>
                               </div>
-                              <div className="text-xs text-muted-foreground mt-1 break-words">
+                              <div className="text-xs text-muted-foreground mt-1.5 flex flex-wrap items-center gap-1.5 break-words">
                                 <span>Paid on: {new Date(payment.settled_at).toLocaleDateString()}</span>
+                                <span className="text-stone-300">•</span>
+                                <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-green-50 text-green-700 border border-green-200/50 leading-none">
+                                  {payment.notes ? "Custom Payment" : "Auto Settlement"}
+                                </span>
+
+                                {payment.is_archived ? (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-rose-50 text-rose-700 border border-rose-200/50 leading-none">
+                                    Void / Archived
+                                  </span>
+                                ) : payment.associated_expense_id ? (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/50 leading-none">
+                                    Linked Settlement
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-stone-50 text-stone-600 border border-stone-200/50 leading-none">
+                                    General Settlement
+                                  </span>
+                                )}
+
                                 {payment.notes && (
                                   <>
-                                    <span className="mx-2">•</span>
-                                    <span className="italic break-words">{payment.notes}</span>
-                                    <span className="mx-2">•</span>
-                                    <span className="text-primary/70 font-medium">Custom Payment</span>
-                                  </>
-                                )}
-                                {!payment.notes && (
-                                  <>
-                                    <span className="mx-2">•</span>
-                                    <span className="text-green-600/70 font-medium">Auto Settlement</span>
+                                    <span className="text-stone-300">•</span>
+                                    <span className="italic break-words text-stone-500">&ldquo;{payment.notes}&rdquo;</span>
                                   </>
                                 )}
                               </div>
