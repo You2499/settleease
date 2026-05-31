@@ -3748,7 +3748,7 @@ export const analyzeExpenseExclusionImpact = query({
   args: { id: v.string() },
   handler: async (ctx, args) => {
     await requireAuthenticatedSupabaseUserId(ctx);
-    const expense = await ctx.db.get(args.id as any);
+    const expense: any = await ctx.db.get(args.id as any);
     if (!expense) throw new ConvexError("Expense not found.");
 
     const allExpenses = await ctx.db.query("expenses").collect();
@@ -3821,8 +3821,8 @@ export const analyzeExpenseExclusionImpact = query({
     ]);
 
     const entangledSettlements = settlements.map((payment) => {
-      const debtorName = peopleMap.get(payment.debtorId) || "Unknown";
-      const creditorName = peopleMap.get(payment.creditorId) || "Unknown";
+      const debtorName = peopleMap.get(payment.debtorId as any) || "Unknown";
+      const creditorName = peopleMap.get(payment.creditorId as any) || "Unknown";
       const paymentDate = new Date(payment.settledAt).getTime();
 
       const isExplicitLink = payment.associatedExpenseId === args.id;

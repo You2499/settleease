@@ -4,14 +4,13 @@ import React, { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import SettleEaseDialog, {
+  SettleEaseModalBody,
+  SettleEaseModalFooter,
+  SettleEaseModalHeader,
+  SettleEaseModalNotice,
+} from "./SettleEaseDialog";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -53,110 +52,133 @@ export default function ExclusionResolutionModal({
   const isLoading = analysis === undefined;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[calc(100vh-2rem)] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto rounded-2xl border-stone-200/50 bg-[#faf9f6]/95 backdrop-blur-md p-6 shadow-[rgba(0,0,0,0.03)_0px_0px_0px_1px,rgba(78,50,23,0.04)_0px_16px_44px_-24px] focus:outline-none">
-        <style>{`
-          @keyframes soundwave {
-            0%, 100% { transform: scaleY(0.25); }
-            50% { transform: scaleY(1); }
-          }
-          .soundwave-bar {
-            animation: soundwave 1.2s ease-in-out infinite;
-            transform-origin: center;
-          }
-        `}</style>
+    <SettleEaseDialog open={open} onOpenChange={onOpenChange} className="sm:max-w-2xl">
+      {isLoading ? (
+        <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+          <SettleEaseModalHeader
+            icon={Scale}
+            tone="default"
+            title="Exclude from Settlements"
+            description="Analyzing dynamic ledger entanglement..."
+          />
+          <SettleEaseModalBody className="space-y-4">
+            {/* Warning Banner Skeleton */}
+            <Skeleton className="h-16 w-full rounded-xl" />
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-12 space-y-6">
-            <DialogHeader className="text-center flex flex-col items-center">
-              <DialogTitle className="text-2xl font-light tracking-tight text-stone-800 font-serif leading-none">
-                Exclude from Settlements
-              </DialogTitle>
-              <DialogDescription className="text-sm font-light text-stone-500 tracking-wide mt-2">
-                Analyzing dynamic ledger entanglement...
-              </DialogDescription>
-            </DialogHeader>
+            {/* Calculations Columns Skeletons */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                  <Skeleton className="h-4 w-28" />
+                </div>
+                <div className="space-y-2">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex justify-between items-center py-1">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-            {/* Ethereal Soundwave Loading State */}
-            <div className="flex items-end gap-1.5 justify-center h-16 py-2">
-              <div
-                className="w-1.5 h-10 bg-stone-400 dark:bg-stone-500 rounded-full soundwave-bar"
-                style={{ animationDelay: "0.1s" }}
-              />
-              <div
-                className="w-1.5 h-10 bg-stone-500 dark:bg-stone-400 rounded-full soundwave-bar"
-                style={{ animationDelay: "0.3s" }}
-              />
-              <div
-                className="w-1.5 h-10 bg-stone-600 dark:bg-stone-300 rounded-full soundwave-bar"
-                style={{ animationDelay: "0.5s" }}
-              />
-              <div
-                className="w-1.5 h-10 bg-stone-500 dark:bg-stone-400 rounded-full soundwave-bar"
-                style={{ animationDelay: "0.2s" }}
-              />
-              <div
-                className="w-1.5 h-10 bg-stone-400 dark:bg-stone-500 rounded-full soundwave-bar"
-                style={{ animationDelay: "0.4s" }}
-              />
+              <div className="space-y-3">
+                <div className="flex items-center gap-1.5">
+                  <Skeleton className="h-4 w-4 shrink-0 rounded" />
+                  <Skeleton className="h-4 w-36" />
+                </div>
+                <div className="space-y-2">
+                  {[1, 2].map((i) => (
+                    <div key={i} className="p-2 border border-border/60 rounded-xl space-y-1.5">
+                      <div className="flex justify-between">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-4 w-16" />
+                      </div>
+                      <Skeleton className="h-3 w-40" />
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            <p className="text-xs text-stone-400/80 font-light tracking-wider uppercase">
-              Calculating Pro-Rata Re-routing
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <DialogHeader className="text-left border-b border-stone-200/40 pb-4">
-              <DialogTitle className="text-2xl font-[300] tracking-[-0.04em] text-stone-800 font-serif">
-                Exclude from Settlements
-              </DialogTitle>
-              <DialogDescription className="text-sm font-light text-stone-500 mt-1">
-                Configure exclusion ledger rules for{" "}
-                <span className="font-semibold text-stone-700">
-                  {expenseDescription}
+            {/* Strategies Skeletons */}
+            <div className="space-y-3 pt-4">
+              <Skeleton className="h-4 w-44" />
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex gap-3 p-3.5 border border-border/60 rounded-xl">
+                  <Skeleton className="h-8 w-8 rounded-full shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-36" />
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SettleEaseModalBody>
+
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Skeleton className="h-10 w-24 rounded-full" />
+              <Skeleton className="h-10 w-44 rounded-full" />
+            </div>
+          </SettleEaseModalFooter>
+        </div>
+      ) : (
+        <div className="flex max-h-[calc(100dvh-1rem)] min-h-0 flex-col">
+          <SettleEaseModalHeader
+            icon={Scale}
+            tone={analysis.hasSettlements ? "warning" : "default"}
+            title="Exclude from Settlements"
+            description={
+              <span>
+                Configure exclusion rules for{" "}
+                <span className="font-semibold text-foreground">
+                  &ldquo;{expenseDescription}&rdquo;
                 </span>{" "}
                 ({formatCurrency(expenseAmount)}).
-              </DialogDescription>
-            </DialogHeader>
+              </span>
+            }
+          />
 
+          <SettleEaseModalBody className="space-y-5">
             {/* Dynamic Alert Banner */}
             {analysis.hasSettlements ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-stone-800 space-y-2.5">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <SettleEaseModalNotice tone="warning" className="space-y-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="text-sm font-semibold tracking-tight text-amber-900 leading-tight">
+                    <h4 className="text-sm font-semibold tracking-tight text-amber-900 dark:text-amber-200 leading-tight">
                       {analysis.warningBoxText}
                     </h4>
-                    <p className="text-xs font-light text-stone-600 leading-relaxed mt-1">
+                    <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
                       {analysis.explanationText}
                     </p>
                   </div>
                 </div>
 
                 {/* Overlapping Settlements & Balance Shifts List */}
-                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-stone-200/50">
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
-                      <TrendingDown className="h-3.5 w-3.5 text-stone-400" />
-                      Balance Shifts
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-border/40">
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <TrendingDown className="h-3.5 w-3.5 text-muted-foreground" />
+                      Projected Balance Shifts
                     </span>
-                    <ul className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
+                    <ul className="space-y-1.5 max-h-[120px] overflow-y-auto pr-1">
                       {analysis.balanceShifts.map((shift, idx) => (
                         <li
                           key={idx}
-                          className="text-xs font-light flex items-center justify-between text-stone-600 py-0.5"
+                          className="text-xs flex items-center justify-between py-1 border-b border-border/40 last:border-0"
                         >
-                          <span className="font-medium text-stone-700">
+                          <span className="font-medium text-foreground">
                             {shift.personName}
                           </span>
                           <span
                             className={cn(
-                              "font-mono font-medium px-1.5 py-0.5 rounded-full text-[11px]",
+                              "font-mono font-medium px-2 py-0.5 rounded-full text-[10px]",
                               shift.shiftAmount > 0
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : "bg-rose-50 text-rose-700 border border-rose-100"
+                                ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300 border border-emerald-100/50"
+                                : "bg-rose-50 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300 border border-rose-100/50"
                             )}
                           >
                             {shift.shiftAmount > 0 ? "+" : ""}
@@ -167,52 +189,52 @@ export default function ExclusionResolutionModal({
                     </ul>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
-                      <Info className="h-3.5 w-3.5 text-stone-400" />
-                      Entangled Payments
+                  <div className="space-y-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                      <Info className="h-3.5 w-3.5 text-muted-foreground" />
+                      Entangled Past Payments
                     </span>
-                    <ul className="space-y-1 max-h-[120px] overflow-y-auto pr-1">
+                    <ul className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
                       {analysis.entangledSettlements.map((settlement, idx) => (
                         <li
                           key={idx}
-                          className="text-xs font-light flex flex-col text-stone-600 bg-stone-100/50 rounded-lg p-1.5 border border-stone-200/30"
+                          className="text-xs flex flex-col bg-muted/40 border border-border/60 rounded-xl p-2.5"
                         >
                           <div className="flex justify-between items-center">
-                            <span className="font-medium text-stone-700">
+                            <span className="font-semibold text-foreground">
                               {settlement.debtorName} &rarr; {settlement.creditorName}
                             </span>
-                            <span className="font-mono font-medium text-stone-600">
+                            <span className="font-mono font-bold text-foreground">
                               {settlement.amountSettled.toFixed(2)} INR
                             </span>
                           </div>
-                          <span className="text-[9px] text-stone-400 mt-0.5 italic">
-                            Entangled: {settlement.entangledAmount.toFixed(2)} INR ({settlement.associationType === "explicit_link" ? "Explicit" : "Legacy"})
+                          <span className="text-[10px] text-muted-foreground mt-0.5">
+                            Entangled share: {settlement.entangledAmount.toFixed(2)} INR ({settlement.associationType === "explicit_link" ? "Explicit" : "Legacy General"})
                           </span>
                         </li>
                       ))}
                     </ul>
                   </div>
                 </div>
-              </div>
+              </SettleEaseModalNotice>
             ) : (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 flex gap-3 text-stone-800">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <SettleEaseModalNotice tone="success" className="flex gap-3">
+                <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-semibold tracking-tight text-emerald-900 leading-tight">
+                  <h4 className="text-sm font-semibold tracking-tight text-emerald-900 dark:text-emerald-200 leading-tight">
                     Clean Ledger Exclusion Safe
                   </h4>
-                  <p className="text-xs font-light text-stone-600 leading-relaxed mt-1">
+                  <p className="text-xs text-muted-foreground leading-relaxed mt-1">
                     {analysis.explanationText}
                   </p>
                 </div>
-              </div>
+              </SettleEaseModalNotice>
             )}
 
             {/* Resolution Strategy Chooser */}
             {analysis.hasSettlements && (
               <div className="space-y-3">
-                <h4 className="text-[11px] font-bold uppercase tracking-wider text-stone-400">
+                <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                   Select Settlement Exclusion Strategy
                 </h4>
 
@@ -220,10 +242,10 @@ export default function ExclusionResolutionModal({
                   {/* Lock & Carry Forward (Recommended) */}
                   <label
                     className={cn(
-                      "flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer select-none",
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer select-none",
                       selectedStrategy === "lock_and_carry"
-                        ? "border-stone-400 bg-white shadow-[0_4px_12px_rgba(78,50,23,0.03)]"
-                        : "border-stone-200 bg-white/50 hover:bg-white hover:border-stone-300"
+                        ? "border-primary bg-accent/20 ring-1 ring-primary/20 shadow-sm"
+                        : "border-border bg-card/60 hover:bg-accent/30"
                     )}
                   >
                     <input
@@ -236,24 +258,24 @@ export default function ExclusionResolutionModal({
                     />
                     <div
                       className={cn(
-                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stone-200",
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-background transition-colors",
                         selectedStrategy === "lock_and_carry"
-                          ? "bg-stone-900 text-white border-stone-950"
-                          : "bg-stone-50 text-stone-500"
+                          ? "bg-foreground text-background border-foreground"
+                          : "text-muted-foreground"
                       )}
                     >
                       <Lock className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-sm font-semibold text-stone-800 leading-none">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-foreground leading-none">
                           Lock & Carry Forward
                         </span>
-                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-stone-100 text-stone-500 border border-stone-200/50 leading-none">
+                        <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20 leading-none">
                           Recommended
                         </span>
                       </div>
-                      <p className="text-xs font-light text-stone-500 leading-relaxed mt-1">
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
                         Keeps payments intact. Balances offset dynamically, re-routing Bob's dinner debt to Alice and directly resolving it. Excellent for simplified debt structures.
                       </p>
                     </div>
@@ -262,10 +284,10 @@ export default function ExclusionResolutionModal({
                   {/* Pro-Rata Adjustment */}
                   <label
                     className={cn(
-                      "flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer select-none",
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer select-none",
                       selectedStrategy === "pro_rata_adjust"
-                        ? "border-stone-400 bg-white shadow-[0_4px_12px_rgba(78,50,23,0.03)]"
-                        : "border-stone-200 bg-white/50 hover:bg-white hover:border-stone-300"
+                        ? "border-primary bg-accent/20 ring-1 ring-primary/20 shadow-sm"
+                        : "border-border bg-card/60 hover:bg-accent/30"
                     )}
                   >
                     <input
@@ -278,19 +300,19 @@ export default function ExclusionResolutionModal({
                     />
                     <div
                       className={cn(
-                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stone-200",
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-background transition-colors",
                         selectedStrategy === "pro_rata_adjust"
-                          ? "bg-stone-900 text-white border-stone-950"
-                          : "bg-stone-50 text-stone-500"
+                          ? "bg-foreground text-background border-foreground"
+                          : "text-muted-foreground"
                       )}
                     >
                       <Scale className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <span className="text-sm font-semibold text-stone-800 leading-none">
+                      <span className="text-sm font-bold text-foreground leading-none">
                         Pro-Rata Adjustment
                       </span>
-                      <p className="text-xs font-light text-stone-500 leading-relaxed mt-1">
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
                         Scale down overlapping payments in proportion to this excluded expense. If a payment's remaining balance drops to zero, it is archived cleanly.
                       </p>
                     </div>
@@ -299,10 +321,10 @@ export default function ExclusionResolutionModal({
                   {/* Unlink & Archive */}
                   <label
                     className={cn(
-                      "flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer select-none",
+                      "flex items-start gap-3.5 p-3.5 rounded-xl border transition-all cursor-pointer select-none",
                       selectedStrategy === "unlink_and_archive"
-                        ? "border-stone-400 bg-white shadow-[0_4px_12px_rgba(78,50,23,0.03)]"
-                        : "border-stone-200 bg-white/50 hover:bg-white hover:border-stone-300"
+                        ? "border-primary bg-accent/20 ring-1 ring-primary/20 shadow-sm"
+                        : "border-border bg-card/60 hover:bg-accent/30"
                     )}
                   >
                     <input
@@ -315,19 +337,19 @@ export default function ExclusionResolutionModal({
                     />
                     <div
                       className={cn(
-                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-stone-200",
+                        "grid h-8 w-8 shrink-0 place-items-center rounded-full border border-border bg-background transition-colors",
                         selectedStrategy === "unlink_and_archive"
-                          ? "bg-stone-900 text-white border-stone-950"
-                          : "bg-stone-50 text-stone-500"
+                          ? "bg-foreground text-background border-foreground"
+                          : "text-muted-foreground"
                       )}
                     >
                       <Archive className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <span className="text-sm font-semibold text-stone-800 leading-none">
+                      <span className="text-sm font-bold text-foreground leading-none">
                         Unlink & Archive
                       </span>
-                      <p className="text-xs font-light text-stone-500 leading-relaxed mt-1">
+                      <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
                         Completely void and archive overlapping payments from future settlement calculations, resetting the ledger to its pre-settlement state.
                       </p>
                     </div>
@@ -335,26 +357,33 @@ export default function ExclusionResolutionModal({
                 </div>
               </div>
             )}
+          </SettleEaseModalBody>
 
-            {/* Modal Footer / Actions */}
-            <DialogFooter className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end border-t border-stone-200/40 pt-4 mt-6">
+          <SettleEaseModalFooter className="sm:justify-end">
+            <div className="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
               <Button
                 variant="outline"
-                className="h-10 rounded-full border-stone-200 text-stone-600 hover:bg-stone-100 hover:text-stone-800"
+                className="h-10 rounded-full"
                 onClick={onCancel}
               >
                 Cancel
               </Button>
               <Button
-                className="h-10 rounded-full bg-stone-900 text-white hover:bg-stone-800"
-                onClick={() => onConfirm(analysis.hasSettlements ? selectedStrategy : "lock_and_carry")}
+                className="h-10 rounded-full bg-foreground text-background hover:bg-foreground/90"
+                onClick={() =>
+                  onConfirm(
+                    analysis.hasSettlements ? selectedStrategy : "lock_and_carry"
+                  )
+                }
               >
-                {analysis.hasSettlements ? "Apply Strategy & Exclude" : "Confirm Exclusion"}
+                {analysis.hasSettlements
+                  ? "Apply Strategy & Exclude"
+                  : "Confirm Exclusion"}
               </Button>
-            </DialogFooter>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+            </div>
+          </SettleEaseModalFooter>
+        </div>
+      )}
+    </SettleEaseDialog>
   );
 }
