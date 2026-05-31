@@ -40,6 +40,7 @@ import { calculateNetBalances } from "@/lib/settleease/settlementCalculations";
 import type { PersonBalanceSnapshot } from "@/lib/settleease/summaryPayload";
 import AISummaryDialog, { type AISummaryActionResult } from "./AISummaryDialog";
 import { formatCurrency } from "@/lib/settleease/utils";
+import { cn } from "@/lib/utils";
 import type {
   Person,
   Expense,
@@ -402,44 +403,79 @@ export default function SettlementSummary({
             {transactionsToDisplay.length > 0 ? (
               <ScrollArea className="flex-1 min-h-0 border rounded-md p-1 mt-2">
                 <ul className="space-y-2 p-2">
-                  {transactionsToDisplay.map((txn, i) => (
-                    <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
-                      <Card className="bg-card/70 px-2 py-2 shadow-sm rounded-md">
-                        <div className="flex flex-col sm:grid sm:grid-cols-5 items-start sm:items-center gap-2 sm:gap-1.5">
-                          <div className="col-span-1 sm:col-span-3 w-full">
-                            <div className="flex items-center justify-between sm:grid sm:grid-cols-3 w-full">
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm px-1 min-w-0 flex-1 sm:col-span-1 sm:justify-self-start">
-                                {peopleMap[txn.from] || "Unknown"}
-                              </span>
-                              <span className="flex items-center justify-center w-5 mx-1 flex-shrink-0 sm:col-span-1 sm:justify-self-center">
-                                <ArrowRight className="text-accent w-4 h-4" />
-                              </span>
-                              <span className="truncate font-medium text-foreground text-base sm:text-sm px-1 min-w-0 flex-1 text-right sm:text-left sm:col-span-1 sm:justify-self-center">
-                                {peopleMap[txn.to] || "Unknown"}
-                              </span>
+                  {transactionsToDisplay.map((txn, i) => {
+                    const isDirect = txn.isDirect === true;
+                    return (
+                      <li key={`${txn.from}-${txn.to}-${i}-${txn.amount}`}>
+                        <Card
+                          className={cn(
+                            "px-3 py-3 shadow-sm transition-all duration-150",
+                            isDirect
+                              ? "border-l-4 border-neutral-700 dark:border-neutral-400 bg-neutral-50 dark:bg-neutral-900/30 rounded-r-xl rounded-l-sm"
+                              : "border border-dashed border-border/80 bg-card/40 rounded-md"
+                          )}
+                        >
+                          <div className="flex flex-col sm:grid sm:grid-cols-6 items-start sm:items-center gap-2.5 sm:gap-1.5">
+                            {/* Path and Names */}
+                            <div className="col-span-1 sm:col-span-3 w-full">
+                              <div className="flex items-center justify-between sm:grid sm:grid-cols-3 w-full">
+                                <span className="truncate font-semibold text-foreground text-sm px-1 min-w-0 flex-1 sm:col-span-1 sm:justify-self-start">
+                                  {peopleMap[txn.from] || "Unknown"}
+                                </span>
+                                <span className="flex items-center justify-center w-5 mx-1 flex-shrink-0 sm:col-span-1 sm:justify-self-center">
+                                  <ArrowRight className={cn("w-4 h-4", isDirect ? "text-neutral-700 dark:text-neutral-300" : "text-muted-foreground/60")} />
+                                </span>
+                                <span className="truncate font-semibold text-foreground text-sm px-1 min-w-0 flex-1 text-right sm:text-left sm:col-span-1 sm:justify-self-center">
+                                  {peopleMap[txn.to] || "Unknown"}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {/* Badge showing transaction type */}
+                            <div className="col-span-1 sm:col-span-1 self-start sm:self-center">
+                              {isDirect ? (
+                                <span className="inline-block bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-0.5 rounded text-[8px] font-bold tracking-wider uppercase leading-none">
+                                  DIRECT
+                                </span>
+                              ) : (
+                                <span className="inline-block border border-muted-foreground/30 text-muted-foreground dark:border-muted-foreground/40 dark:text-muted-foreground px-1.5 py-0.5 rounded text-[8px] font-medium tracking-wider uppercase leading-none">
+                                  GLOBAL NET
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Amount */}
+                            <span
+                              className={cn(
+                                "text-base sm:text-sm col-span-1 sm:col-span-1 self-end sm:self-center sm:text-right w-full sm:w-auto font-mono",
+                                isDirect
+                                  ? "font-bold text-neutral-900 dark:text-white"
+                                  : "font-medium text-muted-foreground"
+                              )}
+                            >
+                              {formatCurrency(txn.amount)}
+                            </span>
+
+                            {/* Button */}
+                            <div className="flex-shrink-0 flex justify-center col-span-1 sm:col-span-1 w-full sm:w-auto">
+                              {userRole === "admin" ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleInternalMarkAsPaid(txn)}
+                                  disabled={isLoading}
+                                  className="text-xs px-2 py-1 h-auto w-full sm:w-auto rounded-full"
+                                >
+                                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                                  Mark as Paid
+                                </Button>
+                              ) : null}
                             </div>
                           </div>
-                          <span className="font-bold text-green-700 text-base sm:text-lg col-span-1 sm:col-span-1 self-end sm:self-center sm:text-right w-full sm:w-auto">
-                            {formatCurrency(txn.amount)}
-                          </span>
-                          <div className="flex-shrink-0 flex justify-center col-span-1 sm:col-span-1 w-full sm:w-auto">
-                            {userRole === "admin" ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleInternalMarkAsPaid(txn)}
-                                disabled={isLoading}
-                                className="text-xs px-2 py-1 h-auto w-full sm:w-auto"
-                              >
-                                <CheckCircle2 className="mr-1 h-4 w-4" />
-                                Mark as Paid
-                              </Button>
-                            ) : null}
-                          </div>
-                        </div>
-                      </Card>
-                    </li>
-                  ))}
+                        </Card>
+                      </li>
+                    );
+                  })}
                 </ul>
               </ScrollArea>
             ) : (

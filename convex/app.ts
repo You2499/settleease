@@ -264,6 +264,7 @@ function expenseDto(expense: any) {
     items: expense.items ?? undefined,
     celebration_contribution: expense.celebrationContribution ?? null,
     exclude_from_settlement: expense.excludeFromSettlement ?? false,
+    exclusion_strategy: expense.exclusionStrategy ?? (expense.excludeFromSettlement ? "standard" : undefined),
     created_at: expense.createdAt,
     updated_at: expense.updatedAt,
   };
@@ -2460,6 +2461,7 @@ export const updateExpenseExcludeFromSettlement = mutation({
     if (!expense) throw new ConvexError("Expense not found.");
     await ctx.db.patch(expense._id, {
       excludeFromSettlement: args.excludeFromSettlement,
+      exclusionStrategy: args.excludeFromSettlement ? args.strategy : undefined,
       updatedAt: nowIso(),
     });
 
@@ -3913,6 +3915,88 @@ export const analyzeExpenseExclusionImpact = query({
       };
     }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
 
+    // Lahu Debt Settlement Simulation
+    // 1. Calculate General Balances (excluding this expense and any explicit settlements)
+    const lahuExclSettlementIds = new Set<string>(entangledSettlements.map(s => s.id));
+    const lahuGeneralBalances = computeLedgerBalances(true, {
+      archivedIds: lahuExclSettlementIds,
+      adjustedAmounts: new Map()
+    });
+
+    // 2. Calculate dynamic pairwise Lahu obligations
+    const lahuDirectDebts: Array<{
+      fromId: string;
+      toId: string;
+      amount: number;
+    }> = [];
+
+    const lahuDirectBalances: Record<string, number> = {};
+    people.forEach(p => lahuDirectBalances[p._id] = 0);
+
+    // Identify net creditors/debtors for this specific expense
+    const rawContributions: Record<string, number> = {};
+    people.forEach(p => {
+      const paid = expense.paidBy?.find((pb: any) => pb.personId === p._id)?.amount || 0;
+      const share = expense.shares?.find((s: any) => s.personId === p._id)?.amount || 0;
+      let totalShare = Number(share);
+      if (expense.celebrationContribution && expense.celebrationContribution.personId === p._id) {
+        totalShare += Number(expense.celebrationContribution.amount);
+      }
+      rawContributions[p._id] = Number(paid) - totalShare;
+    });
+
+    const lahuCreditors = Object.entries(rawContributions).filter(([_, contrib]) => contrib > 0.001);
+    const lahuDebtors = Object.entries(rawContributions).filter(([_, contrib]) => contrib < -0.001);
+    const lahuTotalSurplus = lahuCreditors.reduce((sum, [_, contrib]) => sum + contrib, 0);
+
+    if (lahuTotalSurplus > 0.001) {
+      lahuDebtors.forEach(([debtorId, debtorContrib]) => {
+        const debtorDeficit = Math.abs(debtorContrib);
+        lahuCreditors.forEach(([creditorId, creditorContrib]) => {
+          const proportion = creditorContrib / lahuTotalSurplus;
+          const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
+          
+          // Get explicit settlements for this pair and this expense
+          const specificSettled = settlements
+            .filter(sp => !sp.isArchived && sp.associatedExpenseId === args.id && sp.debtorId === debtorId && sp.creditorId === creditorId)
+            .reduce((sum, sp) => sum + Number(sp.amountSettled), 0);
+
+          const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
+
+          if (unpaidShare >= 0.01) {
+            lahuDirectDebts.push({
+              fromId: debtorId,
+              toId: creditorId,
+              amount: unpaidShare
+            });
+            lahuDirectBalances[debtorId] -= unpaidShare;
+            lahuDirectBalances[creditorId] += unpaidShare;
+          }
+        });
+      });
+    }
+
+    // Combine general balances and direct Lahu balances
+    const lahuTotalBalances: Record<string, number> = {};
+    people.forEach(p => {
+      const gen = lahuGeneralBalances[p._id] || 0;
+      const dir = lahuDirectBalances[p._id] || 0;
+      lahuTotalBalances[p._id] = Math.round((gen + dir) * 100) / 100;
+    });
+
+    const lahuShifts = people.map((p) => {
+      const current = currentBalances[p._id] || 0;
+      const projected = lahuTotalBalances[p._id] || 0;
+      const shift = Math.round((projected - current) * 100) / 100;
+      return {
+        personId: p._id,
+        personName: p.name,
+        currentBalance: current,
+        projectedBalance: projected,
+        shiftAmount: shift,
+      };
+    }).filter((shift) => Math.abs(shift.shiftAmount) >= 0.01);
+
     // Format strategies with context-specific descriptions
     const strategies = [
       {
@@ -3937,6 +4021,33 @@ export const analyzeExpenseExclusionImpact = query({
             isArchived: false,
             associationType: payment.associationType,
           })),
+        },
+      },
+      {
+        id: "lahu_debt_settlement" as const,
+        title: "Lahu Debt Settlement",
+        badge: "Direct Selection",
+        shortDescription: "Bypass netting and enforce direct payments.",
+        fullDescription: `Reserves all paid settlements and locks remaining unpaid shares into direct, un-netted pairwise payments to the original payer(s). Outstanding debts will bypass global netting optimization entirely.`,
+        impactLabel: "High Integrity",
+        impactColor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40",
+        simulatedOutcome: {
+          balanceShifts: lahuShifts,
+          entangledSettlements: entangledSettlements.map((payment) => ({
+            id: payment.id,
+            debtorName: payment.debtorName,
+            creditorName: payment.creditorName,
+            amountSettled: payment.amountSettled,
+            entangledAmount: payment.entangledAmount,
+            adjustedAmount: payment.amountSettled,
+            isArchived: false,
+            associationType: payment.associationType,
+          })),
+          isolatedDirectTransactions: lahuDirectDebts.map(d => ({
+            fromName: peopleMap.get(d.fromId as any) || "Unknown",
+            toName: peopleMap.get(d.toId as any) || "Unknown",
+            amount: d.amount
+          }))
         },
       },
       {

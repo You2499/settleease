@@ -22,6 +22,7 @@ import {
   Coins,
   ArrowRight,
   Sparkles,
+  HandCoins,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/settleease";
@@ -41,6 +42,7 @@ const STRATEGY_ICONS: Record<string, React.ComponentType<{ className?: string }>
   lock_and_carry: Lock,
   pro_rata_adjust: Scale,
   unlink_and_archive: Archive,
+  lahu_debt_settlement: HandCoins,
 };
 
 export default function ExclusionResolutionModal({
@@ -315,6 +317,42 @@ export default function ExclusionResolutionModal({
                       ))}
                     </ul>
                   </div>
+
+                  {/* Direct Lahu Payments Preview */}
+                  {selectedStrategy === "lahu_debt_settlement" && currentStrategy?.simulatedOutcome?.isolatedDirectTransactions && (
+                    <div className="col-span-1 md:col-span-2 space-y-3 mt-4 pt-4 border-t border-amber-200/40 dark:border-amber-950/40">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-900/60 dark:text-amber-200/60 flex items-center gap-1.5">
+                        <HandCoins className="h-3.5 w-3.5 text-neutral-700 dark:text-neutral-300" />
+                        Bypassed Direct Pairwise Settlements
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {currentStrategy.simulatedOutcome.isolatedDirectTransactions.map((tx, idx) => (
+                          <div
+                            key={idx}
+                            className="flex flex-col border-l-4 border-neutral-700 dark:border-neutral-400 bg-white/40 dark:bg-neutral-950/40 p-3 rounded-r-xl rounded-l-sm shadow-[rgba(0,0,0,0.02)_0px_2px_4px] transition-all duration-150"
+                          >
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold text-neutral-900 dark:text-neutral-100 text-xs">
+                                {tx.fromName} &rarr; {tx.toName}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono font-bold text-neutral-950 dark:text-white text-sm">
+                                  {tx.amount.toFixed(2)}
+                                </span>
+                                <span className="font-mono text-[9px] font-medium text-neutral-500">INR</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center justify-between mt-2 text-[9px]">
+                              <span className="text-neutral-500 font-medium">Bypasses global simplified netting</span>
+                              <span className="bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-900 px-1.5 py-0.5 rounded font-bold tracking-wider uppercase text-[8px] leading-none">
+                                DIRECT PAIRWISE
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </SettleEaseModalNotice>
             ) : (

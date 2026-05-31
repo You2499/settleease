@@ -35,6 +35,7 @@ export interface Expense {
   items?: ExpenseItemDetail[]; // Itemwise split details, or Smart Scan item metadata for equal/unequal expenses
   celebration_contribution?: CelebrationContribution | null; // New field for celebration contributions
   exclude_from_settlement?: boolean; // When true, expense is excluded from settlement calculations but still counted in analytics
+  exclusion_strategy?: string; // Dynamic exclusion strategy chosen (e.g., standard, lahu_debt_settlement)
   created_at?: string; // ISO date string
   updated_at?: string; // ISO date string
 }
@@ -174,6 +175,7 @@ export interface CalculatedTransaction {
   to: string;   // creditorId
   amount: number;
   contributingExpenseIds?: string[]; // Optional: for pairwise transactions to trace back
+  isDirect?: boolean; // True if this transaction bypasses global simplified netting (Lahu Debt Settlement)
 }
 
 
@@ -237,7 +239,7 @@ export interface Announcement {
 
 // Dynamic Exclusion Strategies and Simulations (Convex Query Response)
 export interface DynamicExclusionStrategy {
-  id: "lock_and_carry" | "pro_rata_adjust" | "unlink_and_archive";
+  id: "lock_and_carry" | "pro_rata_adjust" | "unlink_and_archive" | "lahu_debt_settlement";
   title: string;
   badge?: string;
   shortDescription: string;
@@ -261,6 +263,11 @@ export interface DynamicExclusionStrategy {
       adjustedAmount: number;
       isArchived: boolean;
       associationType: "explicit_link" | "legacy_general";
+    }>;
+    isolatedDirectTransactions?: Array<{
+      fromName: string;
+      toName: string;
+      amount: number;
     }>;
   };
 }

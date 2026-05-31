@@ -99,6 +99,7 @@ export default defineSchema({
     items: v.optional(v.union(v.array(expenseItem), v.null())),
     celebrationContribution: v.optional(v.union(celebrationContribution, v.null())),
     excludeFromSettlement: v.optional(v.boolean()),
+    exclusionStrategy: v.optional(v.string()),
     createdAt: v.optional(v.string()),
     updatedAt: v.optional(v.string()),
   })

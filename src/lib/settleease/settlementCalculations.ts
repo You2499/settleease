@@ -173,7 +173,8 @@ export function calculateSimplifiedTransactions(
       if (creditor.amount < 0.01 || settlementAmount < 0.01) creditorIndex++;
     }
     
-    return transactions;
+    const lahuTransactions = calculateLahuDirectTransactions(people, expenses, settlementPayments);
+    return [...transactions, ...lahuTransactions];
   }
 
   // No manual overrides - use standard optimized calculation
@@ -211,7 +212,8 @@ export function calculateSimplifiedTransactions(
     if (creditor.amount < 0.01 || settlementAmount < 0.01) creditorIndex++;
   }
 
-  return transactions;
+  const lahuTransactions = calculateLahuDirectTransactions(people, expenses, settlementPayments);
+  return [...transactions, ...lahuTransactions];
 }
 
 /**
@@ -371,5 +373,89 @@ export function calculatePairwiseTransactions(
     }
   }
 
-  return transactions;
+  const lahuTransactions = calculateLahuDirectTransactions(people, expenses, settlementPayments);
+  return [...transactions, ...lahuTransactions];
+}
+
+/**
+ * Calculate outstanding unpaid direct pairwise transactions for Lahu-excluded expenses.
+ * These are appended directly and bypass standard netting calculations.
+ */
+function calculateLahuDirectTransactions(
+  people: Person[],
+  expenses: Expense[],
+  settlementPayments: SettlementPayment[]
+): CalculatedTransaction[] {
+  const directTransactions: CalculatedTransaction[] = [];
+
+  // Filter for expenses that are excluded under the Lahu Debt Settlement strategy
+  const lahuExpenses = expenses.filter(
+    (e) => e.exclude_from_settlement && e.exclusion_strategy === "lahu_debt_settlement"
+  );
+
+  if (lahuExpenses.length === 0) {
+    return directTransactions;
+  }
+
+  lahuExpenses.forEach((expense) => {
+    // 1. Calculate net contributions specifically for this Lahu expense
+    const rawContributions: Record<string, number> = {};
+    people.forEach((p) => {
+      const paidObj = expense.paid_by?.find((pb) => pb.personId === p.id);
+      const paid = paidObj ? Number(paidObj.amount) : 0;
+
+      const shareObj = expense.shares?.find((s) => s.personId === p.id);
+      let share = shareObj ? Number(shareObj.amount) : 0;
+
+      if (
+        expense.celebration_contribution &&
+        expense.celebration_contribution.personId === p.id
+      ) {
+        share += Number(expense.celebration_contribution.amount);
+      }
+
+      rawContributions[p.id] = paid - share;
+    });
+
+    // 2. Identify surplus (creditors) and deficit (debtors) contributors
+    const creditors = Object.entries(rawContributions).filter(([_, contrib]) => contrib > 0.001);
+    const debtors = Object.entries(rawContributions).filter(([_, contrib]) => contrib < -0.001);
+    const totalSurplus = creditors.reduce((sum, [_, contrib]) => sum + contrib, 0);
+
+    if (totalSurplus > 0.001) {
+      debtors.forEach(([debtorId, debtorContrib]) => {
+        const debtorDeficit = Math.abs(debtorContrib);
+        creditors.forEach(([creditorId, creditorContrib]) => {
+          const proportion = creditorContrib / totalSurplus;
+          // grossOwed is debtor's portion of this creditor's surplus
+          const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
+
+          // 3. Subtract any active (non-archived) settlement payments explicitly associated with this expense
+          const specificSettled = settlementPayments
+            .filter(
+              (sp) =>
+                !sp.is_archived &&
+                sp.associated_expense_id === expense.id &&
+                sp.debtor_id === debtorId &&
+                sp.creditor_id === creditorId
+            )
+            .reduce((sum, sp) => sum + Number(sp.amount_settled), 0);
+
+          const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
+
+          if (unpaidShare >= 0.01) {
+            directTransactions.push({
+              from: debtorId,
+              to: creditorId,
+              amount: unpaidShare,
+              contributingExpenseIds: [expense.id],
+              isDirect: true,
+            });
+          }
+        });
+      });
+    }
+  });
+
+  return directTransactions;
 }
