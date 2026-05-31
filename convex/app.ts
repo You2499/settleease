@@ -3785,6 +3785,8 @@ export const analyzeExpenseExclusionImpact = query({
 
       return {
         id: payment._id,
+        debtorId: payment.debtorId,
+        creditorId: payment.creditorId,
         debtorName,
         creditorName,
         amountSettled: payment.amountSettled,
@@ -3956,10 +3958,10 @@ export const analyzeExpenseExclusionImpact = query({
           const proportion = creditorContrib / lahuTotalSurplus;
           const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
           
-          // Get explicit settlements for this pair and this expense
-          const specificSettled = settlements
-            .filter(sp => !sp.isArchived && sp.associatedExpenseId === args.id && sp.debtorId === debtorId && sp.creditorId === creditorId)
-            .reduce((sum, sp) => sum + Number(sp.amountSettled), 0);
+          // Get explicit or legacy general entangled settlements for this pair and this expense
+          const specificSettled = entangledSettlements
+            .filter(es => es.debtorId === debtorId && es.creditorId === creditorId)
+            .reduce((sum, es) => sum + Number(es.entangledAmount), 0);
 
           const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
 

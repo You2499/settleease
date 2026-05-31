@@ -23,6 +23,10 @@ export function calculateNetBalances(
     expenses.filter((e) => e.exclude_from_settlement).map((e) => e.id)
   );
 
+  const lahuExcludedExpenses = expenses.filter(
+    (e) => e.exclude_from_settlement && e.exclusion_strategy === "lahu_debt_settlement"
+  );
+
   // Process expenses (excluding those marked as exclude_from_settlement)
   expenses.forEach((expense) => {
     // Skip expenses excluded from settlement calculations
@@ -66,6 +70,28 @@ export function calculateNetBalances(
       return;
     }
     if (payment.associated_expense_id && excludedExpenseIds.has(payment.associated_expense_id)) {
+      return;
+    }
+    
+    // Skip if legacy-general entangled with a Lahu-excluded expense
+    const isLegacyGeneralEntangled = lahuExcludedExpenses.some((expense) => {
+      const expenseDate = new Date(expense.created_at || 0).getTime();
+      const paymentDate = new Date(payment.settled_at).getTime();
+      
+      const expenseParticipantIds = new Set([
+        ...(expense.paid_by ?? []).map((p) => p.personId),
+        ...(expense.shares ?? []).map((s) => s.personId),
+      ]);
+
+      return (
+        !payment.associated_expense_id &&
+        expenseParticipantIds.has(payment.debtor_id) &&
+        expenseParticipantIds.has(payment.creditor_id) &&
+        paymentDate >= expenseDate - 60000
+      );
+    });
+
+    if (isLegacyGeneralEntangled) {
       return;
     }
     if (balances[payment.debtor_id] !== undefined) {
@@ -430,16 +456,35 @@ function calculateLahuDirectTransactions(
           // grossOwed is debtor's portion of this creditor's surplus
           const grossOwed = Math.round((debtorDeficit * proportion) * 100) / 100;
 
-          // 3. Subtract any active (non-archived) settlement payments explicitly associated with this expense
+          // 3. Subtract any active (non-archived) settlement payments explicitly or legacy-general entangled with this expense
+          const expenseDate = new Date(expense.created_at || 0).getTime();
+          const expenseParticipantIds = new Set([
+            ...(expense.paid_by ?? []).map((p) => p.personId),
+            ...(expense.shares ?? []).map((s) => s.personId),
+          ]);
+
           const specificSettled = settlementPayments
-            .filter(
-              (sp) =>
-                !sp.is_archived &&
-                sp.associated_expense_id === expense.id &&
-                sp.debtor_id === debtorId &&
-                sp.creditor_id === creditorId
-            )
-            .reduce((sum, sp) => sum + Number(sp.amount_settled), 0);
+            .filter((sp) => {
+              if (
+                sp.is_archived ||
+                sp.debtor_id !== debtorId ||
+                sp.creditor_id !== creditorId
+              ) {
+                return false;
+              }
+              const paymentDate = new Date(sp.settled_at).getTime();
+              const isExplicitLink = sp.associated_expense_id === expense.id;
+              const isLegacyGeneral =
+                !isExplicitLink &&
+                expenseParticipantIds.has(sp.debtor_id) &&
+                expenseParticipantIds.has(sp.creditor_id) &&
+                paymentDate >= expenseDate - 60000;
+              return isExplicitLink || isLegacyGeneral;
+            })
+            .reduce((sum, sp) => {
+              const entangledAmount = Math.min(Number(sp.amount_settled), Number(expense.total_amount));
+              return sum + entangledAmount;
+            }, 0);
 
           const unpaidShare = Math.max(0, Math.round((grossOwed - specificSettled) * 100) / 100);
 

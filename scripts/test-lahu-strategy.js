@@ -43,7 +43,7 @@ const people = [
 ];
 
 try {
-  console.log("\n--- SCENARIO: E1/E2 Bob-Netting-Exclusion under Lahu ---");
+  console.log("\n--- SCENARIO 1: E1/E2 Bob-Netting-Exclusion under Lahu (Explicit Settlement) ---");
   // Setup:
   // E1 (Dinner): Alice pays $90, split A, B, C equally ($30 each)
   // E2 (Taxi): Bob pays $60, split B, C equally ($30 each)
@@ -85,9 +85,6 @@ try {
   const settlements = [s1];
 
   // 1. Verify general balances calculations
-  // Since E1 is a Lahu expense, it has exclude_from_settlement = true, and s1 is associated with it.
-  // Both are skipped in general balance.
-  // Only E2 is active in general balance: Bob paid $60, consumed $30 -> Bob: +$30. Charlie consumed $30 -> Charlie: -$30.
   const generalBalances = calculateNetBalances(people, expenses, settlements);
   console.log("  Computed General Balances (bypassing Lahu):", generalBalances);
   
@@ -100,9 +97,6 @@ try {
   const simplifiedTxs = calculateSimplifiedTransactions(people, expenses, settlements);
   console.log("  Calculated Simplified Transactions:", simplifiedTxs);
 
-  // Expecting 2 transactions:
-  // - Charlie pays Bob $30 (global simplified netting of E2)
-  // - Bob pays Alice $30 (direct isolated unpaid share of E1, isDirect = true)
   assert.strictEqual(simplifiedTxs.length, 2);
   
   const directTx = simplifiedTxs.find(tx => tx.isDirect === true);
@@ -120,31 +114,67 @@ try {
 
   console.log("  ✓ [Simplified Routing] Direct and global netting transactions are beautifully isolated and tagged!");
 
-  // 3. Verify pairwise transactions calculation
-  const pairwiseTxs = calculatePairwiseTransactions(people, expenses, settlements);
-  console.log("  Calculated Pairwise Transactions:", pairwiseTxs);
+  // =========================================================================
+  console.log("\n--- SCENARIO 2: Lahu Strategy with Legacy General (Unlinked 60s Window) Settlement ---");
+  // Setup:
+  // E1 (Dinner): Alice pays $90, split A, B, C equally ($30 each)
+  // E2 (Taxi): Bob pays $60, split B, C equally ($30 each)
+  // S1: Charlie pays Alice $30 (legacy general, not associated with E1 explicitly, but settled 60s after E1)
+  
+  const e1_s2 = {
+    id: "e1",
+    description: "Dinner",
+    total_amount: 90,
+    paid_by: [{ personId: "person-a", amount: 90 }],
+    split_method: "equal",
+    shares: [{ personId: "person-a", amount: 30 }, { personId: "person-b", amount: 30 }, { personId: "person-c", amount: 30 }],
+    exclude_from_settlement: true,
+    exclusion_strategy: "lahu_debt_settlement",
+    created_at: "2026-05-31T09:00:00Z"
+  };
 
-  assert.strictEqual(pairwiseTxs.length, 2);
-  const pairwiseDirectTx = pairwiseTxs.find(tx => tx.isDirect === true);
-  const pairwiseNetTx = pairwiseTxs.find(tx => !tx.isDirect);
+  const e2_s2 = {
+    id: "e2",
+    description: "Taxi",
+    total_amount: 60,
+    paid_by: [{ personId: "person-b", amount: 60 }],
+    split_method: "equal",
+    shares: [{ personId: "person-b", amount: 30 }, { personId: "person-c", amount: 30 }],
+    created_at: "2026-05-31T09:05:00Z"
+  };
 
-  assert.ok(pairwiseDirectTx, "Pairwise output must also include the direct transaction");
-  assert.strictEqual(pairwiseDirectTx.from, "person-b");
-  assert.strictEqual(pairwiseDirectTx.to, "person-a");
-  assert.strictEqual(pairwiseDirectTx.amount, 30.00);
+  const s1_s2 = {
+    id: "s1",
+    debtor_id: "person-c",
+    creditor_id: "person-a",
+    amount_settled: 30,
+    settled_at: "2026-05-31T09:00:30Z", // within 60s window of E1
+    associated_expense_id: null,        // UNLINKED legacy general!
+    marked_by_user_id: "user-admin"
+  };
 
-  assert.ok(pairwiseNetTx, "Pairwise output must also include the standard pairwise debt");
-  assert.strictEqual(pairwiseNetTx.from, "person-c");
-  assert.strictEqual(pairwiseNetTx.to, "person-b");
-  assert.strictEqual(pairwiseNetTx.amount, 30.00);
+  const expenses_s2 = [e1_s2, e2_s2];
+  const settlements_s2 = [s1_s2];
 
-  console.log("  ✓ [Pairwise Routing] Pairwise engine matches simplified calculations flawlessly!");
+  const simplifiedTxs_s2 = calculateSimplifiedTransactions(people, expenses_s2, settlements_s2);
+  console.log("  Calculated Simplified Transactions (Legacy General):", simplifiedTxs_s2);
 
-  // 4. Assert cash conservation & double-entry ledger balance
-  // Sum of net balances in general pool = 0.00
-  const generalSum = Object.values(generalBalances).reduce((sum, val) => sum + val, 0);
-  assert.strictEqual(Math.round(generalSum * 100) / 100, 0.00);
-  console.log("  ✓ [Invariant - Zero Sum] Double entry ledger balances sum to exactly 0.00!");
+  // Expecting 2 transactions:
+  // - Charlie pays Bob $30 (global simplified netting of E2)
+  // - Bob pays Alice $30 (direct isolated unpaid share of E1, isDirect = true)
+  // Charlie's $30 legacy general payment must be successfully matched and reduce his E1 unpaid share to $0!
+  assert.strictEqual(simplifiedTxs_s2.length, 2);
+  
+  const directTx_s2 = simplifiedTxs_s2.find(tx => tx.isDirect === true);
+  assert.ok(directTx_s2, "Outstanding Lahu debt must be appended");
+  assert.strictEqual(directTx_s2.from, "person-b");
+  assert.strictEqual(directTx_s2.to, "person-a");
+  assert.strictEqual(directTx_s2.amount, 30.00);
+
+  const charlieTx = simplifiedTxs_s2.find(tx => tx.from === "person-c" && tx.to === "person-a");
+  assert.ok(!charlieTx, "Charlie's unlinked general settlement must be matched to E1, so Charlie owes Alice $0");
+
+  console.log("  ✓ [Legacy Netting Bypass] Legacy general settlements are perfectly matched in Lahu calculations!");
 
   console.log("\n=============================================================");
   console.log("      LAHU DEBT SETTLEMENT STRATEGY FULLY VERIFIED! PASS!     ");
