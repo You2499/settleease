@@ -54,7 +54,7 @@ export default function ExclusionResolutionModal({
   onConfirm,
   onCancel,
 }: ExclusionResolutionModalProps) {
-  const [selectedStrategy, setSelectedStrategy] = useState<string>("lock_and_carry");
+  const [selectedStrategy, setSelectedStrategy] = useState<string>("lahu_debt_settlement");
 
   // Fetch dynamic impact analysis from the Convex backend
   const analysis = useQuery(api.app.analyzeExpenseExclusionImpact, {

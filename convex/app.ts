@@ -4052,33 +4052,9 @@ export const analyzeExpenseExclusionImpact = query({
     // Format strategies with context-specific descriptions
     const strategies = [
       {
-        id: "lock_and_carry" as const,
-        title: "Lock & Carry Forward",
-        badge: "Recommended",
-        shortDescription: "Keeps past settlements intact.",
-        fullDescription: hasSettlements
-          ? `Keeps all ${entangledSettlements.length} overlapping settlements active in the database. SettleEase will dynamically offset the remaining balances, re-routing debts to active creditors. Perfect for netting without rewriting history.`
-          : "Keeps all outstanding settlements fully intact. SettleEase will calculate outstanding debts normally.",
-        impactLabel: "Minimal Impact",
-        impactColor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40",
-        simulatedOutcome: {
-          balanceShifts: lockAndCarryShifts,
-          entangledSettlements: entangledSettlements.map((payment) => ({
-            id: payment.id,
-            debtorName: payment.debtorName,
-            creditorName: payment.creditorName,
-            amountSettled: payment.amountSettled,
-            entangledAmount: payment.entangledAmount,
-            adjustedAmount: payment.amountSettled,
-            isArchived: false,
-            associationType: payment.associationType,
-          })),
-        },
-      },
-      {
         id: "lahu_debt_settlement" as const,
         title: "Lahu Debt Settlement",
-        badge: "Direct Selection",
+        badge: "Recommended",
         shortDescription: "Bypass netting and enforce direct payments.",
         fullDescription: `Reserves all paid settlements and locks remaining unpaid shares into direct, un-netted pairwise payments to the original payer(s). Outstanding debts will bypass global netting optimization entirely.`,
         impactLabel: "High Integrity",
@@ -4100,6 +4076,30 @@ export const analyzeExpenseExclusionImpact = query({
             toName: peopleMap.get(d.toId as any) || "Unknown",
             amount: d.amount
           }))
+        },
+      },
+      {
+        id: "lock_and_carry" as const,
+        title: "Lock & Carry Forward",
+        badge: "Alternative",
+        shortDescription: "Keeps past settlements intact.",
+        fullDescription: hasSettlements
+          ? `Keeps all ${entangledSettlements.length} overlapping settlements active in the database. SettleEase will dynamically offset the remaining balances, re-routing debts to active creditors. Perfect for netting without rewriting history.`
+          : "Keeps all outstanding settlements fully intact. SettleEase will calculate outstanding debts normally.",
+        impactLabel: "Minimal Impact",
+        impactColor: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40",
+        simulatedOutcome: {
+          balanceShifts: lockAndCarryShifts,
+          entangledSettlements: entangledSettlements.map((payment) => ({
+            id: payment.id,
+            debtorName: payment.debtorName,
+            creditorName: payment.creditorName,
+            amountSettled: payment.amountSettled,
+            entangledAmount: payment.entangledAmount,
+            adjustedAmount: payment.amountSettled,
+            isArchived: false,
+            associationType: payment.associationType,
+          })),
         },
       },
       {
@@ -4169,7 +4169,7 @@ export const analyzeExpenseExclusionImpact = query({
         recommendedAction = "Select 'Pro-Rata Adjustment' or 'Unlink & Archive' to automatically adjust these linked payments in the database.";
       } else {
         warningBoxText = `LEDGER WARNING: Excluding this expense will shift net balances because global settlements were logged to net out outstanding debts.`;
-        recommendedAction = "Use 'Lock & Carry Forward' (Dynamic Cash Reconciliation) to dynamically carry forward outstanding debts without circular balance refunds.";
+        recommendedAction = "Use 'Lahu Debt Settlement' (Bypass Netting) to enforce direct pairwise payments and respect existing settlements.";
       }
     } else {
       explanationText = `Excluding this expense is safe. SettleEase did not find any settlement payments overlapping this expense. Outstanding balances will shift cleanly without any phantom debts.`;
@@ -4180,7 +4180,7 @@ export const analyzeExpenseExclusionImpact = query({
       hasSettlements,
       totalAmount,
       entangledSettlements,
-      balanceShifts: lockAndCarryShifts, // Keep standard baseline projected shifts
+      balanceShifts: lahuShifts, // Keep Lahu projected shifts as baseline
       explanationText,
       warningBoxText,
       recommendedAction,
