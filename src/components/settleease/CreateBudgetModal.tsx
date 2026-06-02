@@ -1053,7 +1053,7 @@ export default function CreateBudgetModal({
       void saveBudgetDraft(payload).then(() => {
         handleUpdateSaveHash({
           selected_lines: selectedLines,
-          fees: { otherCharge: fees.other_charge, discount: fees.discount },
+          fees: { other_charge: fees.other_charge, discount: fees.discount },
           vat_classifications: vatClassifications,
           vat_status: vatStatus,
           vat_model_name: vatModelName,

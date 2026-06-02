@@ -9,6 +9,7 @@ export type SyncStatus = "idle" | "syncing" | "success" | "error";
 export interface SyncStats {
   rowsCreated: number;
   rowsUpdated: number;
+  rowsDeleted?: number;
   totalCanonicalItems: number;
 }
 
@@ -154,6 +155,7 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
       const syncStats: SyncStats = {
         rowsCreated: result.rowsCreated ?? 0,
         rowsUpdated: result.rowsUpdated ?? 0,
+        rowsDeleted: result.rowsDeleted ?? 0,
         totalCanonicalItems: cleanedData.canonicalItems.length,
       };
 

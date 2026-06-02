@@ -2422,6 +2422,26 @@ export const importCleanedCatalog = mutation({
       }
     }
 
+    // 4. PURGE Messy Duplicates (Outdated unconsolidated historical rows)
+    const importedKeys = new Set(
+      args.canonicalItems.map((item) =>
+        buildBudgetCatalogKey(
+          cleanBudgetItemName(item.name),
+          cleanBudgetCategoryName(item.categoryName)
+        )
+      )
+    );
+
+    let rowsDeleted = 0;
+    for (const existing of existingBudgetItems) {
+      if (!importedKeys.has(existing.catalogKey)) {
+        if (existing.source === "historical" || existing.source === "mixed") {
+          await ctx.db.delete(existing._id);
+          rowsDeleted++;
+        }
+      }
+    }
+
     const profile = await getProfileBySupabaseUserId(ctx, actorUserId);
     const actorRole = profile?.role ?? "user";
 
@@ -2435,6 +2455,7 @@ export const importCleanedCatalog = mutation({
       metadata: {
         rowsCreated,
         rowsUpdated,
+        rowsDeleted,
         totalCanonicalItems: args.canonicalItems.length,
       },
     });
@@ -2443,6 +2464,7 @@ export const importCleanedCatalog = mutation({
       status: "success",
       rowsCreated,
       rowsUpdated,
+      rowsDeleted,
       totalCanonicalItems: args.canonicalItems.length,
     };
   },
