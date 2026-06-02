@@ -87,7 +87,7 @@ export const AI_CLEAN_CATALOG_RESPONSE_SCHEMA = {
           },
           cleanedPrice: {
             type: "number",
-            description: "The cleaned unit price for this individual observation, rounding to exactly 2 decimal places. Typically matches the input price.",
+            description: "The normalized individual unit price. IMPORTANT: If the raw item name includes a quantity multiplier (e.g., 'x2', 'x3', '2x', '3x') and the input price is the un-divided total price, you MUST divide the price by the quantity to calculate the true unit price. E.g., for Name 'Budweiser Magnum x2' with price 10.00, cleanedPrice MUST be 5.00. Round to exactly 2 decimal places.",
           },
         },
         required: ["observationId", "canonicalItemId", "decipheredVenue", "cleanedPrice"],
@@ -104,10 +104,10 @@ Analyze a list of noisy item observations from historical expenses and consolida
 
 Rules:
 1. Canonical Item Consolidation:
-   - Identify items that represent the exact same product or service (e.g., "coca-cola 330ml", "coke can", "coca cola") and group them into a single canonical budget item.
-   - Assign a clean, professional, and properly capitalized canonical name (e.g., "Coca-Cola" instead of "coke can", "Veggie Burger" instead of "veg burger 2x").
-   - Strip out quantity, package sizes, or volume markers (like "330ml", "500ml", "1L", "pack of 6", "x2") from the canonical item name.
-   - Keep the generated canonical item ID short, lowercase, and URL-safe (e.g., "coca-cola", "veggie-burger").
+   - Identify items that represent the exact same product or service and group them into a single canonical budget item.
+   - AGGRESSIVELY normalize casings, typos, trailing punctuation, and OCR junk. Assign a clean, professional, and properly capitalized canonical name in standard Title Case (e.g., "Coca-Cola" instead of "coke can" or "COCA COLA 330ML", "Budweiser Magnum" instead of "BUDWEISER MAGNUM 650ML x2", "Veggie Burger" instead of "veg burger 2x").
+   - Strip out quantity multipliers (like "x2", "x3", "x 4", "2x", "3x", "Qty: 2"), volume/weight markers (like "330ml", "500ml", "1L", "650ML", "750 ml", "500g", "1kg", "pack of 6"), container types ("can", "glass", "bottle", "pkg"), and descriptors of format.
+   - Keep the generated canonical item ID short, lowercase, and URL-safe (e.g., "coca-cola", "budweiser-magnum", "veggie-burger").
 
 2. Category Assignment:
    - Match each canonical item to the best-fitting category from the allowed categories list provided below.
@@ -118,9 +118,15 @@ Rules:
    - Use proper capitalization and spelling for venue names (e.g., "McDonald's" instead of "mcdonalds").
    - If the item is general, or no specific venue can be deciphered, return null for "decipheredVenue".
 
-4. Individual Mapping:
+4. Individual Mapping & Unit Price Normalization:
    - Map EVERY single input observation ID to its designated canonical item ID.
-   - For each mapping, decipher the venue specifically for that observation, and output its cleaned price (rounded to 2 decimal places).
+   - For each mapping, decipher the venue specifically for that observation.
+   - Calculate the true UNIT PRICE for "cleanedPrice":
+     - Check the raw input item name for quantity multipliers (e.g. "x2", "x3", "2x", "3x", "2 *", "qty 2").
+     - If a quantity multiplier is found, and the input "price" represents the total price (un-divided total amount) for that row, you MUST divide the input "price" by that quantity to calculate the correct unit price.
+     - E.g., if raw item Name is "Budweiser Magnum 650ML x2" and input price is "10.00", the unit price is "5.00".
+     - E.g., if raw item Name is "Coca Cola x3" and input price is "9.00", the unit price is "3.00".
+     - Output this calculated unit price as "cleanedPrice", rounded to exactly 2 decimal places.
 
 Allowed Categories:
 {{ALLOWED_CATEGORIES}}
@@ -199,7 +205,7 @@ export function normalizeCleanCatalogResponse(
   const canonicalIds = new Set(canonicalItems.map((c: CanonicalItemOutput) => c.id));
   const fallbackCanonicalId = canonicalItems[0].id;
 
-  // 2. Validate mappings and match IDs
+  // 2. Validate mappings and match IDs (with deterministic programmatic quantity & price parsing)
   const mappings: CatalogMappingOutput[] = Array.isArray(parsed?.mappings)
     ? parsed.mappings
         .map((m: any) => {
@@ -212,13 +218,41 @@ export function normalizeCleanCatalogResponse(
             canonicalId = fallbackCanonicalId;
           }
 
+          // --- Programmatic Quantity & Unit Price Resolution ---
+          let quantity = 1;
+          const cleanName = obs.itemName.trim();
+          
+          const quantityPatterns = [
+            /\s*[\(\[]\s*[xX×]?\s*(\d{1,3})\s*[\)\]]\s*$/, // matches " (x2)", " [3]"
+            /\s+[xX×]\s*(\d{1,3})\s*$/,                    // matches " x2", " X 3"
+            /\s+qty\.?\s*(\d{1,3})\s*$/i,                  // matches " qty 2", " Qty. 3"
+            /^\s*(\d{1,3})\s*[xX×]\s+/,                   // matches "2x ", "3 X " at the start
+          ];
+
+          for (const pattern of quantityPatterns) {
+            const match = cleanName.match(pattern);
+            if (match) {
+              const parsedQty = parseInt(match[1], 10);
+              if (Number.isFinite(parsedQty) && parsedQty > 1) {
+                quantity = parsedQty;
+              }
+              break;
+            }
+          }
+
+          let rawCleanedPrice = typeof m?.cleanedPrice === "number" && Number.isFinite(m.cleanedPrice)
+            ? m.cleanedPrice
+            : obs.price;
+
+          if (quantity > 1 && Math.abs(rawCleanedPrice - obs.price) < 0.01) {
+            rawCleanedPrice = obs.price / quantity;
+          }
+
           return {
             observationId: obsId,
             canonicalItemId: canonicalId,
             decipheredVenue: m?.decipheredVenue ? String(m.decipheredVenue).trim() : null,
-            cleanedPrice: typeof m?.cleanedPrice === "number" && Number.isFinite(m.cleanedPrice)
-              ? Math.round(m.cleanedPrice * 100) / 100
-              : Math.round(obs.price * 100) / 100,
+            cleanedPrice: Math.round(rawCleanedPrice * 100) / 100,
           };
         })
         .filter((m: any): m is CatalogMappingOutput => m !== null)
@@ -229,11 +263,31 @@ export function normalizeCleanCatalogResponse(
   
   observations.forEach((obs) => {
     if (!mappedObsIds.has(obs.id)) {
+      let quantity = 1;
+      const cleanName = obs.itemName.trim();
+      const quantityPatterns = [
+        /\s*[\(\[]\s*[xX×]?\s*(\d{1,3})\s*[\)\]]\s*$/,
+        /\s+[xX×]\s*(\d{1,3})\s*$/,
+        /\s+qty\.?\s*(\d{1,3})\s*$/i,
+        /^\s*(\d{1,3})\s*[xX×]\s+/,
+      ];
+
+      for (const pattern of quantityPatterns) {
+        const match = cleanName.match(pattern);
+        if (match) {
+          const parsedQty = parseInt(match[1], 10);
+          if (Number.isFinite(parsedQty) && parsedQty > 1) {
+            quantity = parsedQty;
+          }
+          break;
+        }
+      }
+
       mappings.push({
         observationId: obs.id,
         canonicalItemId: fallbackCanonicalId,
         decipheredVenue: null,
-        cleanedPrice: Math.round(obs.price * 100) / 100,
+        cleanedPrice: Math.round((obs.price / quantity) * 100) / 100,
       });
     }
   });

@@ -57,6 +57,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useUsageAnalytics } from "@/hooks/useUsageAnalytics";
+import { useAutomaticCatalogSync } from "@/hooks/settleease/useAutomaticCatalogSync";
+import { BackgroundSyncStatus } from "@/components/settleease/BackgroundSyncStatus";
 import {
   BUDGET_ITEM_TAX_RATE,
   getBudgetAlcoholVatRate,
@@ -753,7 +755,6 @@ export default function CreateBudgetModal({
   const [customCategory, setCustomCategory] = useState(UNCATEGORIZED_CATEGORY);
   const [saveCustomToCatalog, setSaveCustomToCatalog] = useState(false);
   const [isSavingCustom, setIsSavingCustom] = useState(false);
-  const [isBackfilling, setIsBackfilling] = useState(false);
   const [vatClassifications, setVatClassifications] = useState<
     Record<string, BudgetVatClassification>
   >({});
@@ -829,43 +830,21 @@ export default function CreateBudgetModal({
   ) as BudgetDraft | null | undefined;
   const isBudgetDraftLoaded = budgetDraft !== undefined;
 
-  const syncState = useQuery(
-    api.app.checkBudgetCatalogSyncState,
-    isOpen ? {} : "skip"
-  );
-  
   const upsertCustomBudgetItem = useMutation(api.app.upsertCustomBudgetItem);
-  const backfillBudgetItemsFromExpenses = useMutation(
-    api.app.backfillBudgetItemsFromExpenses
-  );
   const saveBudgetDraft = useMutation(api.app.saveBudgetDraft);
   const clearSavedBudgetDraft = useMutation(api.app.clearBudgetDraft);
 
-  // Trigger catalog backfill automatically when out of sync
-  useEffect(() => {
-    if (isOpen && syncState?.isOutOfSync && !isBackfilling) {
-      setIsBackfilling(true);
-      backfillBudgetItemsFromExpenses({ dryRun: false })
-        .then((result: any) => {
-          toast({
-            title: "Budget catalog synced",
-            description: `${result.validObservationCount} item prices merged into ${result.rowsToInsert + result.rowsToUpdate} catalog rows.`,
-          });
-        })
-        .catch((error: any) => {
-          console.error("Auto sync failed:", error);
-        })
-        .finally(() => {
-          setIsBackfilling(false);
-        });
-    }
-  }, [isOpen, syncState, isBackfilling, backfillBudgetItemsFromExpenses]);
+  const {
+    status: autoSyncStatus,
+    error: autoSyncError,
+    stats: autoSyncStats,
+    isOutOfSync: isAutoSyncOutOfSync,
+    triggerSync: autoTriggerSync,
+  } = useAutomaticCatalogSync(isOpen);
 
   const isCatalogLoadingOrSyncing =
     budgetItems === undefined ||
-    syncState === undefined ||
-    syncState.isOutOfSync ||
-    isBackfilling;
+    autoSyncStatus === "syncing";
 
   // Group historical restaurant observations for unique items in catalog selection
   const itemObservationsMap = useMemo(() => {
@@ -1569,7 +1548,7 @@ export default function CreateBudgetModal({
     return (
       <div
         key={item.id}
-        className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:border-neutral-200/60"
+        className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
       >
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0 flex-1">
@@ -1617,10 +1596,10 @@ export default function CreateBudgetModal({
                     type="button"
                     onClick={() => setSelectedCatalogPrices(curr => ({ ...curr, [item.id]: { price: opt.price, venue: opt.venue } }))}
                     className={cn(
-                      "px-2.5 py-1 text-[11px] font-medium rounded-full border shrink-0 transition-all duration-200 flex items-center gap-1",
+                      "px-2.5 py-1 text-[11px] font-medium rounded-full border shrink-0 flex items-center gap-1",
                       isActive
                         ? "bg-neutral-900 border-neutral-900 text-white shadow-sm"
-                        : "bg-neutral-50 border-neutral-200 text-neutral-600 hover:bg-neutral-100 hover:border-neutral-300"
+                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
                     )}
                   >
                     <span>{opt.label}:</span>
@@ -1640,7 +1619,7 @@ export default function CreateBudgetModal({
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 shrink-0 rounded-full px-3 text-xs border-neutral-200 text-neutral-700 hover:bg-neutral-50 lg:mt-2 bg-white shadow-sm"
+              className="h-8 shrink-0 rounded-full px-3 text-xs border-neutral-200 text-neutral-700 lg:mt-2 bg-white shadow-sm"
               onClick={() => addCatalogItem(item)}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -1717,11 +1696,18 @@ export default function CreateBudgetModal({
               <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:space-y-0 lg:gap-4">
                 <Card className="min-w-0 border-neutral-200/70 shadow-sm overflow-hidden lg:flex lg:min-h-0 lg:flex-col bg-white">
                   <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80">
-                    <div className="flex min-w-0 items-center justify-between">
+                    <div className="flex min-w-0 items-center justify-between gap-4">
                       <CardTitle className="flex min-w-0 items-center text-base font-bold tracking-tight text-neutral-800">
                         <ReceiptText className="mr-2 h-4.5 w-4.5 text-neutral-400" />
                         <span className="min-w-0 truncate">Item Catalog</span>
                       </CardTitle>
+                      <BackgroundSyncStatus
+                        status={autoSyncStatus}
+                        error={autoSyncError}
+                        stats={autoSyncStats}
+                        isOutOfSync={isAutoSyncOutOfSync}
+                        onRetry={autoTriggerSync}
+                      />
                     </div>
                   </CardHeader>
                   <CardContent className="min-w-0 space-y-3 pt-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
@@ -1834,7 +1820,7 @@ export default function CreateBudgetModal({
                       </div>
                       <Button
                         type="button"
-                        className="h-10 w-full rounded-lg px-4 bg-neutral-900 hover:bg-neutral-800 text-white font-medium text-sm md:w-auto shadow-sm"
+                        className="h-10 w-full rounded-lg px-4 bg-neutral-900 text-white font-medium text-sm md:w-auto shadow-sm"
                         onClick={handleAddCustomItem}
                         disabled={isSavingCustom}
                       >
@@ -1883,7 +1869,7 @@ export default function CreateBudgetModal({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50 px-3 text-xs shadow-sm font-medium"
+                                className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-medium"
                                 disabled={copyMode !== null}
                               >
                                 {copyMode ? (
@@ -1904,7 +1890,7 @@ export default function CreateBudgetModal({
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  className="h-auto w-full justify-start rounded-lg px-2.5 py-2.5 text-left hover:bg-neutral-50"
+                                  className="h-auto w-full justify-start rounded-lg px-2.5 py-2.5 text-left"
                                   onClick={handleCopyEstimateImage}
                                   disabled={copyMode !== null}
                                 >
@@ -1925,7 +1911,7 @@ export default function CreateBudgetModal({
                                 <Button
                                   type="button"
                                   variant="ghost"
-                                  className="h-auto w-full justify-start rounded-lg px-2.5 py-2.5 text-left hover:bg-neutral-50"
+                                  className="h-auto w-full justify-start rounded-lg px-2.5 py-2.5 text-left"
                                   onClick={handleCopyEstimateText}
                                   disabled={copyMode !== null}
                                 >
@@ -1950,7 +1936,7 @@ export default function CreateBudgetModal({
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-8 rounded-full text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 px-3 text-xs"
+                            className="h-8 rounded-full text-neutral-500 px-3 text-xs"
                             onClick={clearEstimate}
                           >
                             Clear
@@ -1972,7 +1958,7 @@ export default function CreateBudgetModal({
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 rounded-full bg-white border-amber-200 hover:bg-amber-50/40 text-amber-900 font-semibold px-3 text-[10px] shadow-sm"
+                                className="h-7 rounded-full bg-white border-amber-200 text-amber-900 font-semibold px-3 text-[10px] shadow-sm"
                                 onClick={() => {
                                   if (budgetDraft) {
                                     setSelectedLines(budgetDraft.selected_lines ?? []);
@@ -1991,7 +1977,7 @@ export default function CreateBudgetModal({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-3 text-[10px] font-semibold text-amber-700 hover:bg-amber-100/20 hover:text-amber-800 rounded-full"
+                                className="h-7 px-3 text-[10px] font-semibold text-amber-700 rounded-full"
                                 onClick={() => {
                                   setLastSavedHash(localStateHash);
                                   setHasConflict(false);
@@ -2116,7 +2102,7 @@ export default function CreateBudgetModal({
                                       type="button"
                                       size="icon"
                                       variant="outline"
-                                      className="h-7 w-7 rounded-lg border-neutral-200 hover:bg-neutral-50 bg-white"
+                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white"
                                       onClick={() =>
                                         updateLineQuantity(line.id, -1)
                                       }
@@ -2130,7 +2116,7 @@ export default function CreateBudgetModal({
                                       type="button"
                                       size="icon"
                                       variant="outline"
-                                      className="h-7 w-7 rounded-lg border-neutral-200 hover:bg-neutral-50 bg-white"
+                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white"
                                       onClick={() =>
                                         updateLineQuantity(line.id, 1)
                                       }
@@ -2141,7 +2127,7 @@ export default function CreateBudgetModal({
                                       type="button"
                                       size="icon"
                                       variant="ghost"
-                                      className="h-7 w-7 rounded-lg text-neutral-400 hover:text-red-500 hover:bg-red-50"
+                                      className="h-7 w-7 rounded-lg text-neutral-400"
                                       onClick={() => removeLine(line.id)}
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -2180,7 +2166,7 @@ export default function CreateBudgetModal({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white hover:bg-neutral-50 px-3 text-xs shadow-sm font-semibold"
+                          className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-semibold"
                           onClick={handleCalculateTaxes}
                           disabled={
                             selectedLines.length === 0 ||

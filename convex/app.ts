@@ -2118,13 +2118,336 @@ export const checkBudgetCatalogSyncState = query({
     }
 
     const expenseTime = new Date(newestExpense.updatedAt ?? newestExpense.createdAt ?? 0).getTime();
-    const catalogTime = new Date(newestBudgetItem.updatedAt).getTime();
+    const catalogTime = new Date(newestBudgetItem.updatedAt ?? newestBudgetItem.createdAt ?? 0).getTime();
 
     return {
       isOutOfSync: expenseTime > catalogTime,
     };
   },
 });
+
+export const getRawObservations = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+    
+    // Fetch all expenses containing items
+    const expenses = await ctx.db.query("expenses").collect();
+    
+    // Fetch allowed categories for standard classification
+    const allowedCategories = (await ctx.db.query("categories").collect()).map((c: any) => c.name);
+    if (!allowedCategories.includes(UNCATEGORIZED_BUDGET_CATEGORY)) {
+      allowedCategories.push(UNCATEGORIZED_BUDGET_CATEGORY);
+    }
+    
+    const observations = [];
+    const timestamp = nowIso();
+    
+    for (const expense of expenses) {
+      if (!Array.isArray(expense.items)) continue;
+      
+      for (const item of expense.items) {
+        const name = cleanBudgetItemName(String(item.name ?? ""));
+        const normalizedName = normalizeBudgetItemName(name);
+        const quantity =
+          Number.isFinite(Number(item.quantity)) && Number(item.quantity) > 0
+            ? Math.max(1, Math.floor(Number(item.quantity)))
+            : 1;
+        const unitPriceCandidate =
+          Number.isFinite(Number(item.unitPrice)) && Number(item.unitPrice) > 0
+            ? Number(item.unitPrice)
+            : Number(item.price) / quantity;
+        const price = toPositiveBudgetPrice(unitPriceCandidate);
+        
+        if (!normalizedName || price === null) continue;
+        
+        const categoryName = cleanBudgetCategoryName(
+          item.categoryName || expense.category,
+        );
+        
+        observations.push({
+          id: `${expense._id}::${item.id}`,
+          itemName: name,
+          expenseDescription: expense.description || "Unknown Venue",
+          price,
+          date: expense.updatedAt ?? expense.createdAt ?? timestamp,
+          categoryName,
+        });
+      }
+    }
+    
+    return {
+      observations,
+      allowedCategories,
+    };
+  }
+});
+
+function computeObservationsStats(observations: Array<{
+  venue: string;
+  price: number;
+  date: string;
+  expenseId?: string | null;
+}>) {
+  const historical = observations.filter(obs => obs.expenseId !== undefined && obs.expenseId !== null);
+  const custom = observations.filter(obs => obs.expenseId === undefined || obs.expenseId === null);
+
+  const historicalCount = historical.length;
+  let historicalTotal = 0;
+  let historicalMin = 0;
+  let historicalMax = 0;
+  let historicalLatest = 0;
+  let lastObservedAt: string | null = null;
+
+  if (historicalCount > 0) {
+    historicalTotal = roundBudgetPrice(historical.reduce((sum, obs) => sum + obs.price, 0));
+    historicalMin = Math.min(...historical.map(obs => obs.price));
+    historicalMax = Math.max(...historical.map(obs => obs.price));
+
+    // Find the chronologically latest historical observation
+    const latestObs = historical.reduce((latest, current) => {
+      return new Date(current.date).getTime() > new Date(latest.date).getTime() ? current : latest;
+    }, historical[0]);
+    historicalLatest = latestObs.price;
+    lastObservedAt = latestObs.date;
+  }
+
+  const customCount = custom.length;
+  let customTotal = 0;
+  let customMin = 0;
+  let customMax = 0;
+  let customLatest = 0;
+  let lastCustomAt: string | null = null;
+
+  if (customCount > 0) {
+    customTotal = roundBudgetPrice(custom.reduce((sum, obs) => sum + obs.price, 0));
+    customMin = Math.min(...custom.map(obs => obs.price));
+    customMax = Math.max(...custom.map(obs => obs.price));
+
+    // Find the chronologically latest custom observation
+    const latestObs = custom.reduce((latest, current) => {
+      return new Date(current.date).getTime() > new Date(latest.date).getTime() ? current : latest;
+    }, custom[0]);
+    customLatest = latestObs.price;
+    lastCustomAt = latestObs.date;
+  }
+
+  return {
+    historicalStats: {
+      historicalObservationCount: historicalCount,
+      historicalTotalPrice: historicalTotal,
+      historicalLatestPrice: historicalLatest,
+      historicalMinPrice: historicalMin,
+      historicalMaxPrice: historicalMax,
+      lastObservedAt,
+    },
+    customStats: {
+      customObservationCount: customCount,
+      customTotalPrice: customTotal,
+      customLatestPrice: customLatest,
+      customMinPrice: customMin,
+      customMaxPrice: customMax,
+      lastCustomAt,
+    }
+  };
+}
+
+export const importCleanedCatalog = mutation({
+  args: {
+    canonicalItems: v.array(
+      v.object({
+        id: v.string(),
+        name: v.string(),
+        categoryName: v.string(),
+        decipheredVenue: v.union(v.string(), v.null()),
+        description: v.string(),
+      })
+    ),
+    mappings: v.array(
+      v.object({
+        observationId: v.string(),
+        canonicalItemId: v.string(),
+        decipheredVenue: v.union(v.string(), v.null()),
+        cleanedPrice: v.number(),
+      })
+    ),
+    clientSyncTimestamp: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const actorUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const timestamp = nowIso();
+    
+    // 1. TRANSACTIONAL RACE CONDITION PREVENTION (OPTIMISTIC LOCK)
+    const newestBudgetItem = await ctx.db
+      .query("budgetItems")
+      .withIndex("by_updated_at")
+      .order("desc")
+      .first();
+
+    if (
+      newestBudgetItem && 
+      new Date(newestBudgetItem.updatedAt).getTime() > new Date(args.clientSyncTimestamp).getTime()
+    ) {
+      console.warn("⚠️ Sync skipped: A newer catalog sync occurred concurrently.");
+      return {
+        status: "skipped",
+        reason: "concurrency_clash",
+        message: "Another sync has already completed in the background.",
+      };
+    }
+
+    // 2. FETCH EXISTING CATALOG
+    const existingBudgetItems = await ctx.db.query("budgetItems").collect();
+    const existingByKey = new Map(
+      existingBudgetItems.map((item: any) => [item.catalogKey, item])
+    );
+
+    // Group the newly cleaned observations by their assigned canonical item slug
+    const observationsByCanonicalId = new Map<string, Array<{
+      venue: string;
+      price: number;
+      date: string;
+      expenseId: string;
+    }>>();
+
+    for (const mapping of args.mappings) {
+      const [expenseId] = mapping.observationId.split("::");
+      const expense = (await ctx.db.get(expenseId as any)) as any;
+      if (!expense) continue;
+
+      const obsDate = expense.updatedAt ?? expense.createdAt ?? timestamp;
+      const venue = mapping.decipheredVenue || expense.description || "Unknown Venue";
+
+      const obs = {
+        venue,
+        price: mapping.cleanedPrice,
+        date: obsDate,
+        expenseId,
+      };
+
+      if (!observationsByCanonicalId.has(mapping.canonicalItemId)) {
+        observationsByCanonicalId.set(mapping.canonicalItemId, []);
+      }
+      observationsByCanonicalId.get(mapping.canonicalItemId)!.push(obs);
+    }
+
+    let rowsCreated = 0;
+    let rowsUpdated = 0;
+
+    // 3. CONSOLIDATE STATS AND PERSIST COMMITS
+    for (const canonicalItem of args.canonicalItems) {
+      const name = cleanBudgetItemName(canonicalItem.name);
+      const categoryName = cleanBudgetCategoryName(canonicalItem.categoryName);
+      
+      const catalogKey = buildBudgetCatalogKey(name, categoryName);
+      const normalizedName = normalizeBudgetItemName(name);
+      const normalizedCategoryName = normalizeBudgetCategoryName(categoryName);
+      const searchText = buildBudgetSearchText(name, categoryName);
+
+      const mappedObs = observationsByCanonicalId.get(canonicalItem.id) ?? [];
+      if (mappedObs.length === 0) continue;
+
+      const sortedObs = [...mappedObs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      const lastObservedAt = sortedObs[0]?.date || timestamp;
+      const latestPrice = sortedObs[0]?.price || 0;
+
+      const historicalObservationCount = sortedObs.length;
+      const historicalTotalPrice = roundBudgetPrice(sortedObs.reduce((sum, o) => sum + o.price, 0));
+      const historicalMinPrice = Math.min(...sortedObs.map((o) => o.price));
+      const historicalMaxPrice = Math.max(...sortedObs.map((o) => o.price));
+
+      const existing = existingByKey.get(catalogKey);
+      const customStats = getCustomBudgetStats(existing);
+      const historicalAveragePrice = roundBudgetPrice(historicalTotalPrice / historicalObservationCount);
+
+      const combined = combineBudgetStats({
+        historicalObservationCount,
+        historicalTotalPrice,
+        historicalLatestPrice: latestPrice,
+        historicalMinPrice,
+        historicalMaxPrice,
+        lastObservedAt,
+        ...customStats,
+      });
+
+      const existingObservations = existing?.observations ?? [];
+      const existingCustomObservations = existingObservations.filter(
+        (obs: any) => !obs.expenseId
+      );
+
+      const mergedObservations = [
+        ...sortedObs,
+        ...existingCustomObservations,
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+      const payload = {
+        name,
+        normalizedName,
+        categoryName,
+        normalizedCategoryName,
+        catalogKey,
+        searchText,
+        ...combined,
+        historicalAveragePrice,
+        historicalLatestPrice: latestPrice,
+        historicalMinPrice,
+        historicalMaxPrice,
+        historicalTotalPrice,
+        historicalObservationCount,
+        customAveragePrice: customStats.customObservationCount > 0
+          ? roundBudgetPrice(customStats.customTotalPrice / customStats.customObservationCount)
+          : 0,
+        customLatestPrice: customStats.customLatestPrice,
+        customMinPrice: customStats.customMinPrice,
+        customMaxPrice: customStats.customMaxPrice,
+        customTotalPrice: customStats.customTotalPrice,
+        customObservationCount: customStats.customObservationCount,
+        observations: mergedObservations,
+        isActive: true,
+        createdByUserId: existing?.createdByUserId ?? null,
+        updatedAt: timestamp,
+        lastObservedAt,
+        lastCustomAt: customStats.lastCustomAt,
+      };
+
+      if (existing) {
+        await ctx.db.patch(existing._id, payload);
+        rowsUpdated++;
+      } else {
+        await ctx.db.insert("budgetItems", {
+          ...payload,
+          createdAt: timestamp,
+        });
+        rowsCreated++;
+      }
+    }
+
+    const profile = await getProfileBySupabaseUserId(ctx, actorUserId);
+    const actorRole = profile?.role ?? "user";
+
+    await recordUsageEvent(ctx, {
+      actorUserId,
+      actorRole,
+      eventName: "budget.catalog_sync_completed",
+      eventGroup: "budget",
+      surface: "background_sync",
+      targetKind: "budgetItem",
+      metadata: {
+        rowsCreated,
+        rowsUpdated,
+        totalCanonicalItems: args.canonicalItems.length,
+      },
+    });
+
+    return {
+      status: "success",
+      rowsCreated,
+      rowsUpdated,
+      totalCanonicalItems: args.canonicalItems.length,
+    };
+  },
+});
+
 
 export const backfillBudgetItemsFromExpenses = mutation({
   args: {
