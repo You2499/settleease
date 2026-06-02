@@ -80,6 +80,7 @@ export interface SelectedBudgetLine {
   unit_price: number;
   quantity: number;
   source: 'catalog' | 'custom';
+  venue?: string;
 }
 
 export type BudgetVatClass = 'standard' | 'alcohol';

@@ -37,6 +37,7 @@ const selectedBudgetLine = v.object({
   unitPrice: v.number(),
   quantity: v.number(),
   source: v.union(v.literal("catalog"), v.literal("custom")),
+  venue: v.optional(v.string()),
 });
 
 const budgetFees = v.object({
@@ -141,6 +142,16 @@ export default defineSchema({
     updatedAt: v.string(),
     lastObservedAt: v.optional(v.union(v.string(), v.null())),
     lastCustomAt: v.optional(v.union(v.string(), v.null())),
+    observations: v.optional(
+      v.array(
+        v.object({
+          venue: v.string(),
+          price: v.number(),
+          date: v.string(),
+          expenseId: v.optional(v.string()),
+        })
+      )
+    ),
   })
     .index("by_catalog_key", ["catalogKey"])
     .index("by_active", ["isActive"])

@@ -104,6 +104,7 @@ const selectedBudgetLine = v.object({
   unitPrice: v.number(),
   quantity: v.number(),
   source: v.union(v.literal("catalog"), v.literal("custom")),
+  venue: v.optional(v.string()),
 });
 
 const budgetFees = v.object({
@@ -497,6 +498,12 @@ function budgetItemDto(item: any) {
     source: item.source,
     created_at: item.createdAt,
     updated_at: item.updatedAt,
+    observations: (item.observations ?? []).map((obs: any) => ({
+      venue: obs.venue,
+      price: obs.price,
+      date: obs.date,
+      expense_id: obs.expenseId ?? null,
+    })),
   };
 }
 
@@ -508,6 +515,7 @@ function cleanBudgetDraftLine(line: {
   unitPrice: number;
   quantity: number;
   source: "catalog" | "custom";
+  venue?: string | null;
 }) {
   const name = cleanBudgetItemName(line.name);
   const unitPrice = toPositiveBudgetPrice(line.unitPrice);
@@ -523,6 +531,7 @@ function cleanBudgetDraftLine(line: {
     unitPrice,
     quantity,
     source: line.source,
+    venue: line.venue ? String(line.venue).trim().replace(/\s+/g, " ") : undefined,
   };
 }
 
@@ -567,6 +576,7 @@ function budgetDraftDto(draft: any) {
       unit_price: line.unitPrice,
       quantity: line.quantity,
       source: line.source,
+      venue: line.venue ?? null,
     })),
     fees: {
       other_charge: draft.fees?.otherCharge ?? "",
@@ -2017,6 +2027,17 @@ export const upsertCustomBudgetItem = mutation({
       ...nextCustomStats,
     });
 
+    const newCustomObservation = {
+      venue: "Custom Catalog",
+      price,
+      date: timestamp,
+    };
+
+    const existingObservations = existing?.observations ?? [];
+    const updatedObservations = [...existingObservations, newCustomObservation].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
     const payload = {
       name,
       normalizedName,
@@ -2034,6 +2055,7 @@ export const upsertCustomBudgetItem = mutation({
             )
           : 0,
       ...nextCustomStats,
+      observations: updatedObservations,
       isActive: true,
       createdByUserId: existing?.createdByUserId ?? supabaseUserId,
       updatedAt: timestamp,
@@ -2070,13 +2092,47 @@ export const upsertCustomBudgetItem = mutation({
   },
 });
 
+export const checkBudgetCatalogSyncState = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+
+    const newestExpense = await ctx.db
+      .query("expenses")
+      .withIndex("by_created_at")
+      .order("desc")
+      .first();
+
+    if (!newestExpense) {
+      return { isOutOfSync: false };
+    }
+
+    const newestBudgetItem = await ctx.db
+      .query("budgetItems")
+      .withIndex("by_updated_at")
+      .order("desc")
+      .first();
+
+    if (!newestBudgetItem) {
+      return { isOutOfSync: true };
+    }
+
+    const expenseTime = new Date(newestExpense.updatedAt ?? newestExpense.createdAt ?? 0).getTime();
+    const catalogTime = new Date(newestBudgetItem.updatedAt).getTime();
+
+    return {
+      isOutOfSync: expenseTime > catalogTime,
+    };
+  },
+});
+
 export const backfillBudgetItemsFromExpenses = mutation({
   args: {
     dryRun: v.optional(v.boolean()),
     expectedEnvironment: v.optional(settleEaseEnvironment),
   },
   handler: async (ctx, args) => {
-    const actorUserId = await requireAdmin(ctx);
+    const actorUserId = await requireAuthenticatedSupabaseUserId(ctx);
     if (args.expectedEnvironment) {
       requireExpectedEnvironment(args.expectedEnvironment);
     }
@@ -2118,6 +2174,15 @@ export const backfillBudgetItemsFromExpenses = mutation({
           normalizeBudgetCategoryName(categoryName);
         const catalogKey = buildBudgetCatalogKey(name, categoryName);
         const observedAt = expense.updatedAt ?? expense.createdAt ?? timestamp;
+        
+        // Prepare observation object
+        const observation = {
+          venue: expense.description || "Unknown Venue",
+          price,
+          date: observedAt,
+          expenseId: expense._id,
+        };
+
         const existing = historicalByKey.get(catalogKey);
 
         if (!existing) {
@@ -2133,6 +2198,7 @@ export const backfillBudgetItemsFromExpenses = mutation({
             historicalMinPrice: price,
             historicalMaxPrice: price,
             lastObservedAt: observedAt,
+            observations: [observation],
           });
           continue;
         }
@@ -2149,6 +2215,8 @@ export const backfillBudgetItemsFromExpenses = mutation({
           existing.historicalMaxPrice,
           price,
         );
+        
+        existing.observations.push(observation);
 
         const existingTime = new Date(existing.lastObservedAt).getTime();
         const observedTime = new Date(observedAt).getTime();
@@ -2183,6 +2251,19 @@ export const backfillBudgetItemsFromExpenses = mutation({
         ...historicalStats,
         ...customStats,
       });
+
+      // Extract and combine existing custom observations
+      const existingObservations = existing?.observations ?? [];
+      const existingCustomObservations = existingObservations.filter(
+        (obs: any) => !obs.expenseId // custom observations don't map to a historic expense ID
+      );
+
+      // Concatenate and sort (newest first)
+      const mergedObservations = [
+        ...historicalStats.observations,
+        ...existingCustomObservations,
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
       const payload = {
         name: historicalStats.name,
         normalizedName: historicalStats.normalizedName,
@@ -2213,6 +2294,7 @@ export const backfillBudgetItemsFromExpenses = mutation({
         customMaxPrice: customStats.customMaxPrice,
         customTotalPrice: customStats.customTotalPrice,
         customObservationCount: customStats.customObservationCount,
+        observations: mergedObservations,
         isActive: true,
         createdByUserId: existing?.createdByUserId ?? null,
         updatedAt: timestamp,
@@ -2240,9 +2322,11 @@ export const backfillBudgetItemsFromExpenses = mutation({
       rowsToInsert,
       rowsToUpdate,
     };
+    const profile = await getProfileBySupabaseUserId(ctx, actorUserId);
+    const actorRole = profile?.role ?? "user";
     await recordUsageEvent(ctx, {
       actorUserId,
-      actorRole: "admin",
+      actorRole,
       eventName: dryRun ? "budget.backfill_previewed" : "budget.backfilled",
       eventGroup: "budget",
       surface: "settings",
