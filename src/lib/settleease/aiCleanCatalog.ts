@@ -57,7 +57,7 @@ export const AI_CLEAN_CATALOG_RESPONSE_SCHEMA = {
           },
           decipheredVenue: {
             type: "string",
-            description: "The specific restaurant, venue, or merchant deciphered from the expense description or item context (e.g., 'McDonald's', 'Walmart'). Use null if it is generic, ambiguous, or no specific venue is mentioned.",
+            description: "The specific restaurant, venue, or merchant deciphered from the expense description or item context (e.g., 'McDonald's', 'Walmart'). Use an empty string '' if it is generic, ambiguous, or no specific venue is mentioned.",
           },
           description: {
             type: "string",
@@ -83,7 +83,7 @@ export const AI_CLEAN_CATALOG_RESPONSE_SCHEMA = {
           },
           decipheredVenue: {
             type: "string",
-            description: "The specific restaurant or venue deciphered for this individual observation (e.g. 'McDonald's', 'Walmart'). Use null if none could be deciphered.",
+            description: "The specific restaurant or venue deciphered for this individual observation (e.g. 'McDonald's', 'Walmart'). Use an empty string '' if none could be deciphered.",
           },
           cleanedPrice: {
             type: "number",
@@ -116,11 +116,11 @@ Rules:
 3. Venue / Restaurant Deciphering:
    - Extract the specific merchant, restaurant, or venue name from the expense description or the item name itself (e.g., extracting "McDonald's" from "Dinner at McDonald's" or "McDonalds delivery", or "Starbucks" from "Starbucks coffee").
    - Use proper capitalization and spelling for venue names (e.g., "McDonald's" instead of "mcdonalds").
-   - If the item is general, or no specific venue can be deciphered, return null for "decipheredVenue".
+   - If the item is general, or no specific venue can be deciphered, return an empty string "" for "decipheredVenue".
 
 4. Individual Mapping & Unit Price Normalization:
    - Map EVERY single input observation ID to its designated canonical item ID.
-   - For each mapping, decipher the venue specifically for that observation.
+   - For each mapping, decipher the venue specifically for that observation. If none could be deciphered, return an empty string "".
    - Calculate the true UNIT PRICE for "cleanedPrice":
      - Check the raw input item name for quantity multipliers (e.g. "x2", "x3", "2x", "3x", "2 *", "qty 2").
      - If a quantity multiplier is found, and the input "price" represents the total price (un-divided total amount) for that row, you MUST divide the input "price" by that quantity to calculate the correct unit price.
@@ -185,7 +185,7 @@ export function normalizeCleanCatalogResponse(
           id: String(item?.id || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "generic-item",
           name: String(item?.name || "Generic Item").trim(),
           categoryName: matchedCategory,
-          decipheredVenue: item?.decipheredVenue ? String(item.decipheredVenue).trim() : null,
+          decipheredVenue: item?.decipheredVenue && String(item.decipheredVenue).trim() !== "" ? String(item.decipheredVenue).trim() : null,
           description: String(item?.description || "Consolidated budget item").trim(),
         };
       })
@@ -251,7 +251,7 @@ export function normalizeCleanCatalogResponse(
           return {
             observationId: obsId,
             canonicalItemId: canonicalId,
-            decipheredVenue: m?.decipheredVenue ? String(m.decipheredVenue).trim() : null,
+            decipheredVenue: m?.decipheredVenue && String(m.decipheredVenue).trim() !== "" ? String(m.decipheredVenue).trim() : null,
             cleanedPrice: Math.round(rawCleanedPrice * 100) / 100,
           };
         })
