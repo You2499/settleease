@@ -1548,27 +1548,27 @@ export default function CreateBudgetModal({
     return (
       <div
         key={item.id}
-        className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)]"
+        className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-[0_2px_8px_rgba(0,0,0,0.03)] dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-none"
       >
         <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
               <CategoryIcon className="h-4 w-4 shrink-0 text-neutral-400" />
               <p
-                className="min-w-0 break-words text-sm font-semibold leading-snug text-neutral-800"
+                className="min-w-0 break-words text-sm font-semibold leading-snug text-neutral-800 dark:text-neutral-200"
                 title={item.name}
               >
                 {item.name}
               </p>
               {isAIConsolidated && (
-                <Badge className="rounded-full bg-emerald-50 text-[10px] text-emerald-600 font-medium px-2 py-0.5 border border-emerald-100 animate-pulse flex items-center gap-1">
+                <Badge className="rounded-full bg-emerald-50 text-[10px] text-emerald-600 font-medium px-2 py-0.5 border border-emerald-100 animate-pulse flex items-center gap-1 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30">
                   <Sparkles className="h-2.5 w-2.5 shrink-0" />
                   AI consolidated
                 </Badge>
               )}
             </div>
-            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-neutral-500">
-              <Badge variant="outline" className="rounded-md border-neutral-200 text-neutral-600 font-medium bg-neutral-50/50">
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+              <Badge variant="outline" className="rounded-md border-neutral-200 text-neutral-600 font-medium bg-neutral-50/50 dark:border-neutral-800 dark:text-neutral-400 dark:bg-neutral-900">
                 {item.category_name}
               </Badge>
               <span>{observationCount} seen</span>
@@ -1576,7 +1576,7 @@ export default function CreateBudgetModal({
                 Latest {formatCurrency(item.latest_price)}
               </span>
               {hasRange && (
-                <span className="min-w-0 break-words font-mono text-neutral-400">
+                <span className="min-w-0 break-words font-mono text-neutral-400 dark:text-neutral-500">
                   Range: {formatCurrency(item.min_price)} - {formatCurrency(item.max_price)}
                 </span>
               )}
@@ -1584,7 +1584,7 @@ export default function CreateBudgetModal({
 
             {/* Horizontal scrollable pricing pill selector */}
             <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1.5 pr-1 scrollbar-thin">
-              <span className="text-[10px] text-neutral-400 font-medium shrink-0 flex items-center gap-1">
+              <span className="text-[10px] text-neutral-400 font-medium shrink-0 flex items-center gap-1 dark:text-neutral-500">
                 <Store className="h-3 w-3 shrink-0" />
                 Select Price:
               </span>
@@ -1598,8 +1598,8 @@ export default function CreateBudgetModal({
                     className={cn(
                       "px-2.5 py-1 text-[11px] font-medium rounded-full border shrink-0 flex items-center gap-1",
                       isActive
-                        ? "bg-neutral-900 border-neutral-900 text-white shadow-sm"
-                        : "bg-neutral-50 border-neutral-200 text-neutral-600"
+                        ? "bg-neutral-900 border-neutral-900 text-white shadow-sm dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-950"
+                        : "bg-neutral-50 border-neutral-200 text-neutral-600 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-400"
                     )}
                   >
                     <span>{opt.label}:</span>
@@ -1612,14 +1612,14 @@ export default function CreateBudgetModal({
 
           </div>
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 lg:block lg:shrink-0 lg:text-right">
-            <p className="min-w-0 break-words text-lg font-bold text-neutral-900 font-mono lg:max-w-40">
+            <p className="min-w-0 break-words text-lg font-bold text-neutral-900 font-mono lg:max-w-40 dark:text-neutral-100">
               {formatCurrency(activePrice)}
             </p>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-8 shrink-0 rounded-full px-3 text-xs border-neutral-200 text-neutral-700 lg:mt-2 bg-white shadow-sm"
+              className="h-8 shrink-0 rounded-full px-3 text-xs border-neutral-200 text-neutral-700 lg:mt-2 bg-white shadow-sm dark:border-neutral-800 dark:text-neutral-300 dark:bg-neutral-900"
               onClick={() => addCatalogItem(item)}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -1640,7 +1640,7 @@ export default function CreateBudgetModal({
       {Array.from({ length: 4 }).map((_, index) => (
         <div
           key={index}
-          className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-sm"
+          className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-[#1c1c1e]"
         >
           <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto]">
             <div className="min-w-0 flex-1 space-y-2.5">
@@ -1679,9 +1679,9 @@ export default function CreateBudgetModal({
     >
       {/* Hydration Guard Skeleton Overlay Block */}
       {!isDraftHydrated && !isBudgetDraftLoaded ? (
-        <div className="flex h-full flex-col justify-center items-center gap-3 bg-neutral-50/80 backdrop-blur-md p-10 z-[70] rounded-2xl">
+        <div className="flex h-full flex-col justify-center items-center gap-3 bg-neutral-50/80 dark:bg-neutral-950/80 backdrop-blur-md p-10 z-[70] rounded-2xl">
           <Loader2 className="h-10 w-10 animate-spin text-neutral-400" />
-          <p className="text-sm font-medium text-neutral-600">Restoring your custom budget draft...</p>
+          <p className="text-sm font-medium text-neutral-600 dark:text-neutral-400">Restoring your custom budget draft...</p>
         </div>
       ) : (
         <div className="flex h-full min-h-0 flex-col">
@@ -1691,13 +1691,13 @@ export default function CreateBudgetModal({
             description="Build a rough bill estimate from catalog items, fees, tax, and VAT."
           />
 
-          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 lg:overflow-hidden bg-neutral-50/50">
+          <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto p-4 sm:p-5 lg:overflow-hidden bg-neutral-50/50 dark:bg-[#141414]">
             <div className="grid min-w-0 gap-4 lg:h-full lg:min-h-0 lg:grid-cols-[minmax(0,1fr)_minmax(380px,480px)] xl:grid-cols-[minmax(0,1fr)_minmax(450px,540px)]">
               <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto] lg:space-y-0 lg:gap-4">
-                <Card className="min-w-0 border-neutral-200/70 shadow-sm overflow-hidden lg:flex lg:min-h-0 lg:flex-col bg-white">
-                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80">
+                <Card className="min-w-0 border-neutral-200/70 dark:border-neutral-800 shadow-sm overflow-hidden lg:flex lg:min-h-0 lg:flex-col bg-white dark:bg-[#1c1c1e]">
+                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80 dark:border-neutral-800">
                     <div className="flex min-w-0 items-center justify-between gap-4">
-                      <CardTitle className="flex min-w-0 items-center text-base font-bold tracking-tight text-neutral-800">
+                      <CardTitle className="flex min-w-0 items-center text-base font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
                         <ReceiptText className="mr-2 h-4.5 w-4.5 text-neutral-400" />
                         <span className="min-w-0 truncate">Item Catalog</span>
                       </CardTitle>
@@ -1718,14 +1718,14 @@ export default function CreateBudgetModal({
                           value={search}
                           onChange={(event) => setSearch(event.target.value)}
                           placeholder="Search items"
-                          className="pl-9 h-10 border-neutral-200 focus-visible:ring-neutral-200 rounded-lg text-sm bg-neutral-50/30"
+                          className="pl-9 h-10 border-neutral-200 focus-visible:ring-neutral-200 rounded-lg text-sm bg-neutral-50/30 dark:border-neutral-800 dark:bg-neutral-950/40 dark:focus-visible:ring-neutral-800 dark:text-neutral-200"
                         />
                       </div>
                       <Select
                         value={categoryFilter}
                         onValueChange={setCategoryFilter}
                       >
-                        <SelectTrigger className="h-10 min-w-0 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus:ring-neutral-200">
+                        <SelectTrigger className="h-10 min-w-0 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:focus:ring-neutral-800 dark:text-neutral-200">
                           <SelectValue placeholder="All categories" />
                         </SelectTrigger>
                         <SelectContent className="rounded-lg">
@@ -1741,7 +1741,7 @@ export default function CreateBudgetModal({
                       </Select>
                     </div>
 
-                    <ScrollArea className="h-72 min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/15 p-2 sm:h-80 md:h-96 lg:h-auto lg:min-h-0 lg:flex-1">
+                    <ScrollArea className="h-72 min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/15 p-2 sm:h-80 md:h-96 lg:h-auto lg:min-h-0 lg:flex-1 dark:border-neutral-800 dark:bg-neutral-950/20">
                       <div className="min-w-0 space-y-2.5 pr-1 sm:pr-2">
                         {isCatalogLoadingOrSyncing ? (
                           renderCatalogSkeletonRows()
@@ -1749,8 +1749,8 @@ export default function CreateBudgetModal({
                           <>
                             {budgetItems && budgetItems.length > 0 && budgetItems.map(renderCatalogItem)}
                             {budgetItems && budgetItems.length === 0 && (
-                              <div className="flex h-40 flex-col gap-2 items-center justify-center rounded-xl bg-white border border-dashed border-neutral-200 text-center text-sm text-neutral-400 p-4">
-                                <Info className="h-5 w-5 text-neutral-300" />
+                              <div className="flex h-40 flex-col gap-2 items-center justify-center rounded-xl bg-white border border-dashed border-neutral-200 text-center text-sm text-neutral-400 p-4 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-500">
+                                <Info className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
                                 No catalog items found matching filters.
                               </div>
                             )}
@@ -1761,9 +1761,9 @@ export default function CreateBudgetModal({
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-0 border-neutral-200/70 shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80">
-                    <CardTitle className="flex min-w-0 items-center text-base font-bold tracking-tight text-neutral-800">
+                <Card className="min-w-0 border-neutral-200/70 dark:border-neutral-800 shadow-sm overflow-hidden bg-white dark:bg-[#1c1c1e]">
+                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80 dark:border-neutral-800">
+                    <CardTitle className="flex min-w-0 items-center text-base font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
                       <Plus className="mr-2 h-4.5 w-4.5 text-neutral-400" />
                       <span className="min-w-0 truncate">Custom Item</span>
                     </CardTitle>
@@ -1771,18 +1771,18 @@ export default function CreateBudgetModal({
                   <CardContent className="min-w-0 space-y-3 pt-3">
                     <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_140px]">
                       <div className="min-w-0">
-                        <Label className="mb-1.5 block text-xs text-neutral-500 font-medium">
+                        <Label className="mb-1.5 block text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                           Name
                         </Label>
                         <Input
                           value={customName}
                           onChange={(event) => setCustomName(event.target.value)}
                           placeholder="Item name"
-                          className="min-w-0 h-10 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200"
+                          className="min-w-0 h-10 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:focus-visible:ring-neutral-800 dark:text-neutral-200"
                         />
                       </div>
                       <div className="min-w-0">
-                        <Label className="mb-1.5 block text-xs text-neutral-500 font-medium">
+                        <Label className="mb-1.5 block text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                           Price
                         </Label>
                         <Input
@@ -1793,20 +1793,20 @@ export default function CreateBudgetModal({
                             setCustomPrice(event.target.value)
                           }
                           placeholder="0.00"
-                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200"
+                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:focus-visible:ring-neutral-800 dark:text-neutral-200"
                         />
                       </div>
                     </div>
                     <div className="grid min-w-0 gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
                       <div className="min-w-0">
-                        <Label className="mb-1.5 block text-xs text-neutral-500 font-medium">
+                        <Label className="mb-1.5 block text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                           Category
                         </Label>
                         <Select
                           value={customCategory}
                           onValueChange={setCustomCategory}
                         >
-                          <SelectTrigger className="h-10 min-w-0 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus:ring-neutral-200">
+                          <SelectTrigger className="h-10 min-w-0 border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:focus:ring-neutral-800 dark:text-neutral-200">
                             <SelectValue placeholder="Category" />
                           </SelectTrigger>
                           <SelectContent className="rounded-lg">
@@ -1820,7 +1820,7 @@ export default function CreateBudgetModal({
                       </div>
                       <Button
                         type="button"
-                        className="h-10 w-full rounded-lg px-4 bg-neutral-900 text-white font-medium text-sm md:w-auto shadow-sm"
+                        className="h-10 w-full rounded-lg px-4 bg-neutral-900 text-white font-medium text-sm md:w-auto shadow-sm dark:bg-neutral-100 dark:text-neutral-950"
                         onClick={handleAddCustomItem}
                         disabled={isSavingCustom}
                       >
@@ -1835,7 +1835,7 @@ export default function CreateBudgetModal({
                       </Button>
                     </div>
                     {isAdmin && (
-                      <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50/50 px-3 py-2 text-xs text-neutral-600 font-medium">
+                      <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-neutral-100 bg-neutral-50/50 px-3 py-2 text-xs text-neutral-600 font-medium dark:border-neutral-800 dark:bg-neutral-950/30 dark:text-neutral-400">
                         <Checkbox
                           checked={saveCustomToCatalog}
                           onCheckedChange={(checked) =>
@@ -1851,9 +1851,9 @@ export default function CreateBudgetModal({
               </div>
 
               <div className="min-w-0 space-y-4 lg:grid lg:min-h-0 lg:grid-rows-[minmax(0,1fr)_auto_auto] lg:space-y-0 lg:gap-4">
-                <Card className="min-w-0 border-neutral-200/70 shadow-sm overflow-hidden lg:flex lg:min-h-0 lg:flex-col bg-white">
-                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80">
-                    <CardTitle className="flex min-w-0 items-center justify-between gap-3 text-base font-bold tracking-tight text-neutral-800">
+                <Card className="min-w-0 border-neutral-200/70 dark:border-neutral-800 shadow-sm overflow-hidden lg:flex lg:min-h-0 lg:flex-col bg-white dark:bg-[#1c1c1e]">
+                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80 dark:border-neutral-800">
+                    <CardTitle className="flex min-w-0 items-center justify-between gap-3 text-base font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
                       <span className="flex min-w-0 items-center">
                         <Calculator className="mr-2 h-4.5 w-4.5 text-neutral-400" />
                         <span className="min-w-0 truncate">Estimate</span>
@@ -1869,7 +1869,7 @@ export default function CreateBudgetModal({
                                 type="button"
                                 size="sm"
                                 variant="outline"
-                                className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-medium"
+                                className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-medium dark:border-neutral-800 dark:text-neutral-300 dark:bg-neutral-900"
                                 disabled={copyMode !== null}
                               >
                                 {copyMode ? (
@@ -1884,7 +1884,7 @@ export default function CreateBudgetModal({
                             <PopoverContent
                               align="end"
                               sideOffset={6}
-                              className="z-[60] w-64 rounded-xl p-2 bg-white shadow-xl border-neutral-150"
+                              className="z-[60] w-64 rounded-xl p-2 bg-white shadow-xl border-neutral-150 dark:bg-[#1c1c1e] dark:border-neutral-800"
                             >
                               <div className="space-y-1">
                                 <Button
@@ -1900,10 +1900,10 @@ export default function CreateBudgetModal({
                                     <ImageIcon className="h-4.5 w-4.5 mr-2 text-neutral-400" />
                                   )}
                                   <span className="min-w-0">
-                                    <span className="block text-xs font-semibold text-neutral-800">
+                                    <span className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                                       Receipt image
                                     </span>
-                                    <span className="block text-[10px] text-neutral-400">
+                                    <span className="block text-[10px] text-neutral-400 dark:text-neutral-500">
                                       {isMobile ? "Download branded PNG" : "Branded PNG for sharing"}
                                     </span>
                                   </span>
@@ -1921,10 +1921,10 @@ export default function CreateBudgetModal({
                                     <FileText className="h-4.5 w-4.5 mr-2 text-neutral-400" />
                                   )}
                                   <span className="min-w-0">
-                                    <span className="block text-xs font-semibold text-neutral-800">
+                                    <span className="block text-xs font-semibold text-neutral-800 dark:text-neutral-200">
                                       Normal text
                                     </span>
-                                    <span className="block text-[10px] text-neutral-400">
+                                    <span className="block text-[10px] text-neutral-400 dark:text-neutral-500">
                                       Current itemized format
                                     </span>
                                   </span>
@@ -1936,7 +1936,7 @@ export default function CreateBudgetModal({
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-8 rounded-full text-neutral-500 px-3 text-xs"
+                            className="h-8 rounded-full text-neutral-500 dark:text-neutral-400 px-3 text-xs"
                             onClick={clearEstimate}
                           >
                             Clear
@@ -1948,17 +1948,17 @@ export default function CreateBudgetModal({
                   <CardContent className="min-w-0 space-y-3 pt-3 lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
                     {/* Multi-Tab quiet sync warning conflict banner */}
                     {hasConflict && (
-                      <div className="rounded-xl border border-amber-200/50 bg-amber-50/20 p-3.5 text-xs text-amber-900 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-1 duration-200">
+                      <div className="rounded-xl border border-amber-200/50 bg-amber-50/20 p-3.5 text-xs text-amber-900 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-top-1 duration-200 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200">
                         <div className="flex gap-2">
                           <Info className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
                           <div className="flex-1 min-w-0">
-                            <p className="font-bold text-amber-800">Draft edited in another window</p>
-                            <p className="mt-1 text-[11px] text-amber-700/80">You have unsaved local edits and another device saved newer changes.</p>
+                            <p className="font-bold text-amber-800 dark:text-amber-300">Draft edited in another window</p>
+                            <p className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-400/80">You have unsaved local edits and another device saved newer changes.</p>
                             <div className="mt-2.5 flex items-center gap-2 flex-wrap">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 rounded-full bg-white border-amber-200 text-amber-900 font-semibold px-3 text-[10px] shadow-sm"
+                                className="h-7 rounded-full bg-white border-amber-200 text-amber-900 font-semibold px-3 text-[10px] shadow-sm dark:bg-neutral-900 dark:border-amber-900/50 dark:text-amber-200"
                                 onClick={() => {
                                   if (budgetDraft) {
                                     setSelectedLines(budgetDraft.selected_lines ?? []);
@@ -1977,7 +1977,7 @@ export default function CreateBudgetModal({
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                className="h-7 px-3 text-[10px] font-semibold text-amber-700 rounded-full"
+                                className="h-7 px-3 text-[10px] font-semibold text-amber-700 rounded-full dark:text-amber-400"
                                 onClick={() => {
                                   setLastSavedHash(localStateHash);
                                   setHasConflict(false);
@@ -1991,11 +1991,11 @@ export default function CreateBudgetModal({
                       </div>
                     )}
 
-                    <ScrollArea className="h-64 min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/15 p-2 sm:h-72 lg:h-auto lg:min-h-0 lg:flex-1">
+                    <ScrollArea className="h-64 min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/15 p-2 sm:h-72 lg:h-auto lg:min-h-0 lg:flex-1 dark:border-neutral-800 dark:bg-neutral-950/20">
                       <div className="min-w-0 space-y-2.5 pr-1 sm:pr-2">
                         {selectedLines.length === 0 && (
-                          <div className="flex h-32 flex-col gap-2 items-center justify-center rounded-xl bg-white border border-dashed border-neutral-200 text-center text-sm text-neutral-400 p-4">
-                            <Info className="h-5 w-5 text-neutral-300" />
+                          <div className="flex h-32 flex-col gap-2 items-center justify-center rounded-xl bg-white border border-dashed border-neutral-200 text-center text-sm text-neutral-400 p-4 dark:bg-neutral-900 dark:border-neutral-800 dark:text-neutral-500">
+                            <Info className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
                             Select items from the catalog or add custom entries to estimate.
                           </div>
                         )}
@@ -2009,20 +2009,20 @@ export default function CreateBudgetModal({
                           return (
                             <div
                               key={line.id}
-                              className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-sm"
+                              className="min-w-0 rounded-xl border border-neutral-100 bg-white p-3.5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
                             >
                               <div className="min-w-0 space-y-3">
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <CategoryIcon className="h-4 w-4 shrink-0 text-neutral-400" />
                                     <p
-                                      className="min-w-0 break-words text-sm font-semibold leading-snug text-neutral-800"
+                                      className="min-w-0 break-words text-sm font-semibold leading-snug text-neutral-800 dark:text-neutral-200"
                                       title={line.name}
                                     >
                                       {line.name}
                                     </p>
                                   </div>
-                                  <p className="mt-1 text-xs text-neutral-400 font-medium">
+                                  <p className="mt-1 text-xs text-neutral-400 dark:text-neutral-500 font-medium">
                                     {formatCurrency(line.unit_price)} each
                                   </p>
                                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -2034,9 +2034,9 @@ export default function CreateBudgetModal({
                                             "rounded-full text-[10px] font-semibold px-2 py-0.5 border cursor-pointer flex items-center gap-1",
                                             vatClassification
                                               ? hasAlcoholVat
-                                                ? "bg-amber-50 text-amber-700 border-amber-100"
-                                                : "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                              : "bg-neutral-50 text-neutral-500 border-neutral-200"
+                                                ? "bg-amber-50 text-amber-700 border-amber-100 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30"
+                                                : "bg-emerald-50 text-emerald-700 border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30"
+                                              : "bg-neutral-50 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:text-neutral-400 dark:border-neutral-700"
                                           )}
                                         >
                                           {vatClassification
@@ -2047,19 +2047,19 @@ export default function CreateBudgetModal({
                                           <Info className="h-2.5 w-2.5 shrink-0" />
                                         </button>
                                       </PopoverTrigger>
-                                      <PopoverContent className="w-72 p-3 bg-white shadow-xl rounded-xl z-[70] border-neutral-150">
+                                      <PopoverContent className="w-72 p-3 bg-white shadow-xl rounded-xl z-[70] border-neutral-150 dark:bg-[#1c1c1e] dark:border-neutral-800">
                                         <div className="space-y-2">
-                                          <p className="text-xs font-bold text-neutral-800 flex items-center gap-1">
+                                          <p className="text-xs font-bold text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
                                             <Sparkles className="h-3.5 w-3.5 text-neutral-500 shrink-0" />
                                             AI Tax Classification Details
                                           </p>
                                           {vatClassification ? (
-                                            <div className="space-y-1.5 text-[11px] text-neutral-600">
-                                              <div className="flex justify-between border-b pb-1">
+                                            <div className="space-y-1.5 text-[11px] text-neutral-600 dark:text-neutral-400">
+                                              <div className="flex justify-between border-b dark:border-neutral-800 pb-1">
                                                 <span>Tax Category:</span>
-                                                <span className="font-semibold text-neutral-800">{hasAlcoholVat ? "Alcohol (10% VAT)" : "Standard (5% Tax)"}</span>
+                                                <span className="font-semibold text-neutral-800 dark:text-neutral-200">{hasAlcoholVat ? "Alcohol (10% VAT)" : "Standard (5% Tax)"}</span>
                                               </div>
-                                              <div className="flex justify-between border-b pb-1">
+                                              <div className="flex justify-between border-b dark:border-neutral-800 pb-1">
                                                 <span>Confidence:</span>
                                                 <span className={cn(
                                                   "font-semibold capitalize",
@@ -2067,32 +2067,32 @@ export default function CreateBudgetModal({
                                                   vatClassification.confidence === "medium" ? "text-amber-600" : "text-red-500"
                                                 )}>{vatClassification.confidence}</span>
                                               </div>
-                                              <div className="flex justify-between border-b pb-1">
+                                              <div className="flex justify-between border-b dark:border-neutral-800 pb-1">
                                                 <span>Model Source:</span>
-                                                <span className="font-mono text-neutral-500 text-[10px]">{vatModelName || "Gemini Core"}</span>
+                                                <span className="font-mono text-neutral-500 dark:text-neutral-400 text-[10px]">{vatModelName || "Gemini Core"}</span>
                                               </div>
                                               <div className="pt-1.5">
-                                                <p className="text-[10px] text-neutral-400 font-medium">Rationale:</p>
-                                                <p className="mt-0.5 leading-snug italic text-neutral-500">"{vatClassification.rationale}"</p>
+                                                <p className="text-[10px] text-neutral-400 dark:text-neutral-550 font-medium">Rationale:</p>
+                                                <p className="mt-0.5 leading-snug italic text-neutral-500 dark:text-neutral-400">"{vatClassification.rationale}"</p>
                                               </div>
                                             </div>
                                           ) : (
-                                            <p className="text-[11px] text-neutral-500 leading-snug">
+                                            <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">
                                               Taxes have not been calculated yet for this draft. Click **Calculate Taxes** below to process this item with Gemini AI.
                                             </p>
                                           )}
                                         </div>
                                       </PopoverContent>
                                     </Popover>
-                                    <span className="text-[10px] text-neutral-400 font-medium">
+                                    <span className="text-[10px] text-neutral-400 dark:text-neutral-550 font-medium">
                                       {vatClassification
                                         ? "AI tax check ok"
                                         : "Taxes pending"}
                                     </span>
                                   </div>
                                 </div>
-                                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-neutral-50 pt-2.5">
-                                  <p className="min-w-0 break-words font-mono font-bold text-neutral-900">
+                                <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-neutral-50 dark:border-neutral-800 pt-2.5">
+                                  <p className="min-w-0 break-words font-mono font-bold text-neutral-900 dark:text-neutral-100">
                                     {formatCurrency(
                                       line.unit_price * line.quantity
                                     )}
@@ -2102,21 +2102,21 @@ export default function CreateBudgetModal({
                                       type="button"
                                       size="icon"
                                       variant="outline"
-                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white"
+                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
                                       onClick={() =>
                                         updateLineQuantity(line.id, -1)
                                       }
                                     >
                                       <Minus className="h-3.5 w-3.5" />
                                     </Button>
-                                    <span className="grid h-7 min-w-8 place-items-center rounded-lg border border-neutral-100 bg-neutral-50/30 px-2 text-xs font-mono font-bold text-neutral-800">
+                                    <span className="grid h-7 min-w-8 place-items-center rounded-lg border border-neutral-100 bg-neutral-50/30 px-2 text-xs font-mono font-bold text-neutral-800 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-200">
                                       {line.quantity}
                                     </span>
                                     <Button
                                       type="button"
                                       size="icon"
                                       variant="outline"
-                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white"
+                                      className="h-7 w-7 rounded-lg border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-200"
                                       onClick={() =>
                                         updateLineQuantity(line.id, 1)
                                       }
@@ -2127,7 +2127,7 @@ export default function CreateBudgetModal({
                                       type="button"
                                       size="icon"
                                       variant="ghost"
-                                      className="h-7 w-7 rounded-lg text-neutral-400"
+                                      className="h-7 w-7 rounded-lg text-neutral-400 dark:text-neutral-550"
                                       onClick={() => removeLine(line.id)}
                                     >
                                       <Trash2 className="h-3.5 w-3.5" />
@@ -2143,9 +2143,9 @@ export default function CreateBudgetModal({
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-0 border-neutral-200/70 shadow-sm overflow-hidden bg-white">
-                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80">
-                    <CardTitle className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-base font-bold tracking-tight text-neutral-800">
+                <Card className="min-w-0 border-neutral-200/70 dark:border-neutral-800 shadow-sm overflow-hidden bg-white dark:bg-[#1c1c1e]">
+                  <CardHeader className="pb-3 pt-4 border-b border-neutral-100/80 dark:border-neutral-800">
+                    <CardTitle className="flex min-w-0 flex-wrap items-center justify-between gap-2 text-base font-bold tracking-tight text-neutral-800 dark:text-neutral-200">
                       <span className="flex min-w-0 items-center">
                         <Sparkles className="mr-2 h-4.5 w-4.5 text-neutral-400" />
                         <span className="min-w-0 truncate">Smart Fees</span>
@@ -2156,8 +2156,8 @@ export default function CreateBudgetModal({
                           className={cn(
                             "max-w-full rounded-full text-[10px] font-semibold px-2.5 py-0.5",
                             isTaxCalculationCurrent
-                              ? "bg-neutral-900 border-neutral-900 text-white"
-                              : "bg-neutral-50 border-neutral-200 text-neutral-500"
+                              ? "bg-neutral-900 border-neutral-900 text-white dark:bg-neutral-100 dark:border-neutral-100 dark:text-neutral-950"
+                              : "bg-neutral-50 border-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400"
                           )}
                         >
                           <span className="truncate">{taxStatusLabel}</span>
@@ -2166,7 +2166,7 @@ export default function CreateBudgetModal({
                           type="button"
                           size="sm"
                           variant="outline"
-                          className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-semibold"
+                          className="h-8 rounded-full border-neutral-200 text-neutral-700 bg-white px-3 text-xs shadow-sm font-semibold dark:border-neutral-800 dark:text-neutral-300 dark:bg-neutral-900"
                           onClick={handleCalculateTaxes}
                           disabled={
                             selectedLines.length === 0 ||
@@ -2185,7 +2185,7 @@ export default function CreateBudgetModal({
                   </CardHeader>
                   <CardContent className="min-w-0 space-y-3 pt-3">
                     {needsTaxCalculation && (
-                      <div className="rounded-xl border border-amber-200/40 bg-amber-50/15 px-3 py-2.5 text-xs text-amber-800 leading-snug flex gap-2">
+                      <div className="rounded-xl border border-amber-200/40 bg-amber-50/15 px-3 py-2.5 text-xs text-amber-800 leading-snug flex gap-2 dark:border-amber-900/40 dark:bg-amber-950/10 dark:text-amber-300">
                         <Info className="h-4 w-4 shrink-0 text-amber-500 mt-0.5" />
                         <span>
                           Run **Calculate Taxes** once your estimate items are ready. SettleEase AI will apply a 5% Tax to standard items and a 10% VAT to alcoholic drinks.
@@ -2193,35 +2193,35 @@ export default function CreateBudgetModal({
                       </div>
                     )}
                     <div className="grid min-w-0 gap-2.5 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                      <div className="min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/30 p-3">
+                      <div className="min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/30 p-3 dark:border-neutral-800 dark:bg-neutral-950/20">
                         <div className="flex min-w-0 items-center justify-between gap-2">
-                          <span className="text-xs text-neutral-500 font-semibold">
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-semibold">
                             Tax 5%
                           </span>
-                          <span className="break-words text-right font-mono font-bold text-neutral-800 text-sm">
+                          <span className="break-words text-right font-mono font-bold text-neutral-800 dark:text-neutral-200 text-sm">
                             {isTaxCalculationCurrent
                               ? formatCurrency(totals.taxAmount)
                               : "Pending"}
                           </span>
                         </div>
-                        <p className="mt-1 text-[10px] text-neutral-400 font-medium">
+                        <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-550 font-medium">
                           {isTaxCalculationCurrent
                             ? `On ${formatCurrency(totals.taxableSubtotal)}`
                             : "Calculated by SettleEase AI"}
                         </p>
                       </div>
-                      <div className="min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/30 p-3">
+                      <div className="min-w-0 rounded-xl border border-neutral-100 bg-neutral-50/30 p-3 dark:border-neutral-800 dark:bg-neutral-950/20">
                         <div className="flex min-w-0 items-center justify-between gap-2">
-                          <span className="text-xs text-neutral-500 font-semibold">
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-semibold">
                             Alcohol VAT 10%
                           </span>
-                          <span className="break-words text-right font-mono font-bold text-neutral-800 text-sm">
+                          <span className="break-words text-right font-mono font-bold text-neutral-800 dark:text-neutral-200 text-sm">
                             {isTaxCalculationCurrent
                               ? formatCurrency(totals.alcoholVatAmount)
                               : "Pending"}
                           </span>
                         </div>
-                        <p className="mt-1 text-[10px] text-neutral-400 font-medium">
+                        <p className="mt-1 text-[10px] text-neutral-400 dark:text-neutral-550 font-medium">
                           {isTaxCalculationCurrent
                             ? `On ${formatCurrency(totals.alcoholSubtotal)}`
                             : "Calculated by SettleEase AI"}
@@ -2231,7 +2231,7 @@ export default function CreateBudgetModal({
 
                     <div className="grid min-w-0 gap-3 sm:grid-cols-2">
                       <div className="min-w-0">
-                        <Label className="mb-1.5 block text-xs text-neutral-500 font-medium">
+                        <Label className="mb-1.5 block text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                           Other charge
                         </Label>
                         <Input
@@ -2242,11 +2242,11 @@ export default function CreateBudgetModal({
                             handleFeeChange("other_charge", event.target.value)
                           }
                           placeholder="0.00"
-                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200"
+                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-200 dark:focus-visible:ring-neutral-800"
                         />
                       </div>
                       <div className="min-w-0">
-                        <Label className="mb-1.5 block text-xs text-neutral-500 font-medium">
+                        <Label className="mb-1.5 block text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                           Discount
                         </Label>
                         <Input
@@ -2257,55 +2257,55 @@ export default function CreateBudgetModal({
                             handleFeeChange("discount", event.target.value)
                           }
                           placeholder="0.00"
-                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200"
+                          className="min-w-0 h-10 text-right font-mono border-neutral-200 rounded-lg bg-neutral-50/30 text-sm focus-visible:ring-neutral-200 dark:border-neutral-800 dark:bg-neutral-950/40 dark:text-neutral-200 dark:focus-visible:ring-neutral-800"
                         />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="min-w-0 border-neutral-200/80 bg-neutral-100/30 shadow-sm rounded-xl">
+                <Card className="min-w-0 border-neutral-200/80 bg-neutral-100/30 shadow-sm rounded-xl dark:border-neutral-800 dark:bg-neutral-950/30">
                   <CardContent className="space-y-2 p-4">
-                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 font-medium">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <span>Subtotal</span>
-                      <span className="break-words text-right font-mono font-semibold text-neutral-700">
+                      <span className="break-words text-right font-mono font-semibold text-neutral-700 dark:text-neutral-300">
                         {formatCurrency(totals.subtotal)}
                       </span>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 font-medium">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <span>Tax</span>
-                      <span className="break-words text-right font-mono text-neutral-700">
+                      <span className="break-words text-right font-mono text-neutral-700 dark:text-neutral-300">
                         {isTaxCalculationCurrent
                           ? formatCurrency(totals.taxAmount)
                           : "Pending"}
                       </span>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 font-medium">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <span>VAT</span>
-                      <span className="break-words text-right font-mono text-neutral-700">
+                      <span className="break-words text-right font-mono text-neutral-700 dark:text-neutral-300">
                         {isTaxCalculationCurrent
                           ? formatCurrency(totals.alcoholVatAmount)
                           : "Pending"}
                       </span>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 font-medium">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <span>Other Offsets</span>
-                      <span className="break-words text-right font-mono text-neutral-700">
+                      <span className="break-words text-right font-mono text-neutral-700 dark:text-neutral-300">
                         {formatCurrency(totals.otherCharge)}
                       </span>
                     </div>
-                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 font-medium">
+                    <div className="flex min-w-0 items-center justify-between gap-3 text-xs text-neutral-500 dark:text-neutral-400 font-medium">
                       <span>Discount</span>
-                      <span className="break-words text-right font-mono text-neutral-700">
+                      <span className="break-words text-right font-mono text-neutral-700 dark:text-neutral-300">
                         -{formatCurrency(totals.discount)}
                       </span>
                     </div>
-                    <div className="border-t border-neutral-200/60 pt-3">
+                    <div className="border-t border-neutral-200/60 dark:border-neutral-800 pt-3">
                       <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
-                        <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                           Rough final bill
                         </span>
-                        <span className="break-words text-2xl font-bold font-mono text-neutral-900 sm:text-right">
+                        <span className="break-words text-2xl font-bold font-mono text-neutral-900 dark:text-neutral-100 sm:text-right">
                           {formatCurrency(totals.finalTotal)}
                         </span>
                       </div>
