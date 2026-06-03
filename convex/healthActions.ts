@@ -179,6 +179,59 @@ async function loadHealthRequestContext(ctx: any, args: { startDate?: string; en
   };
 }
 
+async function verifyModelCapability(ctx: any, modelName: string): Promise<boolean> {
+  try {
+    // 1. Check database for existing capability check record
+    const record = await ctx.runQuery(internal.aiSummaryCache.getAiModelCapability, {
+      modelCode: modelName,
+    });
+    if (record !== null) {
+      return record.verified;
+    }
+
+    // 2. If no record exists, run a dynamic capability check
+    if (!GEMINI_API_KEY) {
+      return false;
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 16,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            success: { type: "boolean" },
+          },
+          required: ["success"],
+        } as any,
+      },
+    });
+
+    const testPrompt = 'Return JSON matching the schema: {"success": true}';
+    const result = await model.generateContent(testPrompt);
+    const text = result.response.text().trim();
+
+    let isVerified = false;
+    try {
+      const parsed = JSON.parse(text);
+      isVerified = !!(parsed && parsed.success === true);
+    } catch {
+      isVerified = false;
+    }
+
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: isVerified });
+    return isVerified;
+  } catch (error) {
+    console.warn(`Dynamic capability check failed for model ${modelName}:`, error);
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: false }).catch(() => {});
+    return false;
+  }
+}
+
 async function generateHealthEstimate({
   jsonData,
   promptText,
@@ -390,12 +443,26 @@ export const getHealthLedger = action({
       rowsByChunk,
       requestedChunkKeys,
       aiConfig,
-      modelAttemptOrder,
+      modelAttemptOrder: rawModelAttemptOrder,
       promptVersion,
       promptText,
       modelConfigFingerprint,
       requestedRange,
     } = await loadHealthRequestContext(ctx, args);
+
+    // Dynamic model verification check
+    const modelAttemptOrder: string[] = [];
+    for (const modelName of rawModelAttemptOrder) {
+      const isVerified = await verifyModelCapability(ctx, modelName);
+      if (isVerified) {
+        modelAttemptOrder.push(modelName);
+      } else {
+        console.warn(`Bypassing unverified AI model: ${modelName}`);
+      }
+    }
+    if (modelAttemptOrder.length === 0) {
+      throw new ConvexError("No verified AI models are available. Please check configured model capabilities.");
+    }
 
     const chunkStatuses: HealthLedgerChunkStatus[] = [];
     const ledgerRows: HealthEstimatedLedgerRow[] = [];
@@ -496,12 +563,27 @@ export const ensureHealthChunks = action({
       rowsByChunk,
       requestedChunkKeys,
       aiConfig,
-      modelAttemptOrder,
+      modelAttemptOrder: rawModelAttemptOrder,
       promptVersion,
       promptText,
       modelConfigFingerprint,
       requestedRange,
     } = await loadHealthRequestContext(ctx, args);
+
+    // Dynamic model verification check
+    const modelAttemptOrder: string[] = [];
+    for (const modelName of rawModelAttemptOrder) {
+      const isVerified = await verifyModelCapability(ctx, modelName);
+      if (isVerified) {
+        modelAttemptOrder.push(modelName);
+      } else {
+        console.warn(`Bypassing unverified AI model: ${modelName}`);
+      }
+    }
+    if (modelAttemptOrder.length === 0) {
+      throw new ConvexError("No verified AI models are available. Please check configured model capabilities.");
+    }
+
 
     let cachedChunkCount = 0;
     let generatedChunkCount = 0;
@@ -632,6 +714,149 @@ export const listAvailableModels = action({
     } catch (error) {
       console.error("Error listing available models:", error);
       throw new ConvexError(`Failed to retrieve models: ${normalizeError(error)}`);
+    }
+  },
+});
+
+export const probeModelCapability = action({
+  args: {
+    modelCode: v.string(),
+  },
+  handler: async (
+    ctx,
+    args
+  ): Promise<{
+    success: boolean;
+    error: string | null;
+    features: {
+      textGeneration: boolean;
+      structuredOutput: boolean;
+    };
+    latencyMs: number;
+  }> => {
+    await requireAuthenticatedSupabaseUserId(ctx);
+
+    if (!GEMINI_API_KEY) {
+      return {
+        success: false,
+        error: "GEMINI_API_KEY environment variable is missing on Convex.",
+        features: {
+          textGeneration: false,
+          structuredOutput: false,
+        },
+        latencyMs: 0,
+      };
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const startTime = Date.now();
+
+    try {
+      // Step 1: Probe structured output JSON schema support
+      const model = genAI.getGenerativeModel({
+        model: args.modelCode,
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 15,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "object",
+            properties: {
+              status: { type: "string" },
+            },
+            required: ["status"],
+          } as any,
+        },
+      });
+
+      const response = await model.generateContent("Respond with JSON object: {\"status\": \"ok\"}");
+      const text = response.response.text();
+      const latencyMs = Date.now() - startTime;
+
+      let parsed = null;
+      try {
+        parsed = JSON.parse(text.trim());
+      } catch (e) {
+        // Parsing failed
+      }
+
+      const isVerified = !!(parsed && parsed.status === "ok");
+      
+      // Cache verified results in db
+      await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+        modelCode: args.modelCode,
+        verified: isVerified,
+      });
+
+      if (isVerified) {
+        return {
+          success: true,
+          error: null,
+          features: {
+            textGeneration: true,
+            structuredOutput: true,
+          },
+          latencyMs,
+        };
+      } else {
+        return {
+          success: true,
+          error: "Model succeeded but failed to generate structured JSON conforming to the schema.",
+          features: {
+            textGeneration: true,
+            structuredOutput: false,
+          },
+          latencyMs,
+        };
+      }
+    } catch (error: any) {
+      // Step 2: Fallback to basic text generation check if structured schemas fail or are unsupported
+      try {
+        const textModel = genAI.getGenerativeModel({
+          model: args.modelCode,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 10,
+          },
+        });
+        
+        await textModel.generateContent("Say 'ok'");
+        const latencyMs = Date.now() - startTime;
+
+        // Cache unverified structured support state
+        await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+          modelCode: args.modelCode,
+          verified: false,
+        });
+
+        return {
+          success: true,
+          error: "JSON schema is unsupported or failed validation. Basic text generation is operational.",
+          features: {
+            textGeneration: true,
+            structuredOutput: false,
+          },
+          latencyMs,
+        };
+      } catch (textError: any) {
+        const latencyMs = Date.now() - startTime;
+        
+        // Cache completely failed capability state
+        await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+          modelCode: args.modelCode,
+          verified: false,
+        });
+
+        return {
+          success: false,
+          error: textError?.message || error?.message || "Model failed to respond to API check.",
+          features: {
+            textGeneration: false,
+            structuredOutput: false,
+          },
+          latencyMs,
+        };
+      }
     }
   },
 });

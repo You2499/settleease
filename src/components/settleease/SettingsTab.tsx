@@ -729,6 +729,16 @@ interface ModelSelectorProps {
   options: ModelUIProps[];
   disabled?: boolean;
   allowNone?: boolean;
+  probeStatus?: {
+    loading: boolean;
+    success?: boolean;
+    error?: string | null;
+    features?: {
+      textGeneration: boolean;
+      structuredOutput: boolean;
+    };
+    latencyMs?: number;
+  };
 }
 
 export function ModelSelector({
@@ -738,6 +748,7 @@ export function ModelSelector({
   options,
   disabled = false,
   allowNone = false,
+  probeStatus,
 }: ModelSelectorProps) {
   const [open, setOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -803,6 +814,24 @@ export function ModelSelector({
                 </span>
               )}
             </div>
+            {/* Probe Status Indicator */}
+            {probeStatus && value !== "none" && (
+              <div className="flex items-center gap-1 shrink-0 ml-2">
+                {probeStatus.loading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                ) : probeStatus.features?.structuredOutput ? (
+                  <span className="flex items-center gap-0.5 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/40 px-1.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-900/60">
+                    <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                    Verified
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-0.5 text-[10px] text-rose-600 dark:text-rose-400 font-semibold bg-rose-50 dark:bg-rose-950/40 px-1.5 py-0.5 rounded-full border border-rose-200 dark:border-rose-900/60">
+                    <ShieldAlert className="h-3 w-3 text-rose-500" />
+                    Failed
+                  </span>
+                )}
+              </div>
+            )}
           </div>
           <ChevronDown className="h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -1001,6 +1030,7 @@ export default function SettingsTab({
   const toggleAnnouncementActive = useMutation(api.app.toggleAnnouncementActive);
   const deleteAnnouncement = useMutation(api.app.deleteAnnouncement);
   const listAvailableModels = useAction(api.healthActions.listAvailableModels);
+  const probeModelCapability = useAction(api.healthActions.probeModelCapability);
 
   const clientEnvironment = getClientSettleEaseEnvironment();
   const configuredConvexUrl = getConvexUrl();
@@ -1052,6 +1082,93 @@ export default function SettingsTab({
   
   // Loading state for announcement CRUD actions
   const [isAnnouncementActionLoading, setIsAnnouncementActionLoading] = useState(false);
+
+  // Model Capability Probing States and Effects
+  const [probeResults, setProbeResults] = useState<Record<string, {
+    loading: boolean;
+    success?: boolean;
+    error?: string | null;
+    features?: {
+      textGeneration: boolean;
+      structuredOutput: boolean;
+    };
+    latencyMs?: number;
+  }>>({});
+
+  const runCapabilityProbe = async (modelCode: string) => {
+    if (!modelCode || modelCode === "none") return;
+    setProbeResults((prev) => ({
+      ...prev,
+      [modelCode]: { loading: true },
+    }));
+    try {
+      const res = await probeModelCapability({ modelCode });
+      setProbeResults((prev) => ({
+        ...prev,
+        [modelCode]: {
+          loading: false,
+          success: res.success,
+          error: res.error,
+          features: res.features,
+          latencyMs: res.latencyMs,
+        },
+      }));
+    } catch (err: any) {
+      setProbeResults((prev) => ({
+        ...prev,
+        [modelCode]: {
+          loading: false,
+          success: false,
+          error: err?.message || "Failed to contact Convex action",
+          features: { textGeneration: false, structuredOutput: false },
+          latencyMs: 0,
+        },
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (userRole !== "admin") return;
+    const modelsToProbe = [selectedAiModel, fallbackOne, fallbackTwo].filter(
+      (m): m is string => !!m && m !== "none"
+    );
+    modelsToProbe.forEach((m) => {
+      setProbeResults((prev) => {
+        if (prev[m]) return prev;
+        // Trigger the probe asynchronously
+        void (async () => {
+          try {
+            const res = await probeModelCapability({ modelCode: m });
+            setProbeResults((current) => ({
+              ...current,
+              [m]: {
+                loading: false,
+                success: res.success,
+                error: res.error,
+                features: res.features,
+                latencyMs: res.latencyMs,
+              },
+            }));
+          } catch (err: any) {
+            setProbeResults((current) => ({
+              ...current,
+              [m]: {
+                loading: false,
+                success: false,
+                error: err?.message || "Failed to contact Convex action",
+                features: { textGeneration: false, structuredOutput: false },
+                latencyMs: 0,
+              },
+            }));
+          }
+        })();
+        return {
+          ...prev,
+          [m]: { loading: true },
+        };
+      });
+    });
+  }, [selectedAiModel, fallbackOne, fallbackTwo, userRole]);
 
   useEffect(() => {
     setSelectedTheme(theme || userProfile?.theme_preference || "light");
@@ -1776,6 +1893,7 @@ export default function SettingsTab({
                       onValueChange={(value) => setSelectedAiModel(value)}
                       options={modelOptions}
                       disabled={!canMutate}
+                      probeStatus={probeResults[selectedAiModel]}
                     />
                   </div>
 
@@ -1789,6 +1907,7 @@ export default function SettingsTab({
                         options={modelOptions.filter((opt) => opt.code !== selectedAiModel)}
                         disabled={!canMutate}
                         allowNone
+                        probeStatus={fallbackOne !== "none" ? probeResults[fallbackOne] : undefined}
                       />
                     </div>
                     <div className="space-y-2">
@@ -1800,9 +1919,126 @@ export default function SettingsTab({
                         options={modelOptions.filter((opt) => opt.code !== selectedAiModel && opt.code !== fallbackOne)}
                         disabled={!canMutate}
                         allowNone
+                        probeStatus={fallbackTwo !== "none" ? probeResults[fallbackTwo] : undefined}
                       />
                     </div>
                   </div>
+
+                  {/* Model Capability Report Card */}
+                  {userRole === "admin" && (
+                    <div className="mt-4 rounded-xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-sm">
+                      <div className="flex items-center gap-2 border-b pb-3 mb-4">
+                        <Brain className="h-5 w-5 text-primary" />
+                        <h4 className="text-sm font-semibold text-foreground">Model Capability Report</h4>
+                      </div>
+                      <div className="space-y-4">
+                        {[
+                          { role: "Primary Model", code: selectedAiModel },
+                          { role: "Fallback 1", code: fallbackOne },
+                          { role: "Fallback 2", code: fallbackTwo },
+                        ].map((m, idx) => {
+                          if (!m.code || m.code === "none") return null;
+                          const status = probeResults[m.code];
+                          const modelMeta = modelOptions.find((o) => o.code === m.code) || analyzeModelHeuristically({ code: m.code });
+
+                          return (
+                            <div key={idx} className="flex flex-col gap-2 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded">
+                                    {m.role}
+                                  </span>
+                                  <span className="text-sm font-medium text-foreground">
+                                    {modelMeta.displayName}
+                                  </span>
+                                </div>
+                                <span className="font-mono text-[10px] text-muted-foreground">
+                                  Code: {m.code}
+                                </span>
+                              </div>
+
+                              <div className="flex flex-wrap items-center gap-3">
+                                {status?.loading ? (
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    <span>Verifying...</span>
+                                  </div>
+                                ) : status ? (
+                                  <>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs text-muted-foreground">
+                                        Latency: <span className="font-medium text-foreground">{status.latencyMs ?? 0}ms</span>
+                                      </span>
+                                    </div>
+                                    <div className="flex gap-1.5">
+                                      <span className={cn(
+                                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+                                        status.features?.textGeneration
+                                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60"
+                                          : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60"
+                                      )}>
+                                        Text Gen
+                                      </span>
+                                      <span className={cn(
+                                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
+                                        status.features?.structuredOutput
+                                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60"
+                                          : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60"
+                                      )}>
+                                        JSON Schema
+                                      </span>
+                                    </div>
+                                    {status.features?.structuredOutput ? (
+                                      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+                                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                                        Verified
+                                      </span>
+                                    ) : (
+                                      <div className="flex flex-col items-end">
+                                        <span className="flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
+                                          <ShieldAlert className="h-4 w-4 text-rose-500" />
+                                          Structured Output Unsupported
+                                        </span>
+                                        {status.error && (
+                                          <span className="text-[10px] text-rose-500/80 text-right max-w-xs mt-0.5 line-clamp-1" title={status.error}>
+                                            {status.error}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </>
+                                ) : (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    onClick={() => runCapabilityProbe(m.code)}
+                                  >
+                                    Verify
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Schema Troubleshooting Guide */}
+                      {Object.values(probeResults).some(r => r && !r.loading && !r.features?.structuredOutput) && (
+                        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
+                          <div className="flex items-start gap-2">
+                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
+                            <div>
+                              <p className="font-semibold">JSON Schema Support Warning</p>
+                              <p className="mt-0.5 text-muted-foreground leading-normal">
+                                One or more selected models do not support structured output schemas. SettleEase requires JSON schema compliance to run health evaluations and ledger summaries. If a selected model fails capability verification, SettleEase will automatically bypass it at runtime and fall back to the next verified model in the fallback chain.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <Button
                     disabled={!canMutate}

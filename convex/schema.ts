@@ -226,6 +226,12 @@ export default defineSchema({
     updatedByUserId: v.optional(v.union(v.string(), v.null())),
   }).index("by_key", ["key"]),
 
+  aiModelCapabilities: defineTable({
+    modelCode: v.string(),
+    verified: v.boolean(),
+    checkedAt: v.string(),
+  }).index("by_model_code", ["modelCode"]),
+
   aiSummaries: defineTable({
     userId: v.string(),
     dataHash: v.string(),

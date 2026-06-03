@@ -189,3 +189,35 @@ export const failAiSummaryGeneration = internalMutation({
     return aiSummaryDto(await ctx.db.get(existing._id));
   },
 });
+
+export const getAiModelCapability = internalQuery({
+  args: { modelCode: v.string() },
+  handler: async (ctx, args) => {
+    const record = await ctx.db
+      .query("aiModelCapabilities")
+      .withIndex("by_model_code", (q) => q.eq("modelCode", args.modelCode))
+      .first();
+    if (!record) return null;
+    return {
+      modelCode: record.modelCode,
+      verified: record.verified,
+      checkedAt: record.checkedAt,
+    };
+  },
+});
+
+export const storeAiModelCapability = internalMutation({
+  args: { modelCode: v.string(), verified: v.boolean() },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("aiModelCapabilities")
+      .withIndex("by_model_code", (q) => q.eq("modelCode", args.modelCode))
+      .first();
+    const timestamp = nowIso();
+    if (existing) {
+      await ctx.db.patch(existing._id, { verified: args.verified, checkedAt: timestamp });
+      return existing._id;
+    }
+    return await ctx.db.insert("aiModelCapabilities", { modelCode: args.modelCode, verified: args.verified, checkedAt: timestamp });
+  },
+});
