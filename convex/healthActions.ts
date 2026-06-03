@@ -1011,7 +1011,7 @@ export const runAiDiagnosticsInternal = internalAction({
           model: code,
           generationConfig: {
             temperature: 0.1,
-            maxOutputTokens: 16,
+            maxOutputTokens: 1024,
             responseMimeType: "application/json",
             responseSchema: {
               type: "object",
