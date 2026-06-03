@@ -1,6 +1,6 @@
 export const AI_CONFIG_KEY = "global-ai-config";
 
-export const DEFAULT_AI_MODEL_CODE = "gemini-2.0-flash";
+export const DEFAULT_AI_MODEL_CODE = "gemini-2.5-flash";
 
 export type AiModelCode = string;
 
@@ -24,24 +24,24 @@ export interface AiModelConfig {
 
 export const AI_MODEL_OPTIONS: AiModelOption[] = [
   {
-    code: "gemini-2.0-flash",
-    displayName: "Gemini 2.0 Flash (Recommended)",
-    shortName: "2.0 Flash",
+    code: "gemini-2.5-flash",
+    displayName: "Gemini 2.5 Flash (Recommended)",
+    shortName: "2.5 Flash",
     status: "Stable",
     freeTierLabel: "Free tier: input and output free of charge",
     paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
     recommendedFor: "Default for extremely fast, highly accurate, and stable summaries and receipt parsing.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-2.0-flash",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models",
   },
   {
-    code: "gemini-1.5-flash",
-    displayName: "Gemini 1.5 Flash",
-    shortName: "1.5 Flash",
+    code: "gemini-2.5-pro",
+    displayName: "Gemini 2.5 Pro",
+    shortName: "2.5 Pro",
     status: "Stable",
     freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
-    recommendedFor: "Extremely fast, stable, and low-cost fallback summaries and receipt parsing.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-1.5-flash",
+    paidPricingLabel: "Paid Standard: $1.25 input, $5.00 output per 1M tokens",
+    recommendedFor: "High-capability model for highly complex, multi-lingual parsing and reasoning.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models",
   },
   {
     code: "gemini-2.0-flash-lite",
@@ -53,24 +53,13 @@ export const AI_MODEL_OPTIONS: AiModelOption[] = [
     documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-2.0-flash-lite",
   },
   {
-    code: "gemini-1.5-pro",
-    displayName: "Gemini 1.5 Pro",
-    shortName: "1.5 Pro",
-    status: "Stable",
+    code: "gemini-3.1-flash-lite-preview",
+    displayName: "Gemini 3.1 Flash-Lite Preview",
+    shortName: "3.1 Flash-Lite",
+    status: "Preview",
     freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $1.25 input, $5.00 output per 1M tokens",
-    recommendedFor: "High-capability model for highly complex, multi-lingual parsing and reasoning.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-v2#gemini-1.5-pro",
-  },
-  {
-    code: "gemini-2.5-flash",
-    displayName: "Gemini 2.5 Flash",
-    shortName: "2.5 Flash",
-    status: "Stable",
-    freeTierLabel: "Free tier: input and output free of charge",
-    paidPricingLabel: "Paid Standard: $0.075 input, $0.30 output per 1M tokens",
-    recommendedFor: "Modern stable fallback model.",
-    documentationUrl: "https://ai.google.dev/gemini-api/docs/models",
+    recommendedFor: "Original default for fast, low-cost summaries and receipt parsing.",
+    documentationUrl: "https://ai.google.dev/gemini-api/docs/models/gemini-3.1-flash-lite-preview",
   },
 ];
 

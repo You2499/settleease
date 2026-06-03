@@ -42,10 +42,10 @@ const celebrationContribution = v.object({
 });
 
 const DEFAULT_AI_CONFIG_KEY = "global-ai-config";
-const DEFAULT_AI_MODEL_CODE = "gemini-2.0-flash";
+const DEFAULT_AI_MODEL_CODE = "gemini-2.5-flash";
 const DEFAULT_AI_FALLBACK_MODEL_CODES = [
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
+  "gemini-2.0-flash-lite",
+  "gemini-2.5-pro",
 ];
 const DEVELOPMENT_CONVEX_HOST = "shocking-panda-595.convex.cloud";
 const PRODUCTION_CONVEX_HOST = "fortunate-fox-427.convex.cloud";
