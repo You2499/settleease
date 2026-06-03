@@ -128,13 +128,20 @@ Rules:
      - E.g., if raw item Name is "Coca Cola x3" and input price is "9.00", the unit price is "3.00".
      - Output this calculated unit price as "cleanedPrice", rounded to exactly 2 decimal places.
 
+5. Formatting Constraints:
+   - Return ONLY valid JSON matching the schema.
+   - Do not include explanations, Markdown, or code fences.
+
 Allowed Categories:
 {{ALLOWED_CATEGORIES}}
 
 Input Observations to Consolidate:
 {{OBSERVATIONS}}
 
-Return ONLY valid JSON matching the required response schema. No markdown code fences, no leading/trailing explanation text.`;
+Required JSON fields:
+- schemaVersion: 1
+- canonicalItems: array of consolidated canonical budget items (each containing: id, name, categoryName, decipheredVenue, description)
+- mappings: array of mappings from input observations to canonical items (each containing: observationId, canonicalItemId, decipheredVenue, cleanedPrice)`;
 
 export function injectCleanCatalogPrompt(
   promptTemplate: string,
@@ -142,8 +149,8 @@ export function injectCleanCatalogPrompt(
   observations: CatalogObservationInput[]
 ): string {
   return promptTemplate
-    .replace("{{ALLOWED_CATEGORIES}}", allowedCategories.join(", "))
-    .replace("{{OBSERVATIONS}}", JSON.stringify(observations, null, 2));
+    .replace("{{ALLOWED_CATEGORIES}}", () => allowedCategories.join(", "))
+    .replace("{{OBSERVATIONS}}", () => JSON.stringify(observations, null, 2));
 }
 
 export function parseCleanCatalogResponse(text: string): CleanCatalogResponse | null {
@@ -201,7 +208,8 @@ export function normalizeCleanCatalogResponse(
           (c: string) => c.toLowerCase() === rawCategory.toLowerCase()
         ) || allowedCategories.find(
           (c: string) => {
-            const pattern = new RegExp(`\\b${rawCategory.toLowerCase()}\\b`, 'i');
+            const escapedCategory = rawCategory.replace(/[.*+?^${}()|[\]\\]/g, (match) => '\\' + match);
+            const pattern = new RegExp(`\\b${escapedCategory.toLowerCase()}\\b`, 'i');
             return pattern.test(c.toLowerCase());
           }
         ) || allowedCategories.find(

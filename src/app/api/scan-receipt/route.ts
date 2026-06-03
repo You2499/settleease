@@ -506,7 +506,7 @@ async function generateContentWithRetry(
             temperature: 0.1,
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 3072,
+            maxOutputTokens: 8192,
           },
         },
         { timeout: 12000 } // 12 seconds per-attempt timeout

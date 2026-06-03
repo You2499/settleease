@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
             temperature: 0.05,
             topP: 0.8,
             topK: 40,
-            maxOutputTokens: 2048,
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
             responseSchema: BUDGET_VAT_RESPONSE_SCHEMA as any,
           },

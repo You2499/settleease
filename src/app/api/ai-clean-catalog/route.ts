@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
             temperature: 0.1, // Highly precise, low temperature
             topP: 0.85,
             topK: 40,
-            maxOutputTokens: 2500,
+            maxOutputTokens: 8192,
             responseMimeType: "application/json",
             responseSchema: AI_CLEAN_CATALOG_RESPONSE_SCHEMA as any,
           },
