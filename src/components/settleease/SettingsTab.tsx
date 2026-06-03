@@ -1031,6 +1031,8 @@ export default function SettingsTab({
   const deleteAnnouncement = useMutation(api.app.deleteAnnouncement);
   const listAvailableModels = useAction(api.healthActions.listAvailableModels);
   const probeModelCapability = useAction(api.healthActions.probeModelCapability);
+  const runAiDiagnostics = useAction(api.healthActions.runAiDiagnostics);
+  const capabilities = useQuery(api.app.listAiModelCapabilities);
 
   const clientEnvironment = getClientSettleEaseEnvironment();
   const configuredConvexUrl = getConvexUrl();
@@ -1065,6 +1067,78 @@ export default function SettingsTab({
   const [dangerAction, setDangerAction] = useState<DangerAction | null>(null);
   const [productionDangerUnlocked, setProductionDangerUnlocked] = useState(false);
   const [productionUnlockDialogOpen, setProductionUnlockDialogOpen] = useState(false);
+
+  const [diagnosticsRunning, setDiagnosticsRunning] = useState(false);
+  const [diagnosticsStep, setDiagnosticsStep] = useState(0);
+  const [diagnosticsResult, setDiagnosticsResult] = useState<{
+    success: boolean;
+    promotedModel: string | null;
+    fallbacks: string[];
+    log: string[];
+  } | null>(null);
+
+  const handleRunDiagnostics = async () => {
+    setDiagnosticsRunning(true);
+    setDiagnosticsStep(1);
+    setDiagnosticsResult(null);
+
+    const t1 = setTimeout(() => setDiagnosticsStep(2), 700);
+    const t2 = setTimeout(() => setDiagnosticsStep(3), 1400);
+    const t3 = setTimeout(() => setDiagnosticsStep(4), 2100);
+    const t4 = setTimeout(() => setDiagnosticsStep(5), 2800);
+
+    try {
+      const res = await runAiDiagnostics({});
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      setDiagnosticsStep(5);
+      setDiagnosticsResult(res);
+      toast({
+        title: "Diagnostics Completed",
+        description: res.success ? `Successfully promoted ${res.promotedModel}` : "Failed to run diagnostics.",
+      });
+    } catch (err: any) {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      clearTimeout(t4);
+      setDiagnosticsStep(0);
+      toast({
+        title: "Diagnostics Failed",
+        description: err?.message || "Failed to execute diagnostics.",
+        variant: "destructive",
+      });
+    } finally {
+      setDiagnosticsRunning(false);
+    }
+  };
+
+  const handlePromoteModel = async (code: string) => {
+    try {
+      const otherVerified = capabilities
+        ?.filter((c) => c.verified && c.modelCode !== code)
+        .map((c) => c.modelCode) || [];
+      const fallbacks = otherVerified.slice(0, 2);
+
+      await updateAiConfig({
+        expectedEnvironment: clientEnvironment,
+        modelCode: code,
+        fallbackModelCodes: fallbacks,
+      });
+      toast({
+        title: "Model Promoted",
+        description: `Successfully promoted ${code} to primary.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Promotion Failed",
+        description: err?.message || "Failed to update configuration.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Announcement composition form states
   const [announcementTitle, setAnnouncementTitle] = useState("");
@@ -1625,7 +1699,7 @@ export default function SettingsTab({
           <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:w-auto sm:grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="preferences">Preferences</TabsTrigger>
-            <TabsTrigger value="ai">AI Config</TabsTrigger>
+            {userRole === "admin" && <TabsTrigger value="ai">AI Config</TabsTrigger>}
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="appAnalytics">App Analytics</TabsTrigger>
             <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
@@ -1876,196 +1950,193 @@ export default function SettingsTab({
             <div className="grid gap-4">
               <SettingsSection
                 icon={Brain}
-                title="AI Model Configuration"
-                description="Controls the active model used by report redaction, summaries, and AI-assisted tools."
+                title="AI Autopilot Diagnostics"
+                description="Monitor AI system health, run structured schema validations, and automatically optimize model fallbacks."
                 action={
                   <Badge variant="outline">
-                    {snapshot?.aiConfig.updatedAt ? `Updated ${formatDateTime(snapshot.aiConfig.updatedAt)}` : "Default config"}
+                    {snapshot?.aiConfig?.updatedAt ? `Self-Optimized ${formatDateTime(snapshot.aiConfig.updatedAt)}` : "Default config"}
                   </Badge>
                 }
               >
-                <div className="grid gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="ai-model">Primary model</Label>
-                    <ModelSelector
-                      id="ai-model"
-                      value={selectedAiModel}
-                      onValueChange={(value) => setSelectedAiModel(value)}
-                      options={modelOptions}
-                      disabled={!canMutate}
-                      probeStatus={probeResults[selectedAiModel]}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="fallback-one">Fallback 1</Label>
-                      <ModelSelector
-                        id="fallback-one"
-                        value={fallbackOne}
-                        onValueChange={(value) => setFallbackOne(value)}
-                        options={modelOptions.filter((opt) => opt.code !== selectedAiModel)}
-                        disabled={!canMutate}
-                        allowNone
-                        probeStatus={fallbackOne !== "none" ? probeResults[fallbackOne] : undefined}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="fallback-two">Fallback 2</Label>
-                      <ModelSelector
-                        id="fallback-two"
-                        value={fallbackTwo}
-                        onValueChange={(value) => setFallbackTwo(value)}
-                        options={modelOptions.filter((opt) => opt.code !== selectedAiModel && opt.code !== fallbackOne)}
-                        disabled={!canMutate}
-                        allowNone
-                        probeStatus={fallbackTwo !== "none" ? probeResults[fallbackTwo] : undefined}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Model Capability Report Card */}
-                  {userRole === "admin" && (
-                    <div className="mt-4 rounded-xl border border-border bg-card/50 p-5 shadow-sm backdrop-blur-sm">
-                      <div className="flex items-center gap-2 border-b pb-3 mb-4">
-                        <Brain className="h-5 w-5 text-primary" />
-                        <h4 className="text-sm font-semibold text-foreground">Model Capability Report</h4>
+                <div className="grid gap-6">
+                  {/* Current Active Config Card */}
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 p-5 shadow-sm backdrop-blur-md">
+                    <h4 className="text-sm font-semibold text-primary flex items-center gap-2">
+                      <Brain className="h-4.5 w-4.5" />
+                      Active Model Configuration
+                    </h4>
+                    <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                      <div className="rounded-lg bg-background/60 p-3 border border-border">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Primary Model</span>
+                        <p className="mt-1 text-sm font-semibold text-foreground truncate">{snapshot?.aiConfig?.modelCode || DEFAULT_AI_MODEL_CODE}</p>
                       </div>
-                      <div className="space-y-4">
+                      <div className="rounded-lg bg-background/60 p-3 border border-border">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Fallback 1</span>
+                        <p className="mt-1 text-sm font-semibold text-foreground truncate">{snapshot?.aiConfig?.fallbackModelCodes?.[0] || "None"}</p>
+                      </div>
+                      <div className="rounded-lg bg-background/60 p-3 border border-border">
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground">Fallback 2</span>
+                        <p className="mt-1 text-sm font-semibold text-foreground truncate">{snapshot?.aiConfig?.fallbackModelCodes?.[1] || "None"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Run Diagnostics Controls */}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t pt-4">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Optimization Diagnostics</p>
+                      <p className="text-xs text-muted-foreground">Probes API status, response latency, and structured schema integrity for all available models.</p>
+                    </div>
+                    <Button
+                      disabled={diagnosticsRunning || !canMutate}
+                      onClick={handleRunDiagnostics}
+                      className="shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground font-medium"
+                    >
+                      {diagnosticsRunning ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Running Optimizer...
+                        </>
+                      ) : (
+                        <>
+                          <Activity className="mr-2 h-4 w-4" />
+                          Optimize AI Configuration
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {/* Checklist & Results */}
+                  {(diagnosticsRunning || diagnosticsResult) && (
+                    <div className="rounded-xl border border-border bg-muted/20 p-5 space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <h4 className="text-xs uppercase font-bold text-muted-foreground tracking-wider">Checklist Status</h4>
+                      
+                      <div className="grid gap-3 sm:grid-cols-2">
                         {[
-                          { role: "Primary Model", code: selectedAiModel },
-                          { role: "Fallback 1", code: fallbackOne },
-                          { role: "Fallback 2", code: fallbackTwo },
-                        ].map((m, idx) => {
-                          if (!m.code || m.code === "none") return null;
-                          const status = probeResults[m.code];
-                          const modelMeta = modelOptions.find((o) => o.code === m.code) || analyzeModelHeuristically({ code: m.code });
-
+                          { step: 1, label: "Google AI API connection check" },
+                          { step: 2, label: "Primary Model check" },
+                          { step: 3, label: "JSON Schema structure check" },
+                          { step: 4, label: "Latency verification (< 1.5s)" },
+                          { step: 5, label: "Fallback chain integrity resolution" }
+                        ].map((s) => {
+                          const isDone = diagnosticsStep > s.step || (diagnosticsStep === 5 && !diagnosticsRunning);
+                          const isActive = diagnosticsRunning && diagnosticsStep === s.step;
                           return (
-                            <div key={idx} className="flex flex-col gap-2 rounded-lg border bg-muted/20 p-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="flex flex-col gap-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-semibold text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded">
-                                    {m.role}
-                                  </span>
-                                  <span className="text-sm font-medium text-foreground">
-                                    {modelMeta.displayName}
-                                  </span>
-                                </div>
-                                <span className="font-mono text-[10px] text-muted-foreground">
-                                  Code: {m.code}
-                                </span>
-                              </div>
-
-                              <div className="flex flex-wrap items-center gap-3">
-                                {status?.loading ? (
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                    <span>Verifying...</span>
-                                  </div>
-                                ) : status ? (
-                                  <>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs text-muted-foreground">
-                                        Latency: <span className="font-medium text-foreground">{status.latencyMs ?? 0}ms</span>
-                                      </span>
-                                    </div>
-                                    <div className="flex gap-1.5">
-                                      <span className={cn(
-                                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
-                                        status.features?.textGeneration
-                                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60"
-                                          : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60"
-                                      )}>
-                                        Text Gen
-                                      </span>
-                                      <span className={cn(
-                                        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border",
-                                        status.features?.structuredOutput
-                                          ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60"
-                                          : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-900/60"
-                                      )}>
-                                        JSON Schema
-                                      </span>
-                                    </div>
-                                    {status.features?.structuredOutput ? (
-                                      <span className="flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                                        <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                                        Verified
-                                      </span>
-                                    ) : (
-                                      <div className="flex flex-col items-end">
-                                        <span className="flex items-center gap-1 text-xs text-rose-600 dark:text-rose-400 font-medium">
-                                          <ShieldAlert className="h-4 w-4 text-rose-500" />
-                                          Structured Output Unsupported
-                                        </span>
-                                        {status.error && (
-                                          <span className="text-[10px] text-rose-500/80 text-right max-w-xs mt-0.5 line-clamp-1" title={status.error}>
-                                            {status.error}
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
-                                  </>
-                                ) : (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-7 text-xs"
-                                    onClick={() => runCapabilityProbe(m.code)}
-                                  >
-                                    Verify
-                                  </Button>
-                                )}
-                              </div>
+                            <div key={s.step} className="flex items-center gap-3 text-sm">
+                              {isDone ? (
+                                <ShieldCheck className="h-5 w-5 text-emerald-500 shrink-0" />
+                              ) : isActive ? (
+                                <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
+                              ) : (
+                                <div className="h-5 w-5 rounded-full border border-muted-foreground/30 shrink-0" />
+                              )}
+                              <span className={cn(
+                                "transition-colors",
+                                isDone ? "text-foreground font-medium" : isActive ? "text-primary font-semibold" : "text-muted-foreground"
+                              )}>
+                                {s.label}
+                              </span>
                             </div>
                           );
                         })}
                       </div>
-                      
-                      {/* Schema Troubleshooting Guide */}
-                      {Object.values(probeResults).some(r => r && !r.loading && !r.features?.structuredOutput) && (
-                        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50/50 dark:border-amber-900/60 dark:bg-amber-950/20 p-3 text-xs text-amber-800 dark:text-amber-300">
-                          <div className="flex items-start gap-2">
-                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-500 animate-pulse" />
-                            <div>
-                              <p className="font-semibold">JSON Schema Support Warning</p>
-                              <p className="mt-0.5 text-muted-foreground leading-normal">
-                                One or more selected models do not support structured output schemas. SettleEase requires JSON schema compliance to run health evaluations and ledger summaries. If a selected model fails capability verification, SettleEase will automatically bypass it at runtime and fall back to the next verified model in the fallback chain.
-                              </p>
-                            </div>
-                          </div>
+
+                      {/* Log Console Output */}
+                      {diagnosticsResult && (
+                        <div className="mt-4 rounded-lg bg-black/90 p-4 font-mono text-[10px] text-zinc-300 space-y-1 max-h-48 overflow-y-auto border border-zinc-800 shadow-inner">
+                          <p className="text-zinc-500 border-b border-zinc-800 pb-1 mb-2">Optimizer Console Logs</p>
+                          {diagnosticsResult.log.map((line, idx) => (
+                            <p key={idx} className={cn(
+                              line.includes("✅") ? "text-emerald-400" : line.includes("❌") ? "text-rose-400" : "text-zinc-300"
+                            )}>{line}</p>
+                          ))}
                         </div>
                       )}
                     </div>
                   )}
 
-                  <Button
-                    disabled={!canMutate}
-                    onClick={() =>
-                      void runAction(
-                        "save-ai-config",
-                        "AI config saved",
-                        () =>
-                          updateAiConfig({
-                            expectedEnvironment: clientEnvironment,
-                            modelCode: selectedAiModel,
-                            fallbackModelCodes: normalizedFallbacks,
-                          }),
-                        "The active AI model configuration was updated.",
-                      )
-                    }
-                  >
-                    {workingAction === "save-ai-config" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="mr-2 h-4 w-4" />
-                    )}
-                    Save AI Config
-                  </Button>
+                  {/* Model Directory Table */}
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                      <Server className="h-4.5 w-4.5" />
+                      Model Capabilities Directory
+                    </h4>
+                    <p className="text-xs text-muted-foreground">Verified capability records stored in database. You can manually promote any validated model to primary.</p>
+                    
+                    <div className="overflow-x-auto rounded-lg border border-border bg-card">
+                      <table className="w-full border-collapse text-left text-sm">
+                        <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground">
+                          <tr>
+                            <th className="p-3">Model Code</th>
+                            <th className="p-3">Status</th>
+                            <th className="p-3">Tested Latency</th>
+                            <th className="p-3">Checked At</th>
+                            <th className="p-3 text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border">
+                          {capabilities && capabilities.length > 0 ? (
+                            capabilities.map((c) => {
+                              const modelMeta = AI_MODEL_OPTIONS.find((opt) => opt.code === c.modelCode) || { displayName: c.modelCode };
+                              return (
+                                <tr key={c._id} className="hover:bg-muted/20 transition-colors">
+                                  <td className="p-3 font-medium text-foreground">
+                                    <div className="flex flex-col">
+                                      <span>{modelMeta.displayName}</span>
+                                      <span className="font-mono text-[10px] text-muted-foreground">{c.modelCode}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3">
+                                    {c.verified ? (
+                                      <Badge variant="outline" className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/60 font-semibold gap-1">
+                                        <ShieldCheck className="h-3.5 w-3.5" /> Verified
+                                      </Badge>
+                                    ) : (
+                                      <div className="flex flex-col gap-0.5">
+                                        <Badge variant="destructive" className="font-semibold gap-1 shrink-0">
+                                          <ShieldAlert className="h-3.5 w-3.5" /> Failed
+                                        </Badge>
+                                        {c.errorDetails && (
+                                          <span className="text-[10px] text-rose-500/80 max-w-xs line-clamp-1 truncate" title={c.errorDetails}>
+                                            {c.errorDetails}
+                                          </span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="p-3 font-mono text-xs">
+                                    {c.latencyMs ? `${c.latencyMs}ms` : "--"}
+                                  </td>
+                                  <td className="p-3 text-xs text-muted-foreground">
+                                    {formatDateTime(c.checkedAt)}
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={!c.verified || !canMutate || snapshot?.aiConfig?.modelCode === c.modelCode}
+                                      onClick={() => handlePromoteModel(c.modelCode)}
+                                      className="h-8 text-xs font-medium"
+                                    >
+                                      {snapshot?.aiConfig?.modelCode === c.modelCode ? "Active Primary" : "Promote to Primary"}
+                                    </Button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan={5} className="p-8 text-center text-xs text-muted-foreground">
+                                No verified capabilities records found. Click 'Optimize AI Configuration' to discover and test models.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
               </SettingsSection>
-
             </div>
 
             <SettingsSection

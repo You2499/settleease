@@ -202,22 +202,69 @@ export const getAiModelCapability = internalQuery({
       modelCode: record.modelCode,
       verified: record.verified,
       checkedAt: record.checkedAt,
+      latencyMs: record.latencyMs,
+      errorDetails: record.errorDetails,
     };
   },
 });
 
 export const storeAiModelCapability = internalMutation({
-  args: { modelCode: v.string(), verified: v.boolean() },
+  args: {
+    modelCode: v.string(),
+    verified: v.boolean(),
+    latencyMs: v.optional(v.number()),
+    errorDetails: v.optional(v.union(v.string(), v.null())),
+  },
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("aiModelCapabilities")
       .withIndex("by_model_code", (q) => q.eq("modelCode", args.modelCode))
       .first();
     const timestamp = nowIso();
+    const payload = {
+      verified: args.verified,
+      checkedAt: timestamp,
+      latencyMs: args.latencyMs,
+      errorDetails: args.errorDetails,
+    };
     if (existing) {
-      await ctx.db.patch(existing._id, { verified: args.verified, checkedAt: timestamp });
+      await ctx.db.patch(existing._id, payload);
       return existing._id;
     }
-    return await ctx.db.insert("aiModelCapabilities", { modelCode: args.modelCode, verified: args.verified, checkedAt: timestamp });
+    return await ctx.db.insert("aiModelCapabilities", {
+      modelCode: args.modelCode,
+      ...payload,
+    });
+  },
+});
+
+const AI_CONFIG_KEY = "global-ai-config";
+
+export const updateAiConfigInternal = internalMutation({
+  args: {
+    modelCode: v.string(),
+    fallbackModelCodes: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const timestamp = nowIso();
+    const existing = await ctx.db
+      .query("aiConfigs")
+      .withIndex("by_key", (q) => q.eq("key", AI_CONFIG_KEY))
+      .first();
+
+    const payload = {
+      key: AI_CONFIG_KEY,
+      modelCode: args.modelCode,
+      fallbackModelCodes: args.fallbackModelCodes,
+      updatedAt: timestamp,
+      updatedByUserId: "system-diagnostics",
+    };
+
+    if (existing) {
+      await ctx.db.patch(existing._id, payload);
+      return existing._id;
+    } else {
+      return await ctx.db.insert("aiConfigs", payload);
+    }
   },
 });

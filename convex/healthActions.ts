@@ -3,7 +3,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createHash, randomUUID } from "crypto";
 import { ConvexError, v } from "convex/values";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import { api as generatedApi, internal as generatedInternal } from "./_generated/api";
 import { requireAuthenticatedSupabaseUserId } from "./authGuards";
 import { stableJsonStringify } from "../src/lib/settleease/stableJson";
@@ -33,6 +33,11 @@ import {
   groupHealthSourceRowsByChunk,
   HEALTH_LEDGER_PAYLOAD_SCHEMA_VERSION,
 } from "../src/lib/settleease/healthPayload";
+import {
+  AI_CLEAN_CATALOG_RESPONSE_SCHEMA,
+  DEFAULT_AI_CLEAN_CATALOG_PROMPT,
+  injectCleanCatalogPrompt,
+} from "../src/lib/settleease/aiCleanCatalog";
 import type {
   HealthEstimatedLedgerRow,
   HealthLedgerChunkStatus,
@@ -179,13 +184,43 @@ async function loadHealthRequestContext(ctx: any, args: { startDate?: string; en
   };
 }
 
+function parseAiError(error: unknown): { message: string; type: "transient" | "permanent" } {
+  const message = error instanceof Error ? error.message : String(error || "");
+  const lowerMsg = message.toLowerCase();
+  
+  if (
+    lowerMsg.includes("429") ||
+    lowerMsg.includes("quota") ||
+    lowerMsg.includes("resource_exhausted") ||
+    lowerMsg.includes("503") ||
+    lowerMsg.includes("overloaded") ||
+    lowerMsg.includes("unavailable") ||
+    lowerMsg.includes("timeout") ||
+    lowerMsg.includes("abort") ||
+    lowerMsg.includes("fetch") ||
+    lowerMsg.includes("econnreset") ||
+    lowerMsg.includes("network")
+  ) {
+    return { message, type: "transient" };
+  }
+  
+  return { message, type: "permanent" };
+}
+
 async function verifyModelCapability(ctx: any, modelName: string): Promise<boolean> {
   try {
     // 1. Check database for existing capability check record
     const record = await ctx.runQuery(internal.aiSummaryCache.getAiModelCapability, {
       modelCode: modelName,
     });
-    if (record !== null) {
+    
+    // 24-hour expiration for capability records
+    const verifiedTtlMs = 24 * 60 * 60 * 1000;
+    const isStale = record
+      ? Date.now() - Date.parse(record.checkedAt) > verifiedTtlMs
+      : true;
+
+    if (record !== null && !isStale) {
       return record.verified;
     }
 
@@ -211,9 +246,11 @@ async function verifyModelCapability(ctx: any, modelName: string): Promise<boole
       },
     });
 
+    const startTime = Date.now();
     const testPrompt = 'Return JSON matching the schema: {"success": true}';
     const result = await model.generateContent(testPrompt);
     const text = result.response.text().trim();
+    const latencyMs = Date.now() - startTime;
 
     let isVerified = false;
     try {
@@ -223,11 +260,27 @@ async function verifyModelCapability(ctx: any, modelName: string): Promise<boole
       isVerified = false;
     }
 
-    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: isVerified });
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+      modelCode: modelName,
+      verified: isVerified,
+      latencyMs,
+      errorDetails: isVerified ? null : "Dummy schema check returned invalid structure",
+    });
     return isVerified;
   } catch (error) {
-    console.warn(`Dynamic capability check failed for model ${modelName}:`, error);
-    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: false }).catch(() => {});
+    const parsedErr = parseAiError(error);
+    console.warn(`Dynamic capability check failed for model ${modelName}:`, parsedErr.message);
+
+    if (parsedErr.type === "transient") {
+      // Return true for transient errors to preserve retries
+      return true;
+    }
+
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+      modelCode: modelName,
+      verified: false,
+      errorDetails: parsedErr.message,
+    }).catch(() => {});
     return false;
   }
 }
@@ -681,7 +734,13 @@ export const listAvailableModels = action({
 
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
+        "https://generativelanguage.googleapis.com/v1beta/models",
+        {
+          headers: {
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json",
+          },
+        }
       );
       if (!response.ok) {
         throw new Error(
@@ -858,5 +917,250 @@ export const probeModelCapability = action({
         };
       }
     }
+  },
+});
+
+export const runAiDiagnosticsInternal = internalAction({
+  args: {},
+  handler: async (ctx): Promise<{
+    success: boolean;
+    modelsTested: number;
+    modelsVerified: number;
+    promotedModel: string | null;
+    fallbacks: string[];
+    log: string[];
+  }> => {
+    const log: string[] = [];
+    if (!GEMINI_API_KEY) {
+      return {
+        success: false,
+        modelsTested: 0,
+        modelsVerified: 0,
+        promotedModel: null,
+        fallbacks: [],
+        log: ["GEMINI_API_KEY is not configured."],
+      };
+    }
+
+    log.push("Starting AI model diagnostics...");
+    let googleModels: any[] = [];
+    try {
+      const response = await fetch(
+        "https://generativelanguage.googleapis.com/v1beta/models",
+        {
+          headers: {
+            "x-goog-api-key": GEMINI_API_KEY,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!response.ok) {
+        throw new Error(`Google API returned status ${response.status}: ${response.statusText}`);
+      }
+      const data: any = await response.json();
+      if (data && Array.isArray(data.models)) {
+        googleModels = data.models;
+      }
+    } catch (err: any) {
+      log.push(`Failed to fetch models: ${err.message}`);
+      return {
+        success: false,
+        modelsTested: 0,
+        modelsVerified: 0,
+        promotedModel: null,
+        fallbacks: [],
+        log,
+      };
+    }
+
+    // Filter standard Gemini models
+    const candidates = googleModels
+      .filter((m: any) => {
+        const name = m.name.replace(/^models\//, "");
+        return (
+          Array.isArray(m.supportedGenerationMethods) &&
+          m.supportedGenerationMethods.includes("generateContent") &&
+          name.includes("gemini") &&
+          !name.includes("vision") &&
+          !name.includes("embedding") &&
+          !name.includes("nano") &&
+          !name.includes("bidi") &&
+          !name.includes("lyria") &&
+          !name.includes("veo") &&
+          !name.includes("robotics")
+        );
+      })
+      .map((m: any) => m.name.replace(/^models\//, ""));
+
+    log.push(`Found ${candidates.length} standard Gemini model candidates: ${candidates.join(", ")}`);
+
+    const verifiedModels: Array<{
+      code: string;
+      latencyMs: number;
+      tierScore: number;
+    }> = [];
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+    for (const code of candidates) {
+      log.push(`Testing model: ${code}...`);
+      const startTime = Date.now();
+      try {
+        // Probe 1: Dummy JSON output check
+        const dummyModel = genAI.getGenerativeModel({
+          model: code,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 16,
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "object",
+              properties: { success: { type: "boolean" } },
+              required: ["success"],
+            } as any,
+          },
+        });
+        const dummyRes = await dummyModel.generateContent('Return JSON matching the schema: {"success": true}');
+        const dummyText = dummyRes.response.text().trim();
+        const dummyParsed = JSON.parse(dummyText);
+        if (!dummyParsed || dummyParsed.success !== true) {
+          throw new Error("Probe 1 failed: invalid structured output JSON");
+        }
+
+        // Probe 2: Catalog Cleaner dry run
+        const mockObs = [
+          { id: "obs-1", itemName: "Organic Whole Milk 1L", expenseDescription: "Grocery shopping", price: 2.5, date: "2026-06-01", categoryName: null },
+          { id: "obs-2", itemName: "Craft IPA Beer bottle", expenseDescription: "Drinks with friends", price: 4.5, date: "2026-06-02", categoryName: null },
+        ];
+        const mockAllowedCats = ["Groceries", "Entertainment", "Other"];
+        const catalogPrompt = injectCleanCatalogPrompt(DEFAULT_AI_CLEAN_CATALOG_PROMPT, mockAllowedCats, mockObs);
+        const catalogModel = genAI.getGenerativeModel({
+          model: code,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 1024,
+            responseMimeType: "application/json",
+            responseSchema: AI_CLEAN_CATALOG_RESPONSE_SCHEMA as any,
+          },
+        });
+        const catalogRes = await catalogModel.generateContent(catalogPrompt);
+        const catalogText = catalogRes.response.text().trim();
+        const catalogParsed = JSON.parse(catalogText);
+        if (!catalogParsed || !Array.isArray(catalogParsed.canonicalItems)) {
+          throw new Error("Probe 2 failed: invalid catalog cleaner response structure");
+        }
+
+        // Probe 3: Health Ledger dry run
+        const mockHealthRows = [
+          { sourceKey: "row-1", date: "2026-06-01", description: "Organic Whole Milk 1L", category: "Groceries", quantity: 1, unitPrice: 2.5, price: 2.5, personName: "Alice" },
+          { sourceKey: "row-2", date: "2026-06-02", description: "Craft IPA Beer bottle", category: "Entertainment", quantity: 1, unitPrice: 4.5, price: 4.5, personName: "Bob" }
+        ];
+        const mockPayload = buildHealthChunkPayload("2026-06", mockHealthRows as any);
+        const healthPrompt = injectHealthJsonIntoPrompt(DEFAULT_HEALTH_LEDGER_PROMPT, mockPayload);
+        const healthModel = genAI.getGenerativeModel({
+          model: code,
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 2048,
+            responseMimeType: "application/json",
+            responseSchema: STRUCTURED_HEALTH_ESTIMATE_RESPONSE_SCHEMA as any,
+          },
+        });
+        const healthRes = await healthModel.generateContent(healthPrompt);
+        const healthText = healthRes.response.text().trim();
+        const healthParsed = JSON.parse(healthText);
+        if (!healthParsed || !Array.isArray(healthParsed.estimates)) {
+          throw new Error("Probe 3 failed: invalid health estimate response structure");
+        }
+
+        const latencyMs = Date.now() - startTime;
+        log.push(`✅ Model ${code} successfully passed all checks. Latency: ${latencyMs}ms`);
+
+        // Compute tier score: Flash (3) > Lite (2) > Pro (1) > Other (0)
+        let tierScore = 0;
+        if (code.includes("2.5-flash") || code.includes("3.1-flash")) {
+          tierScore = 3;
+        } else if (code.includes("flash-lite") || code.includes("lite")) {
+          tierScore = 2;
+        } else if (code.includes("2.5-pro") || code.includes("pro")) {
+          tierScore = 1;
+        }
+
+        verifiedModels.push({ code, latencyMs, tierScore });
+
+        // Update capability table
+        await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+          modelCode: code,
+          verified: true,
+          latencyMs,
+          errorDetails: null,
+        });
+
+      } catch (err: any) {
+        const parsedErr = parseAiError(err);
+        log.push(`❌ Model ${code} failed: ${parsedErr.message} (${parsedErr.type})`);
+
+        if (parsedErr.type === "permanent") {
+          await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, {
+            modelCode: code,
+            verified: false,
+            latencyMs: 0,
+            errorDetails: parsedErr.message,
+          }).catch(() => {});
+        }
+      }
+    }
+
+    if (verifiedModels.length === 0) {
+      log.push("No models were successfully verified.");
+      return {
+        success: false,
+        modelsTested: candidates.length,
+        modelsVerified: 0,
+        promotedModel: null,
+        fallbacks: [],
+        log,
+      };
+    }
+
+    // Rank verified models: Tier score descending, latency ascending
+    verifiedModels.sort((a, b) => {
+      if (b.tierScore !== a.tierScore) {
+        return b.tierScore - a.tierScore;
+      }
+      return a.latencyMs - b.latencyMs;
+    });
+
+    const primary = verifiedModels[0].code;
+    const fallbacks = verifiedModels.slice(1, 3).map((m) => m.code);
+
+    log.push(`Promoting primary model: ${primary}`);
+    log.push(`Configuring fallbacks: ${fallbacks.join(", ")}`);
+
+    await ctx.runMutation(internal.aiSummaryCache.updateAiConfigInternal, {
+      modelCode: primary,
+      fallbackModelCodes: fallbacks,
+    });
+
+    return {
+      success: true,
+      modelsTested: candidates.length,
+      modelsVerified: verifiedModels.length,
+      promotedModel: primary,
+      fallbacks,
+      log,
+    };
+  },
+});
+
+export const runAiDiagnostics = action({
+  args: {},
+  handler: async (ctx) => {
+    const supabaseUserId = await requireAuthenticatedSupabaseUserId(ctx);
+    const profile = await ctx.runQuery(api.app.getUserProfile, { supabaseUserId });
+    if (profile?.role !== "admin") {
+      throw new ConvexError("Admin access required.");
+    }
+    return await ctx.runAction(internal.healthActions.runAiDiagnosticsInternal, {});
   },
 });

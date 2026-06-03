@@ -45,17 +45,55 @@ export function normalizeStructuredHealthEstimateRow(value: unknown): Structured
   const source = typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
   const sourceKey = String(source.sourceKey ?? "").trim();
 
+  let classification = typeof source.classification === "string" && HEALTH_CLASSIFICATIONS.has(source.classification)
+    ? source.classification as StructuredHealthEstimateRow["classification"]
+    : "ignore";
+
+  let estimatedProteinGrams = toStructuredHealthNumber(source.estimatedProteinGrams);
+  let estimatedCarbGrams = toStructuredHealthNumber(source.estimatedCarbGrams);
+  let estimatedFatGrams = toStructuredHealthNumber(source.estimatedFatGrams);
+  let estimatedAlcoholServings = toStructuredHealthNumber(source.estimatedAlcoholServings);
+  let estimatedAlcoholCalories = toStructuredHealthNumber(source.estimatedAlcoholCalories);
+  let estimatedCalories = toStructuredHealthNumber(source.estimatedCalories);
+
+  if (estimatedAlcoholServings > 0) {
+    classification = "alcohol";
+  }
+
+  if (classification === "ignore") {
+    estimatedProteinGrams = 0;
+    estimatedCarbGrams = 0;
+    estimatedFatGrams = 0;
+    estimatedAlcoholServings = 0;
+    estimatedAlcoholCalories = 0;
+    estimatedCalories = 0;
+  } else {
+    // 1 standard drink = 14g pure alcohol = 98 kcal minimum
+    if (estimatedAlcoholServings > 0 && estimatedAlcoholCalories < estimatedAlcoholServings * 98) {
+      estimatedAlcoholCalories = Number((estimatedAlcoholServings * 98).toFixed(2));
+    }
+
+    const minCalories = Number((
+      estimatedProteinGrams * 4 +
+      estimatedCarbGrams * 4 +
+      estimatedFatGrams * 9 +
+      estimatedAlcoholCalories
+    ).toFixed(2));
+
+    if (estimatedCalories < minCalories) {
+      estimatedCalories = minCalories;
+    }
+  }
+
   return {
     sourceKey,
-    classification: typeof source.classification === "string" && HEALTH_CLASSIFICATIONS.has(source.classification)
-      ? source.classification as StructuredHealthEstimateRow["classification"]
-      : "ignore",
-    estimatedCalories: toStructuredHealthNumber(source.estimatedCalories),
-    estimatedProteinGrams: toStructuredHealthNumber(source.estimatedProteinGrams),
-    estimatedCarbGrams: toStructuredHealthNumber(source.estimatedCarbGrams),
-    estimatedFatGrams: toStructuredHealthNumber(source.estimatedFatGrams),
-    estimatedAlcoholServings: toStructuredHealthNumber(source.estimatedAlcoholServings),
-    estimatedAlcoholCalories: toStructuredHealthNumber(source.estimatedAlcoholCalories),
+    classification,
+    estimatedCalories,
+    estimatedProteinGrams,
+    estimatedCarbGrams,
+    estimatedFatGrams,
+    estimatedAlcoholServings,
+    estimatedAlcoholCalories,
     confidence: normalizeConfidence(source.confidence),
     rationale: String(source.rationale ?? "").trim() || "No rationale provided.",
   };

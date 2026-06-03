@@ -9,6 +9,8 @@ import {
   injectSummaryJsonIntoPrompt,
   normalizeStructuredSummary,
   parseStructuredSummaryText,
+  EMPTY_SETTLEMENT_SUMMARY,
+  isSummaryPayloadEmpty,
 } from '@/lib/settleease/aiSummarization';
 import { getConvexUrl } from '@/lib/settleease/convexUrl';
 import { fetchActiveAiModelConfig } from '@/lib/settleease/aiModelConfigServer';
@@ -24,13 +26,29 @@ export async function POST(request: NextRequest) {
       hasGeminiKey: !!GEMINI_API_KEY,
       hasConvexUrl: !!CONVEX_URL,
     });
-    const { jsonData, hash, promptVersion } = await request.json();
 
-    if (!jsonData) {
-      console.error('❌ No JSON data provided');
-      return new Response(JSON.stringify({ error: 'JSON data is required' }), {
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError: any) {
+      console.error('❌ Failed to parse request JSON:', parseError);
+      return new Response(JSON.stringify({ error: 'Invalid or empty JSON body' }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { jsonData, hash, promptVersion } = body;
+
+    // Check for empty inputs or empty lists to avoid crash/hallucination/unnecessary API call.
+    if (isSummaryPayloadEmpty(jsonData)) {
+      console.log('ℹ️ Empty JSON data, returning empty settlement summary');
+      return Response.json({
+        summary: EMPTY_SETTLEMENT_SUMMARY,
+        hash,
+        model: 'static-fallback',
+        modelDisplayName: 'Static Fallback',
+        promptVersion: promptVersion || 0,
       });
     }
 
@@ -74,7 +92,8 @@ export async function POST(request: NextRequest) {
     let successfulModel = null;
     const errors: string[] = [];
 
-    for (const modelName of modelAttemptOrder) {
+    for (let i = 0; i < modelAttemptOrder.length; i++) {
+      const modelName = modelAttemptOrder[i];
       try {
         console.log(`🔄 Trying model: ${modelName}...`);
         const model = genAI.getGenerativeModel({
@@ -104,15 +123,25 @@ export async function POST(request: NextRequest) {
         console.warn(`⚠️ Model ${modelName} failed: ${errorMsg}`);
         errors.push(`${modelName}: ${errorMsg}`);
 
+        // Fail fast on API key or authentication errors (no point in trying other models)
+        const isApiKeyError =
+          error.status === 403 ||
+          error.message?.includes('API key') ||
+          error.message?.includes('API_KEY_INVALID') ||
+          error.message?.includes('invalid key');
+
+        if (isApiKeyError) {
+          console.error(`❌ Global API key error encountered on ${modelName}, failing fast`);
+          throw error;
+        }
+
         // If this is the last model, throw the error
-        if (modelName === modelAttemptOrder[modelAttemptOrder.length - 1]) {
+        if (i === modelAttemptOrder.length - 1) {
           console.error('❌ All models failed');
           throw new Error(
-            `All AI models are currently unavailable. Please try again later. Errors: ${errors.join('; ')}`
+            `All AI models are currently unavailable. Errors: ${errors.join('; ')}`
           );
         }
-        // Otherwise, continue to next model
-        continue;
       }
     }
 
@@ -134,15 +163,20 @@ export async function POST(request: NextRequest) {
 
     // Provide user-friendly error messages
     let userMessage = 'Failed to generate summary. Please try again.';
+    let statusCode = 500;
 
     if (error.message?.includes('overloaded') || error.message?.includes('503')) {
       userMessage = 'AI service is currently busy. Please try again in a moment.';
+      statusCode = 503;
     } else if (error.message?.includes('quota') || error.message?.includes('429')) {
       userMessage = 'API quota exceeded. Please try again later.';
-    } else if (error.message?.includes('API key')) {
+      statusCode = 429;
+    } else if (error.message?.includes('API key') || error.status === 403) {
       userMessage = 'AI service configuration error. Please contact administrator.';
+      statusCode = 403;
     } else if (error.message?.includes('All AI models')) {
-      userMessage = error.message; // Use the detailed message from fallback
+      // Security fix: Do NOT expose internal API error details to client in production
+      userMessage = 'All AI models are currently unavailable. Please try again later.';
     } else if (error.message?.includes('{{JSON_DATA}}')) {
       userMessage = 'AI prompt configuration error (missing JSON placeholder). Please contact administrator.';
     }
@@ -153,7 +187,7 @@ export async function POST(request: NextRequest) {
         technicalDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
       }),
       {
-        status: 500,
+        status: statusCode,
         headers: { 'Content-Type': 'application/json' },
       }
     );

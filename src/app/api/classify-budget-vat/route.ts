@@ -94,6 +94,20 @@ export async function POST(request: NextRequest) {
       return Response.json({ classifications: [], source: "none" });
     }
 
+    // Anonymize keys to prevent database key leakage to Gemini API
+    const originalToAnonymized = new Map<string, string>();
+    const anonymizedToOriginal = new Map<string, string>();
+
+    const anonymizedItems = budgetItems.map((item, index) => {
+      const anonKey = `item-${index}`;
+      originalToAnonymized.set(item.key, anonKey);
+      anonymizedToOriginal.set(anonKey, item.key);
+      return {
+        ...item,
+        key: anonKey,
+      };
+    });
+
     if (!GEMINI_API_KEY) {
       return Response.json(
         { error: "AI tax classification is not configured." },
@@ -103,7 +117,7 @@ export async function POST(request: NextRequest) {
 
     const modelAttemptOrder = await fetchAiModelAttemptOrder();
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const prompt = buildBudgetVatPrompt(budgetItems);
+    const prompt = buildBudgetVatPrompt(anonymizedItems);
     const errors: string[] = [];
 
     for (const modelName of modelAttemptOrder) {
@@ -126,10 +140,26 @@ export async function POST(request: NextRequest) {
           throw new Error("Model returned invalid VAT classification JSON");
         }
 
+        // Restore original keys in the parsed AI response
+        const restoredItems = (parsed as any)?.items?.map((item: any) => {
+          if (item && typeof item === "object" && typeof item.key === "string") {
+            const originalKey = anonymizedToOriginal.get(item.key);
+            if (originalKey) {
+              return { ...item, key: originalKey };
+            }
+          }
+          return item;
+        }) || [];
+
+        const restoredParsed = {
+          ...(parsed as any),
+          items: restoredItems,
+        };
+
         return Response.json({
           classifications: normalizeBudgetVatClassifications(
             budgetItems,
-            parsed,
+            restoredParsed,
             "ai",
           ),
           source: "ai",

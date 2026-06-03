@@ -292,13 +292,267 @@ function normalizeParsedReceiptData(parsedData: any, categories: AllowedCategory
   return {
     restaurant_name: parsedData.restaurant_name ?? null,
     date: parsedData.date ?? null,
-    items: normalizedItems,
+    items: mergeSplitItems(normalizedItems),
     subtotals: normalizedSubtotals,
     taxes: normalizedTaxes,
     total_amount: toAmount(parsedData.total_amount),
     currency: parsedData.currency || "INR",
     additional_charges: normalizedCharges,
   };
+}
+
+/**
+ * 2. Programmatic multi-line item merging logic
+ * Merges split items that the LLM failed to merge or split across multiple lines.
+ */
+function mergeSplitItems(items: any[]): any[] {
+  if (items.length <= 1) return items;
+
+  const merged: any[] = [];
+
+  for (let i = 0; i < items.length; i++) {
+    const current = items[i];
+
+    if (merged.length > 0) {
+      const prev = merged[merged.length - 1];
+
+      const currentName = current.name;
+      const prevName = prev.name;
+
+      // Indicators that 'current' is a continuation of 'prev':
+      // 1. prevName ends with a connector/dangling word or symbol
+      const endsWithConnector = /(?:\b(with|and|add|extra|for|w\/|or)|[+\-&])\s*$/i.test(prevName);
+
+      // 2. currentName starts with a modifier or continuation prefix
+      const startsWithModifier = /^\s*([+\-•*]|with|add|extra|no|side|w\/)\b/i.test(currentName) || /^\s*[+&•*-]/i.test(currentName);
+
+      // 3. prev item has no price (free or LLM parsing omission for a line split)
+      const prevHasNoPrice = prev.total_price === 0 || prev.unit_price === 0;
+
+      // 4. current item has no price (like a comment or free modifier)
+      const currentHasNoPrice = current.total_price === 0 || current.unit_price === 0;
+
+      let shouldMerge = false;
+
+      if (endsWithConnector) {
+        shouldMerge = true;
+      } else if (startsWithModifier) {
+        shouldMerge = true;
+      } else if (prevHasNoPrice && !currentHasNoPrice) {
+        shouldMerge = true;
+      } else if (currentHasNoPrice && !prevHasNoPrice) {
+        shouldMerge = true;
+      }
+
+      if (shouldMerge) {
+        // Merge current into prev
+        prev.name = normalizeText(`${prev.name} ${current.name}`);
+
+        if (prevHasNoPrice && !currentHasNoPrice) {
+          prev.unit_price = current.unit_price;
+          prev.total_price = current.total_price;
+          prev.quantity = current.quantity;
+        } else if (!prevHasNoPrice && currentHasNoPrice) {
+          // Keep prev prices
+        } else {
+          // Both have price, combine them
+          prev.total_price = toAmount(prev.total_price + current.total_price);
+          prev.quantity = Math.max(prev.quantity, current.quantity);
+          prev.unit_price = toAmount(prev.total_price / prev.quantity);
+        }
+
+        // Keep the more specific category if one is other/null
+        if ((prev.category_hint === 'other' || !prev.category_name) && current.category_name) {
+          prev.category_hint = current.category_hint;
+          prev.category_name = current.category_name;
+        }
+
+        continue; // Skip adding 'current' to the merged list since it is merged
+      }
+    }
+
+    merged.push(current);
+  }
+
+  return merged;
+}
+
+/**
+ * 1. Safety validation helpers
+ */
+function verifyMagicBytes(buffer: Buffer, mimeType: string): boolean {
+  if (buffer.length < 12) return false;
+
+  if (mimeType === 'image/jpeg') {
+    return buffer[0] === 0xFF && buffer[1] === 0xD8 && buffer[2] === 0xFF;
+  }
+
+  if (mimeType === 'image/png') {
+    return (
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4E &&
+      buffer[3] === 0x47 &&
+      buffer[4] === 0x0D &&
+      buffer[5] === 0x0A &&
+      buffer[6] === 0x1A &&
+      buffer[7] === 0x0A
+    );
+  }
+
+  if (mimeType === 'image/webp') {
+    const isRiff = buffer[0] === 0x52 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x46;
+    const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50;
+    return isRiff && isWebp;
+  }
+
+  return false;
+}
+
+function getPngDimensions(buffer: Buffer): { width: number; height: number } | null {
+  if (buffer.length < 24) return null;
+  const isIhdr = buffer.toString('utf8', 12, 16) === 'IHDR';
+  if (!isIhdr) return null;
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  return { width, height };
+}
+
+function getJpegDimensions(buffer: Buffer): { width: number; height: number } | null {
+  let i = 2; // Skip SOI (FF D8)
+  while (i < buffer.length) {
+    if (buffer[i] !== 0xFF) return null;
+    while (buffer[i] === 0xFF && i < buffer.length) {
+      i++;
+    }
+    if (i >= buffer.length) return null;
+    const marker = buffer[i];
+    i++;
+
+    if (marker === 0xDA || marker === 0xD9) return null; // SOS or EOI
+
+    if (i + 1 >= buffer.length) return null;
+    const length = buffer.readUInt16BE(i);
+
+    const isSOF = (marker >= 0xC0 && marker <= 0xC3) ||
+                  (marker >= 0xC5 && marker <= 0xC7) ||
+                  (marker >= 0xC9 && marker <= 0xCB) ||
+                  (marker >= 0xCD && marker <= 0xCF);
+
+    if (isSOF) {
+      if (i + 2 + 5 >= buffer.length) return null;
+      const height = buffer.readUInt16BE(i + 3);
+      const width = buffer.readUInt16BE(i + 5);
+      return { width, height };
+    }
+
+    i += length;
+  }
+  return null;
+}
+
+function getWebpDimensions(buffer: Buffer): { width: number; height: number } | null {
+  if (buffer.length < 30) return null;
+  const type = buffer.toString('utf8', 12, 16);
+  if (type === 'VP8X') {
+    const width = (buffer[24] | (buffer[25] << 8) | (buffer[26] << 16)) + 1;
+    const height = (buffer[27] | (buffer[28] << 8) | (buffer[29] << 16)) + 1;
+    return { width, height };
+  }
+  if (type === 'VP8 ') {
+    if (buffer[23] === 0x9D && buffer[24] === 0x01 && buffer[25] === 0x2A) {
+      const width = (buffer[26] | (buffer[27] << 8)) & 0x3FFF;
+      const height = (buffer[28] | (buffer[29] << 8)) & 0x3FFF;
+      return { width, height };
+    }
+  }
+  if (type === 'VP8L') {
+    if (buffer[20] === 0x2F) {
+      const val = buffer[21] | (buffer[22] << 8) | (buffer[23] << 16) | (buffer[24] << 24);
+      const width = (val & 0x3FFF) + 1;
+      const height = ((val >> 14) & 0x3FFF) + 1;
+      return { width, height };
+    }
+  }
+  return null;
+}
+
+function getImageDimensions(buffer: Buffer, mimeType: string): { width: number; height: number } | null {
+  if (mimeType === 'image/jpeg') return getJpegDimensions(buffer);
+  if (mimeType === 'image/png') return getPngDimensions(buffer);
+  if (mimeType === 'image/webp') return getWebpDimensions(buffer);
+  return null;
+}
+
+/**
+ * 3. Failover handling and retry loops helper
+ */
+async function generateContentWithRetry(
+  genAI: GoogleGenerativeAI,
+  modelName: string,
+  prompt: string,
+  image: string,
+  mimeType: string,
+  globalSignal: AbortSignal,
+  maxRetries = 2
+): Promise<any> {
+  let attempt = 0;
+  while (true) {
+    try {
+      const model = genAI.getGenerativeModel(
+        {
+          model: modelName,
+          generationConfig: {
+            temperature: 0.1,
+            topP: 0.8,
+            topK: 40,
+            maxOutputTokens: 3072,
+          },
+        },
+        { timeout: 12000 } // 12 seconds per-attempt timeout
+      );
+
+      const result = await model.generateContent([
+        prompt,
+        {
+          inlineData: {
+            mimeType,
+            data: image,
+          },
+        },
+      ]);
+      return result;
+    } catch (error: any) {
+      if (globalSignal.aborted) {
+        throw error;
+      }
+
+      const errorMsg = error?.message || '';
+      const errorStr = JSON.stringify(error);
+      
+      const is429 = errorMsg.includes('429') || errorMsg.includes('quota') || errorStr.includes('RESOURCE_EXHAUSTED');
+      const is503 = errorMsg.includes('503') || errorMsg.includes('overloaded') || errorStr.includes('UNAVAILABLE');
+      const isTimeout = error.name === 'AbortError' || errorMsg.includes('timeout') || errorMsg.includes('deadline');
+      
+      const isRetryable = is429 || is503 || isTimeout;
+
+      if (isRetryable && attempt < maxRetries) {
+        attempt++;
+        const delay = attempt * 1000; // 1s, then 2s
+        console.warn(`⚠️ Model ${modelName} failed with retryable error (${errorMsg || 'Timeout'}). Retrying attempt ${attempt}/${maxRetries} in ${delay}ms...`);
+        
+        await new Promise<void>((resolve, reject) => {
+          const timeoutId = setTimeout(resolve, delay);
+          globalSignal.addEventListener('abort', () => {
+            clearTimeout(timeoutId);
+            reject(new Error('Request aborted during backoff'));
+          });
+        });
+        continue;
+      }
+      throw error;
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -339,9 +593,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check size (base64 string length approximates bytes)
-    const estimatedSize = (image.length * 3) / 4; // More accurate base64 size calculation
-    if (estimatedSize > MAX_IMAGE_SIZE_BYTES) {
+    // Handle data URI scheme if present
+    let base64Data = image;
+    if (image.startsWith('data:')) {
+      const match = image.match(/^data:([^;]+);base64,(.*)$/);
+      if (match) {
+        base64Data = match[2];
+      }
+    }
+
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Validate signature / magic bytes to prevent executable uploads masquerading as images
+    if (!verifyMagicBytes(buffer, mimeType)) {
+      clearTimeout(timeoutId);
+      return Response.json(
+        { error: 'File signature does not match the specified image type. Executable or corrupted files are not allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate size using actual byte buffer length (more secure than base64 string length estimation)
+    const actualSizeBytes = buffer.length;
+    if (actualSizeBytes > MAX_IMAGE_SIZE_BYTES) {
       clearTimeout(timeoutId);
       return Response.json(
         { error: 'Image is too large. Please use an image under 4MB.' },
@@ -349,9 +623,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate image dimensions (bounds 40px to 10000px)
+    const dimensions = getImageDimensions(buffer, mimeType);
+    if (dimensions) {
+      const { width, height } = dimensions;
+      if (width < 40 || width > 10000 || height < 40 || height > 10000) {
+        clearTimeout(timeoutId);
+        return Response.json(
+          { error: `Image dimensions (${width}x${height}) are out of bounds. Dimensions must be between 40px and 10000px.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const modelAttemptOrder = await fetchAiModelAttemptOrder();
 
-    console.log(`✅ Image received (${Math.round(estimatedSize / 1024)}KB), calling Gemini ${modelAttemptOrder[0]}...`);
+    console.log(`✅ Image received (${Math.round(actualSizeBytes / 1024)}KB), calling Gemini ${modelAttemptOrder[0]}...`);
 
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
@@ -361,25 +648,14 @@ export async function POST(request: NextRequest) {
 
     for (const modelName of modelAttemptOrder) {
       try {
-        const model = genAI.getGenerativeModel({
-          model: modelName,
-          generationConfig: {
-            temperature: 0.1, // Low temperature for consistent, deterministic parsing
-            topP: 0.8,
-            topK: 40,
-            maxOutputTokens: 3072, // Sufficient for receipt data and categories
-          },
-        });
-
-        result = await model.generateContent([
+        result = await generateContentWithRetry(
+          genAI,
+          modelName,
           buildReceiptPrompt(allowedCategories),
-          {
-            inlineData: {
-              mimeType,
-              data: image,
-            },
-          },
-        ]);
+          base64Data,
+          mimeType,
+          controller.signal
+        );
         successfulModel = modelName;
         console.log(`✅ Successfully scanned receipt with ${modelName}`);
         break;

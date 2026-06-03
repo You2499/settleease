@@ -230,6 +230,8 @@ export default defineSchema({
     modelCode: v.string(),
     verified: v.boolean(),
     checkedAt: v.string(),
+    latencyMs: v.optional(v.number()),
+    errorDetails: v.optional(v.union(v.string(), v.null())),
   }).index("by_model_code", ["modelCode"]),
 
   aiSummaries: defineTable({

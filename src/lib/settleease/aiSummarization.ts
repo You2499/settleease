@@ -151,3 +151,61 @@ export function parseStructuredSummaryText(text: string): StructuredSettlementSu
     }
   }
 }
+
+export const EMPTY_SETTLEMENT_SUMMARY: StructuredSettlementSummary = {
+  schemaVersion: 1,
+  settlementSnapshot: ["No settlement data is available."],
+  keyNumbers: [
+    "Total expenses: $0.00",
+    "Amount already settled: $0.00",
+    "Remaining settlement amount: $0.00",
+    "Active manual overrides: 0",
+  ],
+  whoShouldReceiveMoney: ["No creditors in this group."],
+  whoShouldPay: ["No debtors in this group."],
+  recommendedSettlementActions: ["No pending settlement actions."],
+  spendingDrivers: ["No spending records found."],
+  manualOverridesAndExceptions: ["No active manual overrides."],
+  dataQuality: ["No data quality issues detected."],
+  nextBestActions: [
+    "Add group members to get started.",
+    "Record expenses to begin tracking balances.",
+  ],
+};
+
+export function isSummaryPayloadEmpty(jsonData: unknown): boolean {
+  if (!jsonData) return true;
+
+  if (typeof jsonData === "string") {
+    const trimmed = jsonData.trim();
+    if (trimmed === "" || trimmed === "[]" || trimmed === "{}") return true;
+    try {
+      const parsed = JSON.parse(trimmed);
+      return isSummaryPayloadEmpty(parsed);
+    } catch {
+      return true;
+    }
+  }
+
+  if (Array.isArray(jsonData) && jsonData.length === 0) return true;
+
+  if (typeof jsonData === "object") {
+    const obj = jsonData as Record<string, unknown>;
+
+    if (obj.counts && typeof obj.counts === "object") {
+      const counts = obj.counts as Record<string, unknown>;
+      if (typeof counts.people === "number" && counts.people === 0) {
+        return true;
+      }
+    }
+
+    if (Array.isArray(obj.people) && obj.people.length === 0) {
+      return true;
+    }
+
+    if (Object.keys(obj).length === 0) return true;
+  }
+
+  return false;
+}
+

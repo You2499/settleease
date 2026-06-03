@@ -13,6 +13,8 @@ import {
   injectSummaryJsonIntoPrompt,
   parseStructuredSummaryText,
   type StructuredSettlementSummary,
+  EMPTY_SETTLEMENT_SUMMARY,
+  isSummaryPayloadEmpty,
 } from "../src/lib/settleease/aiSummarization";
 import {
   AI_CONFIG_KEY,
@@ -171,7 +173,8 @@ async function generateSummary({
   const prompt = injectSummaryJsonIntoPrompt(promptText, jsonData);
   const errors: string[] = [];
 
-  for (const modelName of modelAttemptOrder) {
+  for (let i = 0; i < modelAttemptOrder.length; i++) {
+    const modelName = modelAttemptOrder[i];
     try {
       const model = genAI.getGenerativeModel({
         model: modelName,
@@ -190,9 +193,23 @@ async function generateSummary({
         throw new Error("Model returned invalid structured summary JSON");
       }
       return { summary: parsed, modelName };
-    } catch (error) {
-      errors.push(`${modelName}: ${normalizeError(error)}`);
-      if (modelName === modelAttemptOrder[modelAttemptOrder.length - 1]) {
+    } catch (error: any) {
+      const normalizedMsg = normalizeError(error);
+      errors.push(`${modelName}: ${normalizedMsg}`);
+
+      // Fail fast on API key / authentication / configuration issues
+      const isApiKeyError =
+        error.status === 403 ||
+        normalizedMsg.includes("API key") ||
+        normalizedMsg.includes("API_KEY_INVALID") ||
+        normalizedMsg.includes("invalid key");
+
+      if (isApiKeyError) {
+        console.error(`❌ Global API key error encountered on ${modelName}, failing fast`);
+        throw error;
+      }
+
+      if (i === modelAttemptOrder.length - 1) {
         throw new Error(`All AI models are currently unavailable. ${errors.join("; ")}`);
       }
     }
@@ -254,6 +271,26 @@ export const getOrGenerateSettlementSummary = action({
       manualOverrides: manualOverrides as any,
       personBalances,
     });
+
+    if (isSummaryPayloadEmpty(payload)) {
+      console.log("ℹ️ Empty settlement payload, returning static summary cache");
+      const promptVersion = Number(activePrompt?.version ?? 0);
+      return summaryResponse({
+        source: "cached",
+        hash: "empty-static-hash",
+        cacheKeyVersion: SETTLEMENT_SUMMARY_CACHE_KEY_VERSION,
+        promptVersion,
+        modelCode: "static-fallback",
+        modelName: "static-fallback",
+        modelConfigFingerprint: "static-fingerprint",
+        payload,
+        summary: EMPTY_SETTLEMENT_SUMMARY,
+        record: {
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+      });
+    }
 
     const aiConfig = resolveAiModelConfig(rawAiConfig as any);
     const rawModelAttemptOrder = buildAiModelAttemptOrder(aiConfig);

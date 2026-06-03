@@ -3239,6 +3239,13 @@ export const getActiveAiConfig = query({
   },
 });
 
+export const listAiModelCapabilities = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("aiModelCapabilities").collect();
+  },
+});
+
 export const updateAiConfig = mutation({
   args: {
     expectedEnvironment: settleEaseEnvironment,

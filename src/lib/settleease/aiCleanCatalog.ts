@@ -162,6 +162,28 @@ export function parseCleanCatalogResponse(text: string): CleanCatalogResponse | 
   }
 }
 
+function extractQuantity(itemName: string): number {
+  const cleanName = itemName.trim();
+  const quantityPatterns = [
+    /\s*[\(\[]\s*(?:[xX×]|qty\.?)\s*(\d{1,3})\s*[\)\]]\s*$/i, // matches " (x2)", " [qty 3]"
+    /\s+[xX×]\s*(\d{1,3})\s*$/,                                // matches " x2", " X 3"
+    /\s+qty\.?\s*(\d{1,3})\s*$/i,                              // matches " qty 2", " Qty. 3"
+    /^\s*(\d{1,3})\s*[xX×]\s+(?!\d+(?:\s*(?:[xX×]|\b(?:in|inch|cm|mm|m)\b)|\b(?!\s*(?:ml|g|kg|l|oz|cl|dl|floz|lb|pcs|pack|pk|ct|cans|serving|servings|bottle|bottles|can|cans)\b)))/i, // matches "2x " but not "3 x 3" or "3 x 3 in"
+  ];
+
+  for (const pattern of quantityPatterns) {
+    const match = cleanName.match(pattern);
+    if (match) {
+      const parsedQty = parseInt(match[1], 10);
+      if (Number.isFinite(parsedQty) && parsedQty > 1) {
+        return Math.min(100, parsedQty);
+      }
+      break;
+    }
+  }
+  return 1;
+}
+
 export function normalizeCleanCatalogResponse(
   parsed: any,
   allowedCategories: string[],
@@ -174,11 +196,16 @@ export function normalizeCleanCatalogResponse(
     ? parsed.canonicalItems.map((item: any) => {
         const rawCategory = String(item?.categoryName || "Other").trim();
         
-        // Find best match in allowed categories
+        // Find best match in allowed categories using cascading matcher
         const matchedCategory = allowedCategories.find(
           (c: string) => c.toLowerCase() === rawCategory.toLowerCase()
         ) || allowedCategories.find(
-          (c: string) => c.toLowerCase().includes(rawCategory.toLowerCase()) || rawCategory.toLowerCase().includes(c.toLowerCase())
+          (c: string) => {
+            const pattern = new RegExp(`\\b${rawCategory.toLowerCase()}\\b`, 'i');
+            return pattern.test(c.toLowerCase());
+          }
+        ) || allowedCategories.find(
+          (c: string) => c.toLowerCase().startsWith(rawCategory.toLowerCase())
         ) || "Other";
 
         return {
@@ -219,26 +246,7 @@ export function normalizeCleanCatalogResponse(
           }
 
           // --- Programmatic Quantity & Unit Price Resolution ---
-          let quantity = 1;
-          const cleanName = obs.itemName.trim();
-          
-          const quantityPatterns = [
-            /\s*[\(\[]\s*[xX×]?\s*(\d{1,3})\s*[\)\]]\s*$/, // matches " (x2)", " [3]"
-            /\s+[xX×]\s*(\d{1,3})\s*$/,                    // matches " x2", " X 3"
-            /\s+qty\.?\s*(\d{1,3})\s*$/i,                  // matches " qty 2", " Qty. 3"
-            /^\s*(\d{1,3})\s*[xX×]\s+/,                   // matches "2x ", "3 X " at the start
-          ];
-
-          for (const pattern of quantityPatterns) {
-            const match = cleanName.match(pattern);
-            if (match) {
-              const parsedQty = parseInt(match[1], 10);
-              if (Number.isFinite(parsedQty) && parsedQty > 1) {
-                quantity = parsedQty;
-              }
-              break;
-            }
-          }
+          const quantity = extractQuantity(obs.itemName);
 
           let rawCleanedPrice = typeof m?.cleanedPrice === "number" && Number.isFinite(m.cleanedPrice)
             ? m.cleanedPrice
@@ -246,6 +254,10 @@ export function normalizeCleanCatalogResponse(
 
           if (quantity > 1 && Math.abs(rawCleanedPrice - obs.price) < 0.01) {
             rawCleanedPrice = obs.price / quantity;
+          }
+
+          if (!Number.isFinite(rawCleanedPrice)) {
+            rawCleanedPrice = 0;
           }
 
           return {
@@ -263,31 +275,17 @@ export function normalizeCleanCatalogResponse(
   
   observations.forEach((obs) => {
     if (!mappedObsIds.has(obs.id)) {
-      let quantity = 1;
-      const cleanName = obs.itemName.trim();
-      const quantityPatterns = [
-        /\s*[\(\[]\s*[xX×]?\s*(\d{1,3})\s*[\)\]]\s*$/,
-        /\s+[xX×]\s*(\d{1,3})\s*$/,
-        /\s+qty\.?\s*(\d{1,3})\s*$/i,
-        /^\s*(\d{1,3})\s*[xX×]\s+/,
-      ];
-
-      for (const pattern of quantityPatterns) {
-        const match = cleanName.match(pattern);
-        if (match) {
-          const parsedQty = parseInt(match[1], 10);
-          if (Number.isFinite(parsedQty) && parsedQty > 1) {
-            quantity = parsedQty;
-          }
-          break;
-        }
+      const quantity = extractQuantity(obs.itemName);
+      let rawCleanedPrice = obs.price / quantity;
+      if (!Number.isFinite(rawCleanedPrice)) {
+        rawCleanedPrice = 0;
       }
 
       mappings.push({
         observationId: obs.id,
         canonicalItemId: fallbackCanonicalId,
         decipheredVenue: null,
-        cleanedPrice: Math.round((obs.price / quantity) * 100) / 100,
+        cleanedPrice: Math.round(rawCleanedPrice * 100) / 100,
       });
     }
   });
