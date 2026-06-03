@@ -630,13 +630,33 @@ function defaultAiConfigDto(key = DEFAULT_AI_CONFIG_KEY) {
 
 function aiConfigDto(config: any, key = DEFAULT_AI_CONFIG_KEY) {
   if (!config) return defaultAiConfigDto(key);
+
+  let modelCode = config.modelCode ?? DEFAULT_AI_MODEL_CODE;
+  let fallbackModelCodes = Array.isArray(config.fallbackModelCodes)
+    ? config.fallbackModelCodes
+    : DEFAULT_AI_FALLBACK_MODEL_CODES;
+
+  // Auto-heal discontinued models from older DB records
+  if (modelCode === "gemini-2.0-flash" || modelCode === "gemini-1.5-flash" || modelCode === "gemini-1.5-pro") {
+    modelCode = DEFAULT_AI_MODEL_CODE;
+  }
+
+  fallbackModelCodes = fallbackModelCodes.map((code: string) => {
+    if (code === "gemini-2.0-flash" || code === "gemini-1.5-flash" || code === "gemini-1.5-pro") {
+      return code === "gemini-2.0-flash" ? "gemini-2.0-flash-lite" : "gemini-2.5-pro";
+    }
+    return code;
+  }).filter((code: string) => code !== modelCode);
+
+  if (fallbackModelCodes.length === 0) {
+    fallbackModelCodes = DEFAULT_AI_FALLBACK_MODEL_CODES.filter((code: string) => code !== modelCode);
+  }
+
   return {
     id: config._id,
     key: config.key ?? key,
-    modelCode: config.modelCode ?? DEFAULT_AI_MODEL_CODE,
-    fallbackModelCodes: Array.isArray(config.fallbackModelCodes)
-      ? config.fallbackModelCodes
-      : DEFAULT_AI_FALLBACK_MODEL_CODES,
+    modelCode,
+    fallbackModelCodes,
     updatedAt: config.updatedAt ?? null,
     updatedByUserId: config.updatedByUserId ?? null,
   };

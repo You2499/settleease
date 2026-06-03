@@ -90,11 +90,22 @@ function getDefaultFallbackModelCodes(modelCode: AiModelCode): AiModelCode[] {
 }
 
 export function resolveAiModelConfig(config: Partial<AiModelConfig> | null | undefined): AiModelConfig {
-  const modelCode = config?.modelCode ? String(config.modelCode).trim() : DEFAULT_AI_MODEL_CODE;
+  let modelCode = config?.modelCode ? String(config.modelCode).trim() : DEFAULT_AI_MODEL_CODE;
+
+  // Auto-heal discontinued models
+  if (modelCode === "gemini-2.0-flash" || modelCode === "gemini-1.5-flash" || modelCode === "gemini-1.5-pro") {
+    modelCode = DEFAULT_AI_MODEL_CODE;
+  }
 
   const fallbackModelCodes = Array.isArray(config?.fallbackModelCodes)
     ? config.fallbackModelCodes
         .map((code) => String(code).trim())
+        .map((code) => {
+          if (code === "gemini-2.0-flash" || code === "gemini-1.5-flash" || code === "gemini-1.5-pro") {
+            return code === "gemini-2.0-flash" ? "gemini-2.0-flash-lite" : "gemini-2.5-pro";
+          }
+          return code;
+        })
         .filter((code) => code !== modelCode)
     : getDefaultFallbackModelCodes(modelCode);
 

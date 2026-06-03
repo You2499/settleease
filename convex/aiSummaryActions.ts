@@ -101,6 +101,59 @@ function summaryResponse({
   };
 }
 
+async function verifyModelCapability(ctx: any, modelName: string): Promise<boolean> {
+  try {
+    // 1. Check database for existing capability check record
+    const record = await ctx.runQuery(internal.aiSummaryCache.getAiModelCapability, {
+      modelCode: modelName,
+    });
+    if (record !== null) {
+      return record.verified;
+    }
+
+    // 2. If no record exists, run a dynamic capability check
+    if (!GEMINI_API_KEY) {
+      return false;
+    }
+
+    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({
+      model: modelName,
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 16,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            success: { type: "boolean" },
+          },
+          required: ["success"],
+        } as any,
+      },
+    });
+
+    const testPrompt = 'Return JSON matching the schema: {"success": true}';
+    const result = await model.generateContent(testPrompt);
+    const text = result.response.text().trim();
+
+    let isVerified = false;
+    try {
+      const parsed = JSON.parse(text);
+      isVerified = !!(parsed && parsed.success === true);
+    } catch {
+      isVerified = false;
+    }
+
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: isVerified });
+    return isVerified;
+  } catch (error) {
+    console.warn(`Dynamic capability check failed for model ${modelName}:`, error);
+    await ctx.runMutation(internal.aiSummaryCache.storeAiModelCapability, { modelCode: modelName, verified: false }).catch(() => {});
+    return false;
+  }
+}
+
 async function generateSummary({
   jsonData,
   promptText,
@@ -203,7 +256,22 @@ export const getOrGenerateSettlementSummary = action({
     });
 
     const aiConfig = resolveAiModelConfig(rawAiConfig as any);
-    const modelAttemptOrder = buildAiModelAttemptOrder(aiConfig);
+    const rawModelAttemptOrder = buildAiModelAttemptOrder(aiConfig);
+
+    // Dynamic model verification check
+    const modelAttemptOrder: string[] = [];
+    for (const modelName of rawModelAttemptOrder) {
+      const isVerified = await verifyModelCapability(ctx, modelName);
+      if (isVerified) {
+        modelAttemptOrder.push(modelName);
+      } else {
+        console.warn(`Bypassing unverified AI model: ${modelName}`);
+      }
+    }
+    if (modelAttemptOrder.length === 0) {
+      throw new ConvexError("No verified AI models are available. Please check configured model capabilities.");
+    }
+
     const promptVersion: number = Number(activePrompt?.version ?? 0);
     const promptText: string = activePrompt?.prompt_text || DEFAULT_PRODUCTION_SUMMARY_PROMPT;
     const payloadSchemaVersion = Number((payload as any)?.schemaVersion ?? 0);
