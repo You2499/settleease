@@ -2455,9 +2455,51 @@ export const importCleanedCatalog = mutation({
     let rowsDeleted = 0;
     for (const existing of existingBudgetItems) {
       if (!importedKeys.has(existing.catalogKey)) {
-        if (existing.source === "historical" || existing.source === "mixed") {
+        if (existing.source === "historical") {
           await ctx.db.delete(existing._id);
           rowsDeleted++;
+        } else if (existing.source === "mixed") {
+          const existingObservations = existing.observations ?? [];
+          const customObservations = existingObservations.filter(
+            (obs: any) => !obs.expenseId
+          );
+
+          if (customObservations.length > 0) {
+            const customStats = computeObservationsStats(customObservations).customStats;
+            const combined = combineBudgetStats({
+              historicalObservationCount: 0,
+              historicalTotalPrice: 0,
+              historicalLatestPrice: 0,
+              historicalMinPrice: 0,
+              historicalMaxPrice: 0,
+              lastObservedAt: null,
+              ...customStats,
+            });
+
+            await ctx.db.patch(existing._id, {
+              source: "custom",
+              ...combined,
+              historicalObservationCount: 0,
+              historicalTotalPrice: 0,
+              historicalLatestPrice: 0,
+              historicalMinPrice: 0,
+              historicalMaxPrice: 0,
+              lastObservedAt: null,
+              customAveragePrice: customStats.customObservationCount > 0
+                ? roundBudgetPrice(customStats.customTotalPrice / customStats.customObservationCount)
+                : 0,
+              customLatestPrice: customStats.customLatestPrice,
+              customMinPrice: customStats.customMinPrice,
+              customMaxPrice: customStats.customMaxPrice,
+              customTotalPrice: customStats.customTotalPrice,
+              customObservationCount: customStats.customObservationCount,
+              observations: customObservations,
+              updatedAt: timestamp,
+            });
+          } else {
+            await ctx.db.delete(existing._id);
+            rowsDeleted++;
+          }
         }
       }
     }

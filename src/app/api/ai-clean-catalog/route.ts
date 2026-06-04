@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       observations
     );
 
-    let result = null;
+    let normalizedData = null;
     let successfulModel = "";
     const errors: string[] = [];
 
@@ -96,7 +96,26 @@ export async function POST(request: NextRequest) {
         });
 
         // Trigger request (respects controller abort signal)
-        result = await model.generateContent(prompt);
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+
+        if (!response || !response.candidates || response.candidates.length === 0) {
+          throw new Error("AI returned empty response candidates. Please try again.");
+        }
+
+        const candidate = response.candidates[0];
+        if (candidate.finishReason === "SAFETY") {
+          throw new Error("SAFETY: Content was blocked by safety filters.");
+        }
+
+        const responseText = response.text();
+        const parsedData = parseCleanCatalogResponse(responseText);
+
+        if (!parsedData) {
+          throw new Error("AI response could not be parsed into valid clean catalog JSON.");
+        }
+
+        normalizedData = normalizeCleanCatalogResponse(parsedData, allowedCategories, observations);
         successfulModel = modelName;
         console.log(`✅ Successfully cleaned catalog with ${modelName}`);
         break;
@@ -109,29 +128,9 @@ export async function POST(request: NextRequest) {
 
     clearTimeout(timeoutId);
 
-    if (!result || !successfulModel) {
+    if (!normalizedData || !successfulModel) {
       throw new Error(`Could not clean catalog with any available Gemini model. Errors: ${errors.join("; ")}`);
     }
-
-    const response = result.response;
-
-    if (!response || !response.candidates || response.candidates.length === 0) {
-      throw new Error("AI returned empty response candidates. Please try again.");
-    }
-
-    const candidate = response.candidates[0];
-    if (candidate.finishReason === "SAFETY") {
-      throw new Error("SAFETY: Content was blocked by safety filters.");
-    }
-
-    const responseText = response.text();
-    const parsedData = parseCleanCatalogResponse(responseText);
-
-    if (!parsedData) {
-      throw new Error("AI response could not be parsed into valid clean catalog JSON.");
-    }
-
-    const normalizedData = normalizeCleanCatalogResponse(parsedData, allowedCategories, observations);
 
     return Response.json({
       ...normalizedData,

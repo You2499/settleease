@@ -56,6 +56,13 @@ export interface Category {
 
 export type BudgetItemSource = 'historical' | 'custom' | 'mixed';
 
+export interface BudgetItemObservation {
+  venue: string;
+  price: number;
+  date: string;
+  expense_id?: string | null;
+}
+
 export interface BudgetItem {
   id: string;
   name: string;
@@ -70,6 +77,7 @@ export interface BudgetItem {
   source: BudgetItemSource;
   created_at: string;
   updated_at: string;
+  observations?: BudgetItemObservation[];
 }
 
 export interface SelectedBudgetLine {

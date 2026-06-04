@@ -64,7 +64,7 @@ export const AI_CLEAN_CATALOG_RESPONSE_SCHEMA = {
             description: "A very brief, one-sentence description of this canonical item and why items were grouped here.",
           },
         },
-        required: ["id", "name", "categoryName", "decipheredVenue", "description"],
+        required: ["id", "name", "categoryName", "description"],
       },
     },
     mappings: {
@@ -90,7 +90,7 @@ export const AI_CLEAN_CATALOG_RESPONSE_SCHEMA = {
             description: "The normalized individual unit price. IMPORTANT: If the raw item name includes a quantity multiplier (e.g., 'x2', 'x3', '2x', '3x') and the input price is the un-divided total price, you MUST divide the price by the quantity to calculate the true unit price. E.g., for Name 'Budweiser Magnum x2' with price 10.00, cleanedPrice MUST be 5.00. Round to exactly 2 decimal places.",
           },
         },
-        required: ["observationId", "canonicalItemId", "decipheredVenue", "cleanedPrice"],
+        required: ["observationId", "canonicalItemId", "cleanedPrice"],
       },
     },
   },
@@ -254,15 +254,9 @@ export function normalizeCleanCatalogResponse(
           }
 
           // --- Programmatic Quantity & Unit Price Resolution ---
-          const quantity = extractQuantity(obs.itemName);
-
           let rawCleanedPrice = typeof m?.cleanedPrice === "number" && Number.isFinite(m.cleanedPrice)
             ? m.cleanedPrice
             : obs.price;
-
-          if (quantity > 1 && Math.abs(rawCleanedPrice - obs.price) < 0.01) {
-            rawCleanedPrice = obs.price / quantity;
-          }
 
           if (!Number.isFinite(rawCleanedPrice)) {
             rawCleanedPrice = 0;

@@ -32,13 +32,14 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
   
   const importCleanedCatalog = useMutation(api.app.importCleanedCatalog);
 
+  const channelRef = useRef<BroadcastChannel | null>(null);
+
   // Setup Broadcast Channel for Cross-Tab Coordination
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    let channel: BroadcastChannel | null = null;
     try {
-      channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+      const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
       channel.onmessage = (event) => {
         const { type, payload } = event.data || {};
         if (type === "SYNC_START") {
@@ -53,27 +54,36 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
           setError(payload);
         }
       };
+      channelRef.current = channel;
     } catch (e) {
       console.warn("BroadcastChannel not supported or failed to initialize", e);
     }
 
     return () => {
-      if (channel) {
-        channel.close();
+      if (channelRef.current) {
+        channelRef.current.close();
+        channelRef.current = null;
       }
     };
   }, []);
 
   const broadcast = useCallback((type: string, payload?: any) => {
-    if (typeof window === "undefined") return;
-    try {
-      const channel = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
-      channel.postMessage({ type, payload });
-      channel.close();
-    } catch {
-      // Ignore broadcast errors
+    if (channelRef.current) {
+      try {
+        channelRef.current.postMessage({ type, payload });
+      } catch {
+        // Ignore broadcast errors
+      }
     }
   }, []);
+
+  // Revert status to idle once Convex reactive queries update
+  useEffect(() => {
+    if (syncState && !syncState.isOutOfSync && status === "success") {
+      setStatus("idle");
+      setStats(null);
+    }
+  }, [syncState?.isOutOfSync, status]);
 
   // Main Sync Pipeline
   const runSync = useCallback(async () => {
@@ -92,8 +102,10 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
 
       if (!observations || observations.length === 0) {
         console.log("No observations found to sync. Skipping AI cleanup.");
+        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: 0 };
+        setStats(syncStats);
         setStatus("success");
-        broadcast("SYNC_SUCCESS", { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: 0 });
+        broadcast("SYNC_SUCCESS", syncStats);
         return;
       }
 
@@ -147,8 +159,10 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
 
       if (result.status === "skipped") {
         console.log("Sync skipped by server due to newer concurrent update.");
+        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: cleanedData.canonicalItems.length };
+        setStats(syncStats);
         setStatus("success");
-        broadcast("SYNC_SUCCESS", { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: cleanedData.canonicalItems.length });
+        broadcast("SYNC_SUCCESS", syncStats);
         return;
       }
 
@@ -179,14 +193,22 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
 
   // Tab lock acquisition and automatic triggering logic
   useEffect(() => {
-    if (!isOpen || !syncState?.isOutOfSync || status === "syncing" || syncInProgressRef.current) {
-      return;
-    }
-
-    // Try to acquire local storage tab lock
     const now = Date.now();
     const existingLockVal = localStorage.getItem(LOCK_KEY);
     const existingLockTime = existingLockVal ? parseInt(existingLockVal, 10) : 0;
+
+    // Stuck/Expired Lock Recovery: If follower tab is stuck in "syncing" but lock expired/vanished, revert to "idle"
+    if (status === "syncing" && !syncInProgressRef.current) {
+      if (!existingLockVal || now - existingLockTime >= LOCK_EXPIRY_MS) {
+        setStatus("idle");
+      }
+      return;
+    }
+
+    // Guard clauses including success state to prevent redundant loops
+    if (!isOpen || !syncState?.isOutOfSync || status === "syncing" || status === "success" || syncInProgressRef.current) {
+      return;
+    }
 
     if (existingLockTime && now - existingLockTime < LOCK_EXPIRY_MS) {
       // Another tab is actively working on it. Set status to syncing and wait for broadcast messages.
@@ -198,7 +220,7 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
     localStorage.setItem(LOCK_KEY, now.toString());
 
     // Double check that we actually acquired it (handles concurrent set)
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       const lockVal = localStorage.getItem(LOCK_KEY);
       if (lockVal === now.toString()) {
         // We own the lock! Run the sync.
@@ -208,11 +230,20 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
       }
     }, 50);
 
+    return () => {
+      clearTimeout(timer);
+    };
   }, [isOpen, syncState, status, runSync]);
 
   const triggerManualSync = useCallback(async () => {
     if (syncInProgressRef.current) return;
     const now = Date.now();
+    const existingLockVal = localStorage.getItem(LOCK_KEY);
+    const existingLockTime = existingLockVal ? parseInt(existingLockVal, 10) : 0;
+    if (existingLockTime && now - existingLockTime < LOCK_EXPIRY_MS) {
+      console.warn("Sync already in progress on another tab.");
+      return;
+    }
     localStorage.setItem(LOCK_KEY, now.toString());
     await runSync();
   }, [runSync]);

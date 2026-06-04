@@ -1498,7 +1498,7 @@ export default function CreateBudgetModal({
     const hasRange = Math.abs(item.max_price - item.min_price) > 0.009;
 
     // Fetch unique observations mapped in client map
-    const observations = itemObservationsMap[item.name.toLowerCase()] || [];
+    const observations = item.observations || [];
 
     // Synthesize interactive pricing selections
     const pricingOptions = (() => {
