@@ -13,6 +13,8 @@ import {
   type CatalogObservationInput,
 } from "@/lib/settleease/aiCleanCatalog";
 
+export const maxDuration = 60;
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MAX_OBSERVATIONS = 100; // Safeguard to prevent token blowout/timeout
 const REQUEST_TIMEOUT_MS = 30000; // Strict 30-second timeout
@@ -69,13 +71,47 @@ export async function POST(request: NextRequest) {
 
     const modelAttemptOrder = await fetchAiModelAttemptOrder();
     const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
+    // Group observations by unique (itemName, expenseDescription) to minimize token footprint and latency
+    const groups = new Map<string, {
+      key: string;
+      representative: CatalogObservationInput;
+      memberIds: string[];
+    }>();
+
+    let groupCounter = 0;
+    for (const obs of observations) {
+      const nameKey = obs.itemName.trim().toLowerCase();
+      const descKey = obs.expenseDescription.trim().toLowerCase();
+      const key = `${nameKey}||${descKey}`;
+
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          representative: {
+            id: `group-${groupCounter++}`,
+            itemName: obs.itemName,
+            expenseDescription: obs.expenseDescription,
+            price: obs.price,
+            date: obs.date,
+            categoryName: obs.categoryName,
+          },
+          memberIds: [],
+        });
+      }
+      groups.get(key)!.memberIds.push(obs.id);
+    }
+
+    const aiObservations = Array.from(groups.values()).map((g) => g.representative);
+    console.log(`📉 Compressed observations from ${observations.length} to ${aiObservations.length} unique items for AI`);
+
     const prompt = injectCleanCatalogPrompt(
       DEFAULT_AI_CLEAN_CATALOG_PROMPT,
       allowedCategories,
-      observations
+      aiObservations
     );
 
-    let normalizedData = null;
+    let normalizedGroupData = null;
     let successfulModel = "";
     const errors: string[] = [];
 
@@ -96,7 +132,7 @@ export async function POST(request: NextRequest) {
         });
 
         // Trigger request (respects controller abort signal)
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(prompt, { signal: controller.signal });
         const response = result.response;
 
         if (!response || !response.candidates || response.candidates.length === 0) {
@@ -115,7 +151,7 @@ export async function POST(request: NextRequest) {
           throw new Error("AI response could not be parsed into valid clean catalog JSON.");
         }
 
-        normalizedData = normalizeCleanCatalogResponse(parsedData, allowedCategories, observations);
+        normalizedGroupData = normalizeCleanCatalogResponse(parsedData, allowedCategories, aiObservations);
         successfulModel = modelName;
         console.log(`✅ Successfully cleaned catalog with ${modelName}`);
         break;
@@ -128,16 +164,61 @@ export async function POST(request: NextRequest) {
 
     clearTimeout(timeoutId);
 
-    if (!normalizedData || !successfulModel) {
+    if (!normalizedGroupData || !successfulModel) {
       throw new Error(`Could not clean catalog with any available Gemini model. Errors: ${errors.join("; ")}`);
     }
 
+    // Expand the normalized group mappings back to all original observation IDs
+    const expandedMappings: any[] = [];
+    const groupMappingMap = new Map<string, {
+      canonicalItemId: string;
+      decipheredVenue: string | null;
+      cleanedPrice: number;
+    }>();
+
+    for (const m of normalizedGroupData.mappings) {
+      groupMappingMap.set(m.observationId, {
+        canonicalItemId: m.canonicalItemId,
+        decipheredVenue: m.decipheredVenue,
+        cleanedPrice: m.cleanedPrice,
+      });
+    }
+
+    const originalObsMap = new Map(observations.map((o) => [o.id, o]));
+
+    for (const group of groups.values()) {
+      const repId = group.representative.id;
+      const resolved = groupMappingMap.get(repId) || {
+        canonicalItemId: normalizedGroupData.canonicalItems[0]?.id || "generic-item",
+        decipheredVenue: null,
+        cleanedPrice: group.representative.price,
+      };
+
+      for (const memberId of group.memberIds) {
+        const originalObs = originalObsMap.get(memberId);
+        if (!originalObs) continue;
+
+        expandedMappings.push({
+          observationId: memberId,
+          canonicalItemId: resolved.canonicalItemId,
+          decipheredVenue: resolved.decipheredVenue,
+          cleanedPrice: originalObs.price, // Keep original unit price
+        });
+      }
+    }
+
+    const finalData = {
+      schemaVersion: normalizedGroupData.schemaVersion,
+      canonicalItems: normalizedGroupData.canonicalItems,
+      mappings: expandedMappings,
+    };
+
     return Response.json({
-      ...normalizedData,
+      ...finalData,
       model: successfulModel,
       modelDisplayName: getAiModelOption(successfulModel).displayName,
       observationsProcessed: observations.length,
-      canonicalItemsCount: normalizedData.canonicalItems.length,
+      canonicalItemsCount: finalData.canonicalItems.length,
     });
 
   } catch (error: any) {
