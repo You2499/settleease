@@ -11,6 +11,7 @@ export interface SyncStats {
   rowsUpdated: number;
   rowsDeleted?: number;
   totalCanonicalItems: number;
+  idMap?: Record<string, string>;
 }
 
 const LOCK_KEY = "settleease-catalog-sync-lock";
@@ -102,12 +103,22 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
 
       if (!observations || observations.length === 0) {
         console.log("No observations found to sync. Skipping AI cleanup.");
-        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: 0 };
+        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: 0, idMap: {} };
         setStats(syncStats);
         setStatus("success");
         broadcast("SYNC_SUCCESS", syncStats);
         return;
       }
+
+      // Fetch all existing canonical items from catalog to act as AI context
+      const existingItems = await convex.query(api.app.listBudgetItems, {});
+      const existingCanonicalItems = existingItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        categoryName: item.category_name,
+        decipheredVenue: item.observations?.[0]?.venue || null,
+        description: `${item.name} budget item`,
+      }));
 
       // 2. Dispatch to the Next.js API route with sequential model fallback & retry mechanisms
       let response: Response | null = null;
@@ -120,7 +131,7 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
           response = await fetch("/api/ai-clean-catalog", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ observations, allowedCategories }),
+            body: JSON.stringify({ observations, allowedCategories, existingCanonicalItems }),
           });
 
           // If the status is not a transient/server issue, break and handle properly
@@ -152,14 +163,14 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
 
       // 3. Commit back to Convex database using transaction-safe mutation
       const result = await importCleanedCatalog({
-        canonicalItems: cleanedData.canonicalItems,
+        canonicalItems: cleanedData.newCanonicalItems,
         mappings: cleanedData.mappings,
         clientSyncTimestamp,
       });
 
       if (result.status === "skipped") {
         console.log("Sync skipped by server due to newer concurrent update.");
-        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: cleanedData.canonicalItems.length };
+        const syncStats = { rowsCreated: 0, rowsUpdated: 0, totalCanonicalItems: cleanedData.newCanonicalItems.length, idMap: {} };
         setStats(syncStats);
         setStatus("success");
         broadcast("SYNC_SUCCESS", syncStats);
@@ -170,7 +181,8 @@ export function useAutomaticCatalogSync(isOpen: boolean) {
         rowsCreated: result.rowsCreated ?? 0,
         rowsUpdated: result.rowsUpdated ?? 0,
         rowsDeleted: result.rowsDeleted ?? 0,
-        totalCanonicalItems: cleanedData.canonicalItems.length,
+        totalCanonicalItems: cleanedData.newCanonicalItems.length,
+        idMap: result.idMap,
       };
 
       setStats(syncStats);

@@ -383,4 +383,23 @@ export default defineSchema({
     updatedAt: v.string(),
     createdByUserId: v.optional(v.union(v.string(), v.null())),
   }).index("by_active", ["isActive"]),
+
+  expenseObservations: defineTable({
+    observationId: v.string(), // Format: `${expenseId}::${itemId}`
+    expenseId: v.id("expenses"),
+    itemId: v.string(),
+    itemName: v.string(),
+    expenseDescription: v.string(), // used as venue info
+    price: v.number(),              // normalized unit price
+    date: v.string(),
+    categoryName: v.string(),
+    budgetItemId: v.optional(v.union(v.id("budgetItems"), v.null())),
+    status: v.union(v.literal("unmapped"), v.literal("mapped")),
+    updatedAt: v.string(),
+  })
+    .index("by_status", ["status"])
+    .index("by_observation_id", ["observationId"])
+    .index("by_expense_id", ["expenseId"])
+    .index("by_budget_item_id", ["budgetItemId"])
+    .index("by_status_updated_at", ["status", "updatedAt"]),
 });

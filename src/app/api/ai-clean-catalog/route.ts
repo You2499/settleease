@@ -5,12 +5,13 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { fetchAiModelAttemptOrder } from "@/lib/settleease/aiModelConfigServer";
 import { getAiModelOption } from "@/lib/settleease/aiModels";
 import {
-  injectCleanCatalogPrompt,
+  injectIncrementalCleanCatalogPrompt,
   parseCleanCatalogResponse,
-  normalizeCleanCatalogResponse,
-  AI_CLEAN_CATALOG_RESPONSE_SCHEMA,
-  DEFAULT_AI_CLEAN_CATALOG_PROMPT,
+  normalizeIncrementalCleanCatalogResponse,
+  AI_INCREMENTAL_CLEAN_CATALOG_RESPONSE_SCHEMA,
+  DEFAULT_AI_INCREMENTAL_CLEAN_CATALOG_PROMPT,
   type CatalogObservationInput,
+  type ExistingCanonicalItemInput,
 } from "@/lib/settleease/aiCleanCatalog";
 
 export const maxDuration = 60;
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    console.log("🧼 AI Clean Catalog API called");
+    console.log("🧼 AI Incremental Clean Catalog API called");
 
     if (!GEMINI_API_KEY) {
       console.error("❌ GEMINI_API_KEY not configured");
@@ -55,11 +56,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const rawObservations = body.observations;
     const rawAllowedCategories = body.allowedCategories || body.allowed_categories;
+    const rawExistingCanonicalItems = body.existingCanonicalItems || body.existing_canonical_items;
 
     const observations = sanitizeObservations(rawObservations);
     const allowedCategories = Array.isArray(rawAllowedCategories)
       ? rawAllowedCategories.map((c) => String(c).trim()).filter(Boolean)
       : ["Other"];
+    
+    const existingCanonicalItems: ExistingCanonicalItemInput[] = Array.isArray(rawExistingCanonicalItems)
+      ? rawExistingCanonicalItems.map((item) => ({
+          id: String(item.id || item.code || "").trim(),
+          name: String(item.name || "").trim(),
+          categoryName: String(item.categoryName || item.category_name || "").trim(),
+          decipheredVenue: item.decipheredVenue || item.deciphered_venue ? String(item.decipheredVenue || item.deciphered_venue).trim() : null,
+          description: String(item.description || "").trim(),
+        }))
+      : [];
 
     if (observations.length === 0) {
       clearTimeout(timeoutId);
@@ -105,9 +117,10 @@ export async function POST(request: NextRequest) {
     const aiObservations = Array.from(groups.values()).map((g) => g.representative);
     console.log(`📉 Compressed observations from ${observations.length} to ${aiObservations.length} unique items for AI`);
 
-    const prompt = injectCleanCatalogPrompt(
-      DEFAULT_AI_CLEAN_CATALOG_PROMPT,
+    const prompt = injectIncrementalCleanCatalogPrompt(
+      DEFAULT_AI_INCREMENTAL_CLEAN_CATALOG_PROMPT,
       allowedCategories,
+      existingCanonicalItems,
       aiObservations
     );
 
@@ -127,7 +140,7 @@ export async function POST(request: NextRequest) {
             topK: 40,
             maxOutputTokens: 8192,
             responseMimeType: "application/json",
-            responseSchema: AI_CLEAN_CATALOG_RESPONSE_SCHEMA as any,
+            responseSchema: AI_INCREMENTAL_CLEAN_CATALOG_RESPONSE_SCHEMA as any,
           },
         });
 
@@ -151,7 +164,7 @@ export async function POST(request: NextRequest) {
           throw new Error("AI response could not be parsed into valid clean catalog JSON.");
         }
 
-        normalizedGroupData = normalizeCleanCatalogResponse(parsedData, allowedCategories, aiObservations);
+        normalizedGroupData = normalizeIncrementalCleanCatalogResponse(parsedData, allowedCategories, existingCanonicalItems, aiObservations);
         successfulModel = modelName;
         console.log(`✅ Successfully cleaned catalog with ${modelName}`);
         break;
@@ -189,7 +202,7 @@ export async function POST(request: NextRequest) {
     for (const group of groups.values()) {
       const repId = group.representative.id;
       const resolved = groupMappingMap.get(repId) || {
-        canonicalItemId: normalizedGroupData.canonicalItems[0]?.id || "generic-item",
+        canonicalItemId: normalizedGroupData.newCanonicalItems[0]?.id || existingCanonicalItems[0]?.id || "generic-item",
         decipheredVenue: null,
         cleanedPrice: group.representative.price,
       };
@@ -209,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     const finalData = {
       schemaVersion: normalizedGroupData.schemaVersion,
-      canonicalItems: normalizedGroupData.canonicalItems,
+      newCanonicalItems: normalizedGroupData.newCanonicalItems,
       mappings: expandedMappings,
     };
 
@@ -218,7 +231,7 @@ export async function POST(request: NextRequest) {
       model: successfulModel,
       modelDisplayName: getAiModelOption(successfulModel).displayName,
       observationsProcessed: observations.length,
-      canonicalItemsCount: finalData.canonicalItems.length,
+      newCanonicalItemsCount: finalData.newCanonicalItems.length,
     });
 
   } catch (error: any) {

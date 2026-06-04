@@ -842,9 +842,73 @@ export default function CreateBudgetModal({
     triggerSync: autoTriggerSync,
   } = useAutomaticCatalogSync(isOpen);
 
-  const isCatalogLoadingOrSyncing =
-    budgetItems === undefined ||
-    autoSyncStatus === "syncing";
+  const isCatalogLoadingOrSyncing = budgetItems === undefined;
+
+  // Reconcile selectedLines, selectedCatalogPrices, and vatClassifications on successful catalog sync
+  useEffect(() => {
+    if (autoSyncStatus === "success" && autoSyncStats?.idMap) {
+      const idMap = autoSyncStats.idMap;
+      if (Object.keys(idMap).length === 0) return;
+
+      setSelectedLines((prevLines) => {
+        let changed = false;
+        const lineIdUpdates: Record<string, string> = {};
+
+        const newLines = prevLines.map((line) => {
+          const lookupKey = line.budget_item_id || line.id;
+          if (lookupKey && idMap[lookupKey]) {
+            const newBudgetItemId = idMap[lookupKey];
+            changed = true;
+
+            let newId = line.id;
+            if (line.id.startsWith("catalog-")) {
+              newId = `catalog-${newBudgetItemId}-${line.unit_price}-${line.venue || "default"}`;
+              lineIdUpdates[line.id] = newId;
+            }
+            return {
+              ...line,
+              id: newId,
+              budget_item_id: newBudgetItemId,
+            };
+          }
+          return line;
+        });
+
+        if (Object.keys(lineIdUpdates).length > 0) {
+          setVatClassifications((prevVats) => {
+            const nextVats = { ...prevVats };
+            let vatChanged = false;
+            for (const [oldLineId, newLineId] of Object.entries(lineIdUpdates)) {
+              if (nextVats[oldLineId]) {
+                nextVats[newLineId] = {
+                  ...nextVats[oldLineId],
+                  key: newLineId,
+                };
+                delete nextVats[oldLineId];
+                vatChanged = true;
+              }
+            }
+            return vatChanged ? nextVats : prevVats;
+          });
+        }
+
+        return changed ? newLines : prevLines;
+      });
+
+      setSelectedCatalogPrices((prevPrices) => {
+        let changed = false;
+        const newPrices = { ...prevPrices };
+        for (const [oldId, newId] of Object.entries(idMap)) {
+          if (newPrices[oldId]) {
+            newPrices[newId] = newPrices[oldId];
+            delete newPrices[oldId];
+            changed = true;
+          }
+        }
+        return changed ? newPrices : prevPrices;
+      });
+    }
+  }, [autoSyncStatus, autoSyncStats]);
 
   // Group historical restaurant observations for unique items in catalog selection
   const itemObservationsMap = useMemo(() => {

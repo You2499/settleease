@@ -298,3 +298,240 @@ export function normalizeCleanCatalogResponse(
     mappings,
   };
 }
+
+export interface ExistingCanonicalItemInput {
+  id: string;
+  name: string;
+  categoryName: string;
+  decipheredVenue: string | null;
+  description: string;
+}
+
+export interface IncrementalCleanCatalogResponse {
+  schemaVersion: number;
+  newCanonicalItems: CanonicalItemOutput[];
+  mappings: CatalogMappingOutput[];
+}
+
+export const AI_INCREMENTAL_CLEAN_CATALOG_RESPONSE_SCHEMA = {
+  type: "object",
+  properties: {
+    schemaVersion: {
+      type: "integer",
+      description: "The catalog cleaning schema version. Use 1.",
+    },
+    newCanonicalItems: {
+      type: "array",
+      description: "List of newly defined canonical budget items. Do not include existing canonical items here.",
+      items: {
+        type: "object",
+        properties: {
+          id: {
+            type: "string",
+            description: "A unique, URL-safe slug identifier for the new canonical item, e.g. 'coca-cola', 'veg-burger'. Keep it lowercase, alphanumeric, and hyphenated.",
+          },
+          name: {
+            type: "string",
+            description: "Clean, standardized, and properly capitalized name of the item. E.g. 'Coca-Cola' instead of 'coke can' or 'coca-cola 330ml'.",
+          },
+          categoryName: {
+            type: "string",
+            description: "The best-fitting category name chosen from the allowed categories list.",
+          },
+          decipheredVenue: {
+            type: "string",
+            description: "The specific restaurant, venue, or merchant deciphered from the expense description or item context (e.g., 'McDonald's', 'Walmart'). Use an empty string '' if none.",
+          },
+          description: {
+            type: "string",
+            description: "A very brief, one-sentence description of this canonical item.",
+          },
+        },
+        required: ["id", "name", "categoryName", "description"],
+      },
+    },
+    mappings: {
+      type: "array",
+      description: "Mapping from each input observation ID to its corresponding canonical item.",
+      items: {
+        type: "object",
+        properties: {
+          observationId: {
+            type: "string",
+            description: "The exact ID of the input observation being mapped.",
+          },
+          canonicalItemId: {
+            type: "string",
+            description: "The ID of the canonical item this observation is mapped to (must match either an existing canonical item ID or a new canonical item ID in newCanonicalItems).",
+          },
+          decipheredVenue: {
+            type: "string",
+            description: "The deciphered venue for this observation. Use an empty string '' if none.",
+          },
+          cleanedPrice: {
+            type: "number",
+            description: "The normalized individual unit price (divided by quantity multiplier if applicable).",
+          },
+        },
+        required: ["observationId", "canonicalItemId", "cleanedPrice"],
+      },
+    },
+  },
+  required: ["schemaVersion", "newCanonicalItems", "mappings"],
+};
+
+export const DEFAULT_AI_INCREMENTAL_CLEAN_CATALOG_PROMPT = `You are SettleEase's expert financial catalog consolidation and cleaning AI.
+
+Task:
+Analyze a list of new noisy item observations from historical expenses and map them to either an existing canonical catalog item OR define a new canonical budget item.
+
+Context - Existing Canonical Catalog Items:
+Use these existing canonical items as context. If a new observation matches one of these items, map it to the existing canonical item's ID. Do NOT redefine or return existing items in the "newCanonicalItems" array.
+{{EXISTING_CANONICAL_ITEMS}}
+
+Allowed Categories (for any new canonical items):
+{{ALLOWED_CATEGORIES}}
+
+New Observations to Map:
+{{OBSERVATIONS}}
+
+Rules:
+1. Match to Existing:
+   - Carefully review the existing canonical items. If a new observation refers to the same product or service (e.g. "coke", "coca cola", "coke zero" matching an existing "coca-cola" item), you MUST map it to that existing item's ID.
+   - Do NOT recreate or redefine existing items.
+
+2. Define New Canonical Items:
+   - If a new observation does NOT match any existing canonical item, define a new canonical item inside the "newCanonicalItems" array.
+   - Assign a clean, professional canonical Name in Title Case, stripping out volume markers, container types, and quantity multipliers.
+   - Generate a unique, lowercase, URL-safe slug ID for the new item (e.g. "veggie-burger"). Ensure this new ID does not clash with any existing canonical item ID.
+
+3. Venue / Restaurant Deciphering:
+   - Extract the specific merchant, restaurant, or venue name from the expense description or the item name itself. Return an empty string "" if generic or ambiguous.
+
+4. Individual Mapping & Unit Price Normalization:
+   - Map EVERY single input observation ID to its designated canonical item ID (which can be either an existing canonical item ID or a new canonical item's ID).
+   - If a quantity multiplier is present in the raw item name, calculate the unit price as the cleaned price, rounded to 2 decimal places.
+
+5. Formatting Constraints:
+   - Return ONLY valid JSON matching the schema.
+   - Do not include explanations, Markdown, or code fences.
+
+Required JSON fields:
+- schemaVersion: 1
+- newCanonicalItems: array of newly defined canonical budget items (each containing: id, name, categoryName, decipheredVenue, description)
+- mappings: array of mappings from input observations to canonical items (each containing: observationId, canonicalItemId, decipheredVenue, cleanedPrice)`;
+
+export function injectIncrementalCleanCatalogPrompt(
+  promptTemplate: string,
+  allowedCategories: string[],
+  existingCanonicalItems: ExistingCanonicalItemInput[],
+  observations: CatalogObservationInput[]
+): string {
+  return promptTemplate
+    .replace("{{ALLOWED_CATEGORIES}}", () => allowedCategories.join(", "))
+    .replace("{{EXISTING_CANONICAL_ITEMS}}", () => JSON.stringify(existingCanonicalItems, null, 2))
+    .replace("{{OBSERVATIONS}}", () => JSON.stringify(observations, null, 2));
+}
+
+export function normalizeIncrementalCleanCatalogResponse(
+  parsed: any,
+  allowedCategories: string[],
+  existingCanonicalItems: ExistingCanonicalItemInput[],
+  observations: CatalogObservationInput[]
+): IncrementalCleanCatalogResponse {
+  const obsMap = new Map(observations.map((o) => [o.id, o]));
+  const existingIds = new Set(existingCanonicalItems.map((item) => item.id));
+
+  // 1. Normalize Canonical Items and map categories safely
+  const newCanonicalItems = Array.isArray(parsed?.newCanonicalItems)
+    ? parsed.newCanonicalItems
+        .filter((item: any) => item && typeof item.id === "string")
+        .map((item: any) => {
+          const rawCategory = String(item?.categoryName || "Other").trim();
+          
+          // Find best match in allowed categories
+          const matchedCategory = allowedCategories.find(
+            (c: string) => c.toLowerCase() === rawCategory.toLowerCase()
+          ) || allowedCategories.find(
+            (c: string) => {
+              const escapedCategory = rawCategory.replace(/[.*+?^${}()|[\]\\]/g, (match) => '\\' + match);
+              const pattern = new RegExp(`\\b${escapedCategory.toLowerCase()}\\b`, 'i');
+              return pattern.test(c.toLowerCase());
+            }
+          ) || allowedCategories.find(
+            (c: string) => c.toLowerCase().startsWith(rawCategory.toLowerCase())
+          ) || "Other";
+
+          return {
+            id: String(item?.id || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-") || "generic-item",
+            name: String(item?.name || "Generic Item").trim(),
+            categoryName: matchedCategory,
+            decipheredVenue: item?.decipheredVenue && String(item.decipheredVenue).trim() !== "" ? String(item.decipheredVenue).trim() : null,
+            description: String(item?.description || "Consolidated budget item").trim(),
+          };
+        })
+    : [];
+
+  const newCanonicalIds = new Set(newCanonicalItems.map((c: any) => c.id));
+  const allAvailableIds = new Set([...existingIds, ...newCanonicalIds]);
+  const fallbackCanonicalId = existingCanonicalItems[0]?.id || newCanonicalItems[0]?.id || "generic-item";
+
+  // 2. Validate mappings and match IDs
+  const mappings: CatalogMappingOutput[] = Array.isArray(parsed?.mappings)
+    ? parsed.mappings
+        .map((m: any) => {
+          const obsId = String(m?.observationId || "").trim();
+          const obs = obsMap.get(obsId);
+          if (!obs) return null; // Reject mapping for unknown observation
+
+          let canonicalId = String(m?.canonicalItemId || "").trim().toLowerCase().replace(/[^a-z0-9]+/g, "-");
+          if (!allAvailableIds.has(canonicalId)) {
+            canonicalId = fallbackCanonicalId;
+          }
+
+          // --- Programmatic Quantity & Unit Price Resolution ---
+          let rawCleanedPrice = typeof m?.cleanedPrice === "number" && Number.isFinite(m.cleanedPrice)
+            ? m.cleanedPrice
+            : obs.price;
+
+          if (!Number.isFinite(rawCleanedPrice)) {
+            rawCleanedPrice = 0;
+          }
+
+          return {
+            observationId: obsId,
+            canonicalItemId: canonicalId,
+            decipheredVenue: m?.decipheredVenue && String(m.decipheredVenue).trim() !== "" ? String(m.decipheredVenue).trim() : null,
+            cleanedPrice: Math.round(rawCleanedPrice * 100) / 100,
+          };
+        })
+        .filter((m: any): m is CatalogMappingOutput => m !== null)
+    : [];
+
+  // 3. Robust Mapping Check Guarantee: every input observation MUST be mapped
+  const mappedObsIds = new Set(mappings.map((m) => m.observationId));
+  
+  observations.forEach((obs) => {
+    if (!mappedObsIds.has(obs.id)) {
+      const quantity = extractQuantity(obs.itemName);
+      let rawCleanedPrice = obs.price / quantity;
+      if (!Number.isFinite(rawCleanedPrice)) {
+        rawCleanedPrice = 0;
+      }
+
+      mappings.push({
+        observationId: obs.id,
+        canonicalItemId: fallbackCanonicalId,
+        decipheredVenue: null,
+        cleanedPrice: Math.round(rawCleanedPrice * 100) / 100,
+      });
+    }
+  });
+
+  return {
+    schemaVersion: Number(parsed?.schemaVersion) || 1,
+    newCanonicalItems,
+    mappings,
+  };
+}
+
