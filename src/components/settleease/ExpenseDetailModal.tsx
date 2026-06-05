@@ -56,7 +56,8 @@ export default function ExpenseDetailModal({
   const celebrationAmount = celebrationContributionOpt
     ? Number(celebrationContributionOpt.amount)
     : 0;
-  const amountEffectivelySplit = Math.max(0, totalOriginalBill - celebrationAmount);
+  const discountAmount = expense.discount ? Number(expense.discount) : 0;
+  const amountEffectivelySplit = Math.max(0, totalOriginalBill - celebrationAmount - discountAmount);
 
   const involvedPersonIdsOverall = useMemo(() => {
     const ids = new Set<string>();
@@ -179,6 +180,7 @@ export default function ExpenseDetailModal({
                 expense={expense}
                 totalOriginalBill={totalOriginalBill}
                 CategoryIcon={CategoryIcon}
+                discount={discountAmount}
               />
             </SettleEaseErrorBoundary>
 
@@ -188,6 +190,7 @@ export default function ExpenseDetailModal({
                 celebrationContributionOpt={celebrationContributionOpt}
                 amountEffectivelySplit={amountEffectivelySplit}
                 peopleMap={peopleMap}
+                discount={discountAmount}
               />
             </SettleEaseErrorBoundary>
 

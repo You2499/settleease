@@ -10,12 +10,14 @@ interface ExpenseGeneralInfoProps {
   expense: Expense;
   totalOriginalBill: number;
   CategoryIcon: React.FC<React.SVGProps<SVGSVGElement>>;
+  discount?: number;
 }
 
 export default function ExpenseGeneralInfo({
   expense,
   totalOriginalBill,
   CategoryIcon,
+  discount,
 }: ExpenseGeneralInfoProps) {
   return (
     <Card>
@@ -37,14 +39,43 @@ export default function ExpenseGeneralInfo({
             {expense.description}
           </span>
         </div>
-        <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-baseline">
-          <span className="text-muted-foreground shrink-0 mr-2">
-            Total Bill Amount:
-          </span>
-          <span className="font-bold text-lg sm:text-xl text-primary text-left sm:text-right">
-            {formatCurrency(totalOriginalBill)}
-          </span>
-        </div>
+        {discount && discount > 0 ? (
+          <>
+            <div className="flex flex-col sm:flex-row sm:justify-between">
+              <span className="text-muted-foreground shrink-0 mr-2">
+                Original Bill Amount:
+              </span>
+              <span className="font-medium text-left sm:text-right">
+                {formatCurrency(totalOriginalBill)}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between">
+              <span className="text-muted-foreground shrink-0 mr-2">
+                Discount:
+              </span>
+              <span className="font-medium text-red-600 dark:text-red-400 text-left sm:text-right">
+                -{formatCurrency(discount)}
+              </span>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-baseline">
+              <span className="text-muted-foreground shrink-0 mr-2 font-semibold">
+                Net Amount to Split:
+              </span>
+              <span className="font-bold text-lg sm:text-xl text-primary text-left sm:text-right">
+                {formatCurrency(Math.max(0, totalOriginalBill - discount))}
+              </span>
+            </div>
+          </>
+        ) : (
+          <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-baseline">
+            <span className="text-muted-foreground shrink-0 mr-2">
+              Total Bill Amount:
+            </span>
+            <span className="font-bold text-lg sm:text-xl text-primary text-left sm:text-right">
+              {formatCurrency(totalOriginalBill)}
+            </span>
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row sm:justify-between">
           <span className="text-muted-foreground shrink-0 mr-2">
             Main Category:

@@ -12,6 +12,7 @@ interface ExpensePaymentInfoProps {
   celebrationContributionOpt: CelebrationContribution | null | undefined;
   amountEffectivelySplit: number;
   peopleMap: Record<string, string>;
+  discount?: number;
 }
 
 export default function ExpensePaymentInfo({
@@ -19,6 +20,7 @@ export default function ExpensePaymentInfo({
   celebrationContributionOpt,
   amountEffectivelySplit,
   peopleMap,
+  discount,
 }: ExpensePaymentInfoProps) {
   return (
     <Card>
@@ -70,6 +72,17 @@ export default function ExpensePaymentInfo({
                   {formatCurrency(celebrationContributionOpt.amount)}
                 </span>
               </div>
+            </div>
+          </>
+        )}
+        {discount !== undefined && discount > 0 && (
+          <>
+            <Separator className="my-2 sm:my-2.5" />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Discount:</span>
+              <span className="font-semibold text-red-600 dark:text-red-400 text-right">
+                -{formatCurrency(discount)}
+              </span>
             </div>
           </>
         )}

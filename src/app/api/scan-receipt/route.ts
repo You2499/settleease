@@ -39,6 +39,7 @@ Return ONLY valid JSON (no markdown fences, no explanation, no extra text) match
     { "label": "string", "amount": 0.00 }
   ],
   "total_amount": 0.00,
+  "discount_amount": 0.00,
   "currency": "INR",
   "additional_charges": [
     { "label": "string", "amount": 0.00 }
@@ -65,7 +66,8 @@ Parsing rules:
 11. Be intelligent about item categorization - use context clues from item names, not only the venue type
 12. Packaged water, mineral water, bottled water, soda, juice, tea, coffee, and soft drinks are "drinks", not hotel/restaurant/food by default
 13. If an item name includes a quantity marker such as "(x2)", "(2)", "x 2", or "2 x", remove it from "name" and put the count in "quantity"
-14. If you are not confident which allowed app category fits an item, set "category_name" to null`;
+14. If you are not confident which allowed app category fits an item, set "category_name" to null
+15. "discount_amount" must capture any receipt-level discounts applied to the bill. If no discount is present, return 0.00 or omit/set to null.`;
 
 type AllowedCategory = {
   name: string;
@@ -296,6 +298,7 @@ function normalizeParsedReceiptData(parsedData: any, categories: AllowedCategory
     subtotals: normalizedSubtotals,
     taxes: normalizedTaxes,
     total_amount: toAmount(parsedData.total_amount),
+    discount_amount: parsedData.discount_amount ? toAmount(parsedData.discount_amount) : undefined,
     currency: parsedData.currency || "INR",
     additional_charges: normalizedCharges,
   };

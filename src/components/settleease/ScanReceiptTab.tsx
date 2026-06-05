@@ -20,6 +20,7 @@ import UnequalSplitSection from './addexpense/UnequalSplitSection';
 import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
 import { useExpenseFormLogic, type ExpenseSubmitOptions } from './addexpense/ExpenseFormLogic';
+import DiscountSection from './addexpense/DiscountSection';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 import SmartScanItemReviewDialog from './SmartScanItemReviewDialog';
 import { useUsageAnalytics } from '@/hooks/useUsageAnalytics';
@@ -316,6 +317,13 @@ export default function ScanReceiptTab({
   const [isLoading, setIsLoading] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [isMetadataReviewOpen, setIsMetadataReviewOpen] = useState(false);
+  const [isDiscountMode, setIsDiscountMode] = useState(false);
+  const [discountAmountInput, setDiscountAmountInput] = useState('');
+  const actualDiscountAmount = useMemo(() => {
+    if (!isDiscountMode) return 0;
+    const parsedAmount = parseFloat(discountAmountInput);
+    return isNaN(parsedAmount) || parsedAmount < 0 ? 0 : parsedAmount;
+  }, [isDiscountMode, discountAmountInput]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -531,9 +539,17 @@ export default function ScanReceiptTab({
   const handleSplitMethodConfirm = useCallback(() => {
     if (!parsedData) return;
 
+    // Handle discount detection
+    const hasDiscount = parsedData.discount_amount !== undefined && parsedData.discount_amount > 0;
+    const initialDiscountVal = parsedData.discount_amount || 0;
+    const preDiscountTotal = parsedData.total_amount + initialDiscountVal;
+
+    setIsDiscountMode(hasDiscount);
+    setDiscountAmountInput(hasDiscount ? parsedData.discount_amount!.toFixed(2) : '');
+
     // Pre-fill basic info
     setDescription(parsedData.restaurant_name || 'Scanned Receipt');
-    setTotalAmount(parsedData.total_amount.toFixed(2));
+    setTotalAmount(preDiscountTotal.toFixed(2));
 
     // Pre-fill date
     if (parsedData.date) {
@@ -553,7 +569,7 @@ export default function ScanReceiptTab({
 
     // Pre-fill payer
     const payerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
-    setPayers([{ id: Date.now().toString(), personId: payerPersonId, amount: parsedData.total_amount.toFixed(2) }]);
+    setPayers([{ id: Date.now().toString(), personId: payerPersonId, amount: preDiscountTotal.toFixed(2) }]);
 
     const scannedItems = buildScannedExpenseItems(parsedData, dynamicCategories, people);
     setItems(scannedItems.length > 0 ? scannedItems : [{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: category || defaultItemCategory, quantity: 1, unitPrice: '' }]);
@@ -592,11 +608,17 @@ export default function ScanReceiptTab({
     setSplitMethod('equal');
     setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: [], categoryName: '', quantity: 1, unitPrice: '' }]);
     setIsMetadataReviewOpen(false);
+    setIsDiscountMode(false);
+    setDiscountAmountInput('');
     hasInitializedPayer.current = false; // Reset the initialization flag
   }, []);
 
   // Form handlers (same as AddExpenseTab)
-  const amountToSplit = useMemo(() => parseFloat(totalAmount) || 0, [totalAmount]);
+  const amountToSplitBeforeDiscount = useMemo(() => parseFloat(totalAmount) || 0, [totalAmount]);
+
+  const amountToSplit = useMemo(() => {
+    return Math.max(0, amountToSplitBeforeDiscount - actualDiscountAmount);
+  }, [amountToSplitBeforeDiscount, actualDiscountAmount]);
 
   const handlePayerChange = (index: number, field: keyof PayerInputRow, value: string) => {
     const newPayers = [...payers];
@@ -746,6 +768,9 @@ export default function ScanReceiptTab({
       '', // celebrationPayerId
       0, // actualCelebrationAmount
       amountToSplit,
+      isDiscountMode,
+      discountAmountInput,
+      actualDiscountAmount,
       undefined, // expenseToEdit
       defaultItemCategory,
       setIsLoading,
@@ -1218,6 +1243,18 @@ export default function ScanReceiptTab({
               />
             </SettleEaseErrorBoundary>
 
+            <SettleEaseErrorBoundary componentName="Discount Section" size="medium">
+              <DiscountSection
+                isDiscountMode={isDiscountMode}
+                setIsDiscountMode={setIsDiscountMode}
+                discountAmountInput={discountAmountInput}
+                setDiscountAmountInput={setDiscountAmountInput}
+                actualDiscountAmount={actualDiscountAmount}
+                totalAmount={totalAmount}
+                amountToSplit={amountToSplit}
+              />
+            </SettleEaseErrorBoundary>
+
             <SettleEaseErrorBoundary componentName="Payment Details" size="medium">
               <section className="rounded-lg border bg-background p-4 sm:p-5">
                 <SectionTitle icon={Wallet} title="Payment details" />
@@ -1258,7 +1295,7 @@ export default function ScanReceiptTab({
                       people={people}
                       unequalShares={unequalShares}
                       handleUnequalShareChange={handleUnequalShareChange}
-                      amountToSplit={amountToSplit}
+                      amountToSplit={amountToSplitBeforeDiscount}
                     />
                   </div>
                 )}

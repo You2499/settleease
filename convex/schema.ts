@@ -99,6 +99,7 @@ export default defineSchema({
     shares: v.array(payerShare),
     items: v.optional(v.union(v.array(expenseItem), v.null())),
     celebrationContribution: v.optional(v.union(celebrationContribution, v.null())),
+    discount: v.optional(v.number()),
     excludeFromSettlement: v.optional(v.boolean()),
     exclusionStrategy: v.optional(v.string()),
     createdAt: v.optional(v.string()),

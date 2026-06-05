@@ -264,6 +264,7 @@ function expenseDto(expense: any) {
     shares: expense.shares,
     items: expense.items ?? undefined,
     celebration_contribution: expense.celebrationContribution ?? null,
+    discount: expense.discount ?? null,
     exclude_from_settlement: expense.excludeFromSettlement ?? false,
     exclusion_strategy: expense.exclusionStrategy ?? (expense.excludeFromSettlement ? "standard" : undefined),
     created_at: expense.createdAt,
@@ -3033,6 +3034,7 @@ export const saveExpense = mutation({
     celebrationContribution: v.optional(
       v.union(celebrationContribution, v.null()),
     ),
+    discount: v.optional(v.number()),
     excludeFromSettlement: v.optional(v.boolean()),
     createdAt: v.optional(v.string()),
   },
@@ -3057,10 +3059,24 @@ export const saveExpense = mutation({
       };
     }
 
+    const celebrationAmount = celebrationContribution ? celebrationContribution.amount : 0;
+
+    let discount: number | undefined = undefined;
+    if (args.discount !== undefined && args.discount !== null) {
+      if (args.discount <= 0) {
+        throw new ConvexError("Discount amount must be positive.");
+      }
+      const discountVal = Math.round(Number(args.discount) * 100) / 100;
+      if (discountVal > totalAmount - celebrationAmount) {
+        throw new ConvexError("Discount cannot exceed total amount minus celebration amount.");
+      }
+      discount = discountVal;
+    }
+    const discountAmount = discount || 0;
+
     const paidBy = adjustRoundingDifference(args.paidBy, totalAmount);
 
-    const celebrationAmount = celebrationContribution ? celebrationContribution.amount : 0;
-    const expectedShareSum = Math.round((totalAmount - celebrationAmount) * 100) / 100;
+    const expectedShareSum = Math.round((totalAmount - celebrationAmount - discountAmount) * 100) / 100;
     const shares = adjustRoundingDifference(args.shares, expectedShareSum);
 
     let items = null;
@@ -3096,13 +3112,21 @@ export const saveExpense = mutation({
       throw new ConvexError(`Sum of payer amounts ($${totalPaid.toFixed(2)}) must equal total amount ($${totalAmount.toFixed(2)}).`);
     }
 
-    // 3. Validate that the sharer shares sum up to exactly (totalAmount - celebrationAmount)
+    // 3. Validate that the sharer shares sum up to exactly (totalAmount - celebrationAmount - discountAmount)
     const totalShares = Math.round(shares.reduce((sum, s) => sum + s.amount, 0) * 100) / 100;
     
     if (Math.abs(totalShares - expectedShareSum) > 0.01) {
-      if (celebrationContribution) {
+      if (celebrationContribution && discount) {
+        throw new ConvexError(
+          `Sum of shares ($${totalShares.toFixed(2)}) must equal total bill minus celebration contribution and discount ($${expectedShareSum.toFixed(2)}).`
+        );
+      } else if (celebrationContribution) {
         throw new ConvexError(
           `Sum of shares ($${totalShares.toFixed(2)}) must equal total bill minus celebration contribution ($${expectedShareSum.toFixed(2)}).`
+        );
+      } else if (discount) {
+        throw new ConvexError(
+          `Sum of shares ($${totalShares.toFixed(2)}) must equal total bill minus discount ($${expectedShareSum.toFixed(2)}).`
         );
       } else {
         throw new ConvexError(
@@ -3120,6 +3144,7 @@ export const saveExpense = mutation({
       shares,
       items: items ?? null,
       celebrationContribution,
+      discount,
       excludeFromSettlement: args.excludeFromSettlement ?? false,
       updatedAt: nowIso(),
     };
@@ -4571,9 +4596,16 @@ export const analyzeExpenseExclusionImpact = query({
         const isExcluded = exp.excludeFromSettlement || (excludeTargetExpense && exp._id === args.id);
         if (isExcluded) return;
 
+        const discountAmount = exp.discount || 0;
+        const totalPaid = Array.isArray(exp.paidBy)
+          ? exp.paidBy.reduce((sum: number, pb: any) => sum + Number(pb.amount), 0)
+          : 0;
+
         if (Array.isArray(exp.paidBy)) {
           exp.paidBy.forEach((p: any) => {
-            balances[p.personId] = (balances[p.personId] || 0) + Number(p.amount);
+            const pPaid = Number(p.amount);
+            const pActualPaid = totalPaid > 0 ? pPaid - (discountAmount * (pPaid / totalPaid)) : pPaid;
+            balances[p.personId] = (balances[p.personId] || 0) + pActualPaid;
           });
         }
         if (Array.isArray(exp.shares)) {
@@ -4714,14 +4746,20 @@ export const analyzeExpenseExclusionImpact = query({
 
     // Identify net creditors/debtors for this specific expense
     const rawContributions: Record<string, number> = {};
+    const targetDiscountAmount = expense.discount || 0;
+    const targetTotalPaid = Array.isArray(expense.paidBy)
+      ? expense.paidBy.reduce((sum: number, pb: any) => sum + Number(pb.amount), 0)
+      : 0;
+
     people.forEach(p => {
-      const paid = expense.paidBy?.find((pb: any) => pb.personId === p._id)?.amount || 0;
+      const pPaid = expense.paidBy?.find((pb: any) => pb.personId === p._id)?.amount || 0;
+      const pActualPaid = targetTotalPaid > 0 ? pPaid - (targetDiscountAmount * (pPaid / targetTotalPaid)) : pPaid;
       const share = expense.shares?.find((s: any) => s.personId === p._id)?.amount || 0;
       let totalShare = Number(share);
       if (expense.celebrationContribution && expense.celebrationContribution.personId === p._id) {
         totalShare += Number(expense.celebrationContribution.amount);
       }
-      rawContributions[p._id] = Number(paid) - totalShare;
+      rawContributions[p._id] = pActualPaid - totalShare;
     });
 
     // Adjust raw contributions by applying entangled settlements

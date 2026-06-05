@@ -186,33 +186,58 @@ export function calculateItemwiseSplit(
   items: ExpenseItemDetail[],
   amountToSplit: number
 ): ItemwiseSplitCalculation {
-  let totalOriginalItems = items.reduce(
+  // Separate discount items from regular items
+  const discountItems = items.filter(
+    (item) =>
+      item.id === "discount-item" ||
+      item.name.toLowerCase() === "discount" ||
+      getItemLineTotal(item) < 0
+  );
+  const regularItems = items.filter(
+    (item) =>
+      !(
+        item.id === "discount-item" ||
+        item.name.toLowerCase() === "discount" ||
+        getItemLineTotal(item) < 0
+      )
+  );
+
+  // Sum the discount amounts (absolute value)
+  const discountAmount = discountItems.reduce(
+    (sum, item) => sum + Math.abs(getItemLineTotal(item)),
+    0
+  );
+
+  // Calculate the regular amount to split
+  const regularAmountToSplit = amountToSplit + discountAmount;
+
+  let totalOriginalItems = regularItems.reduce(
     (sum, item) => sum + Math.abs(getItemLineTotal(item)),
     0
   );
 
   const isZeroPriced = totalOriginalItems <= EPSILON;
-  if (isZeroPriced && amountToSplit > 0) {
+  if (isZeroPriced && regularAmountToSplit > 0) {
     // Treat zero-priced items as having a virtual price equal to their quantity
-    totalOriginalItems = items.reduce(
+    totalOriginalItems = regularItems.reduce(
       (sum, item) => sum + getItemQuantity(item),
       0
     );
   }
 
   const reductionFactor =
-    totalOriginalItems > EPSILON && amountToSplit >= 0
-      ? amountToSplit / totalOriginalItems
-      : totalOriginalItems === 0 && amountToSplit === 0
+    totalOriginalItems > EPSILON && regularAmountToSplit >= 0
+      ? regularAmountToSplit / totalOriginalItems
+      : totalOriginalItems === 0 && regularAmountToSplit === 0
         ? 1
         : 0;
 
   const personBreakdown: PersonAggregatedItemShares = {};
 
-  items.forEach((item, itemIndex) => {
+  regularItems.forEach((item, itemIndex) => {
     const actualLineTotal = getItemLineTotal(item);
     let lineTotalForFactor = actualLineTotal;
-    if (isZeroPriced && amountToSplit > 0) {
+    if (isZeroPriced && regularAmountToSplit > 0) {
       lineTotalForFactor = getItemQuantity(item);
     }
 
@@ -268,6 +293,50 @@ export function calculateItemwiseSplit(
       });
     });
   });
+
+  // Keep a map of the regular shares (before discount) for proportion calculation
+  const regularSharesMap: Record<string, number> = {};
+  Object.entries(personBreakdown).forEach(([personId, personData]) => {
+    regularSharesMap[personId] = personData.totalShareOfAdjustedItems;
+  });
+
+  const totalRegularAdjustedShares = Object.values(regularSharesMap).reduce(
+    (sum, val) => sum + val,
+    0
+  );
+
+  // Allocate discount items proportionally to regular shares and append to breakdown
+  if (discountAmount > 0) {
+    discountItems.forEach((discItem) => {
+      const discLineTotal = Math.abs(getItemLineTotal(discItem));
+      if (discLineTotal <= EPSILON) return;
+
+      Object.entries(personBreakdown).forEach(([personId, personData]) => {
+        const proportion = totalRegularAdjustedShares > EPSILON
+          ? regularSharesMap[personId] / totalRegularAdjustedShares
+          : 1 / Object.keys(personBreakdown).length;
+
+        const personDiscountShare = -discLineTotal * proportion;
+
+        const discountItemDetail: PersonItemShareDetails = {
+          itemId: discItem.id || "discount-item",
+          itemName: discItem.name || "Discount",
+          originalItemPrice: -discLineTotal * proportion,
+          adjustedItemPriceForSplit: -discLineTotal * proportion,
+          shareForPerson: personDiscountShare,
+          sharedByCount: Object.keys(personBreakdown).length,
+          itemCategoryName: discItem.categoryName || "Discount",
+          quantity: discItem.quantity || 1,
+          quantityShared: proportion,
+          unitPrice: -(discItem.unitPrice ? Math.abs(toItemAmount(discItem.unitPrice)) : discLineTotal),
+          unitIndexes: [0],
+        };
+
+        personData.items.push(discountItemDetail);
+        personData.totalShareOfAdjustedItems += personDiscountShare;
+      });
+    });
+  }
 
   const shares = Object.entries(personBreakdown).map(([personId, data]) => ({
     personId,

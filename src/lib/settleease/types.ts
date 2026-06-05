@@ -34,6 +34,7 @@ export interface Expense {
   shares: PayerShare[]; // Calculated shares for each person (personId and amount) based on the net amount split
   items?: ExpenseItemDetail[]; // Itemwise split details, or Smart Scan item metadata for equal/unequal expenses
   celebration_contribution?: CelebrationContribution | null; // New field for celebration contributions
+  discount?: number; // New field for discount amount
   exclude_from_settlement?: boolean; // When true, expense is excluded from settlement calculations but still counted in analytics
   exclusion_strategy?: string; // Dynamic exclusion strategy chosen (e.g., standard, lahu_debt_settlement)
   created_at?: string; // ISO date string
@@ -207,6 +208,7 @@ export interface ParsedReceiptData {
   total_amount: number;
   currency: string;
   additional_charges: { label: string; amount: number }[];
+  discount_amount?: number;
 }
 
 

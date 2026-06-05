@@ -119,6 +119,7 @@ function expenseDto(expense: any): Expense {
     shares: expense.shares,
     items: expense.items ?? undefined,
     celebration_contribution: expense.celebrationContribution ?? null,
+    discount: expense.discount ?? null,
     exclude_from_settlement: expense.excludeFromSettlement ?? false,
     created_at: expense.createdAt,
     updated_at: expense.updatedAt,

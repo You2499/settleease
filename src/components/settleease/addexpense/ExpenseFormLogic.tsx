@@ -109,7 +109,10 @@ export function useExpenseFormLogic({
       isCelebrationMode: boolean,
       celebrationPayerId: string,
       actualCelebrationAmount: number,
-      amountToSplit: number
+      amountToSplit: number,
+      isDiscountMode: boolean = false,
+      discountAmountInput: string = "0",
+      actualDiscountAmount: number = 0
     ) => {
       if (!description.trim()) {
         toast({
@@ -160,6 +163,26 @@ export function useExpenseFormLogic({
           toast({
             title: "Validation Error",
             description: "Celebration contribution cannot exceed total bill amount.",
+            variant: "destructive",
+          });
+          return false;
+        }
+      }
+
+      if (isDiscountMode) {
+        if (actualDiscountAmount <= 0) {
+          toast({
+            title: "Validation Error",
+            description: "Discount amount must be positive.",
+            variant: "destructive",
+          });
+          return false;
+        }
+        const maxAllowedDiscount = originalTotalAmountNum - (isCelebrationMode ? actualCelebrationAmount : 0);
+        if (actualDiscountAmount > maxAllowedDiscount) {
+          toast({
+            title: "Validation Error",
+            description: "Discount cannot exceed the bill amount after celebration contribution.",
             variant: "destructive",
           });
           return false;
@@ -263,9 +286,13 @@ export function useExpenseFormLogic({
               ? getItemUnitSharing(item).every((unit) => unit.sharedBy.length > 0)
               : item.sharedBy.length > 0;
 
+            const priceNum = typeof item.price === "number" ? item.price : parseFloat(item.price) || 0;
+            const isDiscountItem = item.name.trim().toLowerCase() === "discount" || priceNum < 0;
+            const isPriceInvalid = isDiscountItem ? false : getItemLineTotal(item) <= 0;
+
             return (
               !item.name.trim() ||
-              getItemLineTotal(item) <= 0 ||
+              isPriceInvalid ||
               !hasSharedParticipants ||
               !item.categoryName
             );
@@ -319,6 +346,9 @@ export function useExpenseFormLogic({
       celebrationPayerId: string,
       actualCelebrationAmount: number,
       amountToSplit: number,
+      isDiscountMode: boolean,
+      discountAmountInput: string,
+      actualDiscountAmount: number,
       expenseToEdit: Expense | null | undefined,
       defaultItemCategory: string,
       setIsLoading: (loading: boolean) => void,
@@ -338,7 +368,10 @@ export function useExpenseFormLogic({
           isCelebrationMode,
           celebrationPayerId,
           actualCelebrationAmount,
-          amountToSplit
+          amountToSplit,
+          isDiscountMode,
+          discountAmountInput,
+          actualDiscountAmount
         )
       ) {
         usageAnalytics.track({
@@ -396,11 +429,30 @@ export function useExpenseFormLogic({
           selectedPeopleEqual.length > 0 ? finalAmountEffectivelySplit / selectedPeopleEqual.length : 0;
         calculatedShares = selectedPeopleEqual.map((personId) => ({ personId, amount: shareAmount }));
       } else if (splitMethod === "unequal") {
+        const preDiscountAmount = originalTotalAmountNum - actualCelebrationAmount;
+        const ratio = preDiscountAmount > 0 ? (preDiscountAmount - (isDiscountMode ? actualDiscountAmount : 0)) / preDiscountAmount : 1;
         calculatedShares = Object.entries(unequalShares)
           .filter(([_, amountStr]) => parseFloat(amountStr || "0") > 0)
-          .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) }));
+          .map(([personId, amountStr]) => ({ personId, amount: parseFloat(amountStr) * ratio }));
       } else if (splitMethod === "itemwise") {
-        expenseItemsPayload = items.map((item) =>
+        let finalItems = [...items];
+        if (isDiscountMode && actualDiscountAmount > 0) {
+          const participantIds = Array.from(
+            new Set(items.flatMap((item) => item.sharedBy || []))
+          );
+          const discountItem: ExpenseItemDetail = {
+            id: "discount-item",
+            name: "Discount",
+            price: -actualDiscountAmount,
+            sharedBy: participantIds,
+            categoryName: "Discount",
+            quantity: 1,
+            unitPrice: -actualDiscountAmount,
+          };
+          finalItems.push(discountItem);
+        }
+
+        expenseItemsPayload = finalItems.map((item) =>
           normalizeExpenseItemForStorage(item, defaultItemCategory)
         );
 
@@ -450,6 +502,7 @@ export function useExpenseFormLogic({
             shares: commonPayload.shares,
             items: convexItems,
             celebrationContribution: commonPayload.celebration_contribution,
+            discount: isDiscountMode ? actualDiscountAmount : undefined,
             excludeFromSettlement: expenseToEdit.exclude_from_settlement ?? false,
             createdAt: expenseDate?.toISOString(),
           });
@@ -477,6 +530,7 @@ export function useExpenseFormLogic({
             shares: commonPayload.shares,
             items: convexItems,
             celebrationContribution: commonPayload.celebration_contribution,
+            discount: isDiscountMode ? actualDiscountAmount : undefined,
             createdAt: expenseDate?.toISOString(),
           });
           toast({

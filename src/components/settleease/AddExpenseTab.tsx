@@ -21,6 +21,7 @@ import UnequalSplitSection from './addexpense/UnequalSplitSection';
 import ItemwiseSplitSection from './addexpense/ItemwiseSplitSection';
 import ExpenseBasicInfo from './addexpense/ExpenseBasicInfo';
 import CelebrationSection from './addexpense/CelebrationSection';
+import DiscountSection from './addexpense/DiscountSection';
 import { useExpenseFormLogic } from './addexpense/ExpenseFormLogic';
 import SettleEaseErrorBoundary from '../ui/SettleEaseErrorBoundary';
 import {
@@ -70,6 +71,9 @@ export default function AddExpenseTab({
   const [celebrationPayerId, setCelebrationPayerId] = useState<string>('');
   const [celebrationAmountInput, setCelebrationAmountInput] = useState<string>('');
 
+  const [isDiscountMode, setIsDiscountMode] = useState(false);
+  const [discountAmountInput, setDiscountAmountInput] = useState<string>('');
+
   const [splitMethod, setSplitMethod] = useState<Expense['split_method']>('equal');
 
   const [selectedPeopleEqual, setSelectedPeopleEqual] = useState<string[]>([]);
@@ -99,10 +103,20 @@ export default function AddExpenseTab({
     return isNaN(parsedAmount) || parsedAmount < 0 ? 0 : parsedAmount;
   }, [isCelebrationMode, celebrationPayerId, celebrationAmountInput]);
 
-  const amountToSplit = useMemo(() => {
+  const actualDiscountAmount = useMemo(() => {
+    if (!isDiscountMode) return 0;
+    const parsedAmount = parseFloat(discountAmountInput);
+    return isNaN(parsedAmount) || parsedAmount < 0 ? 0 : parsedAmount;
+  }, [isDiscountMode, discountAmountInput]);
+
+  const amountToSplitBeforeDiscount = useMemo(() => {
     const currentTotal = parseFloat(totalAmount) || 0;
     return Math.max(0, currentTotal - actualCelebrationAmount);
   }, [totalAmount, actualCelebrationAmount]);
+
+  const amountToSplit = useMemo(() => {
+    return Math.max(0, amountToSplitBeforeDiscount - actualDiscountAmount);
+  }, [amountToSplitBeforeDiscount, actualDiscountAmount]);
 
   const defaultItemCategory = useMemo(() => dynamicCategories.length > 0 ? dynamicCategories[0].name : '', [dynamicCategories]);
   const payerAutoCalculationKey = useMemo(() => payers.slice(0, -1).map(p => p.amount).join('|'), [payers]);
@@ -125,6 +139,9 @@ export default function AddExpenseTab({
       celebrationPayerId,
       actualCelebrationAmount,
       amountToSplit,
+      isDiscountMode,
+      discountAmountInput,
+      actualDiscountAmount,
       expenseToEdit,
       defaultItemCategory,
       setIsLoading
@@ -183,6 +200,26 @@ export default function AddExpenseTab({
         setCelebrationAmountInput('');
       }
 
+      let discountVal = 0;
+      if (expenseToEdit.discount !== undefined && expenseToEdit.discount > 0) {
+        discountVal = expenseToEdit.discount;
+      } else if (Array.isArray(expenseToEdit.items)) {
+        const discountItem = expenseToEdit.items.find(
+          item => item.name.trim().toLowerCase() === 'discount' || parseFloat(item.price.toString()) < 0
+        );
+        if (discountItem) {
+          discountVal = Math.abs(parseFloat(discountItem.price.toString()) || 0);
+        }
+      }
+
+      if (discountVal > 0) {
+        setIsDiscountMode(true);
+        setDiscountAmountInput(discountVal.toString());
+      } else {
+        setIsDiscountMode(false);
+        setDiscountAmountInput('');
+      }
+
       setSplitMethod(expenseToEdit.split_method);
 
       if (expenseToEdit.split_method === 'equal' && Array.isArray(expenseToEdit.shares)) {
@@ -200,18 +237,25 @@ export default function AddExpenseTab({
       }
 
       if (Array.isArray(expenseToEdit.items) && expenseToEdit.items.length > 0) {
-        setItems(expenseToEdit.items.map(item => ({
-          id: item.id || Date.now().toString() + Math.random(),
-          name: item.name,
-          price: item.price.toString(),
-          sharedBy: item.sharedBy || [],
-          categoryName: item.categoryName || expenseToEdit.category || defaultItemCategory,
-          quantity: getItemQuantity(item),
-          unitPrice: item.unitPrice !== undefined
-            ? item.unitPrice.toString()
-            : roundItemAmount(toItemAmount(item.price) / getItemQuantity(item)).toString(),
-          quantitySplits: item.quantitySplits,
-        })));
+        const regularItems = expenseToEdit.items.filter(
+          item => item.name.trim().toLowerCase() !== 'discount' && parseFloat(item.price.toString()) >= 0
+        );
+        if (regularItems.length > 0) {
+          setItems(regularItems.map(item => ({
+            id: item.id || Date.now().toString() + Math.random(),
+            name: item.name,
+            price: item.price.toString(),
+            sharedBy: item.sharedBy || [],
+            categoryName: item.categoryName || expenseToEdit.category || defaultItemCategory,
+            quantity: getItemQuantity(item),
+            unitPrice: item.unitPrice !== undefined
+              ? item.unitPrice.toString()
+              : roundItemAmount(toItemAmount(item.price) / getItemQuantity(item)).toString(),
+            quantitySplits: item.quantitySplits,
+          })));
+        } else {
+          setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory, quantity: 1, unitPrice: '' }]);
+        }
       } else {
         setItems([{ id: Date.now().toString(), name: '', price: '', sharedBy: people.map(p => p.id), categoryName: defaultItemCategory, quantity: 1, unitPrice: '' }]);
       }
@@ -228,6 +272,9 @@ export default function AddExpenseTab({
       setIsCelebrationMode(false);
       setCelebrationPayerId('');
       setCelebrationAmountInput('');
+
+      setIsDiscountMode(false);
+      setDiscountAmountInput('');
 
       const firstPayerPersonId = defaultPayerId || (people.length > 0 ? people[0].id : '');
       setPayers([{ id: Date.now().toString(), personId: firstPayerPersonId, amount: '' }]);
@@ -663,6 +710,18 @@ export default function AddExpenseTab({
           />
         </SettleEaseErrorBoundary>
 
+        <SettleEaseErrorBoundary componentName="Discount Section" size="medium">
+          <DiscountSection
+            isDiscountMode={isDiscountMode}
+            setIsDiscountMode={setIsDiscountMode}
+            discountAmountInput={discountAmountInput}
+            setDiscountAmountInput={setDiscountAmountInput}
+            actualDiscountAmount={actualDiscountAmount}
+            totalAmount={totalAmount}
+            amountToSplit={amountToSplit}
+          />
+        </SettleEaseErrorBoundary>
+
         <SettleEaseErrorBoundary componentName="Payment Details" size="medium">
           <div className="p-4 sm:p-5 border rounded-lg shadow-sm bg-card/50">
             <h3 className="text-md sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center text-primary">
@@ -707,12 +766,12 @@ export default function AddExpenseTab({
                 </SettleEaseErrorBoundary>
               )}
               {splitMethod === 'unequal' && (
-                <SettleEaseErrorBoundary componentName="Unequal Split Section" size="small">
+                <SettleEaseErrorBoundary componentName="Equal Split Section" size="small">
                   <UnequalSplitSection
                     people={people}
                     unequalShares={unequalShares}
                     handleUnequalShareChange={handleUnequalShareChange}
-                    amountToSplit={amountToSplit}
+                    amountToSplit={amountToSplitBeforeDiscount}
                   />
                 </SettleEaseErrorBoundary>
               )}

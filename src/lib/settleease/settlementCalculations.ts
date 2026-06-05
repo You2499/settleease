@@ -36,9 +36,18 @@ export function calculateNetBalances(
     
     // Credit payers
     if (Array.isArray(expense.paid_by)) {
+      const discount = expense.discount || 0;
+      const totalPaidByAllPayers = expense.paid_by.reduce(
+        (sum, p) => sum + Number(p.amount),
+        0
+      );
       expense.paid_by.forEach((payment) => {
+        const rawPayerPaid = Number(payment.amount);
+        const payerActualCredit = totalPaidByAllPayers > 0
+          ? rawPayerPaid - (discount * (rawPayerPaid / totalPaidByAllPayers))
+          : rawPayerPaid;
         balances[payment.personId] =
-          (balances[payment.personId] || 0) + Number(payment.amount);
+          (balances[payment.personId] || 0) + payerActualCredit;
       });
     }
 
@@ -303,11 +312,15 @@ export function calculatePairwiseTransactions(
         (obligations[contributorId] || 0) + contributionAmount;
     }
 
+    const discount = expense.discount || 0;
     const totalPaidInExpense = expense.paid_by.reduce(
       (sum, p) => sum + Number(p.amount),
       0
     );
     if (totalPaidInExpense <= 0.001) return;
+
+    const discountedTotalPaid = Math.max(0, totalPaidInExpense - discount);
+    if (discountedTotalPaid <= 0.001) return;
 
     // Distribute obligations as debts to payers
     for (const debtorId in obligations) {
@@ -318,10 +331,13 @@ export function calculatePairwiseTransactions(
         const payerId = payment.personId;
         if (debtorId === payerId) return;
 
-        const proportionPaidByThisPayer =
-          Number(payment.amount) / totalPaidInExpense;
-        const amountOwedToThisPayer =
-          totalOwedByDebtor * proportionPaidByThisPayer;
+        const rawPayerPaid = Number(payment.amount);
+        const discountedPayerPaid = totalPaidInExpense > 0
+          ? rawPayerPaid - (discount * (rawPayerPaid / totalPaidInExpense))
+          : rawPayerPaid;
+
+        const proportionPaidByThisPayer = discountedPayerPaid / discountedTotalPaid;
+        const amountOwedToThisPayer = totalOwedByDebtor * proportionPaidByThisPayer;
 
         if (amountOwedToThisPayer > 0.001) {
           const relation = getOrCreateRelation(debtorId, payerId);
@@ -426,9 +442,18 @@ function calculateLahuDirectTransactions(
   lahuExpenses.forEach((expense) => {
     // 1. Calculate raw contributions specifically for this Lahu expense
     const rawContributions: Record<string, number> = {};
+    const discount = expense.discount || 0;
+    const totalPaidByAllPayers = expense.paid_by?.reduce(
+      (sum, p) => sum + Number(p.amount),
+      0
+    ) || 0;
+
     people.forEach((p) => {
       const paidObj = expense.paid_by?.find((pb) => pb.personId === p.id);
-      const paid = paidObj ? Number(paidObj.amount) : 0;
+      const rawPaid = paidObj ? Number(paidObj.amount) : 0;
+      const paid = totalPaidByAllPayers > 0
+        ? rawPaid - (discount * (rawPaid / totalPaidByAllPayers))
+        : rawPaid;
 
       const shareObj = expense.shares?.find((s) => s.personId === p.id);
       let share = shareObj ? Number(shareObj.amount) : 0;
